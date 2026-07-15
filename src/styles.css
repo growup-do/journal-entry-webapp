@@ -1,0 +1,159 @@
+/* =========================================================
+   仕訳伝票 入力ページ — グローバルスタイル
+   （インライン擬似クラス表現できない hover / focus / keyframes /
+     スクロールバー等をここで定義。数値は README / プロトタイプ準拠）
+   ========================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #e8ecf0;
+  font-family: 'Noto Sans JP', sans-serif;
+  color: #22303c;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: #1f7a52;
+  text-decoration: none;
+}
+a:hover {
+  color: #155c3d;
+}
+
+/* 新規追加行のハイライト */
+@keyframes rowin {
+  from {
+    background: #fff2c9;
+  }
+  to {
+    background: transparent;
+  }
+}
+
+/* スクロールバー */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #c7d0d9;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #aab5c0;
+  background-clip: padding-box;
+}
+
+/* ---------------------------------------------------------
+   フィールド / ボタンの hover・focus 状態
+   アクセント色は各オプションのラッパで --accent / --accent-rgb を切替
+   --------------------------------------------------------- */
+
+/* フィールドボタン（科目・区分・業者） */
+.field-btn {
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.field-btn:hover {
+  border-color: var(--field-accent, #1f7a52);
+  box-shadow: 0 0 0 3px rgba(var(--field-accent-rgb, 31, 122, 82), 0.1);
+}
+
+/* テキスト入力（摘要・金額・月日） */
+.field-input {
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.field-input:focus {
+  border-color: var(--field-accent, #1f7a52);
+}
+.field-input.ring:focus {
+  box-shadow: 0 0 0 3px rgba(var(--field-accent-rgb, 31, 122, 82), 0.1);
+}
+
+/* 摘要の▼ボタン */
+.tekiyo-toggle {
+  transition: border-color 0.12s, color 0.12s;
+}
+.tekiyo-toggle:hover {
+  border-color: var(--field-accent, #1f7a52);
+  color: var(--field-accent, #1f7a52);
+}
+
+/* 送信ボタン */
+.submit-btn {
+  transition: filter 0.12s;
+}
+.submit-btn:hover {
+  filter: brightness(0.92);
+}
+
+/* チップ */
+.chip {
+  transition: all 0.12s;
+}
+
+/* 補助ドロップダウン */
+.assist-search {
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.assist-search:focus {
+  border-color: #1f7a52;
+  box-shadow: 0 0 0 3px rgba(31, 122, 82, 0.1);
+}
+.assist-item {
+  transition: background 0.1s, color 0.1s;
+}
+.assist-item:hover {
+  background: #eaf5ef;
+  color: #186641;
+}
+
+/* メニュー（横=フォーム型ナビ / 縦=サイドバー） */
+.menu-item-h {
+  transition: color 0.12s;
+}
+.menu-item-h:hover {
+  color: #1f7a52;
+}
+.menu-item-v {
+  transition: background 0.12s;
+}
+.menu-item-v:hover {
+  background: #f4f6f8;
+}
+
+/* スプレッドシート型の検索フィールド（青アクセント固定） */
+.search-input,
+.search-select {
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.search-input:focus {
+  border-color: #2c5f9e;
+  box-shadow: 0 0 0 3px rgba(44, 95, 158, 0.1);
+}
+.search-input.no-ring:focus {
+  box-shadow: none;
+}
+.search-select:focus {
+  border-color: #2c5f9e;
+}
+
+/* 汎用ボタン hover（クリア・折りたたみトグル等） */
+.btn-outline {
+  transition: border-color 0.12s, color 0.12s;
+}
+.btn-outline:hover {
+  border-color: #aab5c0;
+}
+.collapse-toggle {
+  transition: right 0.28s ease, color 0.12s, border-color 0.12s;
+}
+.collapse-toggle:hover {
+  color: #1f7a52;
+  border-color: #1f7a52;
+}

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="background:#ffffff;border:1px solid #d3dce4;border-radius:11px;box-shadow:0 14px 36px rgba(24,42,62,.18);overflow:hidden;font-family:'Noto Sans JP',sans-serif;">
+  <div style="padding:9px;border-bottom:1px solid #eef2f5;background:#fafcfd;">
+    <input id="assist-search" value="{{ query }}" onInput="{{ onInput }}" placeholder="入力して絞り込み" autocomplete="off" style="width:100%;box-sizing:border-box;padding:8px 11px;border:1px solid #d3dce4;border-radius:8px;font-size:13.5px;outline:none;font-family:inherit;background:#ffffff;color:#22303c;" style-focus="border-color:#1f7a52;box-shadow:0 0 0 3px rgba(31,122,82,.10);" />
+  </div>
+  <div style="max-height:232px;overflow-y:auto;padding:4px 0;">
+    <sc-for list="{{ groups }}" as="g" hint-placeholder-count="2">
+      <sc-if value="{{ g.hasHeader }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:9px 13px 3px;font-size:10.5px;font-weight:700;color:#93a0ad;letter-spacing:.05em;">{{ g.group }}</div>
+      </sc-if>
+      <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
+        <div onMouseDown="{{ onPick }}" data-value="{{ it.value }}" style="padding:8px 15px;font-size:14px;color:#283641;cursor:pointer;line-height:1.3;" style-hover="background:#eaf5ef;color:#186641;">{{ it.value }}</div>
+      </sc-for>
+    </sc-for>
+    <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:16px 15px;font-size:13px;color:#9aa5b1;text-align:center;">該当する候補がありません</div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:250,&quot;height&quot;:260},&quot;groups&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;any[]&quot;},&quot;query&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;empty&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;onInput&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;any&quot;},&quot;onPick&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;any&quot;}}"></script>
+</body>
+</html>

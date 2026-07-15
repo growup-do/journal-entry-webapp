@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/data.ts","./src/main.tsx","./src/types.ts","./src/usevoucher.ts","./src/components/assistfield.tsx","./src/components/assistpanel.tsx","./src/components/chips.tsx","./src/components/optiona.tsx","./src/components/optionb.tsx"],"errors":true,"version":"5.9.3"}

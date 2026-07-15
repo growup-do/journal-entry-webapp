@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:#eef1f4;font-family:'Noto Sans JP',sans-serif;color:#22303c;-webkit-font-smoothing:antialiased}
+  a{color:#1f7a52;text-decoration:none}
+  a:hover{color:#155c3d}
+  @keyframes rowin{from{background:#fff2c9}to{background:transparent}}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:#c7d0d9;border-radius:6px;border:2px solid transparent;background-clip:padding-box}
+  ::-webkit-scrollbar-thumb:hover{background:#aab5c0;background-clip:padding-box}
+</style>
+</helmet>
+
+<div style="min-height:100vh;display:flex;flex-direction:column;">
+  <!-- app bar -->
+  <header style="position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #dde4ea;height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;">
+    <div style="display:flex;align-items:center;gap:16px;min-width:0;">
+      <div style="display:flex;align-items:center;gap:9px;">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#1f7a52;color:#fff;border-radius:8px;font-family:'Zen Kaku Gothic New',sans-serif;font-weight:700;font-size:15px;">会</span>
+        <span style="font-family:'Zen Kaku Gothic New',sans-serif;font-weight:700;font-size:15.5px;">会計基準システム</span>
+      </div>
+      <span style="color:#c3ccd4;">｜</span>
+      <div style="display:flex;align-items:center;gap:7px;font-size:13px;color:#68757f;overflow:hidden;white-space:nowrap;">
+        <span>社会福祉法人</span><span style="color:#c3ccd4;">›</span><span>チャイルド保育園</span><span style="color:#c3ccd4;">›</span><span style="color:#22303c;font-weight:500;">拠点区分</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:18px;font-size:13px;color:#68757f;">
+      <span>会計期間　<b style="color:#22303c;font-weight:600;">令和8年度</b></span>
+      <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:#eef4f0;color:#1f7a52;font-size:13px;font-weight:700;">経</span>
+    </div>
+  </header>
+
+  <!-- nav strip -->
+  <nav style="background:#fff;border-bottom:1px solid #eef2f5;padding:3px 24px;display:flex;flex-wrap:nowrap;overflow-x:auto;align-items:stretch;">
+    <sc-for list="{{ menuGroups }}" as="g" hint-placeholder-count="11">
+      <div style="{{ g.groupStyle }}">
+        <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
+          <button type="button" style="{{ it.style }}" style-hover="color:#1f7a52;">{{ it.label }}</button>
+        </sc-for>
+      </div>
+    </sc-for>
+  </nav>
+
+  <main style="flex:1;padding:28px;padding-right:{{ mainPadRight }};display:flex;gap:24px;align-items:flex-start;justify-content:center;overflow-x:auto;transition:padding-right .28s ease;">
+    <!-- FORM -->
+    <div style="flex:none;width:720px;background:#fff;border:1px solid #dde4ea;border-radius:16px;box-shadow:0 6px 26px rgba(30,50,70,.07);padding:26px 28px 22px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #28323c;padding-bottom:15px;margin-bottom:20px;">
+        <div>
+          <div style="font-family:'Zen Kaku Gothic New',sans-serif;font-weight:700;font-size:25px;letter-spacing:.03em;">仕訳伝票</div>
+          <div style="color:#5b6773;font-size:13px;margin-top:4px;">チャイルド保育園　拠点区分</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:11px;color:#8895a3;margin-bottom:7px;">取引区分</div>
+          <div style="display:flex;gap:6px;">
+            <sc-for list="{{ torihiki }}" as="chip" hint-placeholder-count="3">
+              <button type="button" onClick="{{ chip.onClick }}" style="{{ chip.style }}">{{ chip.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.5fr 1.5fr .95fr;gap:16px;margin-bottom:20px;">
+        <div>
+          <label style="display:block;font-size:11px;font-weight:600;color:#8290a0;margin-bottom:7px;letter-spacing:.03em;">サービス区分</label>
+          <div style="position:relative;" data-assist>
+            <button type="button" data-field="service" data-type="service" onClick="{{ openAssist }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;box-sizing:border-box;padding:9px 12px;background:#fff;border:1px solid #cfd8e0;border-radius:9px;font-size:14px;font-family:inherit;cursor:pointer;text-align:left;color:inherit;" style-hover="border-color:#1f7a52;box-shadow:0 0 0 3px rgba(31,122,82,.10);">
+              <span style="{{ fields.service.style }}">{{ fields.service.text }}</span>
+              <span style="color:#9aa5b1;font-size:9px;">▼</span>
+            </button>
+            <sc-if value="{{ active.service }}" hint-placeholder-val="{{ false }}">
+              <dc-import name="AssistPanel" groups="{{ assistGroups }}" query="{{ assist.query }}" empty="{{ assistEmpty }}" on-input="{{ onQueryInput }}" on-pick="{{ onPick }}" hint-size="240px,240px" style="position:absolute;top:calc(100% + 6px);left:0;width:100%;min-width:230px;z-index:60;"></dc-import>
+            </sc-if>
+          </div>
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;font-weight:600;color:#8290a0;margin-bottom:7px;letter-spacing:.03em;">伝票日付</label>
+          <div style="display:flex;align-items:center;gap:6px;height:38px;font-size:14px;color:#5b6773;">
+            <span>令和8年</span>
+            <input data-field="month" value="{{ form.month }}" onInput="{{ onFieldInput }}" inputmode="numeric" style="width:44px;padding:8px 4px;text-align:center;border:1px solid #cfd8e0;border-radius:8px;font-size:14px;font-family:inherit;outline:none;color:#22303c;" style-focus="border-color:#1f7a52;" />
+            <span>月</span>
+            <input data-field="day" value="{{ form.day }}" onInput="{{ onFieldInput }}" inputmode="numeric" style="width:44px;padding:8px 4px;text-align:center;border:1px solid #cfd8e0;border-radius:8px;font-size:14px;font-family:inherit;outline:none;color:#22303c;" style-focus="border-color:#1f7a52;" />
+            <span>日</span>
+          </div>
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;font-weight:600;color:#8290a0;margin-bottom:7px;letter-spacing:.03em;">伝票No</label>
+          <div style="display:flex;align-items:center;height:38px;padding:0 12px;background:#f5f7f9;border:1px solid #e2e8ee;border-radius:9px;font-size:13.5px;color:#9aa5b1;">自動採番</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;">
+        <div style="border:1px solid #cfe0f2;border-radius:12px;">
+          <div style="background:#eaf2fb;padding:9px 14px;font-weight:700;font-size:13px;color:#2c5f9e;display:flex;justify-content:space-between;align-items:baseline;border-radius:11px 11px 0 0;">借方<span style="font-size:10px;font-weight:600;color:#87a6cc;">BS / PL</span></div>
+          <div style="padding:14px;">
+            <div style="position:relative;" data-assist>
+              <button type="button" data-field="kariKamoku" data-type="account" onClick="{{ openAssist }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;box-sizing:border-box;padding:11px 12px;background:#fff;border:1px solid #cfd8e0;border-radius:9px;font-size:14.5px;font-family:inherit;cursor:pointer;text-align:left;color:inherit;" style-hover="border-color:#2c5f9e;box-shadow:0 0 0 3px rgba(44,95,158,.10);">
+                <span style="{{ fields.kariKamoku.style }}">{{ fields.kariKamoku.text }}</span>
+                <span style="color:#9aa5b1;font-size:9px;">▼</span>
+              </button>
+              <sc-if value="{{ active.kariKamoku }}" hint-placeholder-val="{{ false }}">
+                <dc-import name="AssistPanel" groups="{{ assistGroups }}" query="{{ assist.query }}" empty="{{ assistEmpty }}" on-input="{{ onQueryInput }}" on-pick="{{ onPick }}" hint-size="280px,280px" style="position:absolute;top:calc(100% + 6px);left:0;width:100%;min-width:270px;z-index:60;"></dc-import>
+              </sc-if>
+            </div>
+            <div style="display:flex;gap:16px;margin-top:11px;font-size:11px;color:#9aa5b1;">
+              <span>予算残 <b style="color:#7a8794;font-weight:600;">—</b></span><span>達成率 <b style="color:#7a8794;font-weight:600;">—</b></span>
+            </div>
+          </div>
+        </div>
+        <div style="border:1px solid #f2d0dc;border-radius:12px;">
+          <div style="background:#fdeef3;padding:9px 14px;font-weight:700;font-size:13px;color:#b0426a;display:flex;justify-content:space-between;align-items:baseline;border-radius:11px 11px 0 0;">貸方<span style="font-size:10px;font-weight:600;color:#d18aa5;">BS / PL</span></div>
+          <div style="padding:14px;">
+            <div style="position:relative;" data-assist>
+              <button type="button" data-field="kashiKamoku" data-type="account" onClick="{{ openAssist }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;box-sizing:border-box;padding:11px 12px;background:#fff;border:1px solid #cfd8e0;border-radius:9px;font-size:14.5px;font-family:inherit;cursor:pointer;text-align:left;color:inherit;" style-hover="border-color:#b0426a;box-shadow:0 0 0 3px rgba(176,66,106,.10);">
+                <span style="{{ fields.kashiKamoku.style }}">{{ fields.kashiKamoku.text }}</span>
+                <span style="color:#9aa5b1;font-size:9px;">▼</span>
+              </button>
+              <sc-if value="{{ active.kashiKamoku }}" hint-placeholder-val="{{ false }}">
+                <dc-import name="AssistPanel" groups="{{ assistGroups }}" query="{{ assist.query }}" empty="{{ assistEmpty }}" on-input="{{ onQueryInput }}" on-pick="{{ onPick }}" hint-size="280px,280px" style="position:absolute;top:calc(100% + 6px);left:0;width:100%;min-width:270px;z-index:60;"></dc-import>
+              </sc-if>
+            </div>
+            <div style="display:flex;gap:16px;margin-top:11px;font-size:11px;color:#9aa5b1;">
+              <span>予算残 <b style="color:#7a8794;font-weight:600;">—</b></span><span>達成率 <b style="color:#7a8794;font-weight:600;">—</b></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="border:1px solid #e2e8ee;border-radius:12px;margin-bottom:22px;">
+        <div style="display:grid;grid-template-columns:1fr 216px;">
+          <div style="padding:15px 16px;border-right:1px solid #eef2f5;display:flex;flex-direction:column;gap:13px;border-radius:11px 0 0 11px;">
+            <div>
+              <label style="display:block;font-size:11px;font-weight:600;color:#8290a0;margin-bottom:7px;letter-spacing:.03em;">摘要</label>
+              <div style="position:relative;display:flex;gap:6px;" data-assist>
+                <input data-field="tekiyo" value="{{ form.tekiyo }}" onInput="{{ onFieldInput }}" placeholder="摘要を入力" autocomplete="off" style="flex:1;padding:10px 12px;border:1px solid #cfd8e0;border-radius:9px;font-size:14px;font-family:inherit;outline:none;color:#22303c;min-width:0;" style-focus="border-color:#1f7a52;box-shadow:0 0 0 3px rgba(31,122,82,.10);" />
+                <button type="button" data-field="tekiyo" data-type="summary" onClick="{{ openAssist }}" style="flex:none;width:40px;border:1px solid #cfd8e0;border-radius:9px;background:#f4f7f9;cursor:pointer;color:#7a8794;font-size:9px;" style-hover="border-color:#1f7a52;color:#1f7a52;">▼</button>
+                <sc-if value="{{ active.tekiyo }}" hint-placeholder-val="{{ false }}">
+                  <dc-import name="AssistPanel" groups="{{ assistGroups }}" query="{{ assist.query }}" empty="{{ assistEmpty }}" on-input="{{ onQueryInput }}" on-pick="{{ onPick }}" hint-size="250px,240px" style="position:absolute;top:calc(100% + 6px);right:0;width:250px;z-index:60;"></dc-import>
+                </sc-if>
+              </div>
+            </div>
+            <div>
+              <label style="display:block;font-size:11px;font-weight:600;color:#8290a0;margin-bottom:7px;letter-spacing:.03em;">業者</label>
+              <div style="position:relative;" data-assist>
+                <button type="button" data-field="gyosha" data-type="vendor" onClick="{{ openAssist }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;box-sizing:border-box;padding:10px 12px;background:#fff;border:1px solid #cfd8e0;border-radius:9px;font-size:14px;font-family:inherit;cursor:pointer;text-align:left;color:inherit;" style-hover="border-color:#1f7a52;box-shadow:0 0 0 3px rgba(31,122,82,.10);">
+                  <span style="{{ fields.gyosha.style }}">{{ fields.gyosha.text }}</span>
+                  <span style="color:#9aa5b1;font-size:9px;">▼</span>
+                </button>
+                <sc-if value="{{ active.gyosha }}" hint-placeholder-val="{{ false }}">
+                  <dc-import name="AssistPanel" groups="{{ assistGroups }}" query="{{ assist.query }}" empty="{{ assistEmpty }}" on-input="{{ onQueryInput }}" on-pick="{{ onPick }}" hint-size="220px,220px" style="position:absolute;top:calc(100% + 6px);left:0;width:100%;min-width:210px;z-index:60;"></dc-import>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+          <div style="padding:15px 18px;display:flex;flex-direction:column;justify-content:center;gap:9px;background:#fbfcfd;border-radius:0 11px 11px 0;">
+            <label style="display:block;font-size:11px;font-weight:600;color:#8290a0;letter-spacing:.03em;">金額</label>
+            <div style="display:flex;align-items:baseline;gap:6px;">
+              <span style="font-size:17px;color:#8290a0;">¥</span>
+              <input data-field="amount" value="{{ form.amountFmt }}" onInput="{{ onFieldInput }}" inputmode="numeric" placeholder="0" style="width:100%;min-width:0;text-align:right;font-size:23px;font-weight:700;padding:5px 2px;border:none;border-bottom:2px solid #cfd8e0;outline:none;font-family:inherit;background:transparent;color:#22303c;font-variant-numeric:tabular-nums;" style-focus="border-color:#1f7a52;" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;">
+        <div style="min-height:22px;">
+          <sc-if value="{{ err }}" hint-placeholder-val="{{ false }}">
+            <span style="color:#c0392b;font-size:12.5px;font-weight:500;">{{ err }}</span>
+          </sc-if>
+        </div>
+        <button type="button" onClick="{{ submit }}" style="{{ submitStyle }}" style-hover="filter:brightness(.92);">処理終了　→　仕訳帳へ登録</button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- collapse toggle -->
+  <button type="button" onClick="{{ toggleCollapse }}" title="仕訳帳の表示切替" style="position:fixed;top:{{ toggleTop }};right:{{ toggleRight }};z-index:95;width:30px;height:38px;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid #dde4ea;border-radius:9px;box-shadow:0 3px 12px rgba(30,50,70,.14);cursor:pointer;color:#5b6773;font-size:12px;transition:right .28s ease;" style-hover="color:#1f7a52;border-color:#1f7a52;">{{ toggleIcon }}</button>
+
+  <!-- JOURNAL -->
+  <aside style="position:fixed;top:{{ journalTop }};right:0;bottom:0;width:392px;background:#fff;border-left:1px solid #dde4ea;box-shadow:-8px 0 28px rgba(30,50,70,.07);display:flex;flex-direction:column;z-index:90;transition:transform .28s ease;transform:{{ journalTransform }};">
+      <div style="padding:15px 18px 13px;border-bottom:1px solid #eef2f5;flex:none;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:11px;">
+          <span style="font-family:'Zen Kaku Gothic New',sans-serif;font-weight:700;font-size:16.5px;">仕訳帳</span>
+          <span style="font-size:12px;color:#8895a3;">{{ count }} 件</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <sc-for list="{{ monthChips }}" as="m" hint-placeholder-count="4">
+            <button type="button" onClick="{{ m.onClick }}" style="{{ m.style }}">{{ m.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:46px minmax(0,1fr) minmax(0,1fr) 82px;gap:8px;padding:9px 14px;background:#f6f8fa;font-size:10.5px;font-weight:700;color:#8290a0;border-bottom:1px solid #eef2f5;">
+        <div>月日</div><div>借方科目</div><div>貸方科目</div><div style="text-align:right;">金額</div>
+      </div>
+      <div id="journal-scroll" style="overflow-y:auto;flex:1;">
+        <sc-for list="{{ journal }}" as="e" hint-placeholder-count="8">
+          <div style="{{ e.rowStyle }}">
+            <div style="color:#8895a3;font-size:11px;">{{ e.date }}</div>
+            <div style="min-width:0;">
+              <div style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ e.kari }}</div>
+              <sc-if value="{{ e.tekiyo }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size:10.5px;color:#9aa5b1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px;">{{ e.tekiyo }}</div>
+              </sc-if>
+            </div>
+            <div style="color:#48565f;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ e.kashi }}</div>
+            <div style="text-align:right;font-weight:700;font-variant-numeric:tabular-nums;">{{ e.amountFmt }}</div>
+          </div>
+        </sc-for>
+      </div>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#1f7a52&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#1f7a52&quot;,&quot;#2c5f9e&quot;,&quot;#b0592a&quot;,&quot;#5b4a8a&quot;],&quot;section&quot;:&quot;外観&quot;},&quot;journalDensity&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;standard&quot;,&quot;options&quot;:[&quot;standard&quot;,&quot;compact&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;仕訳帳&quot;}}">
+const ACCOUNTS = [
+  {group:'現金及び預金', items:['現金','普通預金（保育園）','当座預金（保育園）','小口現金']},
+  {group:'事業未収金', items:['事業未収金','未収金','立替金','仮払金']},
+  {group:'事業費', items:['保育材料費','給食費','水道光熱費（事業）','通信運搬費','賃借料（事業）','印刷製本費','消耗品費']},
+  {group:'人件費', items:['職員俸給','法定福利費','特殊業務手当','扶養手当','時間外手当','通勤手当','その他手当']},
+  {group:'事業収益', items:['委託費収益','その他の利用料収益','現金（収入）','受託事業収益','補助金収益']},
+];
+const SERVICES = ['001 本部','002 保育事業','003 子育て支援','004 一時預かり','005 地域支援'];
+const VENDORS = ['（なし）','東京電力','ＮＴＴ東日本','中央リース','みどり商店','市役所','保護者'];
+const SUMMARIES = ['健康保険','厚生年金','法定福利費','職員俸給','委託費ー８月分','電話料金','ガス代ー７月分','副食費ー保護者より','コピー代','夏祭り用品','振込手数料'];
+const SEED = [
+  {date:'8/1', kari:'健康保険', kashi:'普通預金（保育園）', tekiyo:'健康保険', amount:237873},
+  {date:'8/1', kari:'厚生年金', kashi:'普通預金（保育園）', tekiyo:'厚生年金', amount:390886},
+  {date:'8/1', kari:'法定福利費', kashi:'普通預金（保育園）', tekiyo:'健康保険・厚生年金', amount:670361},
+  {date:'8/1', kari:'保育材料費', kashi:'普通預金（保育園）', tekiyo:'夏祭り用品', amount:12529},
+  {date:'8/1', kari:'手数料', kashi:'小口現金', tekiyo:'振込手数料', amount:660},
+  {date:'8/1', kari:'水道光熱費（事業）', kashi:'普通預金（保育園）', tekiyo:'水道料金', amount:23870},
+  {date:'8/4', kari:'現金（収入）', kashi:'その他の利用料収益', tekiyo:'副食費ー保護者より', amount:4500},
+  {date:'8/5', kari:'通信運搬費', kashi:'普通預金（保育園）', tekiyo:'電話料金', amount:8936},
+];
+
+const MENU = [
+  ['単一入力','伝票入力','振替入力','振替単一'],
+  ['仕訳一覧','勘定元帳','資金元帳','業者元帳'],
+  ['科目推移','資金推移','業者推移'],
+  ['月次試算','予算対比','月次決算'],
+  ['仕訳数'],
+  ['日次調査','決算調査'],
+  ['減価償却'],
+  ['経年グラフ','分析グラフ','充実残額'],
+  ['バージョン'],
+  ['当年仕訳'],
+  ['前年仕訳','元帳１','元帳２','残高照合'],
+];
+const ACTIVE_MENU = '伝票入力';
+
+class Component extends DCLogic {
+  constructor(props){
+    super(props);
+    let id = -1;
+    this.state = {
+      form: { service:'001 本部', month:'8', day:'1', torihiki:'資金', kariKamoku:'', kashiKamoku:'', tekiyo:'', gyosha:'', amount:'' },
+      assist: { open:false, field:'', type:'', query:'' },
+      journal: SEED.map(e => ({ ...e, id: id-- })),
+      lastAdded: null, err:'', collapsed:false, monthFilter:null, topOffset:102,
+    };
+    this.nextId = 1;
+  }
+  componentDidMount(){
+    this._down = (e) => {
+      if (this.state.assist.open && !(e.target.closest && e.target.closest('[data-assist]')))
+        this.setState(s => ({ assist: { ...s.assist, open:false } }));
+    };
+    document.addEventListener('mousedown', this._down, true);
+    this._measure = () => {
+      const h = document.querySelector('header'), n = document.querySelector('nav');
+      if (h && n){ const o = h.offsetHeight + n.offsetHeight; if (o && o !== this.state.topOffset) this.setState({ topOffset:o }); }
+    };
+    this._measure(); setTimeout(this._measure, 60); setTimeout(this._measure, 300);
+    window.addEventListener('resize', this._measure);
+  }
+  componentWillUnmount(){ document.removeEventListener('mousedown', this._down, true); window.removeEventListener('resize', this._measure); }
+  componentDidUpdate(prevProps, prevState){
+    if (this.state.lastAdded && this.state.lastAdded !== prevState.lastAdded){
+      const el = document.getElementById('journal-scroll'); if (el) el.scrollTop = el.scrollHeight;
+    }
+  }
+  fmt(v){ const n = parseInt(String(v).replace(/[^0-9]/g,''),10); return isNaN(n) ? '' : n.toLocaleString('ja-JP'); }
+  mk(v, ph){ return { text: v || ph, style: { color: v ? '#22303c' : '#9aa5b1', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 } }; }
+  groups(){
+    const a = this.state.assist; if (!a.open) return [];
+    const q = (a.query||'').trim();
+    const f = (arr) => q ? arr.filter(x => x.indexOf(q) >= 0) : arr;
+    if (a.type === 'account') return ACCOUNTS.map(g => ({ group:g.group, hasHeader:true, items:f(g.items).map(v=>({value:v})) })).filter(g => g.items.length);
+    if (a.type === 'service') return [{ group:'', hasHeader:false, items:f(SERVICES).map(v=>({value:v})) }];
+    if (a.type === 'vendor')  return [{ group:'', hasHeader:false, items:f(VENDORS).map(v=>({value:v})) }];
+    if (a.type === 'summary') return [{ group:'よく使う摘要', hasHeader:true, items:f(SUMMARIES).map(v=>({value:v})) }];
+    return [];
+  }
+  activeMap(){
+    const a = this.state.assist;
+    const m = (fl) => a.open && a.field === fl;
+    return { service:m('service'), kariKamoku:m('kariKamoku'), kashiKamoku:m('kashiKamoku'), gyosha:m('gyosha'), tekiyo:m('tekiyo') };
+  }
+  chips(){
+    const cur = this.state.form.torihiki, AC = this.props.accent || '#1f7a52';
+    return ['資金','事業','その他'].map(l => {
+      const on = cur === l;
+      return { label:l, onClick:()=>this.setTorihiki(l),
+        style:{ padding:'6px 14px', fontSize:'12.5px', fontWeight:600, borderRadius:'20px', cursor:'pointer', fontFamily:'inherit', transition:'all .12s', background:on?AC:'#fff', color:on?'#fff':'#5b6773', border:'1px solid '+(on?AC:'#cfd8e0') } };
+    });
+  }
+  journalView(){
+    const st = this.state, density = this.props.journalDensity || 'standard';
+    const pad = density === 'compact' ? '7px 14px' : '11px 14px';
+    let list = st.journal;
+    if (st.monthFilter != null) list = list.filter(e => String(e.date).split('/')[0] === st.monthFilter);
+    return list.map(e => {
+      const isNew = e.id === st.lastAdded;
+      return { ...e, amountFmt: e.amount.toLocaleString('ja-JP'),
+        rowStyle:{ display:'grid', gridTemplateColumns:'46px minmax(0,1fr) minmax(0,1fr) 82px', gap:'8px', padding:pad, borderBottom:'1px solid #f1f4f6', fontSize:'12.5px', alignItems:'center', background:isNew?'#fff2c9':'transparent', animation:isNew?'rowin 1.8s ease':'none' } };
+    });
+  }
+  openAssist = (e) => {
+    const t = e.currentTarget;
+    this.setState({ assist: { open:true, field:t.dataset.field, type:t.dataset.type, query:'' } });
+    setTimeout(() => { const el = document.getElementById('assist-search'); if (el) el.focus(); }, 30);
+  };
+  onQueryInput = (e) => { const q = e.target.value; this.setState(s => ({ assist: { ...s.assist, query:q } })); };
+  onPick = (e) => {
+    const raw = e.currentTarget.dataset.value, a = this.state.assist, val = raw === '（なし）' ? '' : raw;
+    this.setState(s => ({ form: { ...s.form, [a.field]: val }, assist: { ...s.assist, open:false }, err:'' }));
+  };
+  onFieldInput = (e) => {
+    const t = e.target, field = t.dataset.field; let val = t.value;
+    if (field === 'amount') val = val.replace(/[^0-9]/g,'');
+    if (field === 'month' || field === 'day') val = val.replace(/[^0-9]/g,'').slice(0,2);
+    this.setState(s => ({ form: { ...s.form, [field]: val }, err:'' }));
+  };
+  setTorihiki = (l) => { this.setState(s => ({ form: { ...s.form, torihiki: s.form.torihiki === l ? '' : l } })); };
+  toggleCollapse = () => { this.setState(s => ({ collapsed: !s.collapsed })); };
+  setMonth = (m) => { this.setState({ monthFilter: m }); };
+  monthChips(){
+    const st = this.state, AC = this.props.accent || '#1f7a52';
+    const months = [...new Set(st.journal.map(e => String(e.date).split('/')[0]))].sort((a,b)=>parseInt(a,10)-parseInt(b,10));
+    const opts = [{label:'全月', value:null}, ...months.map(m=>({label:m+'月', value:m}))];
+    return opts.map(o => {
+      const on = st.monthFilter === o.value;
+      return { label:o.label, onClick:()=>this.setMonth(o.value),
+        style:{ padding:'4px 12px', fontSize:'11.5px', fontWeight:600, borderRadius:'16px', cursor:'pointer', fontFamily:'inherit', transition:'all .12s', background:on?AC:'#fff', color:on?'#fff':'#5b6773', border:'1px solid '+(on?AC:'#d3dbe3') } };
+    });
+  }
+  submit = () => {
+    const f = this.state.form;
+    if (!f.kariKamoku || !f.kashiKamoku || !f.amount){ this.setState({ err:'借方科目・貸方科目・金額を入力してください。' }); return; }
+    const id = this.nextId++;
+    const entry = { id, date:(f.month||'')+'/'+(f.day||''), kari:f.kariKamoku, kashi:f.kashiKamoku, tekiyo:f.tekiyo||'', amount:parseInt(f.amount,10)||0 };
+    this.setState(s => ({ journal:[...s.journal, entry], form:{ ...s.form, kariKamoku:'', kashiKamoku:'', tekiyo:'', gyosha:'', amount:'' }, lastAdded:id, err:'', monthFilter: (s.monthFilter != null && s.monthFilter !== (f.month||'')) ? (f.month||'') : s.monthFilter }));
+  };
+  buildMenu(orient){
+    const AC = this.props.accent || '#1f7a52';
+    return MENU.map(function(group, gi){
+      const items = group.map(function(label){
+        const active = label === ACTIVE_MENU;
+        if (orient === 'h'){
+          return { label:label, active:active,
+            style:{ padding:'6px 11px', fontSize:'13px', whiteSpace:'nowrap', fontFamily:'inherit', cursor:'pointer', background:'none', border:'none', borderBottom:'2px solid '+(active?AC:'transparent'), color:active?AC:'#5b6773', fontWeight:active?700:500 } };
+        }
+        return { label:label, active:active,
+          style:{ display:'block', width:'100%', textAlign:'left', padding:'8px 12px', fontSize:'13px', fontFamily:'inherit', cursor:'pointer', background:active?'#eef2f6':'transparent', border:'none', borderLeft:'3px solid '+(active?AC:'transparent'), color:active?AC:'#5b6773', fontWeight:active?700:500 } };
+      });
+      let groupStyle;
+      if (orient === 'h') groupStyle = { display:'flex', gap:'1px', flex:'none', marginLeft: gi===0?'0':'16px' };
+      else groupStyle = { display:'flex', flexDirection:'column', paddingTop: gi===0?'0':'8px', marginTop: gi===0?'0':'8px', borderTop: gi===0?'none':'1px solid #eef2f5' };
+      return { items:items, groupStyle:groupStyle };
+    });
+  }
+  renderVals(){
+    const st = this.state, f = st.form, AC = this.props.accent || '#1f7a52';
+    const grp = this.groups();
+    return {
+      menuGroups: this.buildMenu('h'),
+      form: { ...f, amountFmt: this.fmt(f.amount) },
+      fields: { service:this.mk(f.service,'選択'), kariKamoku:this.mk(f.kariKamoku,'科目を選択'), kashiKamoku:this.mk(f.kashiKamoku,'科目を選択'), gyosha:this.mk(f.gyosha,'業者を選択') },
+      assist: st.assist, assistGroups: grp,
+      assistEmpty: st.assist.open && grp.reduce((n,g)=>n+g.items.length,0) === 0,
+      active: this.activeMap(), torihiki: this.chips(), journal: this.journalView(), count: this.journalView().length, err: st.err,
+      monthChips: this.monthChips(),
+      collapsed: st.collapsed,
+      journalTransform: st.collapsed ? 'translateX(392px)' : 'translateX(0)',
+      journalTop: st.topOffset + 'px',
+      toggleTop: (st.topOffset + 10) + 'px',
+      toggleRight: st.collapsed ? '12px' : '404px',
+      toggleIcon: st.collapsed ? '◀' : '▶',
+      mainPadRight: st.collapsed ? '28px' : '420px',
+      toggleCollapse: this.toggleCollapse,
+      submitStyle: { display:'inline-flex', alignItems:'center', gap:'8px', background:AC, color:'#fff', border:'none', borderRadius:'11px', padding:'13px 24px', fontWeight:700, fontSize:'15px', fontFamily:'inherit', cursor:'pointer', whiteSpace:'nowrap', boxShadow:'0 3px 12px rgba(31,122,82,.24)' },
+      openAssist: this.openAssist, onQueryInput: this.onQueryInput, onPick: this.onPick, onFieldInput: this.onFieldInput, submit: this.submit,
+    };
+  }
+}
+</script>
+</body>
+</html>
