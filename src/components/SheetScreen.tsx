@@ -9,8 +9,7 @@ import { AssistPanel } from './AssistPanel';
 import { Chips } from './Chips';
 import { Menu } from './Menu';
 import { MonthChips } from './MonthChips';
-import { PlaceholderPage } from './PlaceholderPage';
-import { SingleEntryPage } from './SingleEntryPage';
+import { renderPage } from './pages';
 import { accountFlat, makeSheetSeed } from '../data';
 import { applyMonth, rgba } from '../lib/format';
 import { useEntryForm } from '../hooks/useEntryForm';
@@ -263,10 +262,8 @@ export function SheetScreen({ page, onNavigate }: Props) {
           </div>
         </header>
 
-        {page === '単一入力' ? (
-          <SingleEntryPage variant="sheet" accent={BLUE} accentRgb={BLUE_RGB} />
-        ) : page !== '伝票入力' ? (
-          <PlaceholderPage title={page} accent={BLUE} />
+        {page !== '伝票入力' ? (
+          renderPage(page, 'sheet', BLUE, BLUE_RGB, onNavigate)
         ) : (
           <>
         {/* 検索パネル */}

@@ -1,7 +1,7 @@
-// 単一入力（1行＝1伝票の連続入力）
-// 既存システムの画面構成を踏襲：
-//   上部 … 下部で入力した伝票が積み上がる一覧（伝票No / 日(曜日) / 証憑 / 借方 / 貸方 / 摘要・業者 / 金額）
-//   下部 … 1行分の入力欄。Enterで次の項目へ進み、金額でEnterすると登録して次の伝票へ。
+// 単一入力（既存「単一式入力」の再現）
+//   上部 … 入力した伝票が積み上がる一覧（会計月タブで絞り込み。既存の右側「当年仕訳」一覧を統合）
+//   下部 … 1行分の入力欄。Enterで次の項目へ、金額でEnterすると登録して次の伝票へ。
+//   既存Fキー：F2伝票訂正/F3伝票削除 → 一覧の行ごとの「訂正」「削除」。F4科目別残/F5現預金残/F8カレンダ/F9連続定型 → 機能ボタン。
 // フォーム型（緑）・スプレッドシート型（青）のどちらのシェルからも同じ部品を使う。
 
 import { useCallback, useState } from 'react';
@@ -9,17 +9,20 @@ import type { CSSProperties, KeyboardEvent } from 'react';
 import { AssistField } from './AssistField';
 import { AssistPanel } from './AssistPanel';
 import { Chips } from './Chips';
+import { FiscalMonthTabs } from './FiscalMonthTabs';
+import { NOT_IMPL, ToastView, useToast } from './Toast';
 import { makeSingleSeed } from '../data';
 import { useEntryForm } from '../hooks/useEntryForm';
-import type { FormState } from '../types';
+import { applyMonth } from '../lib/format';
+import type { FormState, JournalEntry } from '../types';
 
 const PINK = '#b0426a';
 const PINK_RGB = '176,66,106';
 const BLUE = '#2c5f9e';
 const BLUE_RGB = '44,95,158';
 
-/** 一覧・入力行で共通の列構成 */
-const COLS = '52px 88px 44px minmax(0,1.15fr) minmax(0,1.15fr) minmax(0,1.35fr) 118px';
+/** 一覧・入力行で共通の列構成（最後は操作列） */
+const COLS = '52px 88px 44px minmax(0,1.15fr) minmax(0,1.15fr) minmax(0,1.35fr) 118px 96px';
 
 const initialForm: FormState = {
   service: '001 本部',
@@ -59,6 +62,9 @@ function onEnter(fn: () => void) {
 }
 const focusId = (id: string) => setTimeout(() => document.getElementById(id)?.focus(), 0);
 
+/** 既存Fキーのうち、単一入力で使う機能（プロトタイプではボタン化） */
+const TOOLS = ['科目別残', '現預金残', 'カレンダー', '連続定型'];
+
 interface Props {
   variant: 'form' | 'sheet';
   accent: string;
@@ -68,16 +74,32 @@ interface Props {
 export function SingleEntryPage({ variant, accent, accentRgb }: Props) {
   const [shohyo, setShohyo] = useState(true);
   const [cheque, setCheque] = useState('');
+  const toast = useToast();
 
   // 登録後：小切手Noをクリアし、借方科目へフォーカス（証憑・日付・区分は保持して連続入力）
   const afterSubmit = useCallback(() => {
     setCheque('');
     focusId('se-kari');
   }, []);
-  const v = useEntryForm({ initialForm, seed: makeSingleSeed(), afterSubmit });
+  const v = useEntryForm({ initialForm, seed: makeSingleSeed(), afterSubmit, initialMonth: '8' });
   const f = v.form;
 
   const doSubmit = () => v.submit({ shohyo, cheque: cheque.trim() || undefined });
+
+  // 訂正：行を入力欄に戻す（既存 F2 伝票訂正）
+  const edit = (e: JournalEntry) => {
+    const [m, d] = e.date.split('/');
+    v.setFields({ month: m ?? '', day: d ?? '', kariKamoku: e.kari, kashiKamoku: e.kashi, tekiyo: e.tekiyo, gyosha: e.gyosha ?? '', amount: String(e.amount) });
+    setShohyo(!!e.shohyo);
+    setCheque(e.cheque ?? '');
+    v.removeEntry(e.id);
+    focusId('se-kari');
+    toast.show('伝票を入力欄に戻しました。修正して登録してください');
+  };
+  // 削除（既存 F3 伝票削除）
+  const del = (e: JournalEntry) => {
+    if (confirm(`${e.date} ${e.kari}／${e.kashi} ${e.amount.toLocaleString('ja-JP')}円 を削除しますか？`)) v.removeEntry(e.id);
+  };
 
   // 補助ドロップダウンで選択したら次の項目へフォーカス
   const NEXT: Record<string, string> = {
@@ -94,7 +116,7 @@ export function SingleEntryPage({ variant, accent, accentRgb }: Props) {
   };
 
   const wd = weekdayOf(f.month, f.day);
-  const rows = v.journal;
+  const rows = applyMonth(v.journal, v.monthFilter);
   const isSheet = variant === 'sheet';
 
   const fieldBtn: CSSProperties = {
@@ -130,13 +152,25 @@ export function SingleEntryPage({ variant, accent, accentRgb }: Props) {
   const dateInput: CSSProperties = { ...textInput, width: 40, padding: '9px 2px', textAlign: 'center' };
   const colLabel: CSSProperties = { fontSize: 10.5, fontWeight: 700, color: '#8290a0', marginBottom: 6, display: 'block' };
   const panel = (w: number): CSSProperties => ({ position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, width: '100%', minWidth: w, zIndex: 60 });
+  const rowBtn = (color: string): CSSProperties => ({
+    padding: '4px 9px',
+    borderRadius: 6,
+    border: '1px solid #d3dbe3',
+    background: '#fff',
+    color,
+    fontSize: 11.5,
+    fontWeight: 700,
+    fontFamily: 'inherit',
+    cursor: 'pointer',
+  });
 
   return (
     <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
+      <ToastView msg={toast.msg} />
       <div
         style={{
           width: '100%',
-          maxWidth: isSheet ? 'none' : 1240,
+          maxWidth: isSheet ? 'none' : 1280,
           background: '#fff',
           border: '1px solid #dde4ea',
           borderRadius: isSheet ? 14 : 16,
@@ -149,9 +183,18 @@ export function SingleEntryPage({ variant, accent, accentRgb }: Props) {
         {/* 見出し */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 20, padding: '18px 22px 14px', borderBottom: '1px solid #eef2f5' }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21, letterSpacing: '.02em' }}>単一入力</div>
+            <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21, letterSpacing: '.02em' }}>
+              単一入力 <span style={{ fontSize: 12.5, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>チャイルド保育園　拠点区分</span>
+            </div>
             <div style={{ color: '#7a8794', fontSize: 12, marginTop: 4 }}>
               1行＝1伝票を連続入力。<b style={{ color: '#5b6773', fontWeight: 600 }}>Enter</b>で次の項目へ、金額で<b style={{ color: '#5b6773', fontWeight: 600 }}>Enter</b>すると登録して次の伝票へ進みます。
+            </div>
+            <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+              {TOOLS.map((t) => (
+                <button key={t} type="button" className="btn-outline" onClick={() => toast.show(NOT_IMPL)} style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid #cfd8e0', background: '#fff', color: '#5b6773', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
+                  {t}
+                </button>
+              ))}
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 18, flex: 'none' }}>
@@ -183,7 +226,16 @@ export function SingleEntryPage({ variant, accent, accentRgb }: Props) {
           </div>
         </div>
 
-        {/* 入力済み一覧（既存画面の上部スペースに相当） */}
+        {/* 会計月タブ（既存の 4〜3・決 ボタン） */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 22px', borderBottom: '1px solid #eef2f5' }}>
+          <span style={{ fontSize: 11, color: '#8895a3', fontWeight: 700, flex: 'none' }}>表示月</span>
+          <FiscalMonthTabs current={v.monthFilter} accent={accent} onSelect={v.setMonth} withAll />
+          <span style={{ marginLeft: 'auto', fontSize: 12, color: '#8895a3', flex: 'none' }}>
+            <b style={{ color: '#22303c', fontWeight: 700 }}>{rows.length}</b> 件
+          </span>
+        </div>
+
+        {/* 入力済み一覧（既存画面の上部スペース＋右側「当年仕訳」を統合） */}
         <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: 12, padding: '9px 22px', background: '#f6f8fa', fontSize: 10.5, fontWeight: 700, color: '#8290a0', borderBottom: '1px solid #eef2f5' }}>
           <div>伝票No</div>
           <div>日（曜日）</div>
@@ -192,10 +244,11 @@ export function SingleEntryPage({ variant, accent, accentRgb }: Props) {
           <div style={{ color: PINK }}>貸方 勘定科目 <span style={{ color: '#b3bcc5', fontWeight: 500 }}>／ 資金科目</span></div>
           <div>摘要 <span style={{ color: '#b3bcc5', fontWeight: 500 }}>／ 業者</span></div>
           <div style={{ textAlign: 'right' }}>金額</div>
+          <div style={{ textAlign: 'right' }}>操作</div>
         </div>
-        <div id="journal-scroll" style={{ overflowY: 'auto', minHeight: 180, maxHeight: 'calc(100vh - 420px)' }}>
+        <div id="journal-scroll" style={{ overflowY: 'auto', minHeight: 180, maxHeight: 'calc(100vh - 470px)' }}>
           {rows.length === 0 && (
-            <div style={{ padding: '40px 22px', textAlign: 'center', color: '#9aa5b1', fontSize: 13 }}>まだ伝票がありません。下の入力行から登録してください。</div>
+            <div style={{ padding: '40px 22px', textAlign: 'center', color: '#9aa5b1', fontSize: 13 }}>この月の伝票はありません。下の入力行から登録してください。</div>
           )}
           {rows.map((e, i) => {
             const isNew = e.id === v.lastAdded;
@@ -240,6 +293,10 @@ export function SingleEntryPage({ variant, accent, accentRgb }: Props) {
                   </div>
                 </div>
                 <div style={{ textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{e.amount.toLocaleString('ja-JP')}</div>
+                <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                  <button type="button" className="btn-outline" onClick={() => edit(e)} style={rowBtn('#2c5f9e')}>訂正</button>
+                  <button type="button" className="btn-outline" onClick={() => del(e)} style={rowBtn('#c0392b')}>削除</button>
+                </div>
               </div>
             );
           })}
@@ -365,9 +422,19 @@ export function SingleEntryPage({ variant, accent, accentRgb }: Props) {
                 style={{ ...textInput, textAlign: 'right', fontSize: 16, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}
               />
             </div>
+            <div>
+              <button
+                type="button"
+                className="submit-btn"
+                onClick={doSubmit}
+                style={{ height: 38, width: '100%', background: accent, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', boxShadow: `0 3px 12px rgba(${accentRgb},.24)`, whiteSpace: 'nowrap' }}
+              >
+                登録 ↵
+              </button>
+            </div>
           </div>
 
-          {/* 2行目：補助情報・小切手No・登録 */}
+          {/* 2行目：補助情報・小切手No */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 10, fontSize: 11.5, color: '#9aa5b1' }}>
             <span>資金科目：<b style={{ color: '#7a8794', fontWeight: 600 }}>勘定科目から自動判定</b></span>
             <span>資金-予算残 <b style={{ color: '#7a8794', fontWeight: 600 }}>—</b>　達成率 <b style={{ color: '#7a8794', fontWeight: 600 }}>—</b></span>
@@ -376,14 +443,6 @@ export function SingleEntryPage({ variant, accent, accentRgb }: Props) {
               <input id="se-cheque" className="field-input" value={cheque} onChange={(e) => setCheque(e.target.value)} onKeyDown={onEnter(() => focusId('se-kari'))} placeholder="任意" autoComplete="off" style={{ ...textInput, width: 110, padding: '5px 8px', fontSize: 12 }} />
             </label>
             <span style={{ marginLeft: 'auto', color: '#c0392b', fontSize: 12.5, fontWeight: 500 }}>{v.err}</span>
-            <button
-              type="button"
-              className="submit-btn"
-              onClick={doSubmit}
-              style={{ height: 38, padding: '0 26px', background: accent, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', boxShadow: `0 3px 12px rgba(${accentRgb},.24)` }}
-            >
-              登録して次へ　↵
-            </button>
           </div>
         </div>
       </div>

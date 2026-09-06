@@ -18,6 +18,8 @@ export interface UseEntryFormOptions {
   seed: JournalEntry[];
   /** 登録成功後に追加で行う処理（例: 検索条件のクリア）。同一ハンドラ内で呼ぶためバッチされる。 */
   afterSubmit?: () => void;
+  /** 月フィルターの初期値（省略時は全月） */
+  initialMonth?: MonthFilter;
 }
 
 export interface EntryForm {
@@ -41,17 +43,21 @@ export interface EntryForm {
   setField: (field: keyof FormState, rawValue: string) => void;
   setTorihiki: (label: '資金' | '事業' | 'その他') => void;
   setMonth: (month: MonthFilter) => void;
+  /** 複数項目をまとめて設定（訂正で行を入力欄に戻すときなど） */
+  setFields: (patch: Partial<FormState>) => void;
+  /** 仕訳帳から1行削除 */
+  removeEntry: (id: number) => void;
   /** 登録。extra で画面固有の追加項目（証憑・小切手No 等）を付与できる。 */
   submit: (extra?: Partial<JournalEntry>) => void;
 }
 
-export function useEntryForm({ initialForm, seed, afterSubmit }: UseEntryFormOptions): EntryForm {
+export function useEntryForm({ initialForm, seed, afterSubmit, initialMonth = null }: UseEntryFormOptions): EntryForm {
   const [form, setForm] = useState<FormState>(initialForm);
   const [assist, setAssist] = useState<AssistState>({ open: false, field: '', type: '', query: '' });
   const [journal, setJournal] = useState<JournalEntry[]>(seed);
   const [lastAdded, setLastAdded] = useState<number | null>(null);
   const [err, setErr] = useState('');
-  const [monthFilter, setMonthFilter] = useState<MonthFilter>(null);
+  const [monthFilter, setMonthFilter] = useState<MonthFilter>(initialMonth);
 
   const nextId = useRef(1);
   const afterSubmitRef = useRef(afterSubmit);
@@ -112,6 +118,11 @@ export function useEntryForm({ initialForm, seed, afterSubmit }: UseEntryFormOpt
   }, []);
 
   const setMonth = useCallback((month: MonthFilter) => setMonthFilter(month), []);
+  const setFields = useCallback((patch: Partial<FormState>) => {
+    setForm((s) => ({ ...s, ...patch }));
+    setErr('');
+  }, []);
+  const removeEntry = useCallback((id: number) => setJournal((arr) => arr.filter((e) => e.id !== id)), []);
 
   // 各 setState には純粋な更新関数のみを渡す（StrictModeの二重実行で重複追加しないため、
   // 採番などの副作用は updater の外＝このコールバック本体で1回だけ行う）。
@@ -180,6 +191,8 @@ export function useEntryForm({ initialForm, seed, afterSubmit }: UseEntryFormOpt
     setField,
     setTorihiki,
     setMonth,
+    setFields,
+    removeEntry,
     submit,
   };
 }

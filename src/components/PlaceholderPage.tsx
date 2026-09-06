@@ -1,5 +1,7 @@
 // プロトタイプ範囲外のメニューを選んだときの案内
 
+import { IMPLEMENTED_MENU } from '../data';
+
 interface Props {
   title: string;
   accent: string;
@@ -14,7 +16,7 @@ export function PlaceholderPage({ title, accent }: Props) {
         <p style={{ color: '#7a8794', fontSize: 13, lineHeight: 1.8, margin: '12px 0 0' }}>
           この画面はまだプロトタイプに含まれていません。
           <br />
-          作成済みの画面は「単一入力」「伝票入力」です。
+          作成済みの画面：{IMPLEMENTED_MENU.join('・')}
         </p>
       </div>
     </main>

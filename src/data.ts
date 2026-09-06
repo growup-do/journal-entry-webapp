@@ -65,7 +65,7 @@ export const MENU: string[][] = [
 export const DEFAULT_MENU = '伝票入力';
 
 /** プロトタイプとして画面を用意しているメニュー項目 */
-export const IMPLEMENTED_MENU = ['単一入力', '伝票入力'];
+export const IMPLEMENTED_MENU = ['単一入力', '伝票入力', '振替入力', '日次調査', '決算調査'];
 
 /** 仕訳帳シード（フォーム型・8件） */
 const SEED_FORM: Omit<JournalEntry, 'id'>[] = [
@@ -106,3 +106,62 @@ const SEED_SINGLE: Omit<JournalEntry, 'id'>[] = [
 export const makeFormSeed = () => seedToJournal(SEED_FORM);
 export const makeSingleSeed = () => seedToJournal(SEED_SINGLE);
 export const makeSheetSeed = () => seedToJournal(SEED_SHEET);
+
+/** 決算調査（決算チェック）の項目。既存システムの 01〜28 を転記（★は既存表記のまま） */
+export const AUDIT_ITEMS: { no: number; name: string }[] = [
+  { no: 1, name: '前期末支払資金残高' },
+  { no: 2, name: '当期末支払資金残高' },
+  { no: 3, name: '当期資金収支差額' },
+  { no: 4, name: '次期繰越活動増減差額' },
+  { no: 5, name: '（うち当期繰越活動増減差額）' },
+  { no: 6, name: '積立金と積立資産－①' },
+  { no: 7, name: '積立金と積立資産－②' },
+  { no: 8, name: '諸口勘定科目の残高' },
+  { no: 9, name: '減価償却資産の増減' },
+  { no: 10, name: '退職共済' },
+  { no: 11, name: '設備資金借入金の増減' },
+  { no: 12, name: '国庫補助金等特別積立金の増減' },
+  { no: 13, name: '基本金の増減' },
+  { no: 14, name: '10万円以上の費用' },
+  { no: 15, name: '減価償却システムの期首帳簿価格' },
+  { no: 16, name: '減価償却システムの減価償却費' },
+  { no: 17, name: '減価償却システムの期末帳簿価格' },
+  { no: 18, name: '前期末支払資金残高(予算・決算)' },
+  { no: 19, name: '人件費・事業費・事務費' },
+  { no: 20, name: '★前年度との連続性' },
+  { no: 21, name: '★期中残高 0円チェック(未収金)' },
+  { no: 22, name: '★期中残高 0円チェック(未払金)' },
+  { no: 23, name: '★１年基準科目 期中残高チェック' },
+  { no: 24, name: '★内部取引合計残高チェック' },
+  { no: 25, name: '★特定勘定科目残高チェック' },
+  { no: 26, name: '★予備費予算額チェック' },
+  { no: 27, name: '★予算額の支払資金残高率' },
+  { no: 28, name: '★小口現金出納帳残高チェック' },
+];
+
+/** 決算調査の「説明」文。既存システムから確認できたものだけ転記（他はクライアントから提供予定） */
+export const AUDIT_EXPLANATIONS: Record<number, { left: string; right: string; text: string }> = {
+  4: {
+    left: '次期繰越\n活動増減差額',
+    right: '次期繰越\n活動増減差額\n（１７）',
+    text: '事業活動計算書の「次期繰越活動増減差額(17)」の額と、貸借対照表の「次期繰越活動収支差額」が一致していることを確認します。',
+  },
+};
+
+/** 日次調査の結果に使うサンプル値（構造の確認用。実データではありません） */
+export const DAILY_AUDIT_SAMPLE = {
+  shishutsu: 17_100_000,
+  zenkiShiharai: 9_800_000,
+  shunyu: 16_000_000,
+  tokiShiharai: 8_700_000,
+  ryudoShisan: 9_150_000,
+  ryudoFusai: 700_000,
+  hikiate: 250_000,
+  koteiShisan: 39_400_000,
+  koteiFusai: 0,
+  junShisan: 7_700_000,
+  jigyoShishutsu: 15_400_000,
+  jigyoShunyu: 16_000_000,
+  zenkiKurikoshi: -8_300_000,
+  jikiKurikoshi: -7_700_000,
+};

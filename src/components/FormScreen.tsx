@@ -9,8 +9,7 @@ import { AssistPanel } from './AssistPanel';
 import { Chips } from './Chips';
 import { Menu } from './Menu';
 import { MonthChips } from './MonthChips';
-import { PlaceholderPage } from './PlaceholderPage';
-import { SingleEntryPage } from './SingleEntryPage';
+import { renderPage } from './pages';
 import { makeFormSeed } from '../data';
 import { applyMonth } from '../lib/format';
 import { useEntryForm } from '../hooks/useEntryForm';
@@ -193,10 +192,8 @@ export function FormScreen({ page, onNavigate }: Props) {
         <Menu orientation="h" accent={GREEN} active={page} onSelect={onNavigate} />
       </nav>
 
-      {page === '単一入力' ? (
-        <SingleEntryPage variant="form" accent={GREEN} accentRgb={GREEN_RGB} />
-      ) : page !== '伝票入力' ? (
-        <PlaceholderPage title={page} accent={GREEN} />
+      {page !== '伝票入力' ? (
+        renderPage(page, 'form', GREEN, GREEN_RGB, onNavigate)
       ) : (
         <>
       {/* メイン（フォームカード） */}

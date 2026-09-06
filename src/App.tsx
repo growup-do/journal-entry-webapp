@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { FormScreen } from './components/FormScreen';
 import { SheetScreen } from './components/SheetScreen';
 import { MemoLayer } from './memo/MemoLayer';
+import { SettlementAuditModal } from './components/SettlementAuditModal';
 import { DEFAULT_MENU } from './data';
 
 type Mode = 'form' | 'sheet';
@@ -19,7 +20,14 @@ const TABS: { key: Mode; label: string; hint: string; accent: string }[] = [
 export default function App() {
   const [mode, setMode] = useState<Mode>('form');
   const [page, setPage] = useState<string>(DEFAULT_MENU);
+  const [auditOpen, setAuditOpen] = useState(false);
   const screenKey = `${mode}:${page}`;
+
+  // メニュー選択：決算調査はページ遷移ではなくモーダルで開く（既存システムと同じ）
+  const selectMenu = (label: string) => {
+    if (label === '決算調査') setAuditOpen(true);
+    else setPage(label);
+  };
 
   const screenLabel = (key: string) => {
     const [m, p] = key.split(':');
@@ -80,7 +88,9 @@ export default function App() {
         })}
       </div>
 
-      {mode === 'form' ? <FormScreen page={page} onNavigate={setPage} /> : <SheetScreen page={page} onNavigate={setPage} />}
+      {mode === 'form' ? <FormScreen page={page} onNavigate={selectMenu} /> : <SheetScreen page={page} onNavigate={selectMenu} />}
+
+      <SettlementAuditModal open={auditOpen} onClose={() => setAuditOpen(false)} />
 
       <MemoLayer screenKey={screenKey} screenLabel={screenLabel} onNavigate={navigateTo} />
     </>
