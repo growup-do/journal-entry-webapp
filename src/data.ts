@@ -61,8 +61,11 @@ export const MENU: string[][] = [
   ['前年仕訳', '元帳１', '元帳２', '残高照合'],
 ];
 
-/** 現在アクティブなメニュー項目 */
-export const ACTIVE_MENU = '伝票入力';
+/** 初期表示のメニュー項目 */
+export const DEFAULT_MENU = '伝票入力';
+
+/** プロトタイプとして画面を用意しているメニュー項目 */
+export const IMPLEMENTED_MENU = ['単一入力', '伝票入力'];
 
 /** 仕訳帳シード（フォーム型・8件） */
 const SEED_FORM: Omit<JournalEntry, 'id'>[] = [
@@ -92,5 +95,14 @@ function seedToJournal(seed: Omit<JournalEntry, 'id'>[]): JournalEntry[] {
   return seed.map((e) => ({ ...e, id: id-- }));
 }
 
+/** 単一入力シード（4件・証憑/業者つき） */
+const SEED_SINGLE: Omit<JournalEntry, 'id'>[] = [
+  { date: '8/1', kari: '法定福利費', kashi: '普通預金（保育園）', tekiyo: '健康保険・厚生年金', amount: 670361, shohyo: true },
+  { date: '8/1', kari: '保育材料費', kashi: '小口現金', tekiyo: '夏祭り用品', gyosha: 'みどり商店', amount: 12529, shohyo: true },
+  { date: '8/4', kari: '現金（収入）', kashi: 'その他の利用料収益', tekiyo: '副食費ー保護者より', gyosha: '保護者', amount: 4500, shohyo: false },
+  { date: '8/5', kari: '通信運搬費', kashi: '普通預金（保育園）', tekiyo: '電話料金', gyosha: 'ＮＴＴ東日本', amount: 8936, shohyo: true },
+];
+
 export const makeFormSeed = () => seedToJournal(SEED_FORM);
+export const makeSingleSeed = () => seedToJournal(SEED_SINGLE);
 export const makeSheetSeed = () => seedToJournal(SEED_SHEET);

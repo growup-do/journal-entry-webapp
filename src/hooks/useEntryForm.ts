@@ -41,7 +41,8 @@ export interface EntryForm {
   setField: (field: keyof FormState, rawValue: string) => void;
   setTorihiki: (label: '資金' | '事業' | 'その他') => void;
   setMonth: (month: MonthFilter) => void;
-  submit: () => void;
+  /** 登録。extra で画面固有の追加項目（証憑・小切手No 等）を付与できる。 */
+  submit: (extra?: Partial<JournalEntry>) => void;
 }
 
 export function useEntryForm({ initialForm, seed, afterSubmit }: UseEntryFormOptions): EntryForm {
@@ -114,7 +115,7 @@ export function useEntryForm({ initialForm, seed, afterSubmit }: UseEntryFormOpt
 
   // 各 setState には純粋な更新関数のみを渡す（StrictModeの二重実行で重複追加しないため、
   // 採番などの副作用は updater の外＝このコールバック本体で1回だけ行う）。
-  const submit = useCallback(() => {
+  const submit = useCallback((extra?: Partial<JournalEntry>) => {
     if (!form.kariKamoku || !form.kashiKamoku || !form.amount) {
       setErr('借方科目・貸方科目・金額を入力してください。');
       return;
@@ -128,6 +129,8 @@ export function useEntryForm({ initialForm, seed, afterSubmit }: UseEntryFormOpt
       kashi: form.kashiKamoku,
       tekiyo: form.tekiyo || '',
       amount: parseInt(form.amount, 10) || 0,
+      gyosha: form.gyosha || undefined,
+      ...extra,
     };
     setJournal((arr) => [...arr, entry]);
     setLastAdded(id);

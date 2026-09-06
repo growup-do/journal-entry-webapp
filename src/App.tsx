@@ -1,20 +1,35 @@
 // 仕訳伝票入力 画面 — Webアプリ プロトタイプ
 // 2つのUI案（フォーム型 / スプレッドシート型）をフルスクリーンで切り替えて確認できる。
-// 各画面は独立した状態を持つ（採用案の意思決定用）。
+// メニューから画面（単一入力 / 伝票入力）を切り替え。各画面は独立した状態を持つ。
+// 右下の「確認メモ」でクライアントとの確認事項を画面上に貼れる（Firestore で共有）。
 
 import { useState } from 'react';
 import { FormScreen } from './components/FormScreen';
 import { SheetScreen } from './components/SheetScreen';
+import { MemoLayer } from './memo/MemoLayer';
+import { DEFAULT_MENU } from './data';
 
-type ScreenKey = 'form' | 'sheet';
+type Mode = 'form' | 'sheet';
 
-const TABS: { key: ScreenKey; label: string; hint: string; accent: string }[] = [
+const TABS: { key: Mode; label: string; hint: string; accent: string }[] = [
   { key: 'form', label: 'フォーム型', hint: '1件ずつ丁寧に入力', accent: '#1f7a52' },
   { key: 'sheet', label: 'スプレッドシート型', hint: '1行で連続入力＋検索', accent: '#2c5f9e' },
 ];
 
 export default function App() {
-  const [screen, setScreen] = useState<ScreenKey>('form');
+  const [mode, setMode] = useState<Mode>('form');
+  const [page, setPage] = useState<string>(DEFAULT_MENU);
+  const screenKey = `${mode}:${page}`;
+
+  const screenLabel = (key: string) => {
+    const [m, p] = key.split(':');
+    return `${TABS.find((t) => t.key === m)?.label ?? m}／${p ?? ''}`;
+  };
+  const navigateTo = (key: string) => {
+    const [m, p] = key.split(':');
+    if (m === 'form' || m === 'sheet') setMode(m);
+    if (p) setPage(p);
+  };
 
   return (
     <>
@@ -36,12 +51,12 @@ export default function App() {
         }}
       >
         {TABS.map((t) => {
-          const on = screen === t.key;
+          const on = mode === t.key;
           return (
             <button
               key={t.key}
               type="button"
-              onClick={() => setScreen(t.key)}
+              onClick={() => setMode(t.key)}
               title={t.hint}
               style={{
                 display: 'flex',
@@ -65,7 +80,9 @@ export default function App() {
         })}
       </div>
 
-      {screen === 'form' ? <FormScreen /> : <SheetScreen />}
+      {mode === 'form' ? <FormScreen page={page} onNavigate={setPage} /> : <SheetScreen page={page} onNavigate={setPage} />}
+
+      <MemoLayer screenKey={screenKey} screenLabel={screenLabel} onNavigate={navigateTo} />
     </>
   );
 }

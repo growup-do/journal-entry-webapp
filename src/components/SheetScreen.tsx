@@ -9,6 +9,8 @@ import { AssistPanel } from './AssistPanel';
 import { Chips } from './Chips';
 import { Menu } from './Menu';
 import { MonthChips } from './MonthChips';
+import { PlaceholderPage } from './PlaceholderPage';
+import { SingleEntryPage } from './SingleEntryPage';
 import { accountFlat, makeSheetSeed } from '../data';
 import { applyMonth, rgba } from '../lib/format';
 import { useEntryForm } from '../hooks/useEntryForm';
@@ -91,7 +93,13 @@ function applySearch(list: JournalEntry[], ap: SearchState | null): JournalEntry
   return out;
 }
 
-export function SheetScreen() {
+interface Props {
+  /** 表示中のメニュー項目（例 '伝票入力'） */
+  page: string;
+  onNavigate: (label: string) => void;
+}
+
+export function SheetScreen({ page, onNavigate }: Props) {
   const [search, setSearch] = useState<SearchState>(emptySearch);
   const [applied, setApplied] = useState<SearchState | null>(null);
 
@@ -186,7 +194,7 @@ export function SheetScreen() {
           </span>
         </div>
         <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 6px', display: 'flex', flexDirection: 'column' }}>
-          <Menu orientation="v" accent={BLUE} />
+          <Menu orientation="v" accent={BLUE} active={page} onSelect={onNavigate} />
         </nav>
         <div
           style={{
@@ -230,7 +238,7 @@ export function SheetScreen() {
             <span style={{ color: '#c3ccd4' }}>›</span>
             <span>会計帳簿</span>
             <span style={{ color: '#c3ccd4' }}>›</span>
-            <span style={{ color: '#22303c', fontWeight: 700, fontFamily: "'Zen Kaku Gothic New', sans-serif" }}>仕訳帳</span>
+            <span style={{ color: '#22303c', fontWeight: 700, fontFamily: "'Zen Kaku Gothic New', sans-serif" }}>{page === '伝票入力' ? '仕訳帳' : page}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 18, fontSize: 13, color: '#68757f' }}>
             <span>令和8年度（1/1〜12/31）</span>
@@ -255,6 +263,12 @@ export function SheetScreen() {
           </div>
         </header>
 
+        {page === '単一入力' ? (
+          <SingleEntryPage variant="sheet" accent={BLUE} accentRgb={BLUE_RGB} />
+        ) : page !== '伝票入力' ? (
+          <PlaceholderPage title={page} accent={BLUE} />
+        ) : (
+          <>
         {/* 検索パネル */}
         <div style={{ background: '#fff', borderBottom: '1px solid #dde4ea', padding: '16px 24px 18px', flex: 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 13 }}>
@@ -512,7 +526,7 @@ export function SheetScreen() {
                     }}
                   />
                 </div>
-                <button type="button" className="submit-btn" onClick={v.submit} style={submitStyle}>
+                <button type="button" className="submit-btn" onClick={() => v.submit()} style={submitStyle}>
                   登録
                 </button>
               </div>
@@ -587,6 +601,8 @@ export function SheetScreen() {
             </div>
           </div>
         </main>
+          </>
+        )}
       </div>
     </div>
   );

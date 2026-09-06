@@ -1,15 +1,17 @@
 // メニュー（横=フォーム型ナビ / 縦=スプレッドシート型サイドバー）
-// テキストのみ・グループ区切りあり。アクティブ項目のみアクセント色。
+// テキストのみ・グループ区切りあり。アクティブ項目のみアクセント色。クリックで画面遷移。
 
 import type { CSSProperties } from 'react';
-import { ACTIVE_MENU, MENU } from '../data';
+import { MENU } from '../data';
 
 interface Props {
   orientation: 'h' | 'v';
   accent: string;
+  active: string;
+  onSelect: (label: string) => void;
 }
 
-export function Menu({ orientation, accent }: Props) {
+export function Menu({ orientation, accent, active: activeLabel, onSelect }: Props) {
   const isH = orientation === 'h';
 
   return (
@@ -36,7 +38,7 @@ export function Menu({ orientation, accent }: Props) {
         return (
           <div key={gi} style={groupStyle}>
             {group.map((label) => {
-              const active = label === ACTIVE_MENU;
+              const active = label === activeLabel;
               const style: CSSProperties = isH
                 ? {
                     padding: '6px 11px',
@@ -70,6 +72,8 @@ export function Menu({ orientation, accent }: Props) {
                   type="button"
                   className={isH ? 'menu-item-h' : 'menu-item-v'}
                   style={style}
+                  onClick={() => onSelect(label)}
+                  data-menu={label}
                 >
                   {label}
                 </button>

@@ -22,6 +22,8 @@ interface Props {
   empty: boolean;
   onInput: (value: string) => void;
   onPick: (value: string) => void;
+  /** ボタン要素の id（キーボードでのフォーカス移動用・任意） */
+  buttonId?: string;
 }
 
 export function AssistField({
@@ -38,6 +40,7 @@ export function AssistField({
   empty,
   onInput,
   onPick,
+  buttonId,
 }: Props) {
   return (
     <div
@@ -50,7 +53,7 @@ export function AssistField({
       }
       data-assist
     >
-      <button type="button" className="field-btn" onClick={onOpen} style={buttonStyle}>
+      <button type="button" id={buttonId} className="field-btn" onClick={onOpen} style={buttonStyle}>
         <span
           style={{
             color: value ? '#22303c' : '#9aa5b1',

@@ -28,6 +28,7 @@ export function Chips({ current, accent, onToggle }: Props) {
               borderRadius: 20,
               cursor: 'pointer',
               fontFamily: 'inherit',
+              whiteSpace: 'nowrap',
               background: on ? accent : '#fff',
               color: on ? '#fff' : '#5b6773',
               border: '1px solid ' + (on ? accent : '#cfd8e0'),

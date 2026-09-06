@@ -30,6 +30,12 @@ export interface JournalEntry {
   kashi: string;
   tekiyo: string;
   amount: number;
+  /** 業者（任意） */
+  gyosha?: string;
+  /** 証憑 有＝true（単一入力） */
+  shohyo?: boolean;
+  /** 小切手No（単一入力・任意） */
+  cheque?: string;
 }
 
 /** 補助ドロップダウンの候補グループ */

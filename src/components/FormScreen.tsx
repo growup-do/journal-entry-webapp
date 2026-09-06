@@ -9,6 +9,8 @@ import { AssistPanel } from './AssistPanel';
 import { Chips } from './Chips';
 import { Menu } from './Menu';
 import { MonthChips } from './MonthChips';
+import { PlaceholderPage } from './PlaceholderPage';
+import { SingleEntryPage } from './SingleEntryPage';
 import { makeFormSeed } from '../data';
 import { applyMonth } from '../lib/format';
 import { useEntryForm } from '../hooks/useEntryForm';
@@ -71,7 +73,13 @@ const dateInput: CSSProperties = {
   color: '#22303c',
 };
 
-export function FormScreen() {
+interface Props {
+  /** 表示中のメニュー項目（例 '伝票入力'） */
+  page: string;
+  onNavigate: (label: string) => void;
+}
+
+export function FormScreen({ page, onNavigate }: Props) {
   const v = useEntryForm({ initialForm, seed: makeFormSeed() });
   const [collapsed, setCollapsed] = useState(false);
   const [topOffset, setTopOffset] = useState(102);
@@ -182,9 +190,15 @@ export function FormScreen() {
           alignItems: 'stretch',
         }}
       >
-        <Menu orientation="h" accent={GREEN} />
+        <Menu orientation="h" accent={GREEN} active={page} onSelect={onNavigate} />
       </nav>
 
+      {page === '単一入力' ? (
+        <SingleEntryPage variant="form" accent={GREEN} accentRgb={GREEN_RGB} />
+      ) : page !== '伝票入力' ? (
+        <PlaceholderPage title={page} accent={GREEN} />
+      ) : (
+        <>
       {/* メイン（フォームカード） */}
       <main
         style={{
@@ -482,7 +496,7 @@ export function FormScreen() {
             <div style={{ minHeight: 22 }}>
               {v.err && <span style={{ color: '#c0392b', fontSize: 12.5, fontWeight: 500 }}>{v.err}</span>}
             </div>
-            <button type="button" className="submit-btn" onClick={v.submit} style={submitStyle}>
+            <button type="button" className="submit-btn" onClick={() => v.submit()} style={submitStyle}>
               処理終了　→　仕訳帳へ登録
             </button>
           </div>
@@ -611,6 +625,8 @@ export function FormScreen() {
           })}
         </div>
       </aside>
+        </>
+      )}
     </div>
   );
 }
