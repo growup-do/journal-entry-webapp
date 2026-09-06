@@ -16,7 +16,16 @@ export function Menu({ orientation, accent }: Props) {
     <>
       {MENU.map((group, gi) => {
         const groupStyle: CSSProperties = isH
-          ? { display: 'flex', gap: 1, flex: 'none', marginLeft: gi === 0 ? 0 : 16 }
+          ? {
+              display: 'flex',
+              gap: 1,
+              flex: 'none',
+              // グループ間の区切り線（縦型サイドバーと同じ色・同等の余白）
+              marginLeft: gi === 0 ? 0 : 8,
+              paddingLeft: gi === 0 ? 0 : 8,
+              borderLeft: gi === 0 ? 'none' : '1px solid #dde3e9',
+              alignSelf: 'stretch',
+            }
           : {
               display: 'flex',
               flexDirection: 'column',
