@@ -8,6 +8,7 @@ import { AssistField } from './AssistField';
 import { AssistPanel } from './AssistPanel';
 import { Chips } from './Chips';
 import { CorpMenu } from './CorpMenu';
+import { VersionBadge } from './VersionBadge';
 import { Menu } from './Menu';
 import { MonthChips } from './MonthChips';
 import { renderPage } from './pages';
@@ -149,6 +150,7 @@ export function FormScreen({ page, onNavigate }: Props) {
             <span style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 15.5 }}>
               会計基準システム
             </span>
+            <VersionBadge accent={GREEN} />
           </div>
           <span style={{ color: '#c3ccd4' }}>｜</span>
           <div

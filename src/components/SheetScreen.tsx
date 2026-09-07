@@ -8,6 +8,7 @@ import { AssistField } from './AssistField';
 import { AssistPanel } from './AssistPanel';
 import { Chips } from './Chips';
 import { CorpMenu } from './CorpMenu';
+import { VersionBadge } from './VersionBadge';
 import { Menu } from './Menu';
 import { MonthChips } from './MonthChips';
 import { renderPage } from './pages';
@@ -192,6 +193,9 @@ export function SheetScreen({ page, onNavigate }: Props) {
             <br />
             システム
           </span>
+        </div>
+        <div style={{ padding: '8px 16px 0' }}>
+          <VersionBadge accent={BLUE} />
         </div>
         <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 6px', display: 'flex', flexDirection: 'column' }}>
           <Menu orientation="v" accent={BLUE} active={page} onSelect={onNavigate} />
