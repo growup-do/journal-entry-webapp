@@ -43,7 +43,9 @@ export function seededSeries(key: string, months: number, base: number): number[
   const out: number[] = [];
   for (let i = 0; i < months; i++) {
     h = (Math.imul(h, 1103515245) + 12345) >>> 0;
-    out.push(Math.round(base * (0.6 + ((h >>> 8) % 1000) / 1250) / 100) * 100);
+    const raw = base * (0.6 + ((h >>> 8) % 1000) / 1250);
+    // 大きな値は100単位、小さな値（比率など）は小数1桁に丸める
+    out.push(base >= 1000 ? Math.round(raw / 100) * 100 : Math.round(raw * 10) / 10);
   }
   return out;
 }
