@@ -3,6 +3,8 @@
 
 import { BudgetComparePage } from './BudgetComparePage';
 import { DailyAuditPage } from './DailyAuditPage';
+import { GraphPage } from './GraphPage';
+import { SufficiencyPage } from './SufficiencyPage';
 import { JournalListPage } from './JournalListPage';
 import { LedgerPage } from './LedgerPage';
 import { TrendPage } from './TrendPage';
@@ -39,6 +41,12 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
       return <TrialBalancePage mode="trial" variant={variant} accent={accent} onNavigate={onNavigate} />;
     case '月次決算':
       return <TrialBalancePage mode="closing" variant={variant} accent={accent} onNavigate={onNavigate} />;
+    case '経年グラフ':
+      return <GraphPage key="yearly" mode="yearly" variant={variant} accent={accent} onNavigate={onNavigate} />;
+    case '分析グラフ':
+      return <GraphPage key="analysis" mode="analysis" variant={variant} accent={accent} onNavigate={onNavigate} />;
+    case '充実残額':
+      return <SufficiencyPage variant={variant} accent={accent} onNavigate={onNavigate} />;
     case '予算対比':
       return <BudgetComparePage variant={variant} accent={accent} onNavigate={onNavigate} />;
     default:
