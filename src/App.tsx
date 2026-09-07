@@ -8,6 +8,7 @@ import { FormScreen } from './components/FormScreen';
 import { SheetScreen } from './components/SheetScreen';
 import { MemoLayer } from './memo/MemoLayer';
 import { SettlementAuditModal } from './components/SettlementAuditModal';
+import { JournalCountModal } from './components/JournalCountModal';
 import { DEFAULT_MENU } from './data';
 
 type Mode = 'form' | 'sheet';
@@ -21,11 +22,13 @@ export default function App() {
   const [mode, setMode] = useState<Mode>('form');
   const [page, setPage] = useState<string>(DEFAULT_MENU);
   const [auditOpen, setAuditOpen] = useState(false);
+  const [countOpen, setCountOpen] = useState(false);
   const screenKey = `${mode}:${page}`;
 
   // メニュー選択：決算調査はページ遷移ではなくモーダルで開く（既存システムと同じ）
   const selectMenu = (label: string) => {
     if (label === '決算調査') setAuditOpen(true);
+    else if (label === '仕訳数') setCountOpen(true);
     else setPage(label);
   };
 
@@ -91,6 +94,7 @@ export default function App() {
       {mode === 'form' ? <FormScreen page={page} onNavigate={selectMenu} /> : <SheetScreen page={page} onNavigate={selectMenu} />}
 
       <SettlementAuditModal open={auditOpen} onClose={() => setAuditOpen(false)} />
+      <JournalCountModal open={countOpen} onClose={() => setCountOpen(false)} />
 
       <MemoLayer screenKey={screenKey} screenLabel={screenLabel} onNavigate={navigateTo} />
     </>

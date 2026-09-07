@@ -35,10 +35,15 @@ interface Props {
   variant: 'form' | 'sheet';
   accent: string;
   accentRgb: string;
+  /** 振替単一：1行のみ・注意ダイアログなし */
+  single?: boolean;
 }
 
-export function TransferEntryPage({ variant, accent, accentRgb }: Props) {
+export function TransferEntryPage({ variant, accent, accentRgb, single }: Props) {
+  const rowCount = single ? 1 : ROW_COUNT;
+  const title = single ? '振替単一' : '振替伝票';
   const [alertOpen, setAlertOpen] = useState(() => {
+    if (single) return false;
     try {
       return localStorage.getItem(ALERT_KEY) !== '1';
     } catch {
@@ -49,7 +54,7 @@ export function TransferEntryPage({ variant, accent, accentRgb }: Props) {
   const [service, setService] = useState('001 本部');
   const [month, setMonth] = useState('8');
   const [day, setDay] = useState('5');
-  const [rows, setRows] = useState<Row[]>(() => Array.from({ length: ROW_COUNT }, emptyRow));
+  const [rows, setRows] = useState<Row[]>(() => Array.from({ length: rowCount }, emptyRow));
   const [shohyo, setShohyo] = useState(true);
   const [cheque, setCheque] = useState('');
   const [err, setErr] = useState('');
@@ -100,11 +105,11 @@ export function TransferEntryPage({ variant, accent, accentRgb }: Props) {
     });
     setJournal((j) => [...j, ...entries]);
     setLastIds(ids);
-    setRows(Array.from({ length: ROW_COUNT }, emptyRow));
+    setRows(Array.from({ length: rowCount }, emptyRow));
     setCheque('');
     setErr('');
     setMonthFilter((mf) => (mf != null && mf !== month ? month : mf));
-    toast.show(`振替伝票を登録しました（${entries.length}行）`);
+    toast.show(`${title}を登録しました（${entries.length}行）`);
     setTimeout(() => {
       const el = document.getElementById('journal-scroll');
       if (el) el.scrollTop = el.scrollHeight;
@@ -189,9 +194,9 @@ export function TransferEntryPage({ variant, accent, accentRgb }: Props) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 20, padding: '18px 22px 14px', borderBottom: '2px solid #28323c', flexWrap: 'wrap' }}>
             <div>
               <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21, letterSpacing: '.04em' }}>
-                振替伝票 <span style={{ fontSize: 12.5, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>チャイルド保育園　拠点区分</span>
+                {title} <span style={{ fontSize: 12.5, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>チャイルド保育園　拠点区分</span>
               </div>
-              <div style={{ color: '#7a8794', fontSize: 12, marginTop: 4 }}>1伝票に最大{ROW_COUNT}行。借方合計と貸方合計が一致すると登録できます。</div>
+              <div style={{ color: '#7a8794', fontSize: 12, marginTop: 4 }}>{single ? '1行の振替伝票です（内部取引にも使えます）。' : `1伝票に最大${ROW_COUNT}行。`}借方合計と貸方合計が一致すると登録できます。</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, flex: 'none' }}>
               <div style={{ width: 170 }}>
@@ -271,7 +276,7 @@ export function TransferEntryPage({ variant, accent, accentRgb }: Props) {
               区分選択
             </button>
             <button type="button" className="submit-btn" onClick={submit} style={{ padding: '9px 28px', background: accent, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', boxShadow: `0 3px 12px rgba(${accentRgb},.24)` }}>
-              振替伝票を登録
+              {title}を登録
             </button>
           </div>
         </div>

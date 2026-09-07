@@ -1,7 +1,12 @@
 // メニュー項目 → ページ部品の振り分け（フォーム型／スプレッドシート型の両シェルから共用）
 // 伝票入力は各シェル固有のレイアウトなので、ここでは扱わない。
 
+import { BudgetComparePage } from './BudgetComparePage';
 import { DailyAuditPage } from './DailyAuditPage';
+import { JournalListPage } from './JournalListPage';
+import { LedgerPage } from './LedgerPage';
+import { TrendPage } from './TrendPage';
+import { TrialBalancePage } from './TrialBalancePage';
 import { PlaceholderPage } from './PlaceholderPage';
 import { SingleEntryPage } from './SingleEntryPage';
 import { TransferEntryPage } from './TransferEntryPage';
@@ -12,8 +17,30 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
       return <SingleEntryPage variant={variant} accent={accent} accentRgb={accentRgb} />;
     case '振替入力':
       return <TransferEntryPage variant={variant} accent={accent} accentRgb={accentRgb} />;
+    case '振替単一':
+      return <TransferEntryPage variant={variant} accent={accent} accentRgb={accentRgb} single />;
     case '日次調査':
       return <DailyAuditPage variant={variant} accent={accent} onNavigate={onNavigate} />;
+    case '仕訳一覧':
+      return <JournalListPage variant={variant} accent={accent} onNavigate={onNavigate} />;
+    case '勘定元帳':
+      return <LedgerPage kind="account" variant={variant} accent={accent} accentRgb={accentRgb} onNavigate={onNavigate} />;
+    case '資金元帳':
+      return <LedgerPage kind="fund" variant={variant} accent={accent} accentRgb={accentRgb} onNavigate={onNavigate} />;
+    case '業者元帳':
+      return <LedgerPage kind="vendor" variant={variant} accent={accent} accentRgb={accentRgb} onNavigate={onNavigate} />;
+    case '科目推移':
+      return <TrendPage kind="account" variant={variant} accent={accent} accentRgb={accentRgb} onNavigate={onNavigate} />;
+    case '資金推移':
+      return <TrendPage kind="fund" variant={variant} accent={accent} accentRgb={accentRgb} onNavigate={onNavigate} />;
+    case '業者推移':
+      return <TrendPage kind="vendor" variant={variant} accent={accent} accentRgb={accentRgb} onNavigate={onNavigate} />;
+    case '月次試算':
+      return <TrialBalancePage mode="trial" variant={variant} accent={accent} onNavigate={onNavigate} />;
+    case '月次決算':
+      return <TrialBalancePage mode="closing" variant={variant} accent={accent} onNavigate={onNavigate} />;
+    case '予算対比':
+      return <BudgetComparePage variant={variant} accent={accent} onNavigate={onNavigate} />;
     default:
       return <PlaceholderPage title={page} accent={accent} />;
   }
