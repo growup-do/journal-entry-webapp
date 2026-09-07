@@ -7,6 +7,7 @@ import type { CSSProperties } from 'react';
 import { AssistField } from './AssistField';
 import { AssistPanel } from './AssistPanel';
 import { Chips } from './Chips';
+import { CorpMenu } from './CorpMenu';
 import { Menu } from './Menu';
 import { MonthChips } from './MonthChips';
 import { renderPage } from './pages';
@@ -240,6 +241,7 @@ export function SheetScreen({ page, onNavigate }: Props) {
             <span style={{ color: '#22303c', fontWeight: 700, fontFamily: "'Zen Kaku Gothic New', sans-serif" }}>{page === '伝票入力' ? '仕訳帳' : page}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 18, fontSize: 13, color: '#68757f' }}>
+            <CorpMenu accent={BLUE} active={page} onSelect={onNavigate} />
             <span>令和8年度（1/1〜12/31）</span>
             <span style={{ color: '#c3ccd4' }}>｜</span>
             <span>チャイルド保育園　拠点区分</span>

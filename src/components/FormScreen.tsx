@@ -7,6 +7,7 @@ import type { CSSProperties } from 'react';
 import { AssistField } from './AssistField';
 import { AssistPanel } from './AssistPanel';
 import { Chips } from './Chips';
+import { CorpMenu } from './CorpMenu';
 import { Menu } from './Menu';
 import { MonthChips } from './MonthChips';
 import { renderPage } from './pages';
@@ -169,6 +170,7 @@ export function FormScreen({ page, onNavigate }: Props) {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 18, fontSize: 13, color: '#68757f' }}>
+          <CorpMenu accent={GREEN} active={page} onSelect={onNavigate} />
           <span>
             会計期間　<b style={{ color: '#22303c', fontWeight: 600 }}>令和8年度</b>
           </span>

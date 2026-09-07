@@ -65,6 +65,9 @@ export const MENU: string[][] = [
 export const OPTION_MENU = ['小口現金', '減価償却', '預金出納', '収入支出'];
 export const isOptionMenu = (label: string) => OPTION_MENU.includes(label);
 
+/** 法人メニュー（通常メニューと別枠でアプリバーに配置） */
+export const CORP_MENU = ['法人調査', '法人印刷'];
+
 /** 初期表示のメニュー項目 */
 export const DEFAULT_MENU = '伝票入力';
 
