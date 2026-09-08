@@ -27,7 +27,8 @@ export default function App() {
 
   // メニュー選択：決算調査はページ遷移ではなくモーダルで開く（既存システムと同じ）
   const selectMenu = (label: string) => {
-    if (label === '決算調査') setAuditOpen(true);
+    // 法人調査は決算調査と同じ内容（右上ボタンの要否は確認メモで確認中）
+    if (label === '決算調査' || label === '法人調査') setAuditOpen(true);
     else if (label === '仕訳数') setCountOpen(true);
     else setPage(label);
   };
