@@ -157,3 +157,11 @@ a:hover {
   color: #1f7a52;
   border-color: #1f7a52;
 }
+
+/* 大メニュー配下の項目 */
+.menu-sub {
+  transition: background 0.1s;
+}
+.menu-sub:hover {
+  background: #f4f6f8;
+}

@@ -46,18 +46,28 @@ export function accountFlat(): string[] {
   return a;
 }
 
-/** サイドメニュー / ナビの項目（11グループ） */
-export const MENU: string[][] = [
-  ['単一入力', '伝票入力', '振替入力', '振替単一'],
-  ['仕訳一覧', '勘定元帳', '資金元帳', '業者元帳'],
-  ['科目推移', '資金推移', '業者推移'],
-  ['月次試算', '予算対比', '月次決算'],
-  ['仕訳数'],
-  ['日次調査', '決算調査'],
-  ['小口現金', '減価償却', '預金出納', '収入支出'], // オプションメニュー
-  ['経年グラフ', '分析グラフ', '充実残額'],
+/** 大メニュー（カテゴリ）とその配下の項目。既存メニューを Screenshots フォルダの分類に合わせて7つにまとめた */
+export interface MenuGroup {
+  key: string;
+  label: string;
+  /** アイコン種別（Menu.tsx で描画） */
+  icon: 'input' | 'ledger' | 'trend' | 'compare' | 'audit' | 'option' | 'graph';
+  items: string[];
+  option?: boolean;
+}
+export const MENU_GROUPS: MenuGroup[] = [
+  { key: 'input', label: '入力', icon: 'input', items: ['単一入力', '伝票入力', '振替入力', '振替単一'] },
+  { key: 'ledger', label: '仕訳・元帳', icon: 'ledger', items: ['仕訳一覧', '勘定元帳', '資金元帳', '業者元帳'] },
+  { key: 'trend', label: '推移', icon: 'trend', items: ['科目推移', '資金推移', '業者推移'] },
+  { key: 'compare', label: '試算・対比', icon: 'compare', items: ['月次試算', '予算対比', '月次決算'] },
+  { key: 'audit', label: '調査', icon: 'audit', items: ['仕訳数', '日次調査', '決算調査'] },
+  { key: 'option', label: 'オプション', icon: 'option', items: ['小口現金', '減価償却', '預金出納', '収入支出'], option: true },
+  { key: 'graph', label: 'グラフ', icon: 'graph', items: ['経年グラフ', '分析グラフ', '充実残額'] },
 ];
-// ※ 当年仕訳／前年仕訳／元帳１／元帳２／残高照合 はアプリバー右側（HeaderTools）に移動
+/** 互換用：フラットなグループ配列 */
+export const MENU: string[][] = MENU_GROUPS.map((g) => g.items);
+/** 項目 → 所属カテゴリ */
+export const groupOf = (label: string) => MENU_GROUPS.find((g) => g.items.includes(label));
 
 /** オプション契約の機能（メニュー上で色分け表示） */
 export const OPTION_MENU = ['小口現金', '減価償却', '預金出納', '収入支出'];

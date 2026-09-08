@@ -192,11 +192,13 @@ export function FormScreen({ page, onNavigate, year, onYear, drawer, onDrawer }:
         style={{
           background: '#fff',
           borderBottom: '1px solid #eef2f5',
-          padding: '3px 24px',
+          padding: '3px 20px',
           display: 'flex',
-          flexWrap: 'nowrap',
-          overflowX: 'auto',
+          flexWrap: 'wrap',
+          overflow: 'visible',
           alignItems: 'stretch',
+          position: 'relative',
+          zIndex: 99,
         }}
       >
         <Menu orientation="h" accent={GREEN} active={page} onSelect={onNavigate} />
