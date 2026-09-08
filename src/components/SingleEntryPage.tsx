@@ -11,6 +11,7 @@ import { AssistPanel } from './AssistPanel';
 import { Chips } from './Chips';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { NOT_IMPL, ToastView, useToast } from './Toast';
+import { PrevYearJournal } from './PrevYearJournal';
 import { makeSingleSeed } from '../data';
 import { useEntryForm } from '../hooks/useEntryForm';
 import { applyMonth } from '../lib/format';
@@ -69,9 +70,11 @@ interface Props {
   variant: 'form' | 'sheet';
   accent: string;
   accentRgb: string;
+  /** ヘッダーで「前年仕訳」を選んだとき：一覧を前年仕訳（閲覧のみ）に差し替え、入力行は隠す */
+  prevYear?: boolean;
 }
 
-export function SingleEntryPage({ variant, accent, accentRgb }: Props) {
+export function SingleEntryPage({ variant, accent, accentRgb, prevYear }: Props) {
   const [shohyo, setShohyo] = useState(true);
   const [cheque, setCheque] = useState('');
   const toast = useToast();
@@ -226,6 +229,10 @@ export function SingleEntryPage({ variant, accent, accentRgb }: Props) {
           </div>
         </div>
 
+        {prevYear ? (
+          <PrevYearJournal accent={accent} />
+        ) : (
+        <>
         {/* 会計月タブ（既存の 4〜3・決 ボタン） */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 22px', borderBottom: '1px solid #eef2f5' }}>
           <span style={{ fontSize: 11, color: '#8895a3', fontWeight: 700, flex: 'none' }}>表示月</span>
@@ -445,6 +452,8 @@ export function SingleEntryPage({ variant, accent, accentRgb }: Props) {
             <span style={{ marginLeft: 'auto', color: '#c0392b', fontSize: 12.5, fontWeight: 500 }}>{v.err}</span>
           </div>
         </div>
+        </>
+        )}
       </div>
     </main>
   );

@@ -11,8 +11,8 @@ interface Props {
 
 export function CorpMenu({ accent, active, onSelect }: Props) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: 3, background: '#f4f6f8', border: '1px solid #e2e8ee', borderRadius: 9 }}>
-      <span style={{ fontSize: 10, fontWeight: 700, color: '#8290a0', padding: '0 6px 0 5px', letterSpacing: '.04em' }}>法人</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 2, background: '#f4f6f8', border: '1px solid #e2e8ee', borderRadius: 8, flex: 'none' }}>
+      <span style={{ fontSize: 9.5, fontWeight: 700, color: '#8290a0', padding: '0 4px', letterSpacing: '.02em' }}>法人</span>
       {CORP_MENU.map((label) => {
         const on = active === label;
         return (
@@ -23,13 +23,14 @@ export function CorpMenu({ accent, active, onSelect }: Props) {
             onClick={() => onSelect(label)}
             data-menu={label}
             style={{
-              padding: '5px 11px',
-              borderRadius: 7,
+              padding: '4px 8px',
+              borderRadius: 6,
               border: '1px solid ' + (on ? accent : '#d3dbe3'),
               background: on ? accent : '#fff',
               color: on ? '#fff' : '#3d4a56',
-              fontSize: 12,
+              fontSize: 11.5,
               fontWeight: 700,
+              lineHeight: 1.3,
               fontFamily: 'inherit',
               cursor: 'pointer',
               whiteSpace: 'nowrap',

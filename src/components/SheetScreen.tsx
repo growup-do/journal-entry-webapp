@@ -7,7 +7,8 @@ import type { CSSProperties } from 'react';
 import { AssistField } from './AssistField';
 import { AssistPanel } from './AssistPanel';
 import { Chips } from './Chips';
-import { CorpMenu } from './CorpMenu';
+import { HeaderTools, type DrawerKind, type JournalYear } from './HeaderTools';
+import { PrevYearJournal } from './PrevYearJournal';
 import { VersionBadge } from './VersionBadge';
 import { Menu } from './Menu';
 import { MonthChips } from './MonthChips';
@@ -98,9 +99,13 @@ interface Props {
   /** 表示中のメニュー項目（例 '伝票入力'） */
   page: string;
   onNavigate: (label: string) => void;
+  year: JournalYear;
+  onYear: (y: JournalYear) => void;
+  drawer: DrawerKind;
+  onDrawer: (d: DrawerKind) => void;
 }
 
-export function SheetScreen({ page, onNavigate }: Props) {
+export function SheetScreen({ page, onNavigate, year, onYear, drawer, onDrawer }: Props) {
   const [search, setSearch] = useState<SearchState>(emptySearch);
   const [applied, setApplied] = useState<SearchState | null>(null);
 
@@ -237,18 +242,18 @@ export function SheetScreen({ page, onNavigate }: Props) {
             flex: 'none',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, color: '#8895a3' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, color: '#8895a3', minWidth: 0, flex: 1, overflow: 'hidden', whiteSpace: 'nowrap' }}>
             <span>ホーム</span>
             <span style={{ color: '#c3ccd4' }}>›</span>
             <span>会計帳簿</span>
             <span style={{ color: '#c3ccd4' }}>›</span>
             <span style={{ color: '#22303c', fontWeight: 700, fontFamily: "'Zen Kaku Gothic New', sans-serif" }}>{page === '伝票入力' ? '仕訳帳' : page}</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 18, fontSize: 13, color: '#68757f' }}>
-            <CorpMenu accent={BLUE} active={page} onSelect={onNavigate} />
-            <span>令和8年度（1/1〜12/31）</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12.5, color: '#68757f', flex: 'none', marginLeft: 12 }}>
+            <HeaderTools accent={BLUE} page={page} onNavigate={onNavigate} year={year} onYear={onYear} drawer={drawer} onDrawer={onDrawer} />
+            <span style={{ whiteSpace: 'nowrap' }}>令和8年度</span>
             <span style={{ color: '#c3ccd4' }}>｜</span>
-            <span>チャイルド保育園　拠点区分</span>
+            <span style={{ whiteSpace: 'nowrap' }}>チャイルド保育園　拠点区分</span>
             <span
               style={{
                 display: 'inline-flex',
@@ -269,7 +274,7 @@ export function SheetScreen({ page, onNavigate }: Props) {
         </header>
 
         {page !== '伝票入力' ? (
-          renderPage(page, 'sheet', BLUE, BLUE_RGB, onNavigate)
+          renderPage(page, 'sheet', BLUE, BLUE_RGB, onNavigate, year)
         ) : (
           <>
         {/* 検索パネル */}
@@ -538,6 +543,10 @@ export function SheetScreen({ page, onNavigate }: Props) {
               </div>
             </div>
 
+            {year === 'prev' ? (
+              <PrevYearJournal accent={BLUE} />
+            ) : (
+            <>
             {/* 月フィルター + 件数 */}
             <div style={{ padding: '10px 22px', borderBottom: '1px solid #eef2f5', display: 'flex', alignItems: 'center', gap: 12, flex: 'none' }}>
               <span style={{ fontSize: 11, color: '#8895a3', fontWeight: 600, flex: 'none' }}>表示月</span>
@@ -602,6 +611,8 @@ export function SheetScreen({ page, onNavigate }: Props) {
                 );
               })}
             </div>
+            </>
+            )}
           </div>
         </main>
           </>

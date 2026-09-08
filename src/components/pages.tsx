@@ -13,10 +13,10 @@ import { PlaceholderPage } from './PlaceholderPage';
 import { SingleEntryPage } from './SingleEntryPage';
 import { TransferEntryPage } from './TransferEntryPage';
 
-export function renderPage(page: string, variant: 'form' | 'sheet', accent: string, accentRgb: string, onNavigate: (label: string) => void) {
+export function renderPage(page: string, variant: 'form' | 'sheet', accent: string, accentRgb: string, onNavigate: (label: string) => void, year: 'current' | 'prev' = 'current') {
   switch (page) {
     case '単一入力':
-      return <SingleEntryPage variant={variant} accent={accent} accentRgb={accentRgb} />;
+      return <SingleEntryPage variant={variant} accent={accent} accentRgb={accentRgb} prevYear={year === 'prev'} />;
     case '振替入力':
       return <TransferEntryPage variant={variant} accent={accent} accentRgb={accentRgb} />;
     case '振替単一':

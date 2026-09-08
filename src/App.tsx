@@ -9,6 +9,9 @@ import { SheetScreen } from './components/SheetScreen';
 import { MemoLayer } from './memo/MemoLayer';
 import { SettlementAuditModal } from './components/SettlementAuditModal';
 import { JournalCountModal } from './components/JournalCountModal';
+import { CorporatePrintModal } from './components/CorporatePrintModal';
+import { DRAWER_W, RightDrawer } from './components/RightDrawer';
+import type { DrawerKind, JournalYear } from './components/HeaderTools';
 import { DEFAULT_MENU } from './data';
 
 type Mode = 'form' | 'sheet';
@@ -23,6 +26,10 @@ export default function App() {
   const [page, setPage] = useState<string>(DEFAULT_MENU);
   const [auditOpen, setAuditOpen] = useState(false);
   const [countOpen, setCountOpen] = useState(false);
+  const [corpPrintOpen, setCorpPrintOpen] = useState(false);
+  // 仕訳の年（当年／前年）と右ドロワー（元帳１／元帳２／残高照合）はアプリ全体で共有
+  const [year, setYear] = useState<JournalYear>('current');
+  const [drawer, setDrawer] = useState<DrawerKind>(null);
   const screenKey = `${mode}:${page}`;
 
   // メニュー選択：決算調査はページ遷移ではなくモーダルで開く（既存システムと同じ）
@@ -30,6 +37,7 @@ export default function App() {
     // 法人調査は決算調査と同じ内容（右上ボタンの要否は確認メモで確認中）
     if (label === '決算調査' || label === '法人調査') setAuditOpen(true);
     else if (label === '仕訳数') setCountOpen(true);
+    else if (label === '法人印刷') setCorpPrintOpen(true);
     else setPage(label);
   };
 
@@ -92,7 +100,15 @@ export default function App() {
         })}
       </div>
 
-      {mode === 'form' ? <FormScreen page={page} onNavigate={selectMenu} /> : <SheetScreen page={page} onNavigate={selectMenu} />}
+      <div style={{ paddingRight: drawer ? DRAWER_W : 0, transition: 'padding-right .2s' }}>
+        {mode === 'form' ? (
+          <FormScreen page={page} onNavigate={selectMenu} year={year} onYear={setYear} drawer={drawer} onDrawer={setDrawer} />
+        ) : (
+          <SheetScreen page={page} onNavigate={selectMenu} year={year} onYear={setYear} drawer={drawer} onDrawer={setDrawer} />
+        )}
+      </div>
+      {drawer && <RightDrawer kind={drawer} accent={TABS.find((t) => t.key === mode)!.accent} accentRgb={mode === 'form' ? '31,122,82' : '44,95,158'} onClose={() => setDrawer(null)} />}
+      <CorporatePrintModal open={corpPrintOpen} onClose={() => setCorpPrintOpen(false)} />
 
       <SettlementAuditModal open={auditOpen} onClose={() => setAuditOpen(false)} />
       <JournalCountModal open={countOpen} onClose={() => setCountOpen(false)} />

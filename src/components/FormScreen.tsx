@@ -7,7 +7,8 @@ import type { CSSProperties } from 'react';
 import { AssistField } from './AssistField';
 import { AssistPanel } from './AssistPanel';
 import { Chips } from './Chips';
-import { CorpMenu } from './CorpMenu';
+import { HeaderTools, type DrawerKind, type JournalYear } from './HeaderTools';
+import { PrevYearJournal } from './PrevYearJournal';
 import { VersionBadge } from './VersionBadge';
 import { Menu } from './Menu';
 import { MonthChips } from './MonthChips';
@@ -78,9 +79,13 @@ interface Props {
   /** 表示中のメニュー項目（例 '伝票入力'） */
   page: string;
   onNavigate: (label: string) => void;
+  year: JournalYear;
+  onYear: (y: JournalYear) => void;
+  drawer: DrawerKind;
+  onDrawer: (d: DrawerKind) => void;
 }
 
-export function FormScreen({ page, onNavigate }: Props) {
+export function FormScreen({ page, onNavigate, year, onYear, drawer, onDrawer }: Props) {
   const v = useEntryForm({ initialForm, seed: makeFormSeed() });
   const [collapsed, setCollapsed] = useState(false);
   const [topOffset, setTopOffset] = useState(102);
@@ -108,6 +113,7 @@ export function FormScreen({ page, onNavigate }: Props) {
 
   const rows = applyMonth(v.journal, v.monthFilter);
   const f = v.form;
+  const hidden = collapsed || !!drawer;
 
   const submitStyle: CSSProperties = {
     display: 'inline-flex',
@@ -144,10 +150,10 @@ export function FormScreen({ page, onNavigate }: Props) {
           padding: '0 26px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 'none' }}>
             <span style={logoStyle(GREEN, 28, 15)}>会</span>
-            <span style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 15.5 }}>
+            <span style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 15.5, whiteSpace: 'nowrap' }}>
               会計基準システム
             </span>
             <VersionBadge accent={GREEN} />
@@ -171,9 +177,9 @@ export function FormScreen({ page, onNavigate }: Props) {
             <span style={{ color: '#22303c', fontWeight: 500 }}>拠点区分</span>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 18, fontSize: 13, color: '#68757f' }}>
-          <CorpMenu accent={GREEN} active={page} onSelect={onNavigate} />
-          <span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12.5, color: '#68757f', flex: 'none', marginLeft: 12 }}>
+          <HeaderTools accent={GREEN} page={page} onNavigate={onNavigate} year={year} onYear={onYear} drawer={drawer} onDrawer={onDrawer} />
+          <span style={{ whiteSpace: 'nowrap' }}>
             会計期間　<b style={{ color: '#22303c', fontWeight: 600 }}>令和8年度</b>
           </span>
           <span style={avatarStyle('#eef4f0', GREEN)}>経</span>
@@ -197,7 +203,7 @@ export function FormScreen({ page, onNavigate }: Props) {
       </nav>
 
       {page !== '伝票入力' ? (
-        renderPage(page, 'form', GREEN, GREEN_RGB, onNavigate)
+        renderPage(page, 'form', GREEN, GREEN_RGB, onNavigate, year)
       ) : (
         <>
       {/* メイン（フォームカード） */}
@@ -205,7 +211,7 @@ export function FormScreen({ page, onNavigate }: Props) {
         style={{
           flex: 1,
           padding: 28,
-          paddingRight: collapsed ? 28 : JOURNAL_W + 28,
+          paddingRight: hidden ? 28 : JOURNAL_W + 28,
           display: 'flex',
           gap: 24,
           alignItems: 'flex-start',
@@ -505,7 +511,7 @@ export function FormScreen({ page, onNavigate }: Props) {
       </main>
 
       {/* 折りたたみトグル */}
-      <button
+      {!drawer && <button
         type="button"
         className="collapse-toggle"
         onClick={() => setCollapsed((c) => !c)}
@@ -530,7 +536,7 @@ export function FormScreen({ page, onNavigate }: Props) {
         }}
       >
         {collapsed ? '◀' : '▶'}
-      </button>
+      </button>}
 
       {/* 仕訳帳（右端固定） */}
       <aside
@@ -547,9 +553,13 @@ export function FormScreen({ page, onNavigate }: Props) {
           flexDirection: 'column',
           zIndex: 90,
           transition: 'transform .28s ease',
-          transform: collapsed ? `translateX(${JOURNAL_W}px)` : 'translateX(0)',
+          transform: hidden ? `translateX(${JOURNAL_W}px)` : 'translateX(0)',
         }}
       >
+        {year === 'prev' ? (
+          <PrevYearJournal accent={GREEN} compact />
+        ) : (
+        <>
         <div style={{ padding: '15px 18px 13px', borderBottom: '1px solid #eef2f5', flex: 'none' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 11 }}>
             <span style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16.5 }}>
@@ -625,6 +635,8 @@ export function FormScreen({ page, onNavigate }: Props) {
             );
           })}
         </div>
+        </>
+        )}
       </aside>
         </>
       )}
