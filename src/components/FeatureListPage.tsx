@@ -3,8 +3,18 @@
 
 import { useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { FEATURE_GROUPS, type FeatureStatus } from '../features';
+import { FEATURE_GROUPS, type FeatureScreen, type FeatureStatus } from '../features';
 import { backToApp } from './Footer';
+
+/** 画面カードの「画面を開く」：アプリ内の画面は ?open=画面名（＋mode／year）で開く。静的ページは ?page=…。 */
+const openLink = (l: NonNullable<FeatureScreen['link']>) => {
+  if (l.url) { window.location.assign(window.location.pathname + l.url); return; }
+  const q = new URLSearchParams();
+  q.set('open', l.page ?? 'ホーム');
+  if (l.mode) q.set('mode', l.mode);
+  if (l.year) q.set('year', l.year);
+  window.location.assign(window.location.pathname + '?' + q.toString());
+};
 
 const STATUS: Record<FeatureStatus, { bg: string; fg: string }> = { 作成済: { bg: '#eaf5ef', fg: '#1f7a52' }, 叩き台: { bg: '#fff1b8', fg: '#8a6d00' }, 未作成: { bg: '#f1f4f6', fg: '#7a8794' } };
 
@@ -29,7 +39,7 @@ export function FeatureListPage() {
       {/* ヘッダー */}
       <header className="no-print" style={{ position: 'sticky', top: 0, zIndex: 10, background: '#fff', borderBottom: '1px solid #dde4ea', padding: '12px 28px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, background: '#1f7a52', color: '#fff', borderRadius: 8, fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700 }}>会</span>
-        <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 17 }}>会計基準システム　機能一覧</div>
+        <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 17 }}>会計基準システム　機能一覧（サイトマップ）</div>
         <span style={{ fontSize: 12, color: '#7a8794' }}>Web版プロトタイプ　{new Date().toLocaleDateString('ja-JP')} 時点</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="画面名・機能で検索" style={{ width: 240, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 12.5, fontFamily: 'inherit', outline: 'none' }} />
@@ -69,6 +79,11 @@ export function FeatureListPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                     <div style={{ fontWeight: 700, fontSize: 14.5, flex: 1 }}>{s.name}</div>
                     <span style={badge(s.status)}>{s.status}</span>
+                    {s.link && (
+                      <button type="button" className="no-print" data-open={s.name} onClick={() => openLink(s.link!)} title="この画面を開く" style={{ padding: '3px 9px', border: '1px solid #cfd8e0', borderRadius: 7, background: '#fff', color: '#1f7a52', fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        画面を開く →
+                      </button>
+                    )}
                   </div>
                   <div style={{ fontSize: 12.5, color: '#5b6773', lineHeight: 1.6, marginBottom: 8 }}>{s.summary}</div>
                   <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, lineHeight: 1.75, color: '#22303c' }}>

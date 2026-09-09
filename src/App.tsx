@@ -18,6 +18,19 @@ import { FeatureListPage } from './components/FeatureListPage';
 import { LegalPage } from './components/LegalPage';
 
 type Mode = 'form' | 'sheet';
+/** ページ遷移ではなくモーダルで開くメニュー */
+const MODAL_MENU = ['決算調査', '法人調査', '仕訳数', '法人印刷'];
+
+/** 機能一覧（サイトマップ）からの「画面を開く」：?open=画面名&mode=form|sheet&year=prev
+ *  読み込み時に1回だけ解釈し、URLは元に戻す（再描画で消えないようモジュール初期化時に処理） */
+const BOOT = (() => {
+  const p = new URLSearchParams(window.location.search);
+  const open = p.get('open');
+  if (!open) return null;
+  const mode: Mode | null = p.get('mode') === 'sheet' ? 'sheet' : p.get('mode') === 'form' ? 'form' : null;
+  try { window.history.replaceState(null, '', window.location.pathname); } catch { /* ignore */ }
+  return { open, mode, year: p.get('year') === 'prev' };
+})();
 
 const readSaved = (k: string) => { try { return sessionStorage.getItem(k) ?? ''; } catch { return ''; } };
 const save = (k: string, v: string) => { try { sessionStorage.setItem(k, v); } catch { /* ignore */ } };
@@ -29,11 +42,23 @@ const TABS: { key: Mode; label: string; hint: string; accent: string }[] = [
 
 export default function App() {
   // 静的ページ（フッターから同じタブで開く）：機能一覧／利用規約／個人情報保護方針
-  const staticPage = new URLSearchParams(window.location.search).get('page');
+  const params = new URLSearchParams(window.location.search);
+  const staticPage = params.get('page');
   if (staticPage === 'features') return <FeatureListPage />;
   if (staticPage === 'terms' || staticPage === 'privacy') return <LegalPage kind={staticPage} />;
+  const boot = BOOT;
+  const bootPage = boot && boot.open !== 'ログイン' && !MODAL_MENU.includes(boot.open) ? boot.open : null;
   // ログイン状態（プロトタイプ：タブを閉じるまで保持）
   const [loggedIn, setLoggedIn] = useState<boolean>(() => {
+    if (boot?.open === 'ログイン') {
+      try { sessionStorage.removeItem('proto-logged-in'); } catch { /* ignore */ }
+      return false;
+    }
+    if (boot) {
+      // サイトマップから開いたときは、ログイン画面を挟まずに該当画面へ
+      try { sessionStorage.setItem('proto-logged-in', '1'); } catch { /* ignore */ }
+      return true;
+    }
     try {
       return sessionStorage.getItem('proto-logged-in') === '1';
     } catch {
@@ -50,15 +75,15 @@ export default function App() {
     setLoggedIn(false);
   };
   // 表示中のUI案・画面は sessionStorage に保持（静的ページから戻ったときに元の画面へ復帰）
-  const [mode, setModeRaw] = useState<Mode>(() => (readSaved('proto-mode') === 'sheet' ? 'sheet' : 'form'));
-  const [page, setPageRaw] = useState<string>(() => readSaved('proto-page') || DEFAULT_MENU);
+  const [mode, setModeRaw] = useState<Mode>(() => (boot?.mode ?? (readSaved('proto-mode') === 'sheet' ? 'sheet' : 'form')) as Mode);
+  const [page, setPageRaw] = useState<string>(() => bootPage ?? (readSaved('proto-page') || DEFAULT_MENU));
   const setMode = (m: Mode) => { setModeRaw(m); save('proto-mode', m); };
   const setPage = (p: string) => { setPageRaw(p); save('proto-page', p); };
-  const [auditOpen, setAuditOpen] = useState(false);
-  const [countOpen, setCountOpen] = useState(false);
-  const [corpPrintOpen, setCorpPrintOpen] = useState(false);
+  const [auditOpen, setAuditOpen] = useState(boot?.open === '決算調査' || boot?.open === '法人調査');
+  const [countOpen, setCountOpen] = useState(boot?.open === '仕訳数');
+  const [corpPrintOpen, setCorpPrintOpen] = useState(boot?.open === '法人印刷');
   // 仕訳の年（当年／前年）はアプリ全体で共有
-  const [year, setYear] = useState<JournalYear>('current');
+  const [year, setYear] = useState<JournalYear>(boot?.year ? 'prev' : 'current');
   const screenKey = `${mode}:${page}`;
 
   // メニュー選択：決算調査はページ遷移ではなくモーダルで開く（既存システムと同じ）
