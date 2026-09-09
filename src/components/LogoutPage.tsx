@@ -6,9 +6,11 @@ import type { CSSProperties } from 'react';
 interface Props {
   accent: string;
   onNavigate: (label: string) => void;
+  /** セッションを終了してログイン画面へ */
+  onLogout: () => void;
 }
 
-export function LogoutPage({ accent, onNavigate }: Props) {
+export function LogoutPage({ accent, onNavigate, onLogout }: Props) {
   const [done, setDone] = useState(false);
   const btn = (primary?: boolean): CSSProperties => ({ padding: '10px 24px', borderRadius: 9, border: primary ? 'none' : '1px solid #cfd8e0', background: primary ? accent : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 13.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
   return (
@@ -25,8 +27,7 @@ export function LogoutPage({ accent, onNavigate }: Props) {
           <>
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 20 }}>ログアウトしました</div>
             <p style={{ color: '#7a8794', fontSize: 13, lineHeight: 1.8, margin: '10px 0 22px' }}>ご利用ありがとうございました。<br />再度ご利用になる場合はログインしてください。</p>
-            <button type="button" onClick={() => { setDone(false); onNavigate('ホーム'); }} style={btn(true)}>ログイン画面へ</button>
-            <div style={{ fontSize: 11, color: '#9aa5b1', marginTop: 12 }}>※ プロトタイプではログイン機能がないため、ホームに戻ります</div>
+            <button type="button" onClick={() => { setDone(false); onLogout(); }} style={btn(true)}>ログイン画面へ</button>
           </>
         ) : (
           <>

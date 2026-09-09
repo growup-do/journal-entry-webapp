@@ -85,9 +85,10 @@ interface Props {
   onYear: (y: JournalYear) => void;
   drawer: DrawerKind;
   onDrawer: (d: DrawerKind) => void;
+  onLogout: () => void;
 }
 
-export function FormScreen({ page, onNavigate, year, onYear, drawer, onDrawer }: Props) {
+export function FormScreen({ page, onNavigate, year, onYear, drawer, onDrawer, onLogout }: Props) {
   const v = useEntryForm({ initialForm, seed: makeFormSeed() });
   const [collapsed, setCollapsed] = useState(false);
   const [topOffset, setTopOffset] = useState(102);
@@ -210,7 +211,7 @@ export function FormScreen({ page, onNavigate, year, onYear, drawer, onDrawer }:
       </nav>
 
       {page !== '伝票入力' ? (
-        renderPage(page, 'form', GREEN, GREEN_RGB, onNavigate, year)
+        renderPage(page, 'form', GREEN, GREEN_RGB, onNavigate, year, onLogout)
       ) : (
         <>
       {/* メイン（フォームカード） */}

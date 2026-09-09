@@ -105,9 +105,10 @@ interface Props {
   onYear: (y: JournalYear) => void;
   drawer: DrawerKind;
   onDrawer: (d: DrawerKind) => void;
+  onLogout: () => void;
 }
 
-export function SheetScreen({ page, onNavigate, year, onYear, drawer, onDrawer }: Props) {
+export function SheetScreen({ page, onNavigate, year, onYear, drawer, onDrawer, onLogout }: Props) {
   const [search, setSearch] = useState<SearchState>(emptySearch);
   const [applied, setApplied] = useState<SearchState | null>(null);
 
@@ -262,7 +263,7 @@ export function SheetScreen({ page, onNavigate, year, onYear, drawer, onDrawer }
         </header>
 
         {page !== '伝票入力' ? (
-          renderPage(page, 'sheet', BLUE, BLUE_RGB, onNavigate, year)
+          renderPage(page, 'sheet', BLUE, BLUE_RGB, onNavigate, year, onLogout)
         ) : (
           <>
         {/* 検索パネル */}

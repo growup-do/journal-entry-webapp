@@ -13,6 +13,7 @@ import { CorporatePrintModal } from './components/CorporatePrintModal';
 import { DRAWER_W, RightDrawer } from './components/RightDrawer';
 import type { DrawerKind, JournalYear } from './components/HeaderTools';
 import { DEFAULT_MENU } from './data';
+import { LoginPage } from './components/LoginPage';
 
 type Mode = 'form' | 'sheet';
 
@@ -22,6 +23,24 @@ const TABS: { key: Mode; label: string; hint: string; accent: string }[] = [
 ];
 
 export default function App() {
+  // ログイン状態（プロトタイプ：タブを閉じるまで保持）
+  const [loggedIn, setLoggedIn] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem('proto-logged-in') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const login = () => {
+    try { sessionStorage.setItem('proto-logged-in', '1'); } catch { /* ignore */ }
+    setLoggedIn(true);
+    setPage(DEFAULT_MENU);
+  };
+  const logout = () => {
+    try { sessionStorage.removeItem('proto-logged-in'); } catch { /* ignore */ }
+    setLoggedIn(false);
+    setDrawer(null);
+  };
   const [mode, setMode] = useState<Mode>('form');
   const [page, setPage] = useState<string>(DEFAULT_MENU);
   const [auditOpen, setAuditOpen] = useState(false);
@@ -50,6 +69,15 @@ export default function App() {
     if (m === 'form' || m === 'sheet') setMode(m);
     if (p) setPage(p);
   };
+
+  if (!loggedIn) {
+    return (
+      <>
+        <LoginPage onLogin={login} />
+        <MemoLayer screenKey="login" screenLabel={(k) => (k === 'login' ? 'ログイン画面' : screenLabel(k))} onNavigate={navigateTo} />
+      </>
+    );
+  }
 
   return (
     <>
@@ -102,9 +130,9 @@ export default function App() {
 
       <div style={{ paddingRight: drawer ? DRAWER_W : 0, transition: 'padding-right .2s' }}>
         {mode === 'form' ? (
-          <FormScreen page={page} onNavigate={selectMenu} year={year} onYear={setYear} drawer={drawer} onDrawer={setDrawer} />
+          <FormScreen page={page} onNavigate={selectMenu} year={year} onYear={setYear} drawer={drawer} onDrawer={setDrawer} onLogout={logout} />
         ) : (
-          <SheetScreen page={page} onNavigate={selectMenu} year={year} onYear={setYear} drawer={drawer} onDrawer={setDrawer} />
+          <SheetScreen page={page} onNavigate={selectMenu} year={year} onYear={setYear} drawer={drawer} onDrawer={setDrawer} onLogout={logout} />
         )}
       </div>
       {drawer && <RightDrawer kind={drawer} accent={TABS.find((t) => t.key === mode)!.accent} accentRgb={mode === 'form' ? '31,122,82' : '44,95,158'} onClose={() => setDrawer(null)} />}

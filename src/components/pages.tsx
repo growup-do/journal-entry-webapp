@@ -22,7 +22,7 @@ import { SETTINGS_MENU } from '../data';
 import { SingleEntryPage } from './SingleEntryPage';
 import { TransferEntryPage } from './TransferEntryPage';
 
-export function renderPage(page: string, variant: 'form' | 'sheet', accent: string, accentRgb: string, onNavigate: (label: string) => void, year: 'current' | 'prev' = 'current') {
+export function renderPage(page: string, variant: 'form' | 'sheet', accent: string, accentRgb: string, onNavigate: (label: string) => void, year: 'current' | 'prev' = 'current', onLogout: () => void = () => {}) {
   if (SETTINGS_MENU.includes(page)) return renderSettingsPage(page, variant, accent);
   switch (page) {
     case 'ホーム':
@@ -32,7 +32,7 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
     case 'メンバーの追加、管理':
       return <MembersPage variant={variant} accent={accent} />;
     case 'ログアウト':
-      return <LogoutPage accent={accent} onNavigate={onNavigate} />;
+      return <LogoutPage accent={accent} onNavigate={onNavigate} onLogout={onLogout} />;
     case '単一入力':
       return <SingleEntryPage variant={variant} accent={accent} accentRgb={accentRgb} prevYear={year === 'prev'} />;
     case '振替入力':
