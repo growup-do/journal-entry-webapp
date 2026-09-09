@@ -3,7 +3,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { NOT_IMPL, ToastView, useToast } from './Toast';
 
 export const USER_MENU_ITEMS = ['事業者設定', 'ユーザー設定', 'メンバーの追加、管理'];
 
@@ -17,7 +16,6 @@ interface Props {
 export function UserMenu({ accent, soft, onNavigate }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const toast = useToast();
 
   useEffect(() => {
     if (!open) return;
@@ -39,7 +37,6 @@ export function UserMenu({ accent, soft, onNavigate }: Props) {
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
-      <ToastView msg={toast.msg} />
       <button
         type="button"
         data-menu="ユーザーメニュー"
@@ -57,13 +54,13 @@ export function UserMenu({ accent, soft, onNavigate }: Props) {
             <div style={{ fontSize: 11.5, color: '#7a8794' }}>社会福祉法人 チャイルド保育園</div>
           </div>
           {USER_MENU_ITEMS.map((label) => (
-            <button key={label} type="button" className="menu-sub" data-menu={label} onClick={() => { setOpen(false); onNavigate(label); }} style={item}>
+            <button key={label} type="button" className="menu-sub" data-menu={label} onClick={() => { setOpen(false); onNavigate(label === '事業者設定' ? '事業者' : label); }} style={item}>
               <MenuIcon kind={label} />
               {label}
             </button>
           ))}
           <div style={{ borderTop: '1px solid #eef2f5', margin: '4px 0' }} />
-          <button type="button" className="menu-sub" data-menu="ログアウト" onClick={() => { setOpen(false); toast.show('ログアウト：' + NOT_IMPL); }} style={{ ...item, color: '#c0392b' }}>
+          <button type="button" className="menu-sub" data-menu="ログアウト" onClick={() => { setOpen(false); onNavigate('ログアウト'); }} style={{ ...item, color: '#c0392b' }}>
             <MenuIcon kind="ログアウト" />
             ログアウト
           </button>

@@ -10,6 +10,7 @@ import { Chips } from './Chips';
 import { HeaderTools, type DrawerKind, type JournalYear } from './HeaderTools';
 import { PrevYearJournal } from './PrevYearJournal';
 import { UserMenu } from './UserMenu';
+import { SettingsMenu } from './SettingsMenu';
 import { VersionBadge } from './VersionBadge';
 import { Menu } from './Menu';
 import { MonthChips } from './MonthChips';
@@ -176,7 +177,7 @@ export function SheetScreen({ page, onNavigate, year, onYear, drawer, onDrawer }
           height: '100vh',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '16px 16px 14px', borderBottom: '1px solid #eef2f5' }}>
+        <button type="button" data-menu="ホーム（ロゴ）" onClick={() => onNavigate('ホーム')} title="ホームへ" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '16px 16px 14px', borderBottom: '1px solid #eef2f5', border: 'none', borderBottomStyle: 'solid', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', color: 'inherit', textAlign: 'left', width: '100%' }}>
           <span
             style={{
               display: 'inline-flex',
@@ -199,7 +200,7 @@ export function SheetScreen({ page, onNavigate, year, onYear, drawer, onDrawer }
             <br />
             システム
           </span>
-        </div>
+        </button>
         <div style={{ padding: '8px 16px 0' }}>
           <VersionBadge accent={BLUE} />
         </div>
@@ -248,13 +249,14 @@ export function SheetScreen({ page, onNavigate, year, onYear, drawer, onDrawer }
             <span style={{ color: '#c3ccd4' }}>›</span>
             <span>会計帳簿</span>
             <span style={{ color: '#c3ccd4' }}>›</span>
-            <span style={{ color: '#22303c', fontWeight: 700, fontFamily: "'Zen Kaku Gothic New', sans-serif" }}>{page === '伝票入力' ? '仕訳帳' : page}</span>
+            <span style={{ color: '#22303c', fontWeight: 700, fontFamily: "'Zen Kaku Gothic New', sans-serif" }}>{page === '伝票入力' ? '仕訳帳' : page === 'ホーム' ? 'ダッシュボード' : page}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12.5, color: '#68757f', flex: 'none', marginLeft: 12 }}>
             <HeaderTools accent={BLUE} page={page} onNavigate={onNavigate} year={year} onYear={onYear} drawer={drawer} onDrawer={onDrawer} />
             <span style={{ whiteSpace: 'nowrap' }}>令和8年度</span>
             <span style={{ color: '#c3ccd4' }}>｜</span>
             <span style={{ whiteSpace: 'nowrap' }}>チャイルド保育園　拠点区分</span>
+            <SettingsMenu accent={BLUE} active={page} onNavigate={onNavigate} />
             <UserMenu accent={BLUE} soft="#eaf0f7" onNavigate={onNavigate} />
           </div>
         </header>

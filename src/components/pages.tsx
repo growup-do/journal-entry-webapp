@@ -4,6 +4,10 @@
 import { BudgetComparePage } from './BudgetComparePage';
 import { DailyAuditPage } from './DailyAuditPage';
 import { GraphPage } from './GraphPage';
+import { HomePage } from './HomePage';
+import { LogoutPage } from './LogoutPage';
+import { MembersPage } from './MembersPage';
+import { UserSettingsPage } from './UserSettingsPage';
 import { SufficiencyPage } from './SufficiencyPage';
 import { JournalListPage } from './JournalListPage';
 import { LedgerPage } from './LedgerPage';
@@ -15,6 +19,14 @@ import { TransferEntryPage } from './TransferEntryPage';
 
 export function renderPage(page: string, variant: 'form' | 'sheet', accent: string, accentRgb: string, onNavigate: (label: string) => void, year: 'current' | 'prev' = 'current') {
   switch (page) {
+    case 'ホーム':
+      return <HomePage variant={variant} accent={accent} onNavigate={onNavigate} />;
+    case 'ユーザー設定':
+      return <UserSettingsPage variant={variant} accent={accent} />;
+    case 'メンバーの追加、管理':
+      return <MembersPage variant={variant} accent={accent} />;
+    case 'ログアウト':
+      return <LogoutPage accent={accent} onNavigate={onNavigate} />;
     case '単一入力':
       return <SingleEntryPage variant={variant} accent={accent} accentRgb={accentRgb} prevYear={year === 'prev'} />;
     case '振替入力':

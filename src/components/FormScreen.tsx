@@ -10,6 +10,7 @@ import { Chips } from './Chips';
 import { HeaderTools, type DrawerKind, type JournalYear } from './HeaderTools';
 import { PrevYearJournal } from './PrevYearJournal';
 import { UserMenu } from './UserMenu';
+import { SettingsMenu } from './SettingsMenu';
 import { VersionBadge } from './VersionBadge';
 import { Menu } from './Menu';
 import { MonthChips } from './MonthChips';
@@ -153,10 +154,12 @@ export function FormScreen({ page, onNavigate, year, onYear, drawer, onDrawer }:
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 'none' }}>
-            <span style={logoStyle(GREEN, 28, 15)}>会</span>
-            <span style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 15.5, whiteSpace: 'nowrap' }}>
-              会計基準システム
-            </span>
+            <button type="button" data-menu="ホーム（ロゴ）" onClick={() => onNavigate('ホーム')} title="ホームへ" style={{ display: 'flex', alignItems: 'center', gap: 9, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: 'inherit', color: 'inherit' }}>
+              <span style={logoStyle(GREEN, 28, 15)}>会</span>
+              <span style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 15.5, whiteSpace: 'nowrap' }}>
+                会計基準システム
+              </span>
+            </button>
             <VersionBadge accent={GREEN} />
           </div>
           <span style={{ color: '#c3ccd4' }}>｜</span>
@@ -183,6 +186,7 @@ export function FormScreen({ page, onNavigate, year, onYear, drawer, onDrawer }:
           <span style={{ whiteSpace: 'nowrap' }}>
             会計期間　<b style={{ color: '#22303c', fontWeight: 600 }}>令和8年度</b>
           </span>
+          <SettingsMenu accent={GREEN} active={page} onNavigate={onNavigate} />
           <UserMenu accent={GREEN} soft="#eef4f0" onNavigate={onNavigate} />
         </div>
       </header>

@@ -38,6 +38,7 @@ function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
 
   return (
     <div style={{ display: 'flex', alignItems: 'stretch', gap: 2 }}>
+      <HomeButton active={active === 'ホーム'} accent={accent} onClick={() => onSelect('ホーム')} />
       {MENU_GROUPS.map((g) => {
         const on = activeGroup === g.key;
         const isOpen = open === g.key;
@@ -112,6 +113,7 @@ function VMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <HomeButton active={active === 'ホーム'} accent={accent} onClick={() => onSelect('ホーム')} vertical />
       {MENU_GROUPS.map((g) => {
         const on = activeGroup === g.key;
         const isOpen = opened.has(g.key);
@@ -161,6 +163,40 @@ function VMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
 }
 
 /* ---------------- 部品 ---------------- */
+function HomeButton({ active, accent, onClick, vertical }: { active: boolean; accent: string; onClick: () => void; vertical?: boolean }) {
+  const color = active ? accent : '#3d4a56';
+  return (
+    <button
+      type="button"
+      className={vertical ? 'menu-item-v' : 'menu-item-h'}
+      data-menu="ホーム"
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: vertical ? 9 : 7,
+        width: vertical ? '100%' : undefined,
+        textAlign: 'left',
+        padding: vertical ? '9px 10px' : '8px 13px',
+        marginBottom: vertical ? 4 : 0,
+        fontSize: 13,
+        fontWeight: 700,
+        fontFamily: 'inherit',
+        cursor: 'pointer',
+        background: active ? (vertical ? '#eef2f6' : 'transparent') : 'transparent',
+        border: 'none',
+        borderRadius: 8,
+        borderBottom: vertical ? 'none' : '2px solid ' + (active ? accent : 'transparent'),
+        color,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none' }}><path d="M3 11l9-8 9 8" /><path d="M5 10v10h5v-6h4v6h5V10" /></svg>
+      ホーム
+    </button>
+  );
+}
+
 function SubItem({ label, active, accent, option, indent, onClick }: { label: string; active: boolean; accent: string; option: boolean; indent?: boolean; onClick: () => void }) {
   const style: CSSProperties = {
     display: 'flex',

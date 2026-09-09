@@ -20,7 +20,7 @@ export function VersionBadge({ accent }: { accent: string }) {
         style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 8px', borderRadius: 10, border: '1px solid #dde4ea', background: '#f7f9fb', color: '#68757f', fontSize: 10.5, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}
       >
         <span style={{ width: 6, height: 6, borderRadius: '50%', background: accent }} />
-        {VERSION.label.replace(/\(.*?\)/, '')}
+        バージョン
       </button>
 
       <Modal open={open} onClose={() => setOpen(false)} width={520} title="バージョン情報">
