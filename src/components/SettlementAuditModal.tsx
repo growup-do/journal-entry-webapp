@@ -86,11 +86,20 @@ export function SettlementAuditModal({ open, onClose }: Props) {
     </div>
   );
 
+  useEffect(() => {
+    if (!open || explain == null) return;
+    const h = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setExplain(null);
+    };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [open, explain]);
   const ex = explain != null ? AUDIT_EXPLANATIONS[explain] : undefined;
   const exItem = explain != null ? AUDIT_ITEMS.find((a) => a.no === explain) : undefined;
 
   return (
-    <Modal open={open} onClose={onClose} width={1000} title={<>決算調査 <span style={{ fontSize: 12, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>令和8年 4月1日 〜 令和9年 3月31日　社会福祉事業</span></>}>
+    // 説明を表示している間はモーダルを閉じられない（「一覧に戻る」のみ）。Esc も一覧に戻る扱い
+    <Modal open={open} onClose={onClose} closable={explain == null} width={1000} title={<>決算調査 <span style={{ fontSize: 12, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>令和8年 4月1日 〜 令和9年 3月31日　社会福祉事業</span></>}>
       <ToastView msg={toast.msg} />
       {explain == null ? (
         <div style={{ padding: '14px 22px 20px' }}>

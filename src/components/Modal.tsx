@@ -11,23 +11,25 @@ interface Props {
   children: ReactNode;
   /** true のときはオーバーレイクリックで閉じない（確認ダイアログ用） */
   strict?: boolean;
+  /** false のときは閉じられない（×なし・オーバーレイ／Escでも閉じない）。画面内の「戻る」等で抜ける用途 */
+  closable?: boolean;
   style?: CSSProperties;
 }
 
-export function Modal({ open, onClose, width = 720, title, children, strict, style }: Props) {
+export function Modal({ open, onClose, width = 720, title, children, strict, closable = true, style }: Props) {
   useEffect(() => {
     if (!open) return;
     const h = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && closable) onClose();
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
-  }, [open, onClose]);
+  }, [open, onClose, closable]);
   if (!open) return null;
   return (
     <div
       onMouseDown={(e) => {
-        if (!strict && e.target === e.currentTarget) onClose();
+        if (!strict && closable && e.target === e.currentTarget) onClose();
       }}
       style={{ position: 'fixed', inset: 0, zIndex: 260, background: 'rgba(20,30,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
     >
@@ -48,9 +50,11 @@ export function Modal({ open, onClose, width = 720, title, children, strict, sty
         {title && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px', borderBottom: '1px solid #eef2f5' }}>
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16, flex: 1 }}>{title}</div>
-            <button type="button" onClick={onClose} title="閉じる" style={{ border: 'none', background: 'transparent', fontSize: 20, color: '#8290a0', cursor: 'pointer', lineHeight: 1 }}>
-              ×
-            </button>
+            {closable && (
+              <button type="button" onClick={onClose} title="閉じる" style={{ border: 'none', background: 'transparent', fontSize: 20, color: '#8290a0', cursor: 'pointer', lineHeight: 1 }}>
+                ×
+              </button>
+            )}
           </div>
         )}
         {children}
