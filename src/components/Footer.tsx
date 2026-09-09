@@ -1,7 +1,7 @@
 // フッター：コピーライト／利用規約／個人情報保護方針／機能一覧。
 // 全画面（ログイン画面を含む）の最下部に置く。リンク先は同じタブで開く静的ページ（?page=…）。
 
-export type StaticPage = 'features' | 'terms' | 'privacy';
+export type StaticPage = 'features' | 'terms';
 
 /** 静的ページへ移動（同じタブ）。アプリの状態は sessionStorage に保持しているので戻れば元の画面に復帰する。 */
 export const goStatic = (key: StaticPage) => {
@@ -13,11 +13,18 @@ export const backToApp = () => {
   window.location.assign(window.location.pathname);
 };
 
-const LINKS: { label: string; key: StaticPage }[] = [
+/** 個人情報保護方針はチャイルド社サイトのページへ（外部サイトなので別タブ） */
+export const PRIVACY_URL = 'https://www.child.co.jp/privacy.html';
+const LINKS: { label: string; key?: StaticPage; href?: string }[] = [
   { label: '利用規約', key: 'terms' },
-  { label: '個人情報保護方針', key: 'privacy' },
+  { label: '個人情報保護方針', href: PRIVACY_URL },
   { label: '機能一覧', key: 'features' },
 ];
+const follow = (l: { key?: StaticPage; href?: string }) => {
+  if (l.href) window.open(l.href, '_blank', 'noopener');
+  else if (l.key) goStatic(l.key);
+};
+export const COPYRIGHT = '© CHILDSHA Co., Ltd.';
 
 export function Footer({ compact, vertical }: { compact?: boolean; vertical?: boolean }) {
   // 縦型：スプレッドシート型の左サイドバー最下部用（リンクを縦に並べ、最後にコピーライト）
@@ -27,10 +34,10 @@ export function Footer({ compact, vertical }: { compact?: boolean; vertical?: bo
         <nav style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, marginBottom: 6 }}>
           {LINKS.map((l) => (
             <button
-              key={l.key}
+              key={l.label}
               type="button"
               data-footer={l.label}
-              onClick={() => goStatic(l.key)}
+              onClick={() => follow(l)}
               style={{ border: 'none', background: 'transparent', padding: '3px 6px', font: 'inherit', fontFamily: 'inherit', fontSize: 11.5, color: '#5b6b7b', cursor: 'pointer', borderRadius: 6 }}
               onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; e.currentTarget.style.color = '#22303c'; }}
               onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; e.currentTarget.style.color = '#5b6b7b'; }}
@@ -39,7 +46,7 @@ export function Footer({ compact, vertical }: { compact?: boolean; vertical?: bo
             </button>
           ))}
         </nav>
-        <div style={{ padding: '0 6px', lineHeight: 1.5 }}>© 2026 社会福祉法人<br />会計基準システム</div>
+        <div style={{ padding: '0 6px', lineHeight: 1.5 }}>{COPYRIGHT}</div>
       </footer>
     );
   }
@@ -59,15 +66,15 @@ export function Footer({ compact, vertical }: { compact?: boolean; vertical?: bo
         color: '#8290a0',
       }}
     >
-      <span style={{ whiteSpace: 'nowrap' }}>© 2026 社会福祉法人会計基準システム</span>
+      <span style={{ whiteSpace: 'nowrap' }}>{COPYRIGHT}</span>
       <nav style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         {LINKS.map((l, i) => (
-          <span key={l.key} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             {i > 0 && <span style={{ color: '#c3ccd4' }}>｜</span>}
             <button
               type="button"
               data-footer={l.label}
-              onClick={() => goStatic(l.key)}
+              onClick={() => follow(l)}
               style={{ border: 'none', background: 'transparent', padding: '2px 6px', font: 'inherit', fontFamily: 'inherit', color: '#5b6b7b', cursor: 'pointer', borderRadius: 6 }}
               onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; e.currentTarget.style.color = '#22303c'; }}
               onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; e.currentTarget.style.color = '#5b6b7b'; }}

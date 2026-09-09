@@ -1,4 +1,4 @@
-// 利用規約／個人情報保護方針（叩き台）。フッターから同じタブで開く静的ページ（?page=terms / ?page=privacy）。
+// 利用規約（叩き台）。フッターから同じタブで開く静的ページ（?page=terms）。個人情報保護方針はチャイルド社サイトへリンク。
 // 条文は一般的な構成のサンプル。正式な文言はクライアントの規程に差し替える。
 
 import { backToApp } from './Footer';
@@ -21,23 +21,9 @@ const TERMS: { title: string; lead: string; sections: Section[] } = {
   ],
 };
 
-const PRIVACY: typeof TERMS = {
-  title: '個人情報保護方針',
-  lead: '提供者は、社会福祉法人会計基準システムの提供にあたり、利用者の個人情報を以下の方針に基づき適切に取り扱います。',
-  sections: [
-    { title: '1. 取得する情報', body: ['氏名、メールアドレス、所属事業者などの登録情報', 'ログイン日時、操作履歴などの利用状況', '会計データに含まれる取引先・職員等の情報'] },
-    { title: '2. 利用目的', body: ['本サービスの提供、本人確認、サポート対応のため', '不正利用の防止、障害対応、機能改善のため', '重要なお知らせや法改正情報の通知のため'] },
-    { title: '3. 第三者提供', body: ['法令に基づく場合を除き、本人の同意なく第三者に個人情報を提供しません。', 'データ保管等を委託するクラウド事業者には、契約により適切な管理を義務づけます。'] },
-    { title: '4. 安全管理措置', body: ['通信の暗号化、アクセス権限の管理、ログの保管などにより、漏えい・滅失・毀損の防止に努めます。'] },
-    { title: '5. 開示・訂正・削除', body: ['本人からの開示・訂正・利用停止・削除の求めには、本人確認のうえ法令に従い対応します。'] },
-    { title: '6. Cookie等の利用', body: ['ログイン状態の維持や利便性向上のため、Cookieおよびブラウザのストレージを利用します。'] },
-    { title: '7. 方針の改定', body: ['本方針は法令の改正やサービス内容の変更に応じて改定することがあります。改定後の方針は本サービス上に掲示します。'] },
-    { title: '8. お問い合わせ', body: ['個人情報の取扱いに関するお問い合わせは、サポート窓口までご連絡ください。'] },
-  ],
-};
 
-export function LegalPage({ kind }: { kind: 'terms' | 'privacy' }) {
-  const doc = kind === 'terms' ? TERMS : PRIVACY;
+export function LegalPage() {
+  const doc = TERMS;
   return (
     <div style={{ minHeight: '100vh', background: '#f3f5f7', fontFamily: "'Noto Sans JP', sans-serif", color: '#22303c', display: 'flex', flexDirection: 'column' }}>
       <header style={{ position: 'sticky', top: 0, zIndex: 10, background: '#fff', borderBottom: '1px solid #dde4ea', padding: '12px 28px', display: 'flex', alignItems: 'center', gap: 14 }}>

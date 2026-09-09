@@ -8,7 +8,11 @@ import { backToApp } from './Footer';
 
 /** 画面カードの「画面を開く」：アプリ内の画面は ?open=画面名（＋mode／year）で開く。静的ページは ?page=…。 */
 const openLink = (l: NonNullable<FeatureScreen['link']>) => {
-  if (l.url) { window.location.assign(window.location.pathname + l.url); return; }
+  if (l.url) {
+    if (/^https?:/.test(l.url)) window.open(l.url, '_blank', 'noopener');
+    else window.location.assign(window.location.pathname + l.url);
+    return;
+  }
   const q = new URLSearchParams();
   q.set('open', l.page ?? 'ホーム');
   if (l.mode) q.set('mode', l.mode);

@@ -45,7 +45,7 @@ export default function App() {
   const params = new URLSearchParams(window.location.search);
   const staticPage = params.get('page');
   if (staticPage === 'features') return <FeatureListPage />;
-  if (staticPage === 'terms' || staticPage === 'privacy') return <LegalPage kind={staticPage} />;
+  if (staticPage === 'terms') return <LegalPage />;
   const boot = BOOT;
   const bootPage = boot && boot.open !== 'ログイン' && !MODAL_MENU.includes(boot.open) ? boot.open : null;
   // ログイン状態（プロトタイプ：タブを閉じるまで保持）
