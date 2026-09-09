@@ -63,13 +63,13 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
     case '充実残額':
       return <SufficiencyPage variant={variant} accent={accent} onNavigate={onNavigate} />;
     case '小口現金':
-      return <CashbookPage key="petty" kind="petty" variant={variant} accent={accent} accentRgb={accentRgb} onNavigate={onNavigate} />;
+      return <CashbookPage key="petty" kind="petty" variant={variant} accent={accent} accentRgb={accentRgb} />;
     case '預金出納':
-      return <CashbookPage key="bank" kind="bank" variant={variant} accent={accent} accentRgb={accentRgb} onNavigate={onNavigate} />;
+      return <CashbookPage key="bank" kind="bank" variant={variant} accent={accent} accentRgb={accentRgb} />;
     case '収入支出':
-      return <ReceiptsPaymentsPage variant={variant} accent={accent} onNavigate={onNavigate} />;
+      return <ReceiptsPaymentsPage variant={variant} accent={accent} />;
     case '減価償却':
-      return <DepreciationPage variant={variant} accent={accent} onNavigate={onNavigate} />;
+      return <DepreciationPage variant={variant} accent={accent} />;
     case '予算対比':
       return <BudgetComparePage variant={variant} accent={accent} onNavigate={onNavigate} />;
     default:

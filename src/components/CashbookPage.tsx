@@ -68,10 +68,9 @@ interface Props {
   variant: 'form' | 'sheet';
   accent: string;
   accentRgb: string;
-  onNavigate: (label: string) => void;
 }
 
-export function CashbookPage({ kind, variant, accent, accentRgb, onNavigate }: Props) {
+export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
   const isPetty = kind === 'petty';
   const title = isPetty ? '小口現金出納帳' : '預金出納帳';
   const [book, setBook] = useState(isPetty ? '小口現金' : '普通預金（保育園）');
@@ -175,7 +174,6 @@ export function CashbookPage({ kind, variant, accent, accentRgb, onNavigate }: P
           ? [{ label: '特殊行', onClick: () => setSpecialOpen(true) }, { label: '集計', onClick: () => setAggOpen(true), primary: true }]
           : [{ label: '預金残高', onClick: () => { setBankInput(bankBalance != null ? String(bankBalance) : ''); setBankBalanceOpen(true); } }, { label: '集計', onClick: () => setAggOpen(true), primary: true }]),
       ]}
-      onBack={() => onNavigate('ホーム')}
       controls={
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <span style={LABEL}>会計月</span>

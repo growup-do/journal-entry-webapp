@@ -44,10 +44,9 @@ const SUBJECT_TREE: { name: string; level: number }[] = [
 interface Props {
   variant: 'form' | 'sheet';
   accent: string;
-  onNavigate: (label: string) => void;
 }
 
-export function ReceiptsPaymentsPage({ variant, accent, onNavigate }: Props) {
+export function ReceiptsPaymentsPage({ variant, accent }: Props) {
   const [kind, setKind] = useState('exp');
   const [month, setMonth] = useState<MonthFilter>('8');
   const [checked, setChecked] = useState<Set<string>>(new Set());
@@ -83,7 +82,7 @@ export function ReceiptsPaymentsPage({ variant, accent, onNavigate }: Props) {
       title="収入・支出調書 印刷"
       badge={badge}
       subtitle="伺書（支出伺・収入伺など）を出力する伝票を選び、Excelへ出力します。"
-      tools={[{ label: '詳細設定', onClick: () => setDetailOpen(true) }, { label: '未出力数', onClick: () => setCountOpen(true) }, { label: 'Excel出力', onClick: doExport, primary: true }, { label: '終了', onClick: () => onNavigate('ホーム') }]}
+      tools={[{ label: '詳細設定', onClick: () => setDetailOpen(true) }, { label: '未出力数', onClick: () => setCountOpen(true) }, { label: 'Excel出力', onClick: doExport, primary: true }]}
       controls={
         <>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
