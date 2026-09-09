@@ -280,6 +280,7 @@ export function SheetScreen({ page, onNavigate, year, onYear, drawer, onDrawer, 
           </svg>
           <span>閉じる</span>
         </button>
+        <Footer vertical />
       </aside>}
 
       {/* メイン列 */}
@@ -660,7 +661,7 @@ export function SheetScreen({ page, onNavigate, year, onYear, drawer, onDrawer, 
         </main>
           </>
         )}
-        <Footer />
+        {!sideOpen && <Footer />}
       </div>
       {/* 右パネル（元帳１／元帳２／残高照合）の表示切替 */}
       {drawer && <DrawerToggle top={66} collapsed={drawerCollapsed} onToggle={() => onDrawerCollapse(!drawerCollapsed)} />}
