@@ -19,9 +19,13 @@ interface Props {
   controls?: ReactNode;
   children: ReactNode;
   onBack?: () => void;
+  /** 見出しの右に出すバッジ（例：オプション） */
+  badge?: ReactNode;
+  /** 見出し右の法人名表記を差し替え */
+  org?: string;
 }
 
-export function ReportShell({ variant, accent, title, subtitle, tools = [], controls, children, onBack }: Props) {
+export function ReportShell({ variant, accent, title, subtitle, tools = [], controls, children, onBack, badge, org = '社会福祉法人　チャイルド保育園 › 社会福祉事業' }: Props) {
   const toast = useToast();
   const isSheet = variant === 'sheet';
   return (
@@ -31,7 +35,7 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], cont
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '18px 22px 14px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21 }}>
-              {title} <span style={{ fontSize: 12.5, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>社会福祉法人　チャイルド保育園 › 社会福祉事業</span>
+              {title} {badge}<span style={{ fontSize: 12.5, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>{org}</span>
             </div>
             {subtitle && <div style={{ color: '#7a8794', fontSize: 12, marginTop: 4 }}>{subtitle}</div>}
           </div>

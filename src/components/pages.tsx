@@ -2,6 +2,9 @@
 // 伝票入力は各シェル固有のレイアウトなので、ここでは扱わない。
 
 import { BudgetComparePage } from './BudgetComparePage';
+import { CashbookPage } from './CashbookPage';
+import { DepreciationPage } from './DepreciationPage';
+import { ReceiptsPaymentsPage } from './ReceiptsPaymentsPage';
 import { DailyAuditPage } from './DailyAuditPage';
 import { GraphPage } from './GraphPage';
 import { HomePage } from './HomePage';
@@ -59,6 +62,14 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
       return <GraphPage key="analysis" mode="analysis" variant={variant} accent={accent} onNavigate={onNavigate} />;
     case '充実残額':
       return <SufficiencyPage variant={variant} accent={accent} onNavigate={onNavigate} />;
+    case '小口現金':
+      return <CashbookPage key="petty" kind="petty" variant={variant} accent={accent} accentRgb={accentRgb} onNavigate={onNavigate} />;
+    case '預金出納':
+      return <CashbookPage key="bank" kind="bank" variant={variant} accent={accent} accentRgb={accentRgb} onNavigate={onNavigate} />;
+    case '収入支出':
+      return <ReceiptsPaymentsPage variant={variant} accent={accent} onNavigate={onNavigate} />;
+    case '減価償却':
+      return <DepreciationPage variant={variant} accent={accent} onNavigate={onNavigate} />;
     case '予算対比':
       return <BudgetComparePage variant={variant} accent={accent} onNavigate={onNavigate} />;
     default:
