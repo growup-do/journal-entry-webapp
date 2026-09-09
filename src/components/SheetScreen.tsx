@@ -9,6 +9,7 @@ import { AssistPanel } from './AssistPanel';
 import { Chips } from './Chips';
 import { HeaderTools, type DrawerKind, type JournalYear } from './HeaderTools';
 import { PrevYearJournal } from './PrevYearJournal';
+import { UserMenu } from './UserMenu';
 import { VersionBadge } from './VersionBadge';
 import { Menu } from './Menu';
 import { MonthChips } from './MonthChips';
@@ -254,22 +255,7 @@ export function SheetScreen({ page, onNavigate, year, onYear, drawer, onDrawer }
             <span style={{ whiteSpace: 'nowrap' }}>令和8年度</span>
             <span style={{ color: '#c3ccd4' }}>｜</span>
             <span style={{ whiteSpace: 'nowrap' }}>チャイルド保育園　拠点区分</span>
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 32,
-                height: 32,
-                borderRadius: '50%',
-                background: '#eaf0f7',
-                color: BLUE,
-                fontSize: 13,
-                fontWeight: 700,
-              }}
-            >
-              経
-            </span>
+            <UserMenu accent={BLUE} soft="#eaf0f7" onNavigate={onNavigate} />
           </div>
         </header>
 

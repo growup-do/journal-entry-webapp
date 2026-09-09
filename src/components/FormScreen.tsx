@@ -9,6 +9,7 @@ import { AssistPanel } from './AssistPanel';
 import { Chips } from './Chips';
 import { HeaderTools, type DrawerKind, type JournalYear } from './HeaderTools';
 import { PrevYearJournal } from './PrevYearJournal';
+import { UserMenu } from './UserMenu';
 import { VersionBadge } from './VersionBadge';
 import { Menu } from './Menu';
 import { MonthChips } from './MonthChips';
@@ -182,7 +183,7 @@ export function FormScreen({ page, onNavigate, year, onYear, drawer, onDrawer }:
           <span style={{ whiteSpace: 'nowrap' }}>
             会計期間　<b style={{ color: '#22303c', fontWeight: 600 }}>令和8年度</b>
           </span>
-          <span style={avatarStyle('#eef4f0', GREEN)}>経</span>
+          <UserMenu accent={GREEN} soft="#eef4f0" onNavigate={onNavigate} />
         </div>
       </header>
 
@@ -662,20 +663,6 @@ function logoStyle(bg: string, size: number, font: number): CSSProperties {
   };
 }
 
-function avatarStyle(bg: string, color: string): CSSProperties {
-  return {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 32,
-    height: 32,
-    borderRadius: '50%',
-    background: bg,
-    color,
-    fontSize: 13,
-    fontWeight: 700,
-  };
-}
 
 function boxHeader(bg: string, color: string): CSSProperties {
   return {
