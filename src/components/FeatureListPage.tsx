@@ -12,9 +12,12 @@ export function FeatureListPage() {
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<FeatureStatus | 'すべて'>('すべて');
   const groups = useMemo(() => FEATURE_GROUPS.map((g) => ({ ...g, screens: g.screens.filter((s) => (filter === 'すべて' || s.status === filter) && (!q || s.name.includes(q) || s.summary.includes(q) || s.features.some((f) => f.includes(q)))) })).filter((g) => g.screens.length > 0), [q, filter]);
-  const all = FEATURE_GROUPS.flatMap((g) => g.screens);
-  const count = (st: FeatureStatus) => all.filter((s) => s.status === st).length;
-  const featureCount = all.reduce((n, s) => n + s.features.length, 0);
+  // 画面数は「画面の分類」だけを数える（共通基盤・未実装／要確認は画面ではないので除外）
+  const screens = FEATURE_GROUPS.filter((g) => !g.kind).flatMap((g) => g.screens);
+  const commons = FEATURE_GROUPS.filter((g) => g.kind === 'feature').flatMap((g) => g.screens);
+  const count = (st: FeatureStatus) => screens.filter((s) => s.status === st).length;
+  const featureCount = FEATURE_GROUPS.flatMap((g) => g.screens).reduce((n, s) => n + s.features.length, 0);
+  const unit = (g: { kind?: string }) => (g.kind ? '項目' : '画面');
   const badge = (st: FeatureStatus): CSSProperties => ({ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: STATUS[st].bg, color: STATUS[st].fg, whiteSpace: 'nowrap' });
 
   return (
@@ -36,7 +39,7 @@ export function FeatureListPage() {
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 28px 60px' }}>
         {/* サマリー */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
-          {[['画面数', `${all.length}`], ['作成済', `${count('作成済')}`], ['叩き台', `${count('叩き台')}`], ['機能項目', `${featureCount}`]].map(([l, v]) => (
+          {[['画面数', `${screens.length}`], ['作成済', `${count('作成済')}`], ['叩き台', `${count('叩き台')}`], ['共通機能', `${commons.length}`], ['機能項目', `${featureCount}`]].map(([l, v]) => (
             <div key={l} className="fl-card" style={{ background: '#fff', border: '1px solid #dde4ea', borderRadius: 12, padding: '12px 16px' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#8290a0' }}>{l}</div>
               <div style={{ fontSize: 24, fontWeight: 800, marginTop: 2 }}>{v}</div>
@@ -54,7 +57,7 @@ export function FeatureListPage() {
           <section key={g.key} id={g.key} style={{ marginBottom: 26 }}>
             <h2 style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontSize: 17, margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: 10 }}>
               {g.title}
-              <span style={{ fontSize: 12, fontWeight: 500, color: '#7a8794' }}>{g.screens.length} 画面</span>
+              <span style={{ fontSize: 12, fontWeight: 500, color: '#7a8794' }}>{g.screens.length} {unit(g)}</span>
             </h2>
             {g.note && <div style={{ fontSize: 12, color: '#7a8794', marginBottom: 8 }}>{g.note}</div>}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 12 }}>
