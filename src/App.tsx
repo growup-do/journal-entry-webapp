@@ -15,8 +15,12 @@ import type { DrawerKind, JournalYear } from './components/HeaderTools';
 import { DEFAULT_MENU } from './data';
 import { LoginPage } from './components/LoginPage';
 import { FeatureListPage } from './components/FeatureListPage';
+import { LegalPage } from './components/LegalPage';
 
 type Mode = 'form' | 'sheet';
+
+const readSaved = (k: string) => { try { return sessionStorage.getItem(k) ?? ''; } catch { return ''; } };
+const save = (k: string, v: string) => { try { sessionStorage.setItem(k, v); } catch { /* ignore */ } };
 
 const TABS: { key: Mode; label: string; hint: string; accent: string }[] = [
   { key: 'form', label: 'フォーム型', hint: '1件ずつ丁寧に入力', accent: '#1f7a52' },
@@ -24,8 +28,10 @@ const TABS: { key: Mode; label: string; hint: string; accent: string }[] = [
 ];
 
 export default function App() {
-  // 機能一覧（別タブで開く静的ページ）
-  if (new URLSearchParams(window.location.search).get('page') === 'features') return <FeatureListPage />;
+  // 静的ページ（フッターから同じタブで開く）：機能一覧／利用規約／個人情報保護方針
+  const staticPage = new URLSearchParams(window.location.search).get('page');
+  if (staticPage === 'features') return <FeatureListPage />;
+  if (staticPage === 'terms' || staticPage === 'privacy') return <LegalPage kind={staticPage} />;
   // ログイン状態（プロトタイプ：タブを閉じるまで保持）
   const [loggedIn, setLoggedIn] = useState<boolean>(() => {
     try {
@@ -44,14 +50,24 @@ export default function App() {
     setLoggedIn(false);
     setDrawer(null);
   };
-  const [mode, setMode] = useState<Mode>('form');
-  const [page, setPage] = useState<string>(DEFAULT_MENU);
+  // 表示中のUI案・画面は sessionStorage に保持（静的ページから戻ったときに元の画面へ復帰）
+  const [mode, setModeRaw] = useState<Mode>(() => (readSaved('proto-mode') === 'sheet' ? 'sheet' : 'form'));
+  const [page, setPageRaw] = useState<string>(() => readSaved('proto-page') || DEFAULT_MENU);
+  const setMode = (m: Mode) => { setModeRaw(m); save('proto-mode', m); };
+  const setPage = (p: string) => { setPageRaw(p); save('proto-page', p); };
   const [auditOpen, setAuditOpen] = useState(false);
   const [countOpen, setCountOpen] = useState(false);
   const [corpPrintOpen, setCorpPrintOpen] = useState(false);
   // 仕訳の年（当年／前年）と右ドロワー（元帳１／元帳２／残高照合）はアプリ全体で共有
   const [year, setYear] = useState<JournalYear>('current');
-  const [drawer, setDrawer] = useState<DrawerKind>(null);
+  const [drawer, setDrawerRaw] = useState<DrawerKind>(null);
+  // 右パネル（元帳１／元帳２／残高照合）の表示／非表示。フォーム型の仕訳帳パネルと同じ切替
+  const [drawerCollapsed, setDrawerCollapsed] = useState(false);
+  const setDrawer = (d: DrawerKind) => {
+    setDrawerRaw(d);
+    if (d) setDrawerCollapsed(false);
+  };
+  const drawerShown = !!drawer && !drawerCollapsed;
   const screenKey = `${mode}:${page}`;
 
   // メニュー選択：決算調査はページ遷移ではなくモーダルで開く（既存システムと同じ）
@@ -131,14 +147,14 @@ export default function App() {
         })}
       </div>
 
-      <div style={{ paddingRight: drawer ? DRAWER_W : 0, transition: 'padding-right .2s' }}>
+      <div style={{ paddingRight: drawerShown ? DRAWER_W : 0, transition: 'padding-right .28s ease' }}>
         {mode === 'form' ? (
-          <FormScreen page={page} onNavigate={selectMenu} year={year} onYear={setYear} drawer={drawer} onDrawer={setDrawer} onLogout={logout} />
+          <FormScreen page={page} onNavigate={selectMenu} year={year} onYear={setYear} drawer={drawer} onDrawer={setDrawer} drawerCollapsed={drawerCollapsed} onDrawerCollapse={setDrawerCollapsed} onLogout={logout} />
         ) : (
-          <SheetScreen page={page} onNavigate={selectMenu} year={year} onYear={setYear} drawer={drawer} onDrawer={setDrawer} onLogout={logout} />
+          <SheetScreen page={page} onNavigate={selectMenu} year={year} onYear={setYear} drawer={drawer} onDrawer={setDrawer} drawerCollapsed={drawerCollapsed} onDrawerCollapse={setDrawerCollapsed} onLogout={logout} />
         )}
       </div>
-      {drawer && <RightDrawer kind={drawer} accent={TABS.find((t) => t.key === mode)!.accent} accentRgb={mode === 'form' ? '31,122,82' : '44,95,158'} onClose={() => setDrawer(null)} />}
+      {drawer && <RightDrawer kind={drawer} accent={TABS.find((t) => t.key === mode)!.accent} accentRgb={mode === 'form' ? '31,122,82' : '44,95,158'} collapsed={drawerCollapsed} onClose={() => setDrawer(null)} />}
       <CorporatePrintModal open={corpPrintOpen} onClose={() => setCorpPrintOpen(false)} />
 
       <SettlementAuditModal open={auditOpen} onClose={() => setAuditOpen(false)} />

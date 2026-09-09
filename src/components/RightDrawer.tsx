@@ -19,17 +19,34 @@ interface Props {
   kind: Exclude<DrawerKind, null>;
   accent: string;
   accentRgb: string;
+  /** 非表示（右端に畳む）。フォーム型の仕訳帳パネルと同じ表示／非表示の切替 */
+  collapsed: boolean;
   onClose: () => void;
 }
 
-export function RightDrawer({ kind, accent, accentRgb, onClose }: Props) {
+/** 右パネルの表示／非表示トグル（仕訳帳パネルの「◀／▶」と同じ見た目・位置に置く） */
+export function DrawerToggle({ top, collapsed, onToggle }: { top: number; collapsed: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      className="collapse-toggle drawer-toggle"
+      onClick={onToggle}
+      title={collapsed ? '右パネルを表示' : '右パネルを非表示'}
+      style={{ position: 'fixed', top, right: collapsed ? 12 : DRAWER_W + 12, zIndex: 155, width: 30, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', border: '1px solid #dde4ea', borderRadius: 9, boxShadow: '0 3px 12px rgba(30,50,70,.14)', cursor: 'pointer', color: '#5b6773', fontSize: 12, transition: 'right .28s ease' }}
+    >
+      {collapsed ? '◀' : '▶'}
+    </button>
+  );
+}
+
+export function RightDrawer({ kind, accent, accentRgb, collapsed, onClose }: Props) {
   const title = kind === 'ledger1' ? '元帳１' : kind === 'ledger2' ? '元帳２' : '残高照合';
   return (
-    <aside style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: DRAWER_W, background: '#fff', borderLeft: '1px solid #dde4ea', boxShadow: '-8px 0 28px rgba(30,50,70,.12)', zIndex: 150, display: 'flex', flexDirection: 'column', fontFamily: "'Noto Sans JP', sans-serif" }}>
+    <aside style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: DRAWER_W, background: '#fff', borderLeft: '1px solid #dde4ea', boxShadow: '-8px 0 28px rgba(30,50,70,.12)', zIndex: 150, display: 'flex', flexDirection: 'column', fontFamily: "'Noto Sans JP', sans-serif", transition: 'transform .28s ease', transform: collapsed ? `translateX(${DRAWER_W}px)` : 'translateX(0)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderBottom: '1px solid #eef2f5' }}>
         <span style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16 }}>{title}</span>
         <span style={{ fontSize: 11.5, color: '#8895a3' }}>令和8年度</span>
-        <button type="button" onClick={onClose} title="閉じる" style={{ marginLeft: 'auto', border: 'none', background: 'transparent', fontSize: 20, color: '#8290a0', cursor: 'pointer', lineHeight: 1 }}>×</button>
+        <button type="button" onClick={onClose} title="閉じる（元帳を終了）" style={{ marginLeft: 'auto', border: 'none', background: 'transparent', fontSize: 20, color: '#8290a0', cursor: 'pointer', lineHeight: 1 }}>×</button>
       </div>
       {kind === 'balance' ? <BalanceCheck accent={accent} /> : <LedgerSlot key={kind} slot={kind} accent={accent} accentRgb={accentRgb} />}
     </aside>

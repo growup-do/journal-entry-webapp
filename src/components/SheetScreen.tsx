@@ -15,6 +15,8 @@ import { VersionBadge } from './VersionBadge';
 import { Menu } from './Menu';
 import { MonthChips } from './MonthChips';
 import { renderPage } from './pages';
+import { Footer } from './Footer';
+import { DrawerToggle } from './RightDrawer';
 import { SETTINGS_MENU, accountFlat, groupOf, makeSheetSeed } from '../data';
 import { applyMonth, rgba } from '../lib/format';
 import { useEntryForm } from '../hooks/useEntryForm';
@@ -105,6 +107,9 @@ interface Props {
   onYear: (y: JournalYear) => void;
   drawer: DrawerKind;
   onDrawer: (d: DrawerKind) => void;
+  /** 右パネル（元帳など）を畳んでいるか／切替 */
+  drawerCollapsed: boolean;
+  onDrawerCollapse: (c: boolean) => void;
   onLogout: () => void;
 }
 
@@ -146,7 +151,9 @@ function Breadcrumb({ page, onNavigate }: { page: string; onNavigate: (label: st
   );
 }
 
-export function SheetScreen({ page, onNavigate, year, onYear, drawer, onDrawer, onLogout }: Props) {
+export function SheetScreen({ page, onNavigate, year, onYear, drawer, onDrawer, drawerCollapsed, onDrawerCollapse, onLogout }: Props) {
+  // 左サイドバー（メニュー）の開閉：下部の「閉じる」で畳み、トップバーの「☰」で開く
+  const [sideOpen, setSideOpen] = useState(true);
   const [search, setSearch] = useState<SearchState>(emptySearch);
   const [applied, setApplied] = useState<SearchState | null>(null);
 
@@ -203,7 +210,7 @@ export function SheetScreen({ page, onNavigate, year, onYear, drawer, onDrawer, 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       {/* サイドバー */}
-      <aside
+      {sideOpen && <aside
         style={{
           flex: 'none',
           width: 210,
@@ -246,7 +253,11 @@ export function SheetScreen({ page, onNavigate, year, onYear, drawer, onDrawer, 
         <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 6px', display: 'flex', flexDirection: 'column' }}>
           <Menu orientation="v" accent={BLUE} active={page} onSelect={onNavigate} />
         </nav>
-        <div
+        <button
+          type="button"
+          data-menu="サイドバーを閉じる"
+          onClick={() => setSideOpen(false)}
+          title="メニューを閉じる"
           style={{
             padding: '12px 16px',
             borderTop: '1px solid #eef2f5',
@@ -256,14 +267,20 @@ export function SheetScreen({ page, onNavigate, year, onYear, drawer, onDrawer, 
             fontSize: 12.5,
             color: '#8895a3',
             cursor: 'pointer',
+            border: 'none',
+            borderTopStyle: 'solid',
+            background: 'transparent',
+            fontFamily: 'inherit',
+            width: '100%',
+            textAlign: 'left',
           }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 18l-6-6 6-6" />
           </svg>
           <span>閉じる</span>
-        </div>
-      </aside>
+        </button>
+      </aside>}
 
       {/* メイン列 */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
@@ -283,6 +300,11 @@ export function SheetScreen({ page, onNavigate, year, onYear, drawer, onDrawer, 
             flex: 'none',
           }}
         >
+          {!sideOpen && (
+            <button type="button" data-menu="サイドバーを開く" onClick={() => setSideOpen(true)} title="メニューを開く" style={{ flex: 'none', width: 34, height: 34, marginRight: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #dde4ea', borderRadius: 8, background: '#fff', cursor: 'pointer', color: '#5b6773' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </button>
+          )}
           <Breadcrumb page={page} onNavigate={onNavigate} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12.5, color: '#68757f', flex: 'none', marginLeft: 12 }}>
             <HeaderTools accent={BLUE} page={page} onNavigate={onNavigate} year={year} onYear={onYear} drawer={drawer} onDrawer={onDrawer} />
@@ -638,7 +660,10 @@ export function SheetScreen({ page, onNavigate, year, onYear, drawer, onDrawer, 
         </main>
           </>
         )}
+        <Footer />
       </div>
+      {/* 右パネル（元帳１／元帳２／残高照合）の表示切替 */}
+      {drawer && <DrawerToggle top={66} collapsed={drawerCollapsed} onToggle={() => onDrawerCollapse(!drawerCollapsed)} />}
     </div>
   );
 }

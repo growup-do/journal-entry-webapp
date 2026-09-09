@@ -1,13 +1,12 @@
 // メニュー
 //   横（フォーム型ナビ）… 大メニュー7つ。マウスオーバー（またはクリック）でその階層の項目をドロップダウン表示
 //   縦（スプレッドシート型サイドバー）… 大メニューをアコーディオンで開閉。開いている階層の項目を表示
-// オプション階層は琥珀色＋「OP」タグで区別。
+// オプション階層は他の階層と同じ見た目（最後尾に配置するのみ）。
 
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { MENU_GROUPS, groupOf, isOptionMenu, type MenuGroup } from '../data';
+import { MENU_GROUPS, groupOf, type MenuGroup } from '../data';
 
-const OPTION = '#b45309';
 
 interface Props {
   orientation: 'h' | 'v';
@@ -42,7 +41,7 @@ function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
       {MENU_GROUPS.map((g) => {
         const on = activeGroup === g.key;
         const isOpen = open === g.key;
-        const color = g.option ? OPTION : on ? accent : '#3d4a56';
+        const color = on ? accent : '#3d4a56';
         return (
           <div key={g.key} style={{ position: 'relative' }} onMouseEnter={() => enter(g.key)} onMouseLeave={leave}>
             <button
@@ -57,10 +56,10 @@ function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
                 gap: 7,
                 padding: '8px 13px',
                 fontSize: 13,
-                fontWeight: on || g.option ? 700 : 500,
+                fontWeight: on ? 700 : 500,
                 fontFamily: 'inherit',
                 cursor: 'pointer',
-                background: isOpen ? (g.option ? '#fff7e6' : '#f4f6f8') : 'transparent',
+                background: isOpen ? '#f4f6f8' : 'transparent',
                 border: 'none',
                 borderRadius: 8,
                 borderBottom: '2px solid ' + (on ? accent : 'transparent'),
@@ -70,7 +69,6 @@ function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
             >
               <Icon kind={g.icon} color={color} />
               {g.label}
-              {g.option && <OpTag color={OPTION} />}
               <Chevron open={isOpen} color="#9aa5b1" />
             </button>
             {isOpen && (
@@ -90,7 +88,7 @@ function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
                 }}
               >
                 {g.items.map((label) => (
-                  <SubItem key={label} label={label} active={label === active} accent={accent} option={!!g.option} onClick={() => { onSelect(label); setOpen(null); }} />
+                  <SubItem key={label} label={label} active={label === active} accent={accent} onClick={() => { onSelect(label); setOpen(null); }} />
                 ))}
               </div>
             )}
@@ -117,9 +115,9 @@ function VMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
       {MENU_GROUPS.map((g) => {
         const on = activeGroup === g.key;
         const isOpen = opened.has(g.key);
-        const color = g.option ? OPTION : on ? accent : '#3d4a56';
+        const color = on ? accent : '#3d4a56';
         return (
-          <div key={g.key} style={{ borderRadius: 8, background: g.option ? '#fff7e6' : 'transparent' }}>
+          <div key={g.key} style={{ borderRadius: 8 }}>
             <button
               type="button"
               className="menu-item-v"
@@ -145,13 +143,12 @@ function VMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
             >
               <Icon kind={g.icon} color={color} />
               <span style={{ flex: 1 }}>{g.label}</span>
-              {g.option && <OpTag color={OPTION} />}
               <Chevron open={isOpen} color="#9aa5b1" />
             </button>
             {isOpen && (
               <div style={{ padding: '0 4px 6px 4px' }}>
                 {g.items.map((label) => (
-                  <SubItem key={label} label={label} active={label === active} accent={accent} option={!!g.option} indent onClick={() => onSelect(label)} />
+                  <SubItem key={label} label={label} active={label === active} accent={accent} indent onClick={() => onSelect(label)} />
                 ))}
               </div>
             )}
@@ -197,7 +194,7 @@ function HomeButton({ active, accent, onClick, vertical }: { active: boolean; ac
   );
 }
 
-function SubItem({ label, active, accent, option, indent, onClick }: { label: string; active: boolean; accent: string; option: boolean; indent?: boolean; onClick: () => void }) {
+function SubItem({ label, active, accent, indent, onClick }: { label: string; active: boolean; accent: string; indent?: boolean; onClick: () => void }) {
   const style: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
@@ -208,25 +205,21 @@ function SubItem({ label, active, accent, option, indent, onClick }: { label: st
     fontSize: 13,
     fontFamily: 'inherit',
     cursor: 'pointer',
-    background: active ? (option ? '#fdebd0' : '#eef2f6') : 'transparent',
+    background: active ? '#eef2f6' : 'transparent',
     border: 'none',
     borderRadius: 7,
     borderLeft: indent ? '3px solid ' + (active ? accent : 'transparent') : 'none',
-    color: active ? accent : option ? OPTION : '#3d4a56',
+    color: active ? accent : '#3d4a56',
     fontWeight: active ? 700 : 500,
     whiteSpace: 'nowrap',
   };
   return (
     <button type="button" className="menu-sub" data-menu={label} onClick={onClick} style={style}>
       {label}
-      {isOptionMenu(label) && <OpTag color={OPTION} small />}
     </button>
   );
 }
 
-function OpTag({ color, small }: { color: string; small?: boolean }) {
-  return <span style={{ fontSize: small ? 8 : 8.5, fontWeight: 800, color: '#fff', background: color, borderRadius: 4, padding: '1px 4px', letterSpacing: '.02em', lineHeight: 1.4 }}>OP</span>;
-}
 
 function Chevron({ open, color }: { open: boolean; color: string }) {
   return (

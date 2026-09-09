@@ -15,6 +15,8 @@ import { VersionBadge } from './VersionBadge';
 import { Menu } from './Menu';
 import { MonthChips } from './MonthChips';
 import { renderPage } from './pages';
+import { Footer } from './Footer';
+import { DrawerToggle } from './RightDrawer';
 import { makeFormSeed } from '../data';
 import { applyMonth } from '../lib/format';
 import { useEntryForm } from '../hooks/useEntryForm';
@@ -85,10 +87,13 @@ interface Props {
   onYear: (y: JournalYear) => void;
   drawer: DrawerKind;
   onDrawer: (d: DrawerKind) => void;
+  /** 右パネル（元帳など）を畳んでいるか／切替 */
+  drawerCollapsed: boolean;
+  onDrawerCollapse: (c: boolean) => void;
   onLogout: () => void;
 }
 
-export function FormScreen({ page, onNavigate, year, onYear, drawer, onDrawer, onLogout }: Props) {
+export function FormScreen({ page, onNavigate, year, onYear, drawer, onDrawer, drawerCollapsed, onDrawerCollapse, onLogout }: Props) {
   const v = useEntryForm({ initialForm, seed: makeFormSeed() });
   const [collapsed, setCollapsed] = useState(false);
   const [topOffset, setTopOffset] = useState(102);
@@ -648,6 +653,9 @@ export function FormScreen({ page, onNavigate, year, onYear, drawer, onDrawer, o
       </aside>
         </>
       )}
+      {/* 右パネル（元帳１／元帳２／残高照合）の表示切替：仕訳帳パネルと同じ位置 */}
+      {drawer && <DrawerToggle top={topOffset + 10} collapsed={drawerCollapsed} onToggle={() => onDrawerCollapse(!drawerCollapsed)} />}
+      <Footer />
     </div>
   );
 }

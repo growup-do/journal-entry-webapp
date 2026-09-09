@@ -1,9 +1,10 @@
-// 機能一覧（別タブで表示：?page=features）
+// 機能一覧（フッターから同じタブで表示：?page=features）
 // このプロトタイプで作成した画面と機能の洗い出し。印刷／PDF保存に対応。
 
 import { useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { FEATURE_GROUPS, type FeatureStatus } from '../features';
+import { backToApp } from './Footer';
 
 const STATUS: Record<FeatureStatus, { bg: string; fg: string }> = { 作成済: { bg: '#eaf5ef', fg: '#1f7a52' }, 叩き台: { bg: '#fff1b8', fg: '#8a6d00' }, 未作成: { bg: '#f1f4f6', fg: '#7a8794' } };
 
@@ -28,6 +29,7 @@ export function FeatureListPage() {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="画面名・機能で検索" style={{ width: 240, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 12.5, fontFamily: 'inherit', outline: 'none' }} />
           {(['すべて', '作成済', '叩き台', '未作成'] as const).map((st) => <button key={st} type="button" onClick={() => setFilter(st)} style={{ padding: '6px 12px', borderRadius: 14, border: '1px solid ' + (filter === st ? '#1f7a52' : '#d3dbe3'), background: filter === st ? '#1f7a52' : '#fff', color: filter === st ? '#fff' : '#5b6773', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{st}</button>)}
           <button type="button" onClick={() => window.print()} style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #cfd8e0', background: '#fff', color: '#22303c', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>印刷／PDF保存</button>
+          <button type="button" onClick={backToApp} style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #1f7a52', background: '#1f7a52', color: '#fff', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>← システムに戻る</button>
         </div>
       </header>
 

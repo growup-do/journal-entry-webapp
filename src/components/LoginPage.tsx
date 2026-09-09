@@ -1,6 +1,7 @@
 // ログイン画面（プロトタイプ：メール／パスワードは入力済み。そのまま「ログイン」で入れる）
 
 import { useState } from 'react';
+import { Footer } from './Footer';
 import type { CSSProperties, KeyboardEvent } from 'react';
 import { ToastView, useToast } from './Toast';
 
@@ -63,6 +64,7 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
           </div>
         </div>
         <div style={{ textAlign: 'center', fontSize: 11, color: '#9aa5b1', marginTop: 14 }}>ご利用には事業者の管理者による招待が必要です。</div>
+        <Footer compact />
       </div>
     </div>
   );
