@@ -15,7 +15,7 @@ import { VersionBadge } from './VersionBadge';
 import { Menu } from './Menu';
 import { MonthChips } from './MonthChips';
 import { renderPage } from './pages';
-import { accountFlat, makeSheetSeed } from '../data';
+import { SETTINGS_MENU, accountFlat, groupOf, makeSheetSeed } from '../data';
 import { applyMonth, rgba } from '../lib/format';
 import { useEntryForm } from '../hooks/useEntryForm';
 import type { FormState, JournalEntry, SearchState } from '../types';
@@ -106,6 +106,44 @@ interface Props {
   drawer: DrawerKind;
   onDrawer: (d: DrawerKind) => void;
   onLogout: () => void;
+}
+
+/** パンくず：ホーム（＝会計帳簿）› 大メニューの分類 › 画面名。ホーム・分類はクリックで移動できる。 */
+function Breadcrumb({ page, onNavigate }: { page: string; onNavigate: (label: string) => void }) {
+  const sep = <span style={{ color: '#c3ccd4' }}>›</span>;
+  const link = (label: string, target: string) => (
+    <button
+      type="button"
+      onClick={() => onNavigate(target)}
+      style={{ border: 'none', background: 'transparent', padding: 0, font: 'inherit', color: '#5b6b7b', cursor: 'pointer', fontFamily: 'inherit' }}
+      onMouseEnter={(e) => { e.currentTarget.style.color = BLUE; e.currentTarget.style.textDecoration = 'underline'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.color = '#5b6b7b'; e.currentTarget.style.textDecoration = 'none'; }}
+    >
+      {label}
+    </button>
+  );
+  const current = (label: string) => <span style={{ color: '#22303c', fontWeight: 700, fontFamily: "'Zen Kaku Gothic New', sans-serif" }}>{label}</span>;
+  const group = groupOf(page);
+  const middle = group ? { label: group.label, target: group.items[0] } : SETTINGS_MENU.includes(page) ? { label: '設定', target: '事業者' } : page === 'ユーザー設定' || page === 'メンバーの追加、管理' || page === 'ログアウト' ? { label: 'ユーザー', target: 'ユーザー設定' } : null;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, color: '#8895a3', minWidth: 0, flex: 1, overflow: 'hidden', whiteSpace: 'nowrap' }}>
+      {page === 'ホーム' ? (
+        current('ホーム')
+      ) : (
+        <>
+          {link('ホーム', 'ホーム')}
+          {middle && (
+            <>
+              {sep}
+              {middle.target === page ? <span>{middle.label}</span> : link(middle.label, middle.target)}
+            </>
+          )}
+          {sep}
+          {current(page === '伝票入力' ? '仕訳帳' : page)}
+        </>
+      )}
+    </div>
+  );
 }
 
 export function SheetScreen({ page, onNavigate, year, onYear, drawer, onDrawer, onLogout }: Props) {
@@ -245,13 +283,7 @@ export function SheetScreen({ page, onNavigate, year, onYear, drawer, onDrawer, 
             flex: 'none',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, color: '#8895a3', minWidth: 0, flex: 1, overflow: 'hidden', whiteSpace: 'nowrap' }}>
-            <span>ホーム</span>
-            <span style={{ color: '#c3ccd4' }}>›</span>
-            <span>会計帳簿</span>
-            <span style={{ color: '#c3ccd4' }}>›</span>
-            <span style={{ color: '#22303c', fontWeight: 700, fontFamily: "'Zen Kaku Gothic New', sans-serif" }}>{page === '伝票入力' ? '仕訳帳' : page === 'ホーム' ? 'ダッシュボード' : page}</span>
-          </div>
+          <Breadcrumb page={page} onNavigate={onNavigate} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12.5, color: '#68757f', flex: 'none', marginLeft: 12 }}>
             <HeaderTools accent={BLUE} page={page} onNavigate={onNavigate} year={year} onYear={onYear} drawer={drawer} onDrawer={onDrawer} />
             <span style={{ whiteSpace: 'nowrap' }}>令和8年度</span>
