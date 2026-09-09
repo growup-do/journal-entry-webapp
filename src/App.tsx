@@ -14,6 +14,7 @@ import { DRAWER_W, RightDrawer } from './components/RightDrawer';
 import type { DrawerKind, JournalYear } from './components/HeaderTools';
 import { DEFAULT_MENU } from './data';
 import { LoginPage } from './components/LoginPage';
+import { FeatureListPage } from './components/FeatureListPage';
 
 type Mode = 'form' | 'sheet';
 
@@ -23,6 +24,8 @@ const TABS: { key: Mode; label: string; hint: string; accent: string }[] = [
 ];
 
 export default function App() {
+  // 機能一覧（別タブで開く静的ページ）
+  if (new URLSearchParams(window.location.search).get('page') === 'features') return <FeatureListPage />;
   // ログイン状態（プロトタイプ：タブを閉じるまで保持）
   const [loggedIn, setLoggedIn] = useState<boolean>(() => {
     try {

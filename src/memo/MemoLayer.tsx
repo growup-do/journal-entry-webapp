@@ -323,6 +323,14 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
 
       {/* ツールバー（右下固定） */}
       <div style={{ position: 'fixed', right: 18, bottom: 18, zIndex: 300, display: 'flex', gap: 8 }}>
+        <button
+          type="button"
+          title="このシステムの機能一覧を別タブで開く"
+          onClick={() => window.open(window.location.origin + window.location.pathname + '?page=features', '_blank', 'noopener')}
+          style={{ ...toolBtn, background: '#fff', color: '#22303c', border: '1px solid #dde4ea' }}
+        >
+          機能一覧 ↗
+        </button>
         <button type="button" onClick={placing ? () => setPlacing(false) : startPlacing} style={{ ...toolBtn, background: placing ? '#22303c' : '#fff', color: placing ? '#fff' : AMBER, border: `1px solid ${placing ? '#22303c' : '#f3d9b0'}` }}>
           {placing ? '配置を中止' : '＋ メモを置く'}
         </button>
