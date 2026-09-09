@@ -17,10 +17,13 @@ import { LedgerPage } from './LedgerPage';
 import { TrendPage } from './TrendPage';
 import { TrialBalancePage } from './TrialBalancePage';
 import { PlaceholderPage } from './PlaceholderPage';
+import { renderSettingsPage } from './SettingsPages';
+import { SETTINGS_MENU } from '../data';
 import { SingleEntryPage } from './SingleEntryPage';
 import { TransferEntryPage } from './TransferEntryPage';
 
 export function renderPage(page: string, variant: 'form' | 'sheet', accent: string, accentRgb: string, onNavigate: (label: string) => void, year: 'current' | 'prev' = 'current') {
+  if (SETTINGS_MENU.includes(page)) return renderSettingsPage(page, variant, accent);
   switch (page) {
     case 'ホーム':
       return <HomePage variant={variant} accent={accent} onNavigate={onNavigate} />;
