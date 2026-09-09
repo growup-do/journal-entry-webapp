@@ -18,6 +18,9 @@ export function FeatureListPage() {
   const count = (st: FeatureStatus) => screens.filter((s) => s.status === st).length;
   const featureCount = FEATURE_GROUPS.flatMap((g) => g.screens).reduce((n, s) => n + s.features.length, 0);
   const unit = (g: { kind?: string }) => (g.kind ? '項目' : '画面');
+  // 小画面（モーダル・説明ページ・タブなど）は共通機能のものも含めて数える
+  const subCount = (list: { subs?: { count: number }[] }[]) => list.reduce((n, s) => n + (s.subs?.reduce((a, b) => a + b.count, 0) ?? 0), 0);
+  const subTotal = subCount(FEATURE_GROUPS.flatMap((g) => g.screens));
   const badge = (st: FeatureStatus): CSSProperties => ({ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: STATUS[st].bg, color: STATUS[st].fg, whiteSpace: 'nowrap' });
 
   return (
@@ -39,7 +42,7 @@ export function FeatureListPage() {
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 28px 60px' }}>
         {/* サマリー */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
-          {[['画面数', `${screens.length}`], ['作成済', `${count('作成済')}`], ['叩き台', `${count('叩き台')}`], ['共通機能', `${commons.length}`], ['機能項目', `${featureCount}`]].map(([l, v]) => (
+          {[['画面数', `${screens.length}`], ['小画面', `${subTotal}`], ['合計（画面＋小画面）', `${screens.length + subTotal}`], ['作成済', `${count('作成済')}`], ['叩き台', `${count('叩き台')}`], ['共通機能', `${commons.length}`], ['機能項目', `${featureCount}`]].map(([l, v]) => (
             <div key={l} className="fl-card" style={{ background: '#fff', border: '1px solid #dde4ea', borderRadius: 12, padding: '12px 16px' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#8290a0' }}>{l}</div>
               <div style={{ fontSize: 24, fontWeight: 800, marginTop: 2 }}>{v}</div>
@@ -57,7 +60,7 @@ export function FeatureListPage() {
           <section key={g.key} id={g.key} style={{ marginBottom: 26 }}>
             <h2 style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontSize: 17, margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: 10 }}>
               {g.title}
-              <span style={{ fontSize: 12, fontWeight: 500, color: '#7a8794' }}>{g.screens.length} {unit(g)}</span>
+              <span style={{ fontSize: 12, fontWeight: 500, color: '#7a8794' }}>{g.screens.length} {unit(g)}{subCount(g.screens) > 0 && `（小画面 ${subCount(g.screens)}）`}</span>
             </h2>
             {g.note && <div style={{ fontSize: 12, color: '#7a8794', marginBottom: 8 }}>{g.note}</div>}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 12 }}>
@@ -71,6 +74,13 @@ export function FeatureListPage() {
                   <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, lineHeight: 1.75, color: '#22303c' }}>
                     {s.features.map((f) => <li key={f}>{f}</li>)}
                   </ul>
+                  {s.subs && s.subs.length > 0 && (
+                    <div style={{ marginTop: 10, padding: '8px 10px', background: '#f8fafc', border: '1px solid #e8edf2', borderRadius: 8, fontSize: 12, lineHeight: 1.7, color: '#5b6773' }}>
+                      <span style={{ fontWeight: 700, color: '#22303c' }}>小画面 {s.subs.reduce((a, b) => a + b.count, 0)}</span>
+                      <span style={{ color: '#c3ccd4', margin: '0 6px' }}>｜</span>
+                      {s.subs.map((b) => `${b.name}${b.count > 1 ? ` ×${b.count}` : ''}`).join('、')}
+                    </div>
+                  )}
                 </article>
               ))}
             </div>
