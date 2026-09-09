@@ -1,10 +1,10 @@
-// アプリバー右側の道具：仕訳の年切替（当年／前年）、右ドロワー（元帳１／元帳２／残高照合）、法人メニュー
-// 通常メニューと別枠にして、入力画面の右側パネルの内容を切り替える。
+// アプリバー右側の道具：仕訳の年切替（当年／前年）、照会（元帳１／元帳２／残高照合＝1画面で開く）、法人メニュー
+// 通常メニューと別枠に置く。
 
 import { CorpMenu } from './CorpMenu';
+import { INQUIRY_MENU } from '../data';
 
 export type JournalYear = 'current' | 'prev';
-export type DrawerKind = 'ledger1' | 'ledger2' | 'balance' | null;
 
 interface Props {
   accent: string;
@@ -12,8 +12,6 @@ interface Props {
   onNavigate: (label: string) => void;
   year: JournalYear;
   onYear: (y: JournalYear) => void;
-  drawer: DrawerKind;
-  onDrawer: (d: DrawerKind) => void;
 }
 
 const seg = (on: boolean, accent: string) => ({
@@ -32,7 +30,7 @@ const seg = (on: boolean, accent: string) => ({
 const groupStyle = { display: 'flex', alignItems: 'center', gap: 2, padding: 2, background: '#f4f6f8', border: '1px solid #e2e8ee', borderRadius: 8, flex: 'none' as const };
 const groupLabel = { fontSize: 9.5, fontWeight: 700, color: '#8290a0', padding: '0 4px 0 4px', letterSpacing: '.02em' };
 
-export function HeaderTools({ accent, page, onNavigate, year, onYear, drawer, onDrawer }: Props) {
+export function HeaderTools({ accent, page, onNavigate, year, onYear }: Props) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 'none' }}>
       <div style={groupStyle}>
@@ -42,8 +40,8 @@ export function HeaderTools({ accent, page, onNavigate, year, onYear, drawer, on
       </div>
       <div style={groupStyle}>
         <span style={groupLabel}>照会</span>
-        {([['ledger1', '元帳１'], ['ledger2', '元帳２'], ['balance', '残高照合']] as const).map(([k, label]) => (
-          <button key={k} type="button" className="btn-outline" data-menu={label} onClick={() => onDrawer(drawer === k ? null : k)} style={seg(drawer === k, accent)}>
+        {INQUIRY_MENU.map((label) => (
+          <button key={label} type="button" className="btn-outline" data-menu={label} onClick={() => onNavigate(label)} style={seg(page === label, accent)}>
             {label}
           </button>
         ))}

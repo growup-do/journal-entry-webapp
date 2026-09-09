@@ -7,7 +7,7 @@ import type { CSSProperties } from 'react';
 import { AssistField } from './AssistField';
 import { AssistPanel } from './AssistPanel';
 import { Chips } from './Chips';
-import { HeaderTools, type DrawerKind, type JournalYear } from './HeaderTools';
+import { HeaderTools, type JournalYear } from './HeaderTools';
 import { PrevYearJournal } from './PrevYearJournal';
 import { UserMenu } from './UserMenu';
 import { SettingsMenu } from './SettingsMenu';
@@ -16,7 +16,6 @@ import { Menu } from './Menu';
 import { MonthChips } from './MonthChips';
 import { renderPage } from './pages';
 import { Footer } from './Footer';
-import { DrawerToggle } from './RightDrawer';
 import { makeFormSeed } from '../data';
 import { applyMonth } from '../lib/format';
 import { useEntryForm } from '../hooks/useEntryForm';
@@ -85,15 +84,10 @@ interface Props {
   onNavigate: (label: string) => void;
   year: JournalYear;
   onYear: (y: JournalYear) => void;
-  drawer: DrawerKind;
-  onDrawer: (d: DrawerKind) => void;
-  /** 右パネル（元帳など）を畳んでいるか／切替 */
-  drawerCollapsed: boolean;
-  onDrawerCollapse: (c: boolean) => void;
   onLogout: () => void;
 }
 
-export function FormScreen({ page, onNavigate, year, onYear, drawer, onDrawer, drawerCollapsed, onDrawerCollapse, onLogout }: Props) {
+export function FormScreen({ page, onNavigate, year, onYear, onLogout }: Props) {
   const v = useEntryForm({ initialForm, seed: makeFormSeed() });
   const [collapsed, setCollapsed] = useState(false);
   const [topOffset, setTopOffset] = useState(102);
@@ -121,7 +115,7 @@ export function FormScreen({ page, onNavigate, year, onYear, drawer, onDrawer, d
 
   const rows = applyMonth(v.journal, v.monthFilter);
   const f = v.form;
-  const hidden = collapsed || !!drawer;
+  const hidden = collapsed;
 
   const submitStyle: CSSProperties = {
     display: 'inline-flex',
@@ -188,7 +182,7 @@ export function FormScreen({ page, onNavigate, year, onYear, drawer, onDrawer, d
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12.5, color: '#68757f', flex: 'none', marginLeft: 12 }}>
-          <HeaderTools accent={GREEN} page={page} onNavigate={onNavigate} year={year} onYear={onYear} drawer={drawer} onDrawer={onDrawer} />
+          <HeaderTools accent={GREEN} page={page} onNavigate={onNavigate} year={year} onYear={onYear} />
           <span style={{ whiteSpace: 'nowrap' }}>
             会計期間　<b style={{ color: '#22303c', fontWeight: 600 }}>令和8年度</b>
           </span>
@@ -524,7 +518,7 @@ export function FormScreen({ page, onNavigate, year, onYear, drawer, onDrawer, d
       </main>
 
       {/* 折りたたみトグル */}
-      {!drawer && <button
+      <button
         type="button"
         className="collapse-toggle"
         onClick={() => setCollapsed((c) => !c)}
@@ -549,7 +543,7 @@ export function FormScreen({ page, onNavigate, year, onYear, drawer, onDrawer, d
         }}
       >
         {collapsed ? '◀' : '▶'}
-      </button>}
+      </button>
 
       {/* 仕訳帳（右端固定） */}
       <aside
@@ -653,8 +647,6 @@ export function FormScreen({ page, onNavigate, year, onYear, drawer, onDrawer, d
       </aside>
         </>
       )}
-      {/* 右パネル（元帳１／元帳２／残高照合）の表示切替：仕訳帳パネルと同じ位置 */}
-      {drawer && <DrawerToggle top={topOffset + 10} collapsed={drawerCollapsed} onToggle={() => onDrawerCollapse(!drawerCollapsed)} />}
       <Footer />
     </div>
   );

@@ -14,6 +14,7 @@ import { UserSettingsPage } from './UserSettingsPage';
 import { SufficiencyPage } from './SufficiencyPage';
 import { JournalListPage } from './JournalListPage';
 import { LedgerPage } from './LedgerPage';
+import { BalanceCheckPage, LedgerInquiryPage } from './InquiryPages';
 import { TrendPage } from './TrendPage';
 import { TrialBalancePage } from './TrialBalancePage';
 import { PlaceholderPage } from './PlaceholderPage';
@@ -49,6 +50,12 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
       return <LedgerPage kind="fund" variant={variant} accent={accent} accentRgb={accentRgb} onNavigate={onNavigate} />;
     case '業者元帳':
       return <LedgerPage kind="vendor" variant={variant} accent={accent} accentRgb={accentRgb} onNavigate={onNavigate} />;
+    case '元帳１':
+      return <LedgerInquiryPage key="ledger1" slot="ledger1" variant={variant} accent={accent} accentRgb={accentRgb} onNavigate={onNavigate} />;
+    case '元帳２':
+      return <LedgerInquiryPage key="ledger2" slot="ledger2" variant={variant} accent={accent} accentRgb={accentRgb} onNavigate={onNavigate} />;
+    case '残高照合':
+      return <BalanceCheckPage variant={variant} accent={accent} onNavigate={onNavigate} />;
     case '科目推移':
       return <TrendPage kind="account" variant={variant} accent={accent} accentRgb={accentRgb} onNavigate={onNavigate} />;
     case '資金推移':

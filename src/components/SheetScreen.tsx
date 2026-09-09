@@ -7,7 +7,7 @@ import type { CSSProperties } from 'react';
 import { AssistField } from './AssistField';
 import { AssistPanel } from './AssistPanel';
 import { Chips } from './Chips';
-import { HeaderTools, type DrawerKind, type JournalYear } from './HeaderTools';
+import { HeaderTools, type JournalYear } from './HeaderTools';
 import { PrevYearJournal } from './PrevYearJournal';
 import { UserMenu } from './UserMenu';
 import { SettingsMenu } from './SettingsMenu';
@@ -16,8 +16,7 @@ import { Menu } from './Menu';
 import { MonthChips } from './MonthChips';
 import { renderPage } from './pages';
 import { Footer } from './Footer';
-import { DrawerToggle } from './RightDrawer';
-import { SETTINGS_MENU, accountFlat, groupOf, makeSheetSeed } from '../data';
+import { INQUIRY_MENU, SETTINGS_MENU, accountFlat, groupOf, makeSheetSeed } from '../data';
 import { applyMonth, rgba } from '../lib/format';
 import { useEntryForm } from '../hooks/useEntryForm';
 import type { FormState, JournalEntry, SearchState } from '../types';
@@ -105,11 +104,6 @@ interface Props {
   onNavigate: (label: string) => void;
   year: JournalYear;
   onYear: (y: JournalYear) => void;
-  drawer: DrawerKind;
-  onDrawer: (d: DrawerKind) => void;
-  /** 右パネル（元帳など）を畳んでいるか／切替 */
-  drawerCollapsed: boolean;
-  onDrawerCollapse: (c: boolean) => void;
   onLogout: () => void;
 }
 
@@ -129,7 +123,7 @@ function Breadcrumb({ page, onNavigate }: { page: string; onNavigate: (label: st
   );
   const current = (label: string) => <span style={{ color: '#22303c', fontWeight: 700, fontFamily: "'Zen Kaku Gothic New', sans-serif" }}>{label}</span>;
   const group = groupOf(page);
-  const middle = group ? { label: group.label, target: group.items[0] } : SETTINGS_MENU.includes(page) ? { label: '設定', target: '事業者' } : page === 'ユーザー設定' || page === 'メンバーの追加、管理' || page === 'ログアウト' ? { label: 'ユーザー', target: 'ユーザー設定' } : null;
+  const middle = group ? { label: group.label, target: group.items[0] } : INQUIRY_MENU.includes(page) ? { label: '照会', target: page } : SETTINGS_MENU.includes(page) ? { label: '設定', target: '事業者' } : page === 'ユーザー設定' || page === 'メンバーの追加、管理' || page === 'ログアウト' ? { label: 'ユーザー', target: 'ユーザー設定' } : null;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, color: '#8895a3', minWidth: 0, flex: 1, overflow: 'hidden', whiteSpace: 'nowrap' }}>
       {page === 'ホーム' ? (
@@ -151,7 +145,7 @@ function Breadcrumb({ page, onNavigate }: { page: string; onNavigate: (label: st
   );
 }
 
-export function SheetScreen({ page, onNavigate, year, onYear, drawer, onDrawer, drawerCollapsed, onDrawerCollapse, onLogout }: Props) {
+export function SheetScreen({ page, onNavigate, year, onYear, onLogout }: Props) {
   // 左サイドバー（メニュー）の開閉：下部の「閉じる」で畳み、トップバーの「☰」で開く
   const [sideOpen, setSideOpen] = useState(true);
   const [search, setSearch] = useState<SearchState>(emptySearch);
@@ -308,7 +302,7 @@ export function SheetScreen({ page, onNavigate, year, onYear, drawer, onDrawer, 
           )}
           <Breadcrumb page={page} onNavigate={onNavigate} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12.5, color: '#68757f', flex: 'none', marginLeft: 12 }}>
-            <HeaderTools accent={BLUE} page={page} onNavigate={onNavigate} year={year} onYear={onYear} drawer={drawer} onDrawer={onDrawer} />
+            <HeaderTools accent={BLUE} page={page} onNavigate={onNavigate} year={year} onYear={onYear} />
             <span style={{ whiteSpace: 'nowrap' }}>令和8年度</span>
             <span style={{ color: '#c3ccd4' }}>｜</span>
             <span style={{ whiteSpace: 'nowrap' }}>チャイルド保育園　拠点区分</span>
@@ -663,8 +657,6 @@ export function SheetScreen({ page, onNavigate, year, onYear, drawer, onDrawer, 
         )}
         {!sideOpen && <Footer />}
       </div>
-      {/* 右パネル（元帳１／元帳２／残高照合）の表示切替 */}
-      {drawer && <DrawerToggle top={66} collapsed={drawerCollapsed} onToggle={() => onDrawerCollapse(!drawerCollapsed)} />}
     </div>
   );
 }

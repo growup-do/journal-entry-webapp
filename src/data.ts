@@ -416,6 +416,8 @@ export const CLOSING_REPORT_ROWS: { name: string; avail: string[]; required: str
 /* ============ 設定メニュー・ホーム画面 ============ */
 
 /** 設定メニュー（ヘッダーの歯車） */
+/** ヘッダー「照会」の項目（1画面で開く） */
+export const INQUIRY_MENU = ['元帳１', '元帳２', '残高照合'];
 export const SETTINGS_MENU = ['事業者', '開始残高', '勘定科目', '税区分', '部門', 'タグ', '摘要辞書', '仕訳辞書', '取引先', '他社ソフトデータの移行'];
 
 /** ホーム：銀行の預金残高（サンプル） */

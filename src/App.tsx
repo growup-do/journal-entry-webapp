@@ -1,6 +1,7 @@
 // 仕訳伝票入力 画面 — Webアプリ プロトタイプ
 // 2つのUI案（フォーム型 / スプレッドシート型）をフルスクリーンで切り替えて確認できる。
 // メニューから画面（単一入力 / 伝票入力）を切り替え。各画面は独立した状態を持つ。
+// ヘッダーの「照会」（元帳１／元帳２／残高照合）は通常の画面として開く。
 // 右下の「確認メモ」でクライアントとの確認事項を画面上に貼れる（Firestore で共有）。
 
 import { useState } from 'react';
@@ -10,8 +11,7 @@ import { MemoLayer } from './memo/MemoLayer';
 import { SettlementAuditModal } from './components/SettlementAuditModal';
 import { JournalCountModal } from './components/JournalCountModal';
 import { CorporatePrintModal } from './components/CorporatePrintModal';
-import { DRAWER_W, RightDrawer } from './components/RightDrawer';
-import type { DrawerKind, JournalYear } from './components/HeaderTools';
+import type { JournalYear } from './components/HeaderTools';
 import { DEFAULT_MENU } from './data';
 import { LoginPage } from './components/LoginPage';
 import { FeatureListPage } from './components/FeatureListPage';
@@ -48,7 +48,6 @@ export default function App() {
   const logout = () => {
     try { sessionStorage.removeItem('proto-logged-in'); } catch { /* ignore */ }
     setLoggedIn(false);
-    setDrawer(null);
   };
   // 表示中のUI案・画面は sessionStorage に保持（静的ページから戻ったときに元の画面へ復帰）
   const [mode, setModeRaw] = useState<Mode>(() => (readSaved('proto-mode') === 'sheet' ? 'sheet' : 'form'));
@@ -58,16 +57,8 @@ export default function App() {
   const [auditOpen, setAuditOpen] = useState(false);
   const [countOpen, setCountOpen] = useState(false);
   const [corpPrintOpen, setCorpPrintOpen] = useState(false);
-  // 仕訳の年（当年／前年）と右ドロワー（元帳１／元帳２／残高照合）はアプリ全体で共有
+  // 仕訳の年（当年／前年）はアプリ全体で共有
   const [year, setYear] = useState<JournalYear>('current');
-  const [drawer, setDrawerRaw] = useState<DrawerKind>(null);
-  // 右パネル（元帳１／元帳２／残高照合）の表示／非表示。フォーム型の仕訳帳パネルと同じ切替
-  const [drawerCollapsed, setDrawerCollapsed] = useState(false);
-  const setDrawer = (d: DrawerKind) => {
-    setDrawerRaw(d);
-    if (d) setDrawerCollapsed(false);
-  };
-  const drawerShown = !!drawer && !drawerCollapsed;
   const screenKey = `${mode}:${page}`;
 
   // メニュー選択：決算調査はページ遷移ではなくモーダルで開く（既存システムと同じ）
@@ -147,14 +138,13 @@ export default function App() {
         })}
       </div>
 
-      <div style={{ paddingRight: drawerShown ? DRAWER_W : 0, transition: 'padding-right .28s ease' }}>
+      <div>
         {mode === 'form' ? (
-          <FormScreen page={page} onNavigate={selectMenu} year={year} onYear={setYear} drawer={drawer} onDrawer={setDrawer} drawerCollapsed={drawerCollapsed} onDrawerCollapse={setDrawerCollapsed} onLogout={logout} />
+          <FormScreen page={page} onNavigate={selectMenu} year={year} onYear={setYear} onLogout={logout} />
         ) : (
-          <SheetScreen page={page} onNavigate={selectMenu} year={year} onYear={setYear} drawer={drawer} onDrawer={setDrawer} drawerCollapsed={drawerCollapsed} onDrawerCollapse={setDrawerCollapsed} onLogout={logout} />
+          <SheetScreen page={page} onNavigate={selectMenu} year={year} onYear={setYear} onLogout={logout} />
         )}
       </div>
-      {drawer && <RightDrawer kind={drawer} accent={TABS.find((t) => t.key === mode)!.accent} accentRgb={mode === 'form' ? '31,122,82' : '44,95,158'} collapsed={drawerCollapsed} onClose={() => setDrawer(null)} />}
       <CorporatePrintModal open={corpPrintOpen} onClose={() => setCorpPrintOpen(false)} />
 
       <SettlementAuditModal open={auditOpen} onClose={() => setAuditOpen(false)} />
