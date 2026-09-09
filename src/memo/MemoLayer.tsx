@@ -280,7 +280,7 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
 
       {/* 一覧パネル */}
       {panelOpen && (
-        <div style={{ position: 'fixed', right: 18, bottom: 70, width: 350, maxHeight: '62vh', zIndex: 300, ...cardStyle, padding: 0, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ position: 'fixed', right: 18, bottom: 120, width: 350, maxHeight: '62vh', zIndex: 300, ...cardStyle, padding: 0, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderBottom: '1px solid #eef2f5' }}>
             <span style={{ fontWeight: 700, fontSize: 14 }}>確認メモ</span>
             <span style={{ fontSize: 11.5, color: '#8290a0' }}>未解決 {openCount} 件</span>
@@ -316,13 +316,13 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
 
       {/* エラー */}
       {error && (
-        <div style={{ position: 'fixed', right: 18, bottom: panelOpen ? 'calc(62vh + 80px)' : 70, zIndex: 301, background: '#fdeee9', border: '1px solid #e6cfc7', color: '#c0392b', padding: '8px 12px', borderRadius: 8, fontSize: 12, maxWidth: 350 }}>
+        <div style={{ position: 'fixed', right: 18, bottom: panelOpen ? 'calc(62vh + 130px)' : 120, zIndex: 301, background: '#fdeee9', border: '1px solid #e6cfc7', color: '#c0392b', padding: '8px 12px', borderRadius: 8, fontSize: 12, maxWidth: 350 }}>
           {error}
         </div>
       )}
 
-      {/* ツールバー（右下固定） */}
-      <div style={{ position: 'fixed', right: 18, bottom: 18, zIndex: 300, display: 'flex', gap: 8 }}>
+      {/* ツールバー（右下固定。フッターに被らないよう1段上に置く） */}
+      <div style={{ position: 'fixed', right: 18, bottom: 68, zIndex: 300, display: 'flex', gap: 8 }}>
         <button type="button" onClick={placing ? () => setPlacing(false) : startPlacing} style={{ ...toolBtn, background: placing ? '#22303c' : '#fff', color: placing ? '#fff' : AMBER, border: `1px solid ${placing ? '#22303c' : '#f3d9b0'}` }}>
           {placing ? '配置を中止' : '＋ メモを置く'}
         </button>
