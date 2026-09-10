@@ -8,6 +8,7 @@ import { FISCAL_MONTHS } from './FiscalMonthTabs';
 import { LABEL, NUM, ReportShell, TD, TH, yen } from './ReportShell';
 import { useAssist } from '../hooks/useAssist';
 import { seededSeries } from '../lib/hier';
+import { setSession } from '../store/session';
 
 export type TrendKind = 'account' | 'fund' | 'vendor';
 const TITLE: Record<TrendKind, string> = { account: '科目推移', fund: '資金推移', vendor: '業者推移' };
@@ -45,7 +46,7 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
       variant={variant}
       accent={accent}
       title={TITLE[kind]}
-      subtitle={<>{isVendor ? '指定した業者' : '指定した科目'}の月ごとの推移を年度で一覧します。<span style={{ color: '#b7791f' }}>（表示中の値はサンプルです）</span></>}
+      subtitle={<>{isVendor ? '指定した業者' : '指定した科目'}の月ごとの推移を年度で一覧します。行をクリックするとその月の元帳を開き、元帳から伝票を訂正できます。<span style={{ color: '#b7791f' }}>（表示中の値はサンプルです）</span></>}
       tools={[{ label: isVendor ? '業者検索' : '科目検索', onClick: () => assist.open('target', isVendor ? 'vendor' : 'account'), primary: true }]}
       onBack={() => onNavigate('伝票入力')}
       controls={
@@ -108,7 +109,7 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
               const future = i > done;
               const dim: CSSProperties = future ? { color: '#b3bcc5' } : {};
               return (
-                <tr key={r.m} style={{ background: r.m === '8' ? '#fff8d6' : 'transparent' }}>
+                <tr key={r.m} onClick={() => { if (!future) { setSession({ ledgerTarget: { account: target, month: r.m } }); onNavigate(isVendor ? '業者元帳' : kind === 'fund' ? '資金元帳' : '勘定元帳'); } }} title={future ? '' : 'クリックでこの月の元帳を開く'} style={{ background: r.m === '8' ? '#fff8d6' : 'transparent', cursor: future ? 'default' : 'pointer' }}>
                   <td style={{ ...TD, fontWeight: 700 }}>{r.m}月{r.m === '8' && <span style={{ marginLeft: 6, fontSize: 10, color: '#b7791f' }}>当月</span>}</td>
                   {isVendor ? (
                     <>

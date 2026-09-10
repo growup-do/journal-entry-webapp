@@ -1,6 +1,7 @@
 // 共通ヘルパー（金額整形・プレースホルダ・補助候補・月抽出）
 
 import { ACCOUNTS, SERVICES, SUMMARIES, VENDORS } from '../data';
+import { accountMatches } from './accounts';
 import type { AssistGroup, AssistType, JournalEntry, MonthFilter } from '../types';
 import type { CSSProperties } from 'react';
 
@@ -29,10 +30,11 @@ export function buildGroups(type: AssistType, query: string): AssistGroup[] {
   const q = (query || '').trim();
   const f = (arr: string[]) => (q ? arr.filter((x) => x.indexOf(q) >= 0) : arr);
   if (type === 'account') {
+    // 科目名のほか、コード（数字）・フリガナ（カナ／かな）でも絞り込める
     return ACCOUNTS.map((g) => ({
       group: g.group,
       hasHeader: true,
-      items: f(g.items).map((v) => ({ value: v })),
+      items: g.items.filter((v) => accountMatches(v, q)).map((v) => ({ value: v })),
     })).filter((g) => g.items.length > 0);
   }
   if (type === 'service') return [{ group: '', hasHeader: false, items: f(SERVICES).map((v) => ({ value: v })) }];

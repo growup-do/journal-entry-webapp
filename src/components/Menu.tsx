@@ -247,5 +247,7 @@ function Icon({ kind, color }: { kind: MenuGroup['icon']; color: string }): Reac
       return <svg {...p}><path d="M12 3l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 15.3 7.2 17.9l.9-5.4-3.9-3.8 5.4-.8z" /></svg>;
     case 'graph':
       return <svg {...p}><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>;
+    case 'print':
+      return <svg {...p}><path d="M6 9V3h12v6" /><rect x="3" y="9" width="18" height="8" rx="2" /><path d="M6 14h12v7H6z" /></svg>;
   }
 }

@@ -51,7 +51,7 @@ export interface MenuGroup {
   key: string;
   label: string;
   /** アイコン種別（Menu.tsx で描画） */
-  icon: 'input' | 'ledger' | 'trend' | 'compare' | 'audit' | 'option' | 'graph';
+  icon: 'input' | 'ledger' | 'trend' | 'compare' | 'audit' | 'option' | 'graph' | 'print';
   items: string[];
   option?: boolean;
 }
@@ -62,6 +62,7 @@ export const MENU_GROUPS: MenuGroup[] = [
   { key: 'compare', label: '試算・対比', icon: 'compare', items: ['月次試算', '予算対比', '月次決算'] },
   { key: 'audit', label: '調査', icon: 'audit', items: ['仕訳数', '日次調査', '決算調査'] },
   { key: 'graph', label: 'グラフ', icon: 'graph', items: ['経年グラフ', '分析グラフ', '充実残額'] },
+  { key: 'print', label: '印刷', icon: 'print', items: ['印刷センター', '一括印刷', '共通の印刷設定'] },
   { key: 'option', label: 'オプション', icon: 'option', items: ['小口現金', '減価償却', '預金出納', '収入支出'], option: true },
 ];
 /** 互換用：フラットなグループ配列 */
@@ -80,7 +81,7 @@ export const CORP_MENU = ['法人調査', '法人印刷'];
 export const DEFAULT_MENU = 'ホーム';
 
 /** プロトタイプとして画面を用意しているメニュー項目 */
-export const IMPLEMENTED_MENU = ['単一入力', '伝票入力', '振替入力', '振替単一', '仕訳一覧', '勘定元帳', '資金元帳', '業者元帳', '科目推移', '資金推移', '業者推移', '月次試算', '予算対比', '月次決算', '仕訳数', '日次調査', '決算調査', '経年グラフ', '分析グラフ', '充実残額', '当年仕訳', '前年仕訳', '元帳１', '元帳２', '残高照合', '法人調査', '法人印刷', 'ホーム', 'ユーザー設定', 'メンバーの追加、管理', 'ログアウト', '小口現金', '預金出納', '収入支出', '減価償却', '事業者', '開始残高', '勘定科目', '税区分', '部門', 'タグ', '摘要辞書', '仕訳辞書', '取引先', '他社ソフトデータの移行'];
+export const IMPLEMENTED_MENU = ['単一入力', '伝票入力', '振替入力', '振替単一', '仕訳一覧', '勘定元帳', '資金元帳', '業者元帳', '科目推移', '資金推移', '業者推移', '月次試算', '予算対比', '月次決算', '仕訳数', '日次調査', '決算調査', '経年グラフ', '分析グラフ', '充実残額', '当年仕訳', '前年仕訳', '元帳１', '元帳２', '残高照合', '法人調査', '法人印刷', 'ホーム', 'ユーザー設定', 'メンバーの追加、管理', 'ログアウト', '小口現金', '預金出納', '収入支出', '減価償却', '事業者', '開始残高', '勘定科目', '税区分', '部門', 'タグ', '摘要辞書', '仕訳辞書', '取引先', '他社ソフトデータの移行', '予算', '年度更新・切替', '環境設定', '決算附属明細書', '整合性チェック', '印刷センター', '一括印刷', '共通の印刷設定'];
 
 /** 仕訳帳シード（フォーム型・8件） */
 const SEED_FORM: Omit<JournalEntry, 'id'>[] = [
@@ -418,7 +419,7 @@ export const CLOSING_REPORT_ROWS: { name: string; avail: string[]; required: str
 /** 設定メニュー（ヘッダーの歯車） */
 /** ヘッダー「照会」の項目（1画面で開く） */
 export const INQUIRY_MENU = ['元帳１', '元帳２', '残高照合'];
-export const SETTINGS_MENU = ['事業者', '開始残高', '勘定科目', '税区分', '部門', 'タグ', '摘要辞書', '仕訳辞書', '取引先', '他社ソフトデータの移行'];
+export const SETTINGS_MENU = ['事業者', '年度更新・切替', '開始残高', '予算', '勘定科目', '税区分', '部門', 'タグ', '摘要辞書', '仕訳辞書', '取引先', '決算附属明細書', '整合性チェック', '環境設定', '他社ソフトデータの移行'];
 
 /** ホーム：銀行の預金残高（サンプル） */
 export const HOME_BANKS: { name: string; bank: string; balance: number; diff: number; updated: string }[] = [

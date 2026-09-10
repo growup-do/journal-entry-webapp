@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { NOT_IMPL, ToastView, useToast } from './Toast';
-import { HOME_BANKS, HOME_FAQ, HOME_NOTICES } from '../data';
+import { HOME_BANKS, HOME_FAQ, HOME_NOTICES, IMPLEMENTED_MENU, MENU_GROUPS, SETTINGS_MENU } from '../data';
+import { Modal } from './Modal';
+import { setSession, useSession } from '../store/session';
 
 const yen = (n: number) => n.toLocaleString('ja-JP');
 const TAG_COLOR: Record<string, { bg: string; fg: string }> = {
@@ -21,6 +23,10 @@ interface Props {
 
 export function HomePage({ variant, accent, onNavigate }: Props) {
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
+  const [favEdit, setFavEdit] = useState(false);
+  const s = useSession();
+  const CANDIDATES = [...MENU_GROUPS.flatMap((g) => g.items), '元帳１', '元帳２', '残高照合', '法人印刷', ...SETTINGS_MENU].filter((l) => IMPLEMENTED_MENU.includes(l) || l === '印刷センター' || l === '一括印刷' || l === '予算' || SETTINGS_MENU.includes(l));
+  const moveFav = (i: number, d: -1 | 1) => { const f = [...s.favorites]; const j = i + d; if (j < 0 || j >= f.length) return; [f[i], f[j]] = [f[j], f[i]]; setSession({ favorites: f }); };
   const toast = useToast();
   const isSheet = variant === 'sheet';
   const total = HOME_BANKS.reduce((a, b) => a + b.balance, 0);
@@ -59,12 +65,31 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
 
           {/* よく使う操作 */}
           <section style={card}>
-            <div style={h2}>よく使う操作</div>
+            <div style={h2}>よく使う操作（お気に入り）<button type="button" style={link} onClick={() => setFavEdit(true)}>編集 ›</button></div>
             <div style={{ display: 'flex', gap: 8, padding: 16, flexWrap: 'wrap' }}>
-              {['単一入力', '伝票入力', '仕訳一覧', '勘定元帳', '月次試算', '日次調査'].map((l) => (
+              {s.favorites.map((l) => (
                 <button key={l} type="button" className="btn-outline" onClick={() => onNavigate(l)} style={{ padding: '9px 16px', border: '1px solid #cfd8e0', borderRadius: 9, background: '#fff', color: '#22303c', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{l}</button>
               ))}
+              {s.favorites.length === 0 && <span style={{ fontSize: 12.5, color: '#9aa5b1' }}>「編集」からよく使う画面を登録できます。</span>}
             </div>
+            <Modal open={favEdit} onClose={() => setFavEdit(false)} width={640} title="お気に入りメニューの設定">
+              <div style={{ padding: '12px 22px 18px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#8290a0', marginBottom: 6 }}>登録済み（上から順に表示・↑↓で並べ替え）</div>
+                  <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, minHeight: 200 }}>
+                    {s.favorites.map((l, i) => <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderBottom: '1px solid #f1f4f6', fontSize: 13 }}><span style={{ flex: 1 }}>{l}</span><button type="button" onClick={() => moveFav(i, -1)} style={{ border: '1px solid #dde4ea', background: '#fff', borderRadius: 6, cursor: 'pointer', fontSize: 11 }}>↑</button><button type="button" onClick={() => moveFav(i, 1)} style={{ border: '1px solid #dde4ea', background: '#fff', borderRadius: 6, cursor: 'pointer', fontSize: 11 }}>↓</button><button type="button" onClick={() => setSession({ favorites: s.favorites.filter((x) => x !== l) })} style={{ border: '1px solid #f2c9c2', background: '#fff', color: '#c0392b', borderRadius: 6, cursor: 'pointer', fontSize: 11 }}>解除</button></div>)}
+                    {s.favorites.length === 0 && <div style={{ padding: 20, color: '#9aa5b1', fontSize: 12.5 }}>右の一覧から追加してください。</div>}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#8290a0', marginBottom: 6 }}>登録できる機能（クリックで追加）</div>
+                  <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: 300, overflow: 'auto' }}>
+                    {CANDIDATES.filter((c) => !s.favorites.includes(c)).map((c) => <button key={c} type="button" onClick={() => setSession({ favorites: [...s.favorites, c] })} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', border: 'none', borderBottom: '1px solid #f1f4f6', background: '#fff', fontSize: 12.5, fontFamily: 'inherit', cursor: 'pointer', color: '#22303c' }}>＋ {c}</button>)}
+                  </div>
+                </div>
+                <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end' }}><button type="button" onClick={() => setFavEdit(false)} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: accent, color: '#fff', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>閉じる</button></div>
+              </div>
+            </Modal>
           </section>
 
           {/* FAQ */}

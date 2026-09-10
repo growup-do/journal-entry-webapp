@@ -12,6 +12,7 @@ import { Chips } from './Chips';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { NOT_IMPL, ToastView, useToast } from './Toast';
 import { PrevYearJournal } from './PrevYearJournal';
+import { TemplatePickerModal } from './EntryExtras';
 import { makeSingleSeed } from '../data';
 import { useEntryForm } from '../hooks/useEntryForm';
 import { applyMonth } from '../lib/format';
@@ -77,6 +78,7 @@ interface Props {
 export function SingleEntryPage({ variant, accent, accentRgb, prevYear }: Props) {
   const [shohyo, setShohyo] = useState(true);
   const [cheque, setCheque] = useState('');
+  const [tplOpen, setTplOpen] = useState(false);
   const toast = useToast();
 
   // 登録後：小切手Noをクリアし、借方科目へフォーカス（証憑・日付・区分は保持して連続入力）
@@ -170,6 +172,7 @@ export function SingleEntryPage({ variant, accent, accentRgb, prevYear }: Props)
   return (
     <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
       <ToastView msg={toast.msg} />
+      <TemplatePickerModal open={tplOpen} onClose={() => setTplOpen(false)} accent={accent} onPick={(t) => { const l = t.lines[0]; if (l) v.setFields({ kariKamoku: l.kari, kashiKamoku: l.kashi, tekiyo: l.tekiyo, gyosha: l.gyosha ?? '', amount: l.amount }); setTplOpen(false); focusId('se-amount'); toast.show(`定型仕訳「${t.name}」を入力欄に呼び出しました`); }} />
       <div
         style={{
           width: '100%',
@@ -194,7 +197,7 @@ export function SingleEntryPage({ variant, accent, accentRgb, prevYear }: Props)
             </div>
             <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
               {TOOLS.map((t) => (
-                <button key={t} type="button" className="btn-outline" onClick={() => toast.show(NOT_IMPL)} style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid #cfd8e0', background: '#fff', color: '#5b6773', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
+                <button key={t} type="button" className="btn-outline" onClick={() => (t === '連続定型' ? setTplOpen(true) : toast.show(NOT_IMPL))} style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid #cfd8e0', background: '#fff', color: '#5b6773', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
                   {t}
                 </button>
               ))}

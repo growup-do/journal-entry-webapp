@@ -49,6 +49,8 @@ export interface EntryForm {
   removeEntry: (id: number) => void;
   /** 登録。extra で画面固有の追加項目（証憑・小切手No 等）を付与できる。 */
   submit: (extra?: Partial<JournalEntry>) => void;
+  /** 複数行をまとめて仕訳帳に追加（自動按分・特殊金額入力） */
+  addEntries: (list: Omit<JournalEntry, 'id'>[]) => void;
 }
 
 export function useEntryForm({ initialForm, seed, afterSubmit, initialMonth = null }: UseEntryFormOptions): EntryForm {
@@ -123,6 +125,12 @@ export function useEntryForm({ initialForm, seed, afterSubmit, initialMonth = nu
     setErr('');
   }, []);
   const removeEntry = useCallback((id: number) => setJournal((arr) => arr.filter((e) => e.id !== id)), []);
+  const addEntries = useCallback((list: Omit<JournalEntry, 'id'>[]) => {
+    const ids = list.map(() => nextId.current++);
+    setJournal((arr) => [...arr, ...list.map((e, i) => ({ ...e, id: ids[i] }))]);
+    if (ids.length) setLastAdded(ids[ids.length - 1]);
+    setMonthFilter((mf) => (mf != null && list[0] && mf !== list[0].date.split('/')[0] ? list[0].date.split('/')[0] : mf));
+  }, []);
 
   // 各 setState には純粋な更新関数のみを渡す（StrictModeの二重実行で重複追加しないため、
   // 採番などの副作用は updater の外＝このコールバック本体で1回だけ行う）。
@@ -194,5 +202,6 @@ export function useEntryForm({ initialForm, seed, afterSubmit, initialMonth = nu
     setFields,
     removeEntry,
     submit,
+    addEntries,
   };
 }

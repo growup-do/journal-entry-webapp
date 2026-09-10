@@ -10,6 +10,15 @@ import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
 import { NOT_IMPL, ToastView, useToast } from './Toast';
 import { ACCOUNTS, SERVICES, SUMMARIES, VENDORS } from '../data';
+import { Tabs } from './ui';
+import { DivisionTreeEditor } from './DivisionTreeEditor';
+import { BudgetPage } from './BudgetPage';
+import { AccountSettingsPage, SummaryAutoCompleteTab } from './AccountSettingsPage';
+import { TemplateJournalPage } from './TemplateJournalPage';
+import { FiscalYearPage } from './FiscalYearPage';
+import { EnvSettingsPage } from './EnvSettingsPage';
+import { IntegrityCheckPage } from './IntegrityCheckPage';
+import { AttachedStatementsPage } from './AttachedStatementsPage';
 
 const yen = (n: number) => n.toLocaleString('ja-JP');
 
@@ -61,7 +70,7 @@ const MASTERS: Record<string, MasterConfig> = {
   取引先: { title: '取引先', desc: '業者・保護者・行政などの取引先。仕訳の「業者」欄と業者元帳に使われます。', addLabel: '取引先を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '取引先名' }, { key: 'kind', label: '種別', type: 'select', options: ['業者', '保護者', '行政', 'その他'], width: 100 }, { key: 'tel', label: '連絡先' }, { key: 'note', label: '備考' }], rows: VENDORS.filter((v) => v !== '（なし）').map((v, i) => ({ code: String(101 + i), name: v, kind: v === '保護者' ? '保護者' : v === '市役所' ? '行政' : '業者', tel: v === '保護者' ? '—' : `03-0000-00${10 + i}`, note: '' })) },
 };
 
-function MasterPage({ variant, accent, label }: { variant: 'form' | 'sheet'; accent: string; label: string }) {
+function MasterPage({ variant, accent, label, tabs }: { variant: 'form' | 'sheet'; accent: string; label: string; tabs?: ReactNode }) {
   const cfg = MASTERS[label];
   const [rows, setRows] = useState<Row[]>(() => cfg.rows.map((r, i) => ({ ...r, _id: String(i + 1), _on: '1' })));
   const [q, setQ] = useState('');
@@ -84,6 +93,7 @@ function MasterPage({ variant, accent, label }: { variant: 'form' | 'sheet'; acc
       <button type="button" className="submit-btn" onClick={() => setEdit(blank())} style={btn(accent, true)}>＋ {cfg.addLabel}</button>
     </>}>
       <ToastView msg={toast.msg} />
+      {tabs}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 22px', borderBottom: '1px solid #eef2f5' }}>
         <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="検索" autoComplete="off" style={{ ...input, width: 260 }} />
         <span style={{ marginLeft: 'auto', fontSize: 12, color: '#8895a3' }}>{list.length} 件（無効 {rows.filter((r) => r._on !== '1').length}）</span>
@@ -131,13 +141,16 @@ function OrgPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: strin
   const toast = useToast();
   const [f, setF] = useState({ name: '社会福祉法人 チャイルド保育園', kana: 'シャカイフクシホウジン チャイルドホイクエン', no: '1234567890123', zip: '100-0001', addr: '東京都千代田区千代田1-1-1', tel: '03-0000-0000', rep: '園長 太郎', fyStart: '4月1日', fyEnd: '3月31日', std: '社会福祉法人会計基準（令和8年度）', rounding: '切り捨て', tax: '税込経理' });
   const [sites, setSites] = useState([{ code: '01', name: '本部', kind: '法人本部' }, { code: '02', name: 'チャイルド保育園', kind: '保育所' }]);
+  const [tab, setTab] = useState('法人情報');
   const set = (k: keyof typeof f, v: string) => setF({ ...f, [k]: v });
   const card: CSSProperties = { border: '1px solid #e2e8ee', borderRadius: 12, overflow: 'hidden' };
   const h: CSSProperties = { padding: '10px 14px', background: '#f6f8fa', fontSize: 12.5, fontWeight: 700, borderBottom: '1px solid #eef2f5' };
   return (
-    <Shell variant={variant} title="事業者" desc="法人の基本情報・会計期間・拠点区分／サービス区分を管理します。" actions={<button type="button" className="submit-btn" onClick={() => toast.show('事業者情報を保存しました（プロトタイプ）')} style={btn(accent, true)}>保存</button>}>
+    <Shell variant={variant} title="事業者" desc="法人の基本情報・会計期間・区分階層（事業区分／拠点区分／サービス区分／小サービス区分）・合算区分を管理します。" actions={<button type="button" className="submit-btn" onClick={() => toast.show('事業者情報を保存しました（プロトタイプ）')} style={btn(accent, true)}>保存</button>}>
       <ToastView msg={toast.msg} />
-      <div style={{ padding: 22, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 18, alignItems: 'start' }}>
+      <Tabs items={['法人情報', '区分階層・合算区分']} current={tab} onChange={setTab} accent={accent} />
+      {tab === '区分階層・合算区分' && <DivisionTreeEditor accent={accent} />}
+      {tab === '法人情報' && <div style={{ padding: 22, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 18, alignItems: 'start' }}>
         <div style={card}>
           <div style={h}>法人情報</div>
           <div style={{ padding: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -167,10 +180,10 @@ function OrgPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: strin
               <thead><tr><th style={{ ...TH, width: 70 }}>コード</th><th style={TH}>拠点名</th><th style={{ ...TH, width: 140 }}>種別</th><th style={{ ...TH, width: 60 }} /></tr></thead>
               <tbody>{sites.map((s, i) => <tr key={i}><td style={TD}>{s.code}</td><td style={TD}><input className="field-input" value={s.name} onChange={(e) => setSites(sites.map((x, k) => (k === i ? { ...x, name: e.target.value } : x)))} placeholder="拠点名" style={{ ...input, padding: '5px 8px' }} /></td><td style={TD}><select value={s.kind} onChange={(e) => setSites(sites.map((x, k) => (k === i ? { ...x, kind: e.target.value } : x)))} style={{ ...input, padding: '5px 8px' }}>{['法人本部', '保育所', '認定こども園', '子育て支援', 'その他'].map((o) => <option key={o}>{o}</option>)}</select></td><td style={TD}><button type="button" className="btn-outline" onClick={() => setSites(sites.filter((_, k) => k !== i))} style={{ ...btn('#c0392b'), padding: '3px 8px', fontSize: 11 }}>削除</button></td></tr>)}</tbody>
             </table>
-            <div style={{ padding: '8px 14px', fontSize: 11.5, color: '#9aa5b1' }}>サービス区分は「部門」で管理します。</div>
+            <div style={{ padding: '8px 14px', fontSize: 11.5, color: '#9aa5b1' }}>区分の階層と伝票入力区分の詳細は「区分階層・合算区分」タブで設定します。</div>
           </div>
         </div>
-      </div>
+      </div>}
     </Shell>
   );
 }
@@ -185,16 +198,37 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
   ];
   const [vals, setVals] = useState(ITEMS.map((i) => [...i.v]));
   const [site, setSite] = useState(0);
+  const [tab, setTab] = useState('貸借科目繰越残高');
+  const PL_ITEMS: { name: string; side: '借方' | '貸方'; v: number }[] = [{ name: '保育事業収益', side: '貸方', v: 40_200_000 }, { name: '補助金事業収益', side: '貸方', v: 700_000 }, { name: '人件費', side: '借方', v: 28_100_000 }, { name: '事業費', side: '借方', v: 5_050_000 }, { name: '事務費', side: '借方', v: 3_480_000 }, { name: '減価償却費', side: '借方', v: 3_034_380 }];
+  const FUND_ITEMS: { name: string; side: '収入' | '支出'; v: number }[] = [{ name: '委託費収入', side: '収入', v: 13_662_150 }, { name: '利用者等利用料収入', side: '収入', v: 84_000 }, { name: '補助金事業収入', side: '収入', v: 660_000 }, { name: '人件費支出', side: '支出', v: 9_600_000 }, { name: '事業費支出', side: '支出', v: 1_720_000 }, { name: '事務費支出', side: '支出', v: 1_150_000 }];
   const sum = (side: '借方' | '貸方') => ITEMS.reduce((s, it, i) => s + (it.side === side ? vals[i][site] : 0), 0);
   const d = sum('借方'), c = sum('貸方');
   const ok = d === c;
   const set = (i: number, v: string) => setVals((vs) => vs.map((row, k) => (k === i ? row.map((x, s) => (s === site ? parseInt(v.replace(/[^0-9]/g, ''), 10) || 0 : x)) : row)));
   return (
-    <Shell variant={variant} title="開始残高" desc="運用開始時点（期首）の貸借残高を拠点ごとに登録します。借方合計と貸方合計が一致すると確定できます。" actions={<>
+    <Shell variant={variant} title="開始残高" desc="運用開始時点（期首）の貸借残高、事業活動科目の前年実績、資金科目の当期実績（期中開始時）を拠点ごとに登録します。" actions={<>
       <button type="button" className="btn-outline" onClick={() => toast.show('前年度決算から取込：' + NOT_IMPL)} style={btn()}>前年度決算から取込</button>
-      <button type="button" className="submit-btn" disabled={!ok} onClick={() => toast.show('開始残高を確定しました（プロトタイプ）')} style={{ ...btn(accent, true), opacity: ok ? 1 : 0.5 }}>確定</button>
+      <button type="button" className="btn-outline" onClick={() => toast.show('繰越残高の設定 - 貸借科目期中：期中から使い始めた場合に使用（カスタマーセンターへご相談ください）')} style={btn()}>借貸残高（期中）</button>
+      <button type="button" className="btn-outline" onClick={() => toast.show('貸借対照表 繰越 内部取引残高：年度更新時に自動設定されます。通常は変更不要')} style={btn()}>内部取引</button>
+      <button type="button" className="submit-btn" disabled={!ok} onClick={() => toast.show('開始残高を確定しました（プロトタイプ）')} style={{ ...btn(accent, true), opacity: ok ? 1 : 0.5 }}>F12 OK</button>
     </>}>
       <ToastView msg={toast.msg} />
+      <Tabs items={['貸借科目繰越残高', '事業活動科目前年実績', '資金科目当期実績']} current={tab} onChange={setTab} accent={accent} />
+      {tab !== '貸借科目繰越残高' && (
+        <div style={{ padding: 22 }}>
+          <div style={{ fontSize: 12.5, color: '#5b6773', marginBottom: 10 }}>{tab === '事業活動科目前年実績' ? '事業活動計算書の前年度実績（前年度決算額）を登録します。年度更新をすると自動で設定されるため、通常は初年度のみ入力します。' : '期中から運用を開始した場合に、開始月までの資金収支計算書の実績（収入・支出）を登録します。'}</div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', maxWidth: 720 }}>
+            <thead><tr><th style={{ ...TH, width: 90 }}>コード</th><th style={TH}>科目名</th><th style={{ ...TH, width: 200, textAlign: 'right' }}>{tab === '事業活動科目前年実績' ? '借方' : '収入'}</th><th style={{ ...TH, width: 200, textAlign: 'right' }}>{tab === '事業活動科目前年実績' ? '貸方' : '支出'}</th></tr></thead>
+            <tbody>
+              {(tab === '事業活動科目前年実績' ? PL_ITEMS.map((it, i) => ({ code: `${400 + i * 10}`, name: it.name, l: it.side === '借方' ? it.v : 0, r: it.side === '貸方' ? it.v : 0 })) : FUND_ITEMS.map((it, i) => ({ code: `${100 + i * 10}`, name: it.name, l: it.side === '収入' ? it.v : 0, r: it.side === '支出' ? it.v : 0 }))).map((row) => (
+                <tr key={row.name}><td style={{ ...TD, color: '#8290a0' }}>{row.code}</td><td style={TD}>{row.name}</td><td style={NUM}><input className="field-input ring" defaultValue={row.l ? yen(row.l) : ''} inputMode="numeric" style={{ ...input, textAlign: 'right', padding: '5px 8px', fontVariantNumeric: 'tabular-nums', background: '#fffbe6' }} /></td><td style={NUM}><input className="field-input ring" defaultValue={row.r ? yen(row.r) : ''} inputMode="numeric" style={{ ...input, textAlign: 'right', padding: '5px 8px', fontVariantNumeric: 'tabular-nums', background: '#fffbe6' }} /></td></tr>
+              ))}
+              <tr style={{ background: '#f3f6f9' }}><td style={{ ...TD, fontWeight: 700 }} colSpan={2}>合計</td><td style={{ ...NUM, fontWeight: 700 }}>{yen((tab === '事業活動科目前年実績' ? PL_ITEMS.filter((x) => x.side === '借方') : FUND_ITEMS.filter((x) => x.side === '収入')).reduce((a, x) => a + x.v, 0))}</td><td style={{ ...NUM, fontWeight: 700 }}>{yen((tab === '事業活動科目前年実績' ? PL_ITEMS.filter((x) => x.side === '貸方') : FUND_ITEMS.filter((x) => x.side === '支出')).reduce((a, x) => a + x.v, 0))}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+      {tab === '貸借科目繰越残高' && <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 22px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: '#8290a0' }}>拠点</span>
         {SITES.map((s, i) => <button key={s} type="button" className="chip" onClick={() => setSite(i)} style={{ padding: '5px 14px', borderRadius: 14, border: '1px solid ' + (site === i ? accent : '#d3dbe3'), background: site === i ? accent : '#fff', color: site === i ? '#fff' : '#5b6773', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{s}</button>)}
@@ -216,6 +250,7 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
         ))}
       </div>
       <div style={{ padding: '10px 22px 16px', fontSize: 11.5, color: '#9aa5b1' }}>※ 科目は主要なもののみ表示しています（叩き台）。確定後は前年仕訳の「繰越」として各元帳に反映されます。</div>
+      </>}
     </Shell>
   );
 }
@@ -294,10 +329,30 @@ function MigrationPage({ variant, accent }: { variant: 'form' | 'sheet'; accent:
   );
 }
 
+/* ---------------- 摘要辞書（辞書＋自動補完候補） ---------------- */
+function SummaryDictPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: string }) {
+  const [tab, setTab] = useState('摘要辞書');
+  if (tab === '摘要辞書') return <MasterPage key="摘要辞書" variant={variant} accent={accent} label="摘要辞書" tabs={<Tabs items={['摘要辞書', '自動補完候補']} current={tab} onChange={setTab} accent={accent} />} />;
+  return (
+    <Shell variant={variant} title="摘要辞書" desc="摘要の自動補完候補を管理します（伝票入力時に過去の摘要から候補を表示）。">
+      <Tabs items={['摘要辞書', '自動補完候補']} current={tab} onChange={setTab} accent={accent} />
+      <SummaryAutoCompleteTab accent={accent} />
+    </Shell>
+  );
+}
+
 /* ---------------- 振り分け ---------------- */
 export function renderSettingsPage(label: string, variant: 'form' | 'sheet', accent: string) {
   if (label === '事業者') return <OrgPage variant={variant} accent={accent} />;
   if (label === '開始残高') return <OpeningBalancePage variant={variant} accent={accent} />;
+  if (label === '予算') return <BudgetPage variant={variant} accent={accent} />;
+  if (label === '年度更新・切替') return <FiscalYearPage variant={variant} accent={accent} />;
+  if (label === '環境設定') return <EnvSettingsPage variant={variant} accent={accent} />;
+  if (label === '決算附属明細書') return <AttachedStatementsPage variant={variant} accent={accent} />;
+  if (label === '整合性チェック') return <IntegrityCheckPage variant={variant} accent={accent} />;
+  if (label === '勘定科目') return <AccountSettingsPage variant={variant} accent={accent} />;
+  if (label === '仕訳辞書') return <TemplateJournalPage variant={variant} accent={accent} />;
+  if (label === '摘要辞書') return <SummaryDictPage variant={variant} accent={accent} />;
   if (label === '他社ソフトデータの移行') return <MigrationPage variant={variant} accent={accent} />;
   if (MASTERS[label]) return <MasterPage key={label} variant={variant} accent={accent} label={label} />;
   return null;

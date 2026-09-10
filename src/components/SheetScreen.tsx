@@ -16,6 +16,8 @@ import { Menu } from './Menu';
 import { MonthChips } from './MonthChips';
 import { renderPage } from './pages';
 import { Footer } from './Footer';
+import { DivisionPicker } from './DivisionPicker';
+import { FiscalYearBanner } from './FiscalYearPage';
 import { INQUIRY_MENU, SETTINGS_MENU, accountFlat, groupOf, makeSheetSeed } from '../data';
 import { applyMonth, rgba } from '../lib/format';
 import { useEntryForm } from '../hooks/useEntryForm';
@@ -303,13 +305,12 @@ export function SheetScreen({ page, onNavigate, year, onYear, onLogout }: Props)
           <Breadcrumb page={page} onNavigate={onNavigate} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12.5, color: '#68757f', flex: 'none', marginLeft: 12 }}>
             <HeaderTools accent={BLUE} page={page} onNavigate={onNavigate} year={year} onYear={onYear} />
-            <span style={{ whiteSpace: 'nowrap' }}>令和8年度</span>
-            <span style={{ color: '#c3ccd4' }}>｜</span>
-            <span style={{ whiteSpace: 'nowrap' }}>チャイルド保育園　拠点区分</span>
+            <DivisionPicker accent={BLUE} compact />
             <SettingsMenu accent={BLUE} active={page} onNavigate={onNavigate} />
             <UserMenu accent={BLUE} soft="#eaf0f7" onNavigate={onNavigate} />
           </div>
         </header>
+        <FiscalYearBanner />
 
         {page !== '伝票入力' ? (
           renderPage(page, 'sheet', BLUE, BLUE_RGB, onNavigate, year, onLogout)

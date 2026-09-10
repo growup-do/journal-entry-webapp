@@ -1,6 +1,6 @@
 // 汎用モーダル（オーバーレイクリック / Esc で閉じる）
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 
 interface Props {
@@ -17,9 +17,13 @@ interface Props {
 }
 
 export function Modal({ open, onClose, width = 720, title, children, strict, closable = true, style }: Props) {
+  const rootRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
     const h = (e: KeyboardEvent) => {
+      // 重ねて開いたモーダルでは、最前面のものだけを閉じる
+      const roots = document.querySelectorAll('[data-modal-root]');
+      if (roots[roots.length - 1] !== rootRef.current) return;
       if (e.key === 'Escape' && closable) onClose();
     };
     window.addEventListener('keydown', h);
@@ -28,6 +32,8 @@ export function Modal({ open, onClose, width = 720, title, children, strict, clo
   if (!open) return null;
   return (
     <div
+      ref={rootRef}
+      data-modal-root
       onMouseDown={(e) => {
         if (!strict && closable && e.target === e.currentTarget) onClose();
       }}
