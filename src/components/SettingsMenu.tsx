@@ -1,4 +1,7 @@
-// 設定メニュー（ヘッダーの歯車アイコン → ドロップダウン）
+// 設定メニュー（ヘッダーの歯車アイコン → ドロップダウン）。末尾に「サポートサイトへ」（外部サイト・別タブ）
+
+/** サポートサイトのURL（仮。正式なURLはクライアントに確認） */
+export const SUPPORT_URL = 'https://www.child.co.jp/';
 
 import { useEffect, useRef, useState } from 'react';
 import { SETTINGS_MENU } from '../data';
@@ -55,6 +58,18 @@ export function SettingsMenu({ accent, active, onNavigate }: Props) {
               </button>
             );
           })}
+          <div style={{ height: 1, background: '#eef2f5', margin: '6px 4px' }} />
+          <button
+            type="button"
+            className="menu-sub"
+            data-menu="サポートサイトへ"
+            onClick={() => { setOpen(false); window.open(SUPPORT_URL, '_blank', 'noopener'); }}
+            title="サポートサイトを別タブで開く"
+            style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '8px 12px', border: 'none', background: 'transparent', borderRadius: 7, fontSize: 13, fontFamily: 'inherit', color: '#22303c', fontWeight: 500, cursor: 'pointer' }}
+          >
+            <span style={{ flex: 1 }}>サポートサイトへ</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8290a0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
+          </button>
         </div>
       )}
     </div>
