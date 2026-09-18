@@ -198,25 +198,27 @@ export function TransferEntryPage({ variant, accent, accentRgb, single }: Props)
               </div>
               <div style={{ color: '#7a8794', fontSize: 12, marginTop: 4 }}>{single ? '1行の振替伝票です（内部取引にも使えます）。' : `1伝票に最大${ROW_COUNT}行。`}借方合計と貸方合計が一致すると登録できます。</div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, flex: 'none' }}>
-              <div style={{ width: 170 }}>
-                <span style={colLabel}>サービス区分</span>
-                <AssistField value={service} placeholder="選択" onOpen={() => assist.open('service', 'service')} accent={accent} accentRgb={accentRgb} buttonStyle={fieldBtn} panelStyle={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, width: '100%', minWidth: 220, zIndex: 60 }} {...assistProps('service')} />
+          </div>
+
+        {/* 伝票の属性（サービス区分・年月日・伝票No）：行入力と同じエリアに配置 */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, padding: '12px 22px', background: '#fbfcfd', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
+            <div style={{ width: 170 }}>
+              <span style={colLabel}>サービス区分</span>
+              <AssistField value={service} placeholder="選択" onOpen={() => assist.open('service', 'service')} accent={accent} accentRgb={accentRgb} buttonStyle={fieldBtn} panelStyle={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, width: '100%', minWidth: 220, zIndex: 60 }} {...assistProps('service')} />
+            </div>
+            <div>
+              <span style={colLabel}>年月日</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13.5, color: '#5b6773', height: 36 }}>
+                <span>令和8年</span>
+                <input className="field-input" value={month} onChange={(e) => setMonth(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))} inputMode="numeric" style={{ ...input, width: 40, padding: '8px 2px', textAlign: 'center' }} />
+                <span>月</span>
+                <input className="field-input" value={day} onChange={(e) => setDay(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))} inputMode="numeric" style={{ ...input, width: 40, padding: '8px 2px', textAlign: 'center' }} />
+                <span>日</span>
               </div>
-              <div>
-                <span style={colLabel}>年月日</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13.5, color: '#5b6773', height: 36 }}>
-                  <span>令和8年</span>
-                  <input className="field-input" value={month} onChange={(e) => setMonth(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))} inputMode="numeric" style={{ ...input, width: 40, padding: '8px 2px', textAlign: 'center' }} />
-                  <span>月</span>
-                  <input className="field-input" value={day} onChange={(e) => setDay(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))} inputMode="numeric" style={{ ...input, width: 40, padding: '8px 2px', textAlign: 'center' }} />
-                  <span>日</span>
-                </div>
-              </div>
-              <div>
-                <span style={colLabel}>伝票No</span>
-                <div style={{ height: 36, display: 'flex', alignItems: 'center', padding: '0 12px', background: '#f5f7f9', border: '1px solid #e2e8ee', borderRadius: 8, fontSize: 13, color: '#9aa5b1' }}>自動採番</div>
-              </div>
+            </div>
+            <div>
+              <span style={colLabel}>伝票No</span>
+              <div style={{ height: 36, display: 'flex', alignItems: 'center', padding: '0 12px', background: '#f5f7f9', border: '1px solid #e2e8ee', borderRadius: 8, fontSize: 13, color: '#9aa5b1' }}>自動採番</div>
             </div>
           </div>
 

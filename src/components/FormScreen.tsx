@@ -8,6 +8,7 @@ import { AssistField } from './AssistField';
 import { AssistPanel } from './AssistPanel';
 import { DivisionPicker } from './DivisionPicker';
 import { FiscalYearBanner } from './FiscalYearPage';
+import { AllocationWizardModal, TemplateWizardModal, blankAllocation, blankTemplate, type AllocationWiz, type TemplateWiz } from './TemplateWizards';
 import { AllocationRunModal, AttachedStatementModal, BudgetGraphModal, BudgetHintLive, EntryConfirmModal, InputSettingsModal, SpecialAmountModal, TemplatePickerModal, TorihikiBadge, watchedStatement } from './EntryExtras';
 import { ToastView, useToast } from './Toast';
 import { fundAccountOf, judgeTorihiki, type Torihiki7 } from '../lib/accounts';
@@ -107,6 +108,8 @@ export function FormScreen({ page, onNavigate, year, onYear, onLogout }: Props) 
   const [confirm, setConfirm] = useState<{ kind: Torihiki7; reason?: '費用間' | '収益間' | '誤伝票' } | null>(null);
   const [graphAcct, setGraphAcct] = useState<string | null>(null);
   const [tplOpen, setTplOpen] = useState(false);
+  const [wiz, setWiz] = useState<TemplateWiz>(null);
+  const [awiz, setAwiz] = useState<AllocationWiz>(null);
   const [tplQueue, setTplQueue] = useState<JournalTemplate['lines']>([]);
   const [allocOpen, setAllocOpen] = useState(false);
   const [special, setSpecial] = useState<number | null>(null);
@@ -550,8 +553,10 @@ export function FormScreen({ page, onNavigate, year, onYear, onLogout }: Props) 
       <InputSettingsModal open={inputOpen} onClose={() => setInputOpen(false)} accent={GREEN} />
       <EntryConfirmModal open={!!confirm} kind={confirm?.kind ?? '要確認'} reason={confirm?.reason} onClose={() => setConfirm(null)} onProceed={(dont) => { if (dont && confirm) setSession({ env: { ...sess.env, ...(confirm.reason === '費用間' ? { confirmExpense: false } : confirm.reason === '収益間' ? { confirmIncome: false } : { confirmGeneral: false }) } }); setConfirm(null); finalize(); }} accent={GREEN} />
       <BudgetGraphModal open={!!graphAcct} onClose={() => setGraphAcct(null)} account={graphAcct ?? ''} />
-      <TemplatePickerModal open={tplOpen} onClose={() => setTplOpen(false)} accent={GREEN} onPick={(t) => { const [first, ...rest] = t.lines; if (first) loadLine(first); setTplQueue(rest); setTplOpen(false); toast.show(`定型仕訳「${t.name}」を呼び出しました${rest.length ? `（残り ${rest.length} 行は登録後に順に呼び出します）` : ''}`); }} />
-      <AllocationRunModal open={allocOpen} onClose={() => setAllocOpen(false)} accent={GREEN} onRegister={(rows, date) => { v.addEntries(rows.map((r) => ({ date, kari: r.kari, kashi: r.kashi, tekiyo: `${r.tekiyo}（${r.division.split(' ')[1] ?? r.division}）`, amount: r.amount }))); toast.show(`自動按分：${rows.length} 枚の伝票を登録しました`); }} />
+      <TemplatePickerModal open={tplOpen} onClose={() => setTplOpen(false)} accent={GREEN} onPick={(t) => { const [first, ...rest] = t.lines; if (first) loadLine(first); setTplQueue(rest); setTplOpen(false); toast.show(`定型仕訳「${t.name}」を呼び出しました${rest.length ? `（残り ${rest.length} 行は登録後に順に呼び出します）` : ''}`); }} onNew={() => { setTplOpen(false); setWiz({ step: 0, t: blankTemplate({ kari: f.kariKamoku, kashi: f.kashiKamoku, tekiyo: f.tekiyo, gyosha: f.gyosha || undefined, amount: f.amount.replace(/[^0-9]/g, '') }, '伝票式') }); }} />
+      <TemplateWizardModal wiz={wiz} setWiz={setWiz} accent={GREEN} onSaved={() => setTplOpen(true)} />
+      <AllocationWizardModal awiz={awiz} setAwiz={setAwiz} accent={GREEN} onSaved={() => setAllocOpen(true)} />
+      <AllocationRunModal open={allocOpen} onClose={() => setAllocOpen(false)} accent={GREEN} onRegister={(rows, date) => { v.addEntries(rows.map((r) => ({ date, kari: r.kari, kashi: r.kashi, tekiyo: `${r.tekiyo}（${r.division.split(' ')[1] ?? r.division}）`, amount: r.amount }))); toast.show(`自動按分：${rows.length} 枚の伝票を登録しました`); }} onNew={() => { setAllocOpen(false); setAwiz({ step: 0, t: blankAllocation({ kari: f.kariKamoku, kashi: f.kashiKamoku, tekiyo: f.tekiyo }) }); }} />
       <SpecialAmountModal key={special ?? 0} open={special != null} total={special ?? 0} onClose={() => setSpecial(null)} accent={GREEN} onOk={(parts) => { if (!f.kariKamoku || !f.kashiKamoku) { toast.show('先に借方・貸方の科目を選んでください'); setSpecial(null); return; } v.addEntries(parts.filter((p) => p.amount > 0).map((p) => ({ date: (f.month || '8') + '/' + (f.day || '1'), kari: f.kariKamoku, kashi: f.kashiKamoku, tekiyo: `${f.tekiyo || '特殊金額入力'}（${p.division.split(' ')[1] ?? p.division}）`, amount: p.amount, gyosha: f.gyosha || undefined }))); v.setFields({ kariKamoku: '', kashiKamoku: '', tekiyo: '', gyosha: '', amount: '' }); setSpecial(null); toast.show(`特殊金額入力：${parts.filter((p) => p.amount > 0).length} 枚の伝票を登録しました`); }} />
       <AttachedStatementModal open={!!stmt} statement={stmt?.label ?? ''} entry={stmt?.entry ?? null} onClose={() => setStmt(null)} onDone={(reg) => { toast.show(reg ? `${stmt?.label}に登録しました` : '明細書には登録しませんでした'); setStmt(null); }} accent={GREEN} />
 

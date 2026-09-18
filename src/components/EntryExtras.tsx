@@ -132,7 +132,7 @@ export function BudgetGraphModal({ open, onClose, account }: { open: boolean; on
 }
 
 /* ---------------- 連続定型仕訳の呼出し ---------------- */
-export function TemplatePickerModal({ open, onClose, accent, onPick }: { open: boolean; onClose: () => void; accent: string; onPick: (t: JournalTemplate) => void }) {
+export function TemplatePickerModal({ open, onClose, accent, onPick, onNew }: { open: boolean; onClose: () => void; accent: string; onPick: (t: JournalTemplate) => void; onNew?: () => void }) {
   const s = useSession();
   const [sel, setSel] = useState<string | null>(null);
   const t = s.templates.find((x) => x.id === sel) ?? null;
@@ -143,8 +143,9 @@ export function TemplatePickerModal({ open, onClose, accent, onPick }: { open: b
           <span style={lbl}>定型伝票一覧（ダブルクリックで呼出し）</span>
           <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'hidden' }}>
             {s.templates.map((x) => <div key={x.id} onClick={() => setSel(x.id)} onDoubleClick={() => onPick(x)} style={{ padding: '9px 12px', borderBottom: '1px solid #f1f4f6', cursor: 'pointer', background: sel === x.id ? accent : '#fff', color: sel === x.id ? '#fff' : '#22303c', fontSize: 13 }}><div style={{ fontWeight: 700 }}>{x.name}</div><div style={{ fontSize: 11, opacity: 0.8 }}>{x.form}・{x.lines.length}行</div></div>)}
-            {s.templates.length === 0 && <div style={{ padding: 20, color: '#9aa5b1', fontSize: 12.5 }}>定型仕訳がありません。設定「仕訳辞書」で登録してください。</div>}
+            {s.templates.length === 0 && <div style={{ padding: 20, color: '#9aa5b1', fontSize: 12.5 }}>定型仕訳がありません。「新規登録」または設定「仕訳辞書」で登録してください。</div>}
           </div>
+          {onNew && <button type="button" className="btn-outline" onClick={onNew} style={{ ...btn(accent, false, true), marginTop: 8, width: '100%' }}>＋ 新規登録（入力中の内容から定型を作る）</button>}
         </div>
         <div>
           <span style={lbl}>内容</span>
@@ -178,7 +179,7 @@ export function allocate(t: AllocationTemplate, total: number): AllocatedVoucher
   });
   return out;
 }
-export function AllocationRunModal({ open, onClose, accent, onRegister }: { open: boolean; onClose: () => void; accent: string; onRegister: (rows: AllocatedVoucher[], date: string) => void }) {
+export function AllocationRunModal({ open, onClose, accent, onRegister, onNew }: { open: boolean; onClose: () => void; accent: string; onRegister: (rows: AllocatedVoucher[], date: string) => void; onNew?: () => void }) {
   const s = useSession();
   const [step, setStep] = useState(0);
   const [tid, setTid] = useState(s.allocations[0]?.id ?? '');
@@ -193,7 +194,7 @@ export function AllocationRunModal({ open, onClose, accent, onRegister }: { open
       <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
         {step === 0 ? (
           <>
-            <Field label="按分仕訳（テンプレート）"><select value={tid} onChange={(e) => setTid(e.target.value)} style={input}>{s.allocations.map((a) => <option key={a.id} value={a.id}>{a.name}（{a.lines.map((l) => `${l.division.split(' ')[1]} ${l.mode === '残り' ? '残り' : l.rate + '%'}`).join('／')}）</option>)}</select></Field>
+            <Field label="按分仕訳（テンプレート）"><div style={{ display: 'flex', gap: 8 }}><select value={tid} onChange={(e) => setTid(e.target.value)} style={input}>{s.allocations.map((a) => <option key={a.id} value={a.id}>{a.name}（{a.lines.map((l) => `${l.division.split(' ')[1]} ${l.mode === '残り' ? '残り' : l.rate + '%'}`).join('／')}）</option>)}</select>{onNew && <button type="button" className="btn-outline" onClick={onNew} style={{ ...btn(accent, false, true), flex: 'none' }}>＋ 新規登録</button>}</div></Field>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <Field label="按分元となる金額（総金額）"><input className="field-input ring" value={amount ? yen(toInt(amount)) : ''} onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" placeholder="0" style={{ ...numInput, fontSize: 18, fontWeight: 700 }} /></Field>
               <Field label="年月日（令和8年）"><input className="field-input" value={date} onChange={(e) => setDate(e.target.value)} style={input} /></Field>
