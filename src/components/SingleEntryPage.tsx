@@ -14,6 +14,7 @@ import { ToastView, useToast } from './Toast';
 import { PrevYearJournal } from './PrevYearJournal';
 import { TemplatePickerModal } from './EntryExtras';
 import { AccountBalanceModal, CalendarModal, CashBalanceModal, yearOfMonth } from './SingleEntryTools';
+import { BellMark } from './BellMark';
 import { makeSingleSeed } from '../data';
 import { useEntryForm } from '../hooks/useEntryForm';
 import { applyMonth } from '../lib/format';
@@ -200,13 +201,15 @@ export function SingleEntryPage({ variant, accent, accentRgb, prevYear }: Props)
             <div style={{ color: '#7a8794', fontSize: 12, marginTop: 4 }}>
               1行＝1伝票を連続入力。<b style={{ color: '#5b6773', fontWeight: 600 }}>Enter</b>で次の項目へ、金額で<b style={{ color: '#5b6773', fontWeight: 600 }}>Enter</b>すると登録して次の伝票へ進みます。
             </div>
-            <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-              {TOOLS.map((t) => (
-                <button key={t} type="button" className="btn-outline" onClick={() => (t === '連続定型' ? setTplOpen(true) : setTool(t as '科目別残' | '現預金残' | 'カレンダー'))} style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid #cfd8e0', background: '#fff', color: '#5b6773', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
-                  {t}
-                </button>
-              ))}
-            </div>
+          </div>
+          {/* 機能ボタン（既存 F4／F5／F8／F9）：見出しの右上 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 'none', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <BellMark note="科目別残・現預金残・カレンダーはマニュアルに説明がなく挙動を推定（要確認）" style={{ marginRight: 2 }} />
+            {TOOLS.map((t) => (
+              <button key={t} type="button" className="btn-outline" onClick={() => (t === '連続定型' ? setTplOpen(true) : setTool(t as '科目別残' | '現預金残' | 'カレンダー'))} style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #cfd8e0', background: '#fff', color: '#5b6773', fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
+                {t}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -313,7 +316,7 @@ export function SingleEntryPage({ variant, accent, accentRgb, prevYear }: Props)
               />
             </div>
             <div>
-              <span style={colLabel}>取引区分</span>
+              <span style={{ ...colLabel, display: 'flex', alignItems: 'center', gap: 6 }}>取引区分 <BellMark note="現在は登録に影響しない（自動判定への統一を検討・要確認）" style={{ width: 15, height: 15 }} /></span>
               <Chips current={f.torihiki} accent={accent} onToggle={v.setTorihiki} />
             </div>
             <div style={{ marginLeft: 'auto', fontSize: 12.5, color: '#68757f', paddingBottom: 9, whiteSpace: 'nowrap' }}>

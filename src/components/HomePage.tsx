@@ -7,6 +7,7 @@ import { HOME_BANKS, HOME_FAQ, HOME_NOTICES, IMPLEMENTED_MENU, MENU_GROUPS, SETT
 import { Modal } from './Modal';
 import { setSession, useSession } from '../store/session';
 import { SUPPORT_URL } from './SettingsMenu';
+import { BellMark } from './BellMark';
 
 const yen = (n: number) => n.toLocaleString('ja-JP');
 const TAG_COLOR: Record<string, { bg: string; fg: string }> = {
@@ -82,7 +83,7 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
             <Modal open={favEdit} onClose={() => setFavEdit(false)} width={640} title="お気に入りメニューの設定">
               <div style={{ padding: '12px 22px 18px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#8290a0', marginBottom: 6 }}>登録済み（上から順に表示・ドラッグ＆ドロップで並べ替え）</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#8290a0', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>登録済み（上から順に表示・ドラッグ＆ドロップで並べ替え）<BellMark note="タッチ端末（iPad）ではドラッグが動かない場合あり（要確認）" style={{ width: 15, height: 15 }} /></div>
                   <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, minHeight: 200 }}>
                     {s.favorites.map((l, i) => (
                       <div
@@ -116,7 +117,7 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
 
           {/* FAQ */}
           <section style={card}>
-            <div style={h2}>よくある質問（FAQ）<button type="button" style={link} onClick={() => window.open(SUPPORT_URL, '_blank', 'noopener')} title="サポートサイトを別タブで開きます">すべて見る（サポートサイトへ） ›</button></div>
+            <div style={h2}>よくある質問（FAQ）<button type="button" style={link} onClick={() => window.open(SUPPORT_URL, '_blank', 'noopener')} title="サポートサイトを別タブで開きます">すべて見る（サポートサイトへ） ›</button><BellMark note="サポートサイトのURLは仮（要確認）" style={{ width: 15, height: 15, marginLeft: 6 }} /></div>
             <div>
               {HOME_FAQ.map((f, i) => {
                 const on = faqOpen === i;

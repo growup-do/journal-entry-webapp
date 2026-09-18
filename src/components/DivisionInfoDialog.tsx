@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { Modal } from './Modal';
+import { BellMark } from './BellMark';
 import { ToastView, useToast } from './Toast';
 import { Field, Notice, Tabs, btn, input, lbl } from './ui';
 import { CATEGORIES, COLORS, DivisionTreeEditor, mapTree } from './DivisionTreeEditor';
@@ -55,7 +56,7 @@ export function DivisionInfoDialog({ open, onClose, accent }: { open: boolean; o
   const [corpKind, corpName] = (() => { const i = s.tree.name.indexOf(' '); return i < 0 ? [s.tree.name, ''] : [s.tree.name.slice(0, i), s.tree.name.slice(i + 1)]; })();
 
   return (
-    <Modal open={open} onClose={cancel} width={1000} title="法人名の変更、及び区分の追加、変更" strict>
+    <Modal open={open} onClose={cancel} width={1000} title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>法人名の変更、及び区分の追加、変更 <BellMark note="右クリック操作を＋ボタンとフォームに置換、集計区分の変更＝階層の移動として解釈（要確認）" /></span>} strict>
       <ToastView msg={toast.msg} />
       <div style={{ display: 'flex', alignItems: 'center' }}>
         <div style={{ flex: 1 }}><Tabs items={TABS} current={tab} onChange={setTab} accent={accent} /></div>
