@@ -9,6 +9,14 @@ import { useMemos, type Memo } from './useMemos';
 
 const AMBER = '#d97706';
 const AMBER_SOFT = '#fff7e6';
+/** Claude（システム）が登録した確認メモの作成者名。人が書いたメモ（GROW UP／チャイルド社）と区別して表示する */
+export const SYSTEM_AUTHOR = 'システムからの確認';
+const SYS = '#4f5fd9';
+const SYS_SOFT = '#eceefb';
+const isSys = (author: string) => author === SYSTEM_AUTHOR;
+const AuthorChip = ({ author }: { author: string }) => (
+  <span style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: isSys(author) ? SYS_SOFT : '#f1f4f6', color: isSys(author) ? SYS : '#3d4a56', whiteSpace: 'nowrap' }}>{isSys(author) ? '🤖 ' : ''}{author || '—'}</span>
+);
 const AUTHORS = ['GROW UP', 'チャイルド社'];
 
 interface Props {
@@ -154,7 +162,7 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
                 height: 28,
                 borderRadius: '50% 50% 50% 4px',
                 border: '2px solid #fff',
-                background: resolved ? '#9aa5b1' : AMBER,
+                background: resolved ? '#9aa5b1' : isSys(m.author) ? SYS : AMBER,
                 color: '#fff',
                 fontWeight: 700,
                 fontSize: 12,
@@ -176,7 +184,7 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
           <div style={{ ...popoverPos(openMemo.x, openMemo.y), ...cardStyle }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <span style={noBadge(openMemo.status === 'resolved')}>#{openMemo.no}</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#22303c' }}>{openMemo.author || '—'}</span>
+              <AuthorChip author={openMemo.author} />
               <span style={{ fontSize: 11, color: '#9aa5b1' }}>{fmtDate(openMemo.createdAt)}</span>
               <span style={{ marginLeft: 'auto', fontSize: 10.5, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: openMemo.status === 'resolved' ? '#f1f4f6' : AMBER_SOFT, color: openMemo.status === 'resolved' ? '#7a8794' : AMBER }}>
                 {openMemo.status === 'resolved' ? '解決済み' : '確認中'}
@@ -302,6 +310,7 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
                     <span style={noBadge(resolved)}>#{m.no}</span>
+                    <AuthorChip author={m.author} />
                     <span style={{ fontSize: 11, color: '#8290a0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{screenLabel(m.screen)}</span>
                     {m.reply && <span style={{ marginLeft: 'auto', fontSize: 10.5, color: '#1f7a52', fontWeight: 700, flex: 'none' }}>回答あり</span>}
                     {resolved && <span style={{ marginLeft: m.reply ? 6 : 'auto', fontSize: 10.5, color: '#7a8794', fontWeight: 700, flex: 'none' }}>解決済み</span>}
