@@ -6,8 +6,8 @@ import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { AssistField } from './AssistField';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
+import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { LABEL, NUM, ReportShell, TD, TH, yen } from './ReportShell';
-import { NOT_IMPL, ToastView, useToast } from './Toast';
 import { BALANCE_ACCOUNTS, JOURNAL_ROWS, type JournalRow } from '../data';
 import { useAssist } from '../hooks/useAssist';
 import type { MonthFilter } from '../types';
@@ -58,6 +58,7 @@ export function LedgerInquiryPage({ slot, variant, accent, accentRgb }: LedgerPr
   const [month, setMonth] = useState<MonthFilter>('8');
   const [cond, setCond] = useState<Cond>(EMPTY);
   const [applied, setApplied] = useState<Cond>(EMPTY);
+  const [exp, setExp] = useState<ExportSpec | null>(null);
   const assist = useAssist();
   const title = slot === 'ledger1' ? '元帳１' : '元帳２';
 
@@ -85,6 +86,17 @@ export function LedgerInquiryPage({ slot, variant, accent, accentRgb }: LedgerPr
   const sumC = lines.reduce((a, l) => a + l.c, 0);
   const isFiltered = applied.other || applied.sub || applied.tax || applied.tekiyo;
   const dirty = JSON.stringify(cond) !== JSON.stringify(applied);
+  // 印刷／Excel：表示中の明細（繰越・月計を含む）をそのまま出力
+  const openExport = (kind: 'print' | 'excel') => {
+    const header = ['月日', 'Seq', account ? '相手勘定科目' : '借方科目 ／ 貸方科目', '摘要', '補助科目', '税区分', '借方', '貸方', ...(account ? ['残高'] : [])];
+    const rows: (string | number)[][] = [
+      ...(account ? [['', '', '繰越金額', '', '', '', '', '', CARRY]] : []),
+      ...lines.map((l) => [l.r.date, l.r.seq, l.other, l.r.tekiyo, l.sub, l.tax, l.d || '', l.c || '', ...(account ? [l.bal] : [])]),
+      [month == null ? '合計' : '月計', '', '', '', '', '', sumD, sumC, ...(account ? [bal] : [])],
+    ];
+    const filt = [applied.other && `相手科目：${applied.other}`, applied.sub && `補助科目：${applied.sub}`, applied.tax && `税区分：${applied.tax}`, applied.tekiyo && `摘要：${applied.tekiyo}`].filter(Boolean).join('　');
+    setExp({ kind, title: `${title}　${account || '全科目'}`, fileName: `${title}_${account || '全科目'}_令和8年${month ?? '全'}月`, meta: `令和8年 ${month == null ? '4月〜3月' : `${month}月`}${filt ? `　絞り込み：${filt}` : ''}`, header, rows });
+  };
 
   const fieldBtn: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, width: 240, boxSizing: 'border-box', padding: '7px 10px', background: '#fff', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left', color: 'inherit' };
   const input: CSSProperties = { padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', outline: 'none', background: '#fff', color: '#22303c', boxSizing: 'border-box' };
@@ -122,7 +134,7 @@ export function LedgerInquiryPage({ slot, variant, accent, accentRgb }: LedgerPr
       accent={accent}
       title={title}
       subtitle="科目を指定して仕訳と残高を照会します。相手勘定科目・補助科目・税区分・摘要でさらに絞り込めます。元帳１と元帳２は別々の条件を保持します。"
-      tools={[{ label: '科目', onClick: () => assist.open('acc', 'account'), primary: true }, { label: '印刷' }, { label: 'Excel' }]}
+      tools={[{ label: '科目', onClick: () => assist.open('acc', 'account'), primary: true }, { label: '印刷', onClick: () => openExport('print') }, { label: 'Excel', onClick: () => openExport('excel') }]}
       controls={
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -174,6 +186,7 @@ export function LedgerInquiryPage({ slot, variant, accent, accentRgb }: LedgerPr
         </>
       }
     >
+      <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
       <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 430px)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
@@ -233,18 +246,24 @@ export function LedgerInquiryPage({ slot, variant, accent, accentRgb }: LedgerPr
 export function BalanceCheckPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: string; onNavigate: (label: string) => void }) {
   const [book, setBook] = useState<number[]>(() => BALANCE_ACCOUNTS.map(() => 0));
   const [editing, setEditing] = useState(false);
-  const toast = useToast();
+  const [exp, setExp] = useState<ExportSpec | null>(null);
   const set = (i: number, v: string) => setBook((b) => b.map((x, k) => (k === i ? parseInt(v.replace(/[^0-9]/g, ''), 10) || 0 : x)));
   const ngCount = BALANCE_ACCOUNTS.filter((a, i) => book[i] !== a.system).length;
   const sumBook = book.reduce((a, b) => a + b, 0);
   const sumSys = BALANCE_ACCOUNTS.reduce((a, b) => a + b.system, 0);
+  // 印刷：既存では【名前を付けて保存】から「現預金残高推移表」を Excel（*.xlsx）で出力する（マニュアル 5.5.4）
+  const openExport = () => setExp({
+    kind: 'excel', title: '現預金残高推移表', fileName: '現預金残高推移表_令和8年8月', meta: '残高照合　令和8年8月31日時点',
+    header: ['現預金科目', '判定', '通帳残高', 'システム残高', '差額'],
+    rows: [...BALANCE_ACCOUNTS.map((a, i) => [a.name, book[i] === a.system ? 'OK' : 'NG', book[i], a.system, book[i] - a.system]), ['合計', sumBook === sumSys ? 'OK' : 'NG', sumBook, sumSys, sumBook - sumSys]],
+  });
   return (
     <ReportShell
       variant={variant}
       accent={accent}
       title="残高照合"
       subtitle="現預金科目ごとに、通帳（実残高）とシステム残高を突合して OK／NG を表示します。"
-      tools={[{ label: editing ? '設定を終了' : '通帳残高の設定', onClick: () => setEditing((e) => !e), primary: true }, { label: '印刷', onClick: () => toast.show(NOT_IMPL) }]}
+      tools={[{ label: editing ? '設定を終了' : '通帳残高の設定', onClick: () => setEditing((e) => !e), primary: true }, { label: '印刷', onClick: openExport }]}
       controls={
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
           <span style={LABEL}>照合日</span>
@@ -253,7 +272,7 @@ export function BalanceCheckPage({ variant, accent }: { variant: 'form' | 'sheet
         </div>
       }
     >
-      <ToastView msg={toast.msg} />
+      <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>

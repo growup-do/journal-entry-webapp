@@ -38,9 +38,9 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
     case '単一入力':
       return <SingleEntryPage variant={variant} accent={accent} accentRgb={accentRgb} prevYear={year === 'prev'} />;
     case '振替入力':
-      return <TransferEntryPage variant={variant} accent={accent} accentRgb={accentRgb} />;
+      return <TransferEntryPage key="transfer" variant={variant} accent={accent} accentRgb={accentRgb} />;
     case '振替単一':
-      return <TransferEntryPage variant={variant} accent={accent} accentRgb={accentRgb} single />;
+      return <TransferEntryPage key="transfer-single" variant={variant} accent={accent} accentRgb={accentRgb} single />;
     case '日次調査':
       return <DailyAuditPage variant={variant} accent={accent} onNavigate={onNavigate} />;
     case '仕訳一覧':

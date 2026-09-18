@@ -2,6 +2,7 @@
 //   マニュアル 5.3・5.4・7.6 に相当。テンプレートはセッションに保存し、伝票入力から呼び出す。
 
 import { useState } from 'react';
+import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { NUM, TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
 import { Field, Notice, SettingsShell, Tabs, btn, input, numInput, toInt, yen } from './ui';
@@ -10,6 +11,18 @@ import { setSession, useSession, type AllocationTemplate, type JournalTemplate }
 import { allocate } from './EntryExtras';
 import { AllocationWizardModal, TemplateWizardModal, blankAllocation, blankTemplate } from './TemplateWizards';
 
+/* 自動按分出力（7.6）：科目ごとの区分別按分率（サンプル）。本番では設定ダイアログで科目単位に登録する */
+interface AllocOutRow { himoku: string; kubun: string; name: string; rates: number[]; note: string }
+const ALLOC_OUT_ROWS: AllocOutRow[] = [
+  { himoku: '50', kubun: '001-01-01', name: '現金預金', rates: [20, 70, 10], note: '' },
+  { himoku: '52', kubun: '002-01-01', name: '器具及び備品', rates: [0, 100, 0], note: '' },
+  { himoku: '60', kubun: '001-02-01', name: '事業未払金', rates: [30, 60, 10], note: '' },
+  { himoku: '70', kubun: '001-00-00', name: '基本金', rates: [0, 100, 0], note: '' },
+];
+const ALLOC_OUT_KINDS = ['貸借対照表の按分出力', '事業活動計算書の按分出力', '資金収支計算書の按分出力'];
+const ALLOC_OUT_COLS = ['当年度末', '前年度末', '増減'];
+/** 按分対象の金額（サンプル）。当年度末／前年度末を科目ごとに決めて按分率で区分に配分する */
+const allocBase = (i: number) => [[9_630_000, 8_420_000], [1_800_000, 2_100_000], [400_000, 355_000], [25_800_000, 25_800_000]][i] ?? [0, 0];
 
 export function TemplateJournalPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: string }) {
   const s = useSession();
@@ -20,13 +33,39 @@ export function TemplateJournalPage({ variant, accent }: { variant: 'form' | 'sh
   // 自動按分ウィザード
   const [awiz, setAwiz] = useState<{ step: number; t: AllocationTemplate } | null>(null);
   const [testAmount, setTestAmount] = useState('12000');
+  // 自動按分出力の条件（出力種類・列・端数の加算区分・按分率・合計行）
+  const [aoKind, setAoKind] = useState(ALLOC_OUT_KINDS[0]);
+  const [aoCols, setAoCols] = useState<Set<string>>(new Set(['当年度末', '前年度末']));
+  const [aoRound, setAoRound] = useState(SERVICES[1]);
+  const [aoRows, setAoRows] = useState<AllocOutRow[]>(ALLOC_OUT_ROWS);
+  const [aoTotal, setAoTotal] = useState(true);
+  const [exp, setExp] = useState<ExportSpec | null>(null);
+  const aoServices = SERVICES.slice(0, 3);
+  // 出力（CSV）：科目 × 区分 × 列（当年度末／前年度末／増減）を按分率で配分した金額。端数は「端数の加算区分」に寄せる
+  const exportAlloc = () => {
+    const cols = ALLOC_OUT_COLS.filter((c) => aoCols.has(c));
+    if (!cols.length) return toast.show('出力する列を1つ以上選んでください');
+    const header = ['費目', '区分コード', '科目名', '区分', ...cols, '備考'];
+    const rows: (string | number)[][] = [];
+    const totals = cols.map(() => 0);
+    aoRows.forEach((r, i) => {
+      const [cur, prev] = allocBase(i);
+      const roundIdx = Math.max(0, aoServices.indexOf(aoRound));
+      const split = (amount: number) => { const parts = r.rates.map((p) => Math.floor((amount * p) / 100)); parts[roundIdx] += amount - parts.reduce((a, b) => a + b, 0); return parts; };
+      const byCol = cols.map((c) => split(c === '当年度末' ? cur : c === '前年度末' ? prev : cur - prev));
+      aoServices.forEach((sv, k) => { if (r.rates[k] === 0) return; rows.push([r.himoku, r.kubun, r.name, sv, ...byCol.map((p) => p[k]), r.note]); });
+      byCol.forEach((p, ci) => { totals[ci] += p.reduce((a, b) => a + b, 0); });
+    });
+    if (aoTotal) rows.push(['', '', '合計', '', ...totals, '']);
+    setExp({ kind: 'csv', title: '自動按分出力', fileName: `自動按分出力_${aoKind.replace('の按分出力', '')}`, meta: `${aoKind}　端数：${aoRound}`, header, rows });
+  };
 
 
   return (
     <SettingsShell variant={variant} title="仕訳辞書" desc="定型仕訳（連続定型）と自動按分仕訳のテンプレート、特殊金額入力の按分率を管理します。伝票入力の「連続定型」「自動按分」ボタンから呼び出せます。" actions={
       tab === '連続定型仕訳' ? <button type="button" className="submit-btn" onClick={() => setWiz({ step: 0, t: blankTemplate() })} style={btn(accent, true)}>＋ 追加</button>
         : tab === '自動按分仕訳' ? <button type="button" className="submit-btn" onClick={() => setAwiz({ step: 0, t: blankAllocation() })} style={btn(accent, true)}>＋ 追加</button>
-          : tab === '自動按分出力' ? <button type="button" className="submit-btn" onClick={() => toast.show('CSVを出力しました（プロトタイプでは動作しません）')} style={btn(accent, true)}>出力（CSV）</button>
+          : tab === '自動按分出力' ? <button type="button" className="submit-btn" onClick={exportAlloc} style={btn(accent, true)}>出力（CSV）</button>
             : <button type="button" className="submit-btn" onClick={() => toast.show('按分率を保存しました')} style={btn(accent, true)}>保存</button>
     }>
       <ToastView msg={toast.msg} />
@@ -92,18 +131,20 @@ export function TemplateJournalPage({ variant, accent }: { variant: 'form' | 'sh
         <div style={{ padding: 22, display: 'grid', gap: 12, maxWidth: 820 }}>
           <Notice>科目ごとに任意の区分間で金額を按分した額を、エクセル互換ファイル（CSV）として出力します（義務となる備付書類向け。摘要も出力）。</Notice>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-            <Field label="出力種類"><select style={input} defaultValue="貸借対照表の按分出力">{['貸借対照表の按分出力', '事業活動計算書の按分出力', '資金収支計算書の按分出力'].map((o) => <option key={o}>{o}</option>)}</select></Field>
-            <Field label="出力する列"><div style={{ display: 'flex', gap: 10, fontSize: 12.5, paddingTop: 8 }}>{['当年度末', '前年度末', '増減'].map((o) => <label key={o} style={{ display: 'flex', gap: 4 }}><input type="checkbox" defaultChecked={o !== '増減'} />{o}</label>)}</div></Field>
-            <Field label="端数の加算区分"><select style={input} defaultValue="002 保育事業">{SERVICES.map((o) => <option key={o}>{o}</option>)}</select></Field>
+            <Field label="出力種類"><select style={input} value={aoKind} onChange={(e) => setAoKind(e.target.value)}>{ALLOC_OUT_KINDS.map((o) => <option key={o}>{o}</option>)}</select></Field>
+            <Field label="出力する列"><div style={{ display: 'flex', gap: 10, fontSize: 12.5, paddingTop: 8 }}>{ALLOC_OUT_COLS.map((o) => <label key={o} style={{ display: 'flex', gap: 4 }}><input type="checkbox" checked={aoCols.has(o)} onChange={() => setAoCols((c) => { const n = new Set(c); if (n.has(o)) n.delete(o); else n.add(o); return n; })} />{o}</label>)}</div></Field>
+            <Field label="端数の加算区分"><select style={input} value={aoRound} onChange={(e) => setAoRound(e.target.value)}>{aoServices.map((o) => <option key={o}>{o}</option>)}</select></Field>
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr><th style={{ ...TH, width: 70 }}>費目</th><th style={{ ...TH, width: 110 }}>区分コード</th><th style={TH}>科目名</th>{SERVICES.slice(0, 3).map((sv) => <th key={sv} style={{ ...TH, textAlign: 'right', width: 90 }}>{sv.split(' ')[1]}</th>)}<th style={{ ...TH, width: 160 }}>備考</th></tr></thead>
-            <tbody>{[['50', '001-01-01', '現金預金', 20, 70, 10], ['52', '002-01-01', '器具及び備品', 0, 100, 0], ['60', '001-02-01', '事業未払金', 30, 60, 10], ['70', '001-00-00', '基本金', 0, 100, 0]].map((r) => <tr key={r[1] as string}><td style={TD}>{r[0]}</td><td style={{ ...TD, fontVariantNumeric: 'tabular-nums' }}>{r[1]}</td><td style={TD}>{r[2]}</td>{[3, 4, 5].map((i) => <td key={i} style={NUM}><input className="field-input" defaultValue={String(r[i])} style={{ ...numInput, width: 60, padding: '3px 6px', fontSize: 12 }} />%</td>)}<td style={TD}><input className="field-input" placeholder="編集" style={{ ...input, padding: '3px 6px', fontSize: 12 }} /></td></tr>)}</tbody>
+            <thead><tr><th style={{ ...TH, width: 70 }}>費目</th><th style={{ ...TH, width: 110 }}>区分コード</th><th style={TH}>科目名</th>{aoServices.map((sv) => <th key={sv} style={{ ...TH, textAlign: 'right', width: 90 }}>{sv.split(' ')[1]}</th>)}<th style={{ ...TH, width: 160 }}>備考</th></tr></thead>
+            <tbody>{aoRows.map((r, ri) => <tr key={r.kubun}><td style={TD}>{r.himoku}</td><td style={{ ...TD, fontVariantNumeric: 'tabular-nums' }}>{r.kubun}</td><td style={TD}>{r.name}</td>{r.rates.map((rate, i) => <td key={i} style={{ ...NUM, color: r.rates.reduce((a, b) => a + b, 0) === 100 ? undefined : '#c0392b' }}><input className="field-input" value={String(rate)} onChange={(e) => setAoRows((rs) => rs.map((x, k) => (k === ri ? { ...x, rates: x.rates.map((v, j) => (j === i ? toInt(e.target.value) : v)) } : x)))} inputMode="numeric" style={{ ...numInput, width: 60, padding: '3px 6px', fontSize: 12 }} />%</td>)}<td style={TD}><input className="field-input" value={r.note} onChange={(e) => setAoRows((rs) => rs.map((x, k) => (k === ri ? { ...x, note: e.target.value } : x)))} placeholder="編集" style={{ ...input, padding: '3px 6px', fontSize: 12 }} /></td></tr>)}</tbody>
           </table>
-          <label style={{ fontSize: 12.5, display: 'flex', gap: 6 }}><input type="checkbox" defaultChecked />合計値を印刷</label>
+          <label style={{ fontSize: 12.5, display: 'flex', gap: 6 }}><input type="checkbox" checked={aoTotal} onChange={() => setAoTotal((v) => !v)} />合計値を印刷</label>
+          {aoRows.some((r) => r.rates.reduce((a, b) => a + b, 0) !== 100) && <Notice tone="warn">按分率の合計が100%になっていない科目があります（赤字）。出力時は入力した率のまま按分し、端数は「端数の加算区分」に加算します。</Notice>}
         </div>
       )}
 
+      <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
       <TemplateWizardModal wiz={wiz} setWiz={setWiz} accent={accent} />
       <AllocationWizardModal awiz={awiz} setAwiz={setAwiz} accent={accent} />
     </SettingsShell>

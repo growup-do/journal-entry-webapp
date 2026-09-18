@@ -1,15 +1,18 @@
 // 環境設定（提案I）：既存【動作環境】（マニュアル 4.2）と【ワイド画面 設定】（5.5.1）をWeb向けに整理。
 //   入力／表示／帳票／右パネル の4区分。金額書式はプレビューつき。
 
-import { useState } from 'react';
-import { NOT_IMPL, ToastView, useToast } from './Toast';
+import { useRef, useState } from 'react';
+import { ToastView, useToast } from './Toast';
 import { DivisionInfoDialog } from './DivisionInfoDialog';
+import { Modal } from './Modal';
 import { Field, Notice, SettingsShell, Tabs, Toggle, btn, card, cardHead, input } from './ui';
 import { DEFAULT_ENV, setSession, useSession, type EnvSettings } from '../store/session';
 import { ACCOUNTS } from '../data';
 
 export function EnvSettingsPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: string }) {
   const [infoOpen, setInfoOpen] = useState(false);
+  const [fileOpen, setFileOpen] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const s = useSession();
   const [v, setV] = useState<EnvSettings>(s.env);
   const [tab, setTab] = useState('入力');
@@ -21,17 +24,54 @@ export function EnvSettingsPage({ variant, accent }: { variant: 'form' | 'sheet'
     return n < 0 ? `${v.negativeSign}${body}` : body;
   };
   const save = () => { setSession({ env: v }); toast.show('環境設定を保存しました'); };
+  /** 設定の保存：現在の環境条件を JSON でダウンロード（既存の .ini に相当） */
+  const saveFile = () => {
+    const d = new Date();
+    const name = `環境設定_${s.division.split(' ')[0]}_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.json`;
+    const blob = new Blob([JSON.stringify({ type: 'chappy-env', division: s.division, savedAt: d.toISOString(), env: v }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
+    setFileOpen(false); toast.show(`${name} を保存しました`);
+  };
+  /** 設定の読込：JSON を解析して未保存の下書きへ反映（OK（保存）で確定） */
+  const applyLoaded = (obj: unknown, label: string) => {
+    const env = (obj && typeof obj === 'object' && 'env' in (obj as Record<string, unknown>)) ? (obj as { env: unknown }).env : obj;
+    if (!env || typeof env !== 'object') { toast.show('環境設定ファイルの形式が正しくありません'); return; }
+    const known = Object.keys(DEFAULT_ENV) as (keyof EnvSettings)[];
+    const picked: Partial<EnvSettings> = {};
+    known.forEach((k) => { const val = (env as Record<string, unknown>)[k]; if (val !== undefined && typeof val === typeof DEFAULT_ENV[k]) (picked as Record<string, unknown>)[k] = val; });
+    if (!Object.keys(picked).length) { toast.show('環境設定の項目が見つかりませんでした'); return; }
+    setV({ ...DEFAULT_ENV, ...picked });
+    setFileOpen(false); toast.show(`${label} から ${Object.keys(picked).length} 項目を読み込みました（未保存：OK（保存）で確定）`);
+  };
+  const onFile = (f: File | undefined) => {
+    if (!f) return;
+    f.text().then((t) => { try { applyLoaded(JSON.parse(t), f.name); } catch { toast.show('JSON として読み込めませんでした'); } });
+    if (fileRef.current) fileRef.current.value = '';
+  };
+  const SAMPLE_ENV: EnvSettings = { ...DEFAULT_ENV, confirmGeneral: false, autoCompleteAdd: false, budgetThreshold: 80, thousandsSep: 'カンマ', negativeSign: '▲', negativeColor: '黒', zeroCut: false, colorReports: false, wideInitial: '勘定元帳1', order: '入力順', eraGannen: false, onePageRow: true, hideCorpName: true };
   const T = (k: keyof EnvSettings, label: string) => <Toggle on={!!v[k]} onChange={(x) => set({ [k]: x } as Partial<EnvSettings>)} accent={accent} label={label} />;
 
   return (
     <SettingsShell variant={variant} title="環境設定" desc="入力時の確認・補完、金額や帳票の表示、試算表の計算方式、右パネルの初期表示など、区分ごとの動作条件を設定します。" actions={<>
       <button type="button" className="btn-outline" onClick={() => setInfoOpen(true)} style={btn()}>部門情報の変更</button>
-      <button type="button" className="btn-outline" onClick={() => toast.show('設定の保存（.ini）／読込：' + NOT_IMPL)} style={btn()}>設定の保存／読込</button>
+      <button type="button" className="btn-outline" onClick={() => setFileOpen(true)} style={btn()}>設定の保存／読込</button>
       <button type="button" className="btn-outline" onClick={() => { setV(DEFAULT_ENV); toast.show('初期値に戻しました（未保存）'); }} style={btn()}>初期値に戻す</button>
       <button type="button" className="submit-btn" onClick={save} style={btn(accent, true)}>OK（保存）</button>
     </>}>
       <ToastView msg={toast.msg} />
       <DivisionInfoDialog open={infoOpen} onClose={() => setInfoOpen(false)} accent={accent} />
+      <Modal open={fileOpen} onClose={() => setFileOpen(false)} width={520} title="環境設定の保存／読込">
+        <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
+          <Notice>区分「{s.division}」の環境条件を設定ファイルとして保存し、別の区分・別の端末で読み込めます（既存の「動作設定ファイル（.ini）」に相当。Web版では JSON 形式）。</Notice>
+          <div style={card}><div style={cardHead}>設定の保存</div><div style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 12, fontSize: 12.5 }}><span style={{ flex: 1, color: '#5b6773' }}>現在設定中（未保存分を含む）の条件をファイルに書き出します。</span><button type="button" onClick={saveFile} style={btn(accent, true)}>保存（ダウンロード）</button></div></div>
+          <div style={card}><div style={cardHead}>設定の読込</div><div style={{ padding: 14, display: 'grid', gap: 10, fontSize: 12.5 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><span style={{ flex: 1, color: '#5b6773' }}>保存した設定ファイルを選んで読み込みます。読み込んだ内容は「OK（保存）」で確定します。</span><button type="button" onClick={() => fileRef.current?.click()} style={btn(accent)}>ファイルを選択…</button></div>
+            <input ref={fileRef} type="file" accept=".json,application/json" onChange={(e) => onFile(e.target.files?.[0])} style={{ display: 'none' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><span style={{ flex: 1, color: '#9aa5b1' }}>手元にファイルがない場合は、サンプルの設定を読み込んで動作を確認できます。</span><button type="button" onClick={() => applyLoaded(SAMPLE_ENV, 'サンプル設定')} style={btn()}>サンプルを読み込む</button></div>
+            <Notice tone="warn">一度読み込んだ環境条件は元に戻せません（保存前なら「初期値に戻す」または画面の再表示で破棄できます）。</Notice>
+          </div></div>
+        </div>
+      </Modal>
       <Tabs items={['入力', '表示・金額書式', '帳票・試算表', '右パネル（ワイド画面）']} current={tab} onChange={setTab} accent={accent} />
       <div style={{ padding: 22, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 18, alignItems: 'start' }}>
         {tab === '入力' && (
@@ -80,12 +120,12 @@ export function EnvSettingsPage({ variant, accent }: { variant: 'form' | 'sheet'
               <div style={{ fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>標準方式：差異欄に予備費充当額を含めない　／　差異に計算結果：差異欄に充当額を含める　／　1行目：充当前の予算額を表示</div>
             </div></div>
             <div style={card}><div style={cardHead}>帳票・繰入金・注意書き</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
-              <Toggle on={true} onChange={() => toast.show('予算の内部取引消去の切替：' + NOT_IMPL)} accent={accent} label="予算の内部取引消去（内部取引を相殺する）" />
-              <Toggle on={false} onChange={() => toast.show(NOT_IMPL)} accent={accent} label="1行の改ページ制御（改行せず1ページに収める）" />
-              <Toggle on={false} onChange={() => toast.show(NOT_IMPL)} accent={accent} label="タームボタン押下時に、期首より月を選択する" />
-              <Field label="繰入金明細表の監視"><div style={{ display: 'flex', gap: 14, fontSize: 12.5 }}>{['収入で監視', '支払いで監視'].map((o, i) => <label key={o} style={{ display: 'flex', gap: 4 }}><input type="radio" defaultChecked={i === 0} />{o}</label>)}</div></Field>
+              {T('budgetInternalOffset', '予算の内部取引消去（内部取引を相殺する）')}
+              {T('onePageRow', '1行の改ページ制御（改行せず1ページに収める）')}
+              {T('termFromStart', 'タームボタン押下時に、期首より月を選択する（試算表印刷時の月範囲設定を有効にする）')}
+              <Field label="繰入金明細表の監視"><div style={{ display: 'flex', gap: 14, fontSize: 12.5 }}>{(['収入で監視', '支払いで監視'] as const).map((o) => <label key={o} style={{ display: 'flex', gap: 4 }}><input type="radio" checked={v.transferWatch === o} onChange={() => set({ transferWatch: o })} />{o}</label>)}</div></Field>
               {T('noteOnExcel', 'Excel／PDF出力で明細書の注意書きを印字する')}
-              <Toggle on={false} onChange={() => toast.show(NOT_IMPL)} accent={accent} label="決算書の「社会福祉法人名」を印刷しない" />
+              {T('hideCorpName', '決算書の「社会福祉法人名」を印刷しない')}
             </div></div>
           </>
         )}

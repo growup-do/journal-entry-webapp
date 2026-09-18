@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import { BizSwitch, useDivisionTools } from './DivisionTools';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
+import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { LABEL, NUM, ReportShell, TD, TH, yen } from './ReportShell';
 import { ToastView, useToast } from './Toast';
 import { AdvancedSearchModal, EMPTY_COND, EditVoucherModal, FlagCell, applyCond, condActive, type SearchCond } from './VoucherEdit';
@@ -32,6 +33,7 @@ export function JournalListPage({ variant, accent }: Props) {
   const [showBiz, setShowBiz] = useState(false);
   const [print, setPrint] = useState(false);
   const [preview, setPreview] = useState<{ title: string; opts: { from: string; to: string; output: string } } | null>(null);
+  const [exp, setExp] = useState<ExportSpec | null>(null);
   const toast = useToast();
   const dt = useDivisionTools(all, accent);
 
@@ -42,6 +44,12 @@ export function JournalListPage({ variant, accent }: Props) {
   const total = rows.reduce((a, r) => a + r.amount, 0);
   const m = month ?? '8';
   const filtered = condActive(cond) || !!kw || dt.filtered;
+  // 表示中（絞り込み後）の仕訳をそのまま出力用の表にする（F1 ファイル出力・印刷・プレビューで共用）
+  const table = {
+    header: ['Seq', '日付', '伝票No', '種別', '借方科目', '貸方科目', '摘要', '業者', '金額', '区分'],
+    rows: rows.map((r) => [r.seq, `令和8年${r.date.replace('/', '月')}日`, r.no, r.kind, r.kari, r.kashi, r.tekiyo, r.gyosha ?? '', r.amount, r.service]) as (string | number)[][],
+  };
+  const periodLabel = month == null ? '令和8年 全期間' : `令和8年 ${m}月1日〜${m}月末日`;
 
   return (
     <ReportShell
@@ -50,7 +58,7 @@ export function JournalListPage({ variant, accent }: Props) {
       title="仕訳一覧"
       subtitle="指定月の仕訳を伝票順に一覧します。行をクリックすると伝票を訂正できます。証憑・チェック・付箋は行上でクリックして切り替えます。"
       tools={[
-        { label: 'ファイル出力', onClick: () => toast.show('CSVファイルを出力しました（プロトタイプでは動作しません）') },
+        { label: 'ファイル出力', onClick: () => setExp({ kind: 'csv', title: '仕訳一覧', fileName: `仕訳一覧_令和8年${month ?? '全'}月`, meta: `${periodLabel}　${rows.length} 件${filtered ? '（絞り込み中）' : ''}`, ...table }) },
         { label: '印刷', onClick: () => setPrint(true) },
         { label: '検索', onClick: () => setSearchOpen(true), primary: true },
         ...dt.tools,
@@ -67,6 +75,7 @@ export function JournalListPage({ variant, accent }: Props) {
             <span>令和8年 {m}月1日 〜 令和8年 {m}月末日</span>
             <input className="search-input" value={kw} onChange={(e) => setKw(e.target.value)} placeholder="科目・摘要・業者で絞り込み" autoComplete="off" style={{ marginLeft: 12, width: 240, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 12.5, fontFamily: 'inherit', outline: 'none' }} />
             <BizSwitch on={showBiz} onChange={setShowBiz} accent={accent} />
+            {dt.colorSwitch}
             {condActive(cond) && <button type="button" onClick={() => setCond(EMPTY_COND)} style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid ' + accent, background: '#fff', color: accent, fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>詳細検索中 ×解除</button>}
             {dt.clearButton}
             <span style={{ marginLeft: 'auto' }}>
@@ -116,8 +125,9 @@ export function JournalListPage({ variant, accent }: Props) {
       </div>
       <EditVoucherModal voucher={edit} onClose={() => setEdit(null)} accent={accent} returnTo="仕訳一覧" />
       <AdvancedSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} cond={cond} onApply={setCond} accent={accent} />
-      <PrintDialog open={print} onClose={() => setPrint(false)} report={REPORTS[0]} accent={accent} onPreview={(title, opts) => setPreview({ title, opts })} />
-      <PreviewModal open={!!preview} onClose={() => setPreview(null)} title={preview?.title ?? ''} opts={preview?.opts} accent={accent} />
+      <PrintDialog open={print} onClose={() => setPrint(false)} report={REPORTS[0]} accent={accent} onPreview={(title, opts) => setPreview({ title, opts })} data={table} />
+      <PreviewModal open={!!preview} onClose={() => setPreview(null)} title={preview?.title ?? ''} opts={preview?.opts} accent={accent} data={table} />
+      <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
       {dt.modal}
     </ReportShell>
   );

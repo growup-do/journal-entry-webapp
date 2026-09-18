@@ -6,9 +6,10 @@
 
 import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
+import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
-import { NOT_IMPL, ToastView, useToast } from './Toast';
+import { ToastView, useToast } from './Toast';
 import { ACCOUNTS, SERVICES, SUMMARIES, VENDORS } from '../data';
 import { Tabs } from './ui';
 import { DivisionTreeEditor } from './DivisionTreeEditor';
@@ -51,6 +52,40 @@ interface Field { key: string; label: string; type?: 'text' | 'number' | 'select
 interface MasterConfig { title: string; desc: string; fields: Field[]; rows: Record<string, string>[]; addLabel: string }
 type Row = Record<string, string>; // _id（空なら新規）・_on（'1'=有効）を含む
 
+/** CSV テキストを行×列に分解（BOM・CRLF・ダブルクォート内のカンマ／改行／""に対応） */
+function parseCsv(text: string): string[][] {
+  const src = text.replace(/^\uFEFF/, '');
+  const rows: string[][] = [];
+  let row: string[] = [], cell = '', quoted = false;
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i];
+    if (quoted) {
+      if (ch === '"') { if (src[i + 1] === '"') { cell += '"'; i++; } else quoted = false; }
+      else cell += ch;
+    } else if (ch === '"') quoted = true;
+    else if (ch === ',') { row.push(cell); cell = ''; }
+    else if (ch === '\n' || ch === '\r') { if (ch === '\r' && src[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; }
+    else cell += ch;
+  }
+  if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter((r) => r.some((c) => c.trim() !== ''));
+}
+/** 1行目を見出しとして項目に対応付け（ラベル／キー名で一致。どれも一致しなければ列順） */
+function csvToRows(fields: Field[], table: string[][]): { rows: Row[]; byHeader: boolean } {
+  if (!table.length) return { rows: [], byHeader: false };
+  const head = table[0].map((h) => h.trim());
+  const idx = fields.map((f) => head.findIndex((h) => h === f.label || h === f.key));
+  const byHeader = idx.some((i) => i >= 0);
+  const body = byHeader ? table.slice(1) : table;
+  const onIdx = head.findIndex((h) => h === '有効');
+  const rows = body.map((r, n) => {
+    const row: Row = { _id: `${Date.now()}_${n}`, _on: byHeader && onIdx >= 0 ? (/^(0|無効|false|×)$/i.test(r[onIdx]?.trim() ?? '') ? '0' : '1') : '1' };
+    fields.forEach((f, k) => { const i = byHeader ? idx[k] : k; row[f.key] = (i >= 0 ? r[i] ?? '' : '').trim() || (f.type === 'color' ? '#2c5f9e' : ''); });
+    return row;
+  });
+  return { rows, byHeader };
+}
+
 const acctRows = (): Record<string, string>[] => {
   let code = 1000;
   const out: Record<string, string>[] = [];
@@ -75,8 +110,36 @@ function MasterPage({ variant, accent, label, tabs }: { variant: 'form' | 'sheet
   const [rows, setRows] = useState<Row[]>(() => cfg.rows.map((r, i) => ({ ...r, _id: String(i + 1), _on: '1' })));
   const [q, setQ] = useState('');
   const [edit, setEdit] = useState<Row | null>(null);
+  const [exp, setExp] = useState<ExportSpec | null>(null);
+  const [imp, setImp] = useState<{ open: boolean; name: string; rows: Row[]; byHeader: boolean; error: string }>({ open: false, name: '', rows: [], byHeader: false, error: '' });
   const toast = useToast();
   const list = rows.filter((r) => !q || cfg.fields.some((f) => String(r[f.key] ?? '').includes(q)));
+  const cell = (r: Row, f: Field) => (f.type === 'number' && f.key !== 'rate' && r[f.key] ? Number(r[f.key]) : r[f.key] ?? '');
+  // CSV出力：表示中（検索後）の一覧。見出しは画面の項目名＋「有効」
+  const exportCsv = () => setExp({ kind: 'csv', title: cfg.title, fileName: `${cfg.title}一覧`, meta: `${list.length} 件${q ? `　検索：${q}` : ''}`, header: [...cfg.fields.map((f) => f.label), '有効'], rows: list.map((r) => [...cfg.fields.map((f) => cell(r, f)), r._on === '1' ? 1 : 0]) });
+  // CSV取込：ファイルを読んで対応付け → プレビュー → 取り込む（一覧の末尾に追加）
+  const loadCsvText = (name: string, text: string) => {
+    const parsed = csvToRows(cfg.fields, parseCsv(text));
+    setImp({ open: true, name, rows: parsed.rows, byHeader: parsed.byHeader, error: parsed.rows.length ? '' : '読み込める行がありません' });
+  };
+  const readFile = (file: File) => {
+    const fr = new FileReader();
+    fr.onload = () => loadCsvText(file.name, String(fr.result ?? ''));
+    fr.onerror = () => setImp((i) => ({ ...i, error: 'ファイルを読み込めませんでした' }));
+    fr.readAsText(file, 'utf-8');
+  };
+  const sampleCsv = () => {
+    const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const lines = [[...cfg.fields.map((f) => f.label), '有効'].map(esc).join(',')];
+    cfg.rows.slice(0, 3).forEach((r, i) => lines.push([...cfg.fields.map((f) => (f.key === 'name' ? `${r.name}（取込${i + 1}）` : f.key === 'code' ? String(9000 + i) : r[f.key] ?? '')), '1'].map(esc).join(',')));
+    loadCsvText(`${cfg.title}_サンプル.csv`, lines.join('\r\n'));
+  };
+  const doImport = () => {
+    if (!imp.rows.length) return;
+    setRows((rs) => [...rs, ...imp.rows]);
+    toast.show(`${imp.rows.length} 件を取り込みました`);
+    setImp({ open: false, name: '', rows: [], byHeader: false, error: '' });
+  };
   const blank = (): Row => ({ ...Object.fromEntries(cfg.fields.map((f) => [f.key, f.type === 'color' ? '#2c5f9e' : ''])), _id: '', _on: '1' });
   const save = () => {
     if (!edit) return;
@@ -88,8 +151,8 @@ function MasterPage({ variant, accent, label, tabs }: { variant: 'form' | 'sheet
   };
   return (
     <Shell variant={variant} title={cfg.title} desc={cfg.desc} actions={<>
-      <button type="button" className="btn-outline" onClick={() => toast.show('CSV取込：' + NOT_IMPL)} style={btn()}>CSV取込</button>
-      <button type="button" className="btn-outline" onClick={() => toast.show('CSV出力：' + NOT_IMPL)} style={btn()}>CSV出力</button>
+      <button type="button" className="btn-outline" onClick={() => setImp({ open: true, name: '', rows: [], byHeader: false, error: '' })} style={btn()}>CSV取込</button>
+      <button type="button" className="btn-outline" onClick={exportCsv} style={btn()}>CSV出力</button>
       <button type="button" className="submit-btn" onClick={() => setEdit(blank())} style={btn(accent, true)}>＋ {cfg.addLabel}</button>
     </>}>
       <ToastView msg={toast.msg} />
@@ -113,6 +176,31 @@ function MasterPage({ variant, accent, label, tabs }: { variant: 'form' | 'sheet
           </tbody>
         </table>
       </div>
+      <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
+      <Modal open={imp.open} onClose={() => setImp((i) => ({ ...i, open: false }))} width={720} title={`${cfg.title}のCSV取込`}>
+        <div style={{ padding: '14px 22px 20px', display: 'grid', gap: 12 }}>
+          <div style={{ fontSize: 12.5, color: '#5b6773', lineHeight: 1.7 }}>1行目を見出し（{cfg.fields.map((f) => f.label).join('／')}／有効）として読み込みます。見出しがない場合はこの列順で取り込みます。文字コードは UTF-8（本番では Shift_JIS も対応）。</div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <input type="file" accept=".csv,text/csv" onChange={(e) => { const f = e.target.files?.[0]; if (f) readFile(f); e.target.value = ''; }} style={{ fontSize: 12.5, fontFamily: 'inherit' }} />
+            <button type="button" className="btn-outline" onClick={sampleCsv} style={btn()}>サンプルCSVを読み込む</button>
+            {imp.name && <span style={{ fontSize: 12, color: '#7a8794' }}>{imp.name}　{imp.rows.length} 行{imp.byHeader ? '（見出し行あり）' : '（列順で対応付け）'}</span>}
+          </div>
+          {imp.error && <div style={{ fontSize: 12.5, color: '#c0392b' }}>{imp.error}</div>}
+          {imp.rows.length > 0 && (
+            <div style={{ border: '1px solid #e2e8ee', borderRadius: 8, overflow: 'auto', maxHeight: 300 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead><tr>{cfg.fields.map((f) => <th key={f.key} style={{ ...TH, textAlign: f.align ?? 'left' }}>{f.label}</th>)}<th style={{ ...TH, width: 60 }}>有効</th></tr></thead>
+                <tbody>{imp.rows.slice(0, 50).map((r) => <tr key={r._id}>{cfg.fields.map((f) => <td key={f.key} style={f.align === 'right' ? NUM : TD}>{f.type === 'color' ? <span style={{ display: 'inline-block', width: 14, height: 14, borderRadius: 4, background: r[f.key], verticalAlign: 'middle' }} /> : r[f.key]}</td>)}<td style={TD}>{r._on === '1' ? '有効' : '無効'}</td></tr>)}</tbody>
+              </table>
+              {imp.rows.length > 50 && <div style={{ padding: '6px 12px', fontSize: 11.5, color: '#9aa5b1' }}>…ほか {imp.rows.length - 50} 行</div>}
+            </div>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <button type="button" onClick={() => setImp((i) => ({ ...i, open: false }))} style={btn()}>キャンセル</button>
+            <button type="button" className="submit-btn" disabled={!imp.rows.length} onClick={doImport} style={{ ...btn(accent, true), opacity: imp.rows.length ? 1 : 0.5 }}>取り込む（{imp.rows.length} 件を追加）</button>
+          </div>
+        </div>
+      </Modal>
       <Modal open={!!edit} onClose={() => setEdit(null)} width={560} title={edit?._id ? `${cfg.title}の編集` : cfg.addLabel}>
         {edit && (
           <div style={{ padding: '14px 22px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -199,6 +287,10 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
   const [vals, setVals] = useState(ITEMS.map((i) => [...i.v]));
   const [site, setSite] = useState(0);
   const [tab, setTab] = useState('貸借科目繰越残高');
+  const [importOpen, setImportOpen] = useState(false);
+  /** 前年度（令和7年度）決算の期末残高（サンプル）。本番では前年度データの貸借対照表から取得 */
+  const PRIOR: number[][] = [[0, 31200], [21500, 0], [0, 9870500], [0, 142300], [0, 1350000], [0, 22000000], [0, 15100000], [0, 1620000], [0, 385000], [0, 262000], [0, 1550000], [0, 25800000], [0, 9300000], [21500, 12817000]];
+  const importPrior = () => { setVals(PRIOR.map((r) => [...r])); setImportOpen(false); toast.show('前年度（令和7年度）の決算残高を貸借科目繰越残高に取り込みました（F12 OK で確定）'); };
   const PL_ITEMS: { name: string; side: '借方' | '貸方'; v: number }[] = [{ name: '保育事業収益', side: '貸方', v: 40_200_000 }, { name: '補助金事業収益', side: '貸方', v: 700_000 }, { name: '人件費', side: '借方', v: 28_100_000 }, { name: '事業費', side: '借方', v: 5_050_000 }, { name: '事務費', side: '借方', v: 3_480_000 }, { name: '減価償却費', side: '借方', v: 3_034_380 }];
   const FUND_ITEMS: { name: string; side: '収入' | '支出'; v: number }[] = [{ name: '委託費収入', side: '収入', v: 13_662_150 }, { name: '利用者等利用料収入', side: '収入', v: 84_000 }, { name: '補助金事業収入', side: '収入', v: 660_000 }, { name: '人件費支出', side: '支出', v: 9_600_000 }, { name: '事業費支出', side: '支出', v: 1_720_000 }, { name: '事務費支出', side: '支出', v: 1_150_000 }];
   const sum = (side: '借方' | '貸方') => ITEMS.reduce((s, it, i) => s + (it.side === side ? vals[i][site] : 0), 0);
@@ -207,12 +299,23 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
   const set = (i: number, v: string) => setVals((vs) => vs.map((row, k) => (k === i ? row.map((x, s) => (s === site ? parseInt(v.replace(/[^0-9]/g, ''), 10) || 0 : x)) : row)));
   return (
     <Shell variant={variant} title="開始残高" desc="運用開始時点（期首）の貸借残高、事業活動科目の前年実績、資金科目の当期実績（期中開始時）を拠点ごとに登録します。" actions={<>
-      <button type="button" className="btn-outline" onClick={() => toast.show('前年度決算から取込：' + NOT_IMPL)} style={btn()}>前年度決算から取込</button>
+      <button type="button" className="btn-outline" onClick={() => setImportOpen(true)} style={btn()}>前年度決算から取込</button>
       <button type="button" className="btn-outline" onClick={() => toast.show('繰越残高の設定 - 貸借科目期中：期中から使い始めた場合に使用（カスタマーセンターへご相談ください）')} style={btn()}>借貸残高（期中）</button>
       <button type="button" className="btn-outline" onClick={() => toast.show('貸借対照表 繰越 内部取引残高：年度更新時に自動設定されます。通常は変更不要')} style={btn()}>内部取引</button>
       <button type="button" className="submit-btn" disabled={!ok} onClick={() => toast.show('開始残高を確定しました（プロトタイプ）')} style={{ ...btn(accent, true), opacity: ok ? 1 : 0.5 }}>F12 OK</button>
     </>}>
       <ToastView msg={toast.msg} />
+      <Modal open={importOpen} onClose={() => setImportOpen(false)} width={480} title="前年度決算から取込" strict>
+        <div style={{ padding: '16px 22px 18px', fontSize: 13, lineHeight: 1.8 }}>
+          <div>前年度（令和7年度）の決算残高を貸借科目繰越残高に取り込みます。</div>
+          <div style={{ color: '#c0392b', fontWeight: 700 }}>現在の入力値は上書きされます。</div>
+          <div style={{ fontSize: 12, color: '#7a8794', marginTop: 6 }}>対象：本部／チャイルド保育園の全拠点。取り込み後は貸借一致を確認し「F12 OK」で確定してください。</div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+            <button type="button" onClick={() => setImportOpen(false)} style={btn()}>キャンセル</button>
+            <button type="button" className="submit-btn" onClick={importPrior} style={btn(accent, true)}>OK（取り込む）</button>
+          </div>
+        </div>
+      </Modal>
       <Tabs items={['貸借科目繰越残高', '事業活動科目前年実績', '資金科目当期実績']} current={tab} onChange={setTab} accent={accent} />
       {tab !== '貸借科目繰越残高' && (
         <div style={{ padding: 22 }}>

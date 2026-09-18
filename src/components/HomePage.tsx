@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { NOT_IMPL, ToastView, useToast } from './Toast';
+import { ToastView, useToast } from './Toast';
 import { HOME_BANKS, HOME_FAQ, HOME_NOTICES, IMPLEMENTED_MENU, MENU_GROUPS, SETTINGS_MENU } from '../data';
 import { Modal } from './Modal';
 import { setSession, useSession } from '../store/session';
@@ -25,6 +25,12 @@ interface Props {
 export function HomePage({ variant, accent, onNavigate }: Props) {
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
   const [favEdit, setFavEdit] = useState(false);
+  // お知らせ一覧（タグ絞り込み・クリックで本文を展開）
+  const [noticeOpen, setNoticeOpen] = useState(false);
+  const [noticeTag, setNoticeTag] = useState<string>('すべて');
+  const [noticeExpanded, setNoticeExpanded] = useState<number | null>(null);
+  const NOTICE_TAGS = ['すべて', ...Array.from(new Set(HOME_NOTICES.map((n) => n.tag)))];
+  const noticeList = HOME_NOTICES.map((n, i) => ({ ...n, i })).filter((n) => noticeTag === 'すべて' || n.tag === noticeTag).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   const s = useSession();
   const CANDIDATES = [...MENU_GROUPS.flatMap((g) => g.items), '元帳１', '元帳２', '残高照合', '法人印刷', ...SETTINGS_MENU].filter((l) => IMPLEMENTED_MENU.includes(l) || l === '印刷センター' || l === '一括印刷' || l === '予算' || SETTINGS_MENU.includes(l));
   // ドラッグ＆ドロップで並べ替え
@@ -139,7 +145,37 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
           {/* お知らせ */}
           <section style={card}>
-            <div style={h2}>お知らせ<button type="button" style={link} onClick={() => toast.show(NOT_IMPL)}>一覧 ›</button></div>
+            <div style={h2}>お知らせ<button type="button" style={link} onClick={() => { setNoticeExpanded(null); setNoticeOpen(true); }}>一覧 ›</button></div>
+            <Modal open={noticeOpen} onClose={() => setNoticeOpen(false)} width={680} title="お知らせ一覧">
+              <div style={{ padding: '12px 22px 18px' }}>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+                  {NOTICE_TAGS.map((t) => {
+                    const on = noticeTag === t;
+                    const c = TAG_COLOR[t];
+                    return <button key={t} type="button" className="chip" onClick={() => { setNoticeTag(t); setNoticeExpanded(null); }} style={{ padding: '5px 12px', borderRadius: 14, border: '1px solid ' + (on ? accent : '#dde4ea'), background: on ? accent : c ? c.bg : '#fff', color: on ? '#fff' : c ? c.fg : '#5b6773', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{t}<span style={{ marginLeft: 4, opacity: 0.75 }}>{t === 'すべて' ? HOME_NOTICES.length : HOME_NOTICES.filter((n) => n.tag === t).length}</span></button>;
+                  })}
+                </div>
+                <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: '56vh', overflow: 'auto' }}>
+                  {noticeList.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: '#9aa5b1', fontSize: 12.5 }}>該当するお知らせはありません。</div>}
+                  {noticeList.map((n) => {
+                    const c = TAG_COLOR[n.tag];
+                    const on = noticeExpanded === n.i;
+                    return (
+                      <div key={n.i} style={{ borderBottom: '1px solid #f1f4f6' }}>
+                        <button type="button" onClick={() => setNoticeExpanded(on ? null : n.i)} aria-expanded={on} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', padding: '11px 14px', border: 'none', background: on ? '#f8fafc' : 'transparent', fontFamily: 'inherit', cursor: 'pointer', color: '#22303c' }}>
+                          <span style={{ fontSize: 11.5, color: '#9aa5b1', fontVariantNumeric: 'tabular-nums', flex: 'none' }}>{n.date}</span>
+                          <span style={{ fontSize: 10.5, padding: '1px 7px', borderRadius: 8, background: c.bg, color: c.fg, fontWeight: 700, flex: 'none' }}>{n.tag}</span>
+                          <span style={{ flex: 1, fontSize: 13, fontWeight: 600, lineHeight: 1.5 }}>{n.title}</span>
+                          <span style={{ color: '#9aa5b1', transform: on ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>▾</span>
+                        </button>
+                        {on && <div style={{ padding: '0 14px 14px 14px', fontSize: 13, color: '#48565f', lineHeight: 1.8, whiteSpace: 'pre-line' }}>{n.body}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}><button type="button" onClick={() => setNoticeOpen(false)} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: accent, color: '#fff', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>閉じる</button></div>
+              </div>
+            </Modal>
             <div>
               {HOME_NOTICES.map((n, i) => {
                 const c = TAG_COLOR[n.tag];

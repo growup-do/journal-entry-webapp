@@ -9,7 +9,23 @@ import { Modal } from './Modal';
 import { TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
 import { Field, Notice, SettingsShell, Toggle, btn, card, cardHead, input, lbl, numInput } from './ui';
+import { ExportDialog, runExport, type ExportKind, type ExportSpec } from './ExportDialog';
+import { ACCOUNTS } from '../data';
 import { PRINT_ITEMS, setSession, useSession } from '../store/session';
+
+/** 印刷・出力に使う表データ（各画面の実データ、または帳票ごとのサンプル） */
+export interface TableData { header: string[]; rows: (string | number)[][]; }
+/** 帳票名からサンプルの表（科目／当月／累計）を作る。本番では各帳票の集計結果が入る */
+export function sampleReportData(name: string, n = 14): TableData {
+  const names = ACCOUNTS.flatMap((g) => g.items);
+  let h = 7;
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const rows: (string | number)[][] = names.slice(0, n).map((acct, i) => { const cur = ((h + i * 7919) % 900000) + 10000; return [acct, cur, cur * 5 + ((h + i * 131) % 50000)]; });
+  rows.push(['合計', rows.reduce((a, r) => a + Number(r[1]), 0), rows.reduce((a, r) => a + Number(r[2]), 0)]);
+  return { header: ['科目', '当月', '累計'], rows };
+}
+/** 出力先（OUTPUTS）→ 出力種別。画面プレビューは null */
+export const outputKind = (output: string): ExportKind | null => (output === OUTPUTS[0] ? 'print' : output === OUTPUTS[2] ? 'csv' : output === OUTPUTS[3] ? 'excel' : output === OUTPUTS[4] ? 'pdf' : null);
 
 export interface ReportDef { id: string; name: string; cat: string; note?: string; detail: string[]; scope?: boolean; }
 const D = {
@@ -55,8 +71,9 @@ const CATS = ['仕訳日記帳', '元帳', '試算表', '決算書', '補助簿�
 export const OUTPUTS = ['プリンターから印刷する', '画面へプレビューする', 'エクセル互換ファイル（CSV）へ出力する', 'Excelファイル出力', 'PDFファイル出力'];
 
 /* ---------------- 共通の印刷ダイアログ ---------------- */
-export function PrintDialog({ open, onClose, report, accent, onPreview }: { open: boolean; onClose: () => void; report: ReportDef | null; accent: string; onPreview: (title: string, opts: { from: string; to: string; output: string }) => void }) {
+export function PrintDialog({ open, onClose, report, accent, onPreview, data }: { open: boolean; onClose: () => void; report: ReportDef | null; accent: string; onPreview: (title: string, opts: { from: string; to: string; output: string }) => void; /** 画面の実データ（省略時は帳票ごとのサンプル表） */ data?: TableData }) {
   const s = useSession();
+  const [exp, setExp] = useState<ExportSpec | null>(null);
   const [months, setMonths] = useState<Set<string>>(new Set(['8']));
   const [from, setFrom] = useState('令和8年8月1日');
   const [to, setTo] = useState('令和8年8月31日');
@@ -68,16 +85,21 @@ export function PrintDialog({ open, onClose, report, accent, onPreview }: { open
   const [useCommon, setUseCommon] = useState(true);
   const toast = useToast();
   const toggleMonth = (m: string) => setMonths((set) => { const n = new Set(set); if (n.has(m)) n.delete(m); else n.add(m); const arr = FISCAL_MONTHS.filter((x) => n.has(x)); if (arr.length) { setFrom(`令和8年${arr[0] === '決' ? '3' : arr[0]}月1日`); setTo(`令和8年${arr[arr.length - 1] === '決' ? '3' : arr[arr.length - 1]}月末日`); } return n; });
-  if (!report) return null;
   const run = () => {
+    if (!report) return;
     if (output === OUTPUTS[1]) { onPreview(report.name, { from, to, output }); onClose(); return; }
-    toast.show(`${report.name}：${output.replace('する', '')}（プロトタイプでは動作しません）`);
-    onClose();
+    const table = data ?? sampleReportData(report.name);
+    const kind = outputKind(output) ?? 'print';
+    const spec: ExportSpec = { kind, title: report.name, meta: `${from}〜${to}${report.scope && scope === '科目指定' ? '　科目指定' : ''}`, ...table };
+    if (kind === 'print') { toast.show(runExport(spec)); onClose(); return; }
+    // ファイル出力は既存どおり【名前を付けて保存】を経由する
+    setExp(spec);
   };
   const chip = (on: boolean): CSSProperties => ({ minWidth: 30, height: 26, padding: '0 8px', borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? '#f4d03f' : '#e8f0fb', color: on ? '#22303c' : '#2c5f9e', border: '1px solid ' + (on ? '#d4b62c' : '#c9d9ec') });
   return (
-    <Modal open={open} onClose={onClose} width={720} title={<>{report.name} の印刷 <span style={{ fontSize: 11.5, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>{report.cat}</span></>}>
-      <ToastView msg={toast.msg} />
+    <>
+    <ToastView msg={toast.msg} />
+    {report && <Modal open={open} onClose={onClose} width={720} title={<>{report.name} の印刷 <span style={{ fontSize: 11.5, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>{report.cat}</span></>}>
       <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 14 }}>
         <div>
           <span style={lbl}>年月日指定（4〜決のボタンでも指定できます：青＝無効・黄＝有効）</span>
@@ -121,29 +143,37 @@ export function PrintDialog({ open, onClose, report, accent, onPreview }: { open
           <button type="button" className="submit-btn" onClick={run} style={btn(accent, true)}>{output === OUTPUTS[1] ? 'プレビュー' : '印刷'}</button>
         </div>
       </div>
-    </Modal>
+    </Modal>}
+    {/* 【名前を付けて保存】は印刷ダイアログの上に重ねる（DOM 上で後に置く） */}
+    <ExportDialog spec={exp} onClose={() => { setExp(null); onClose(); }} accent={accent} />
+    </>
   );
 }
 
 /* ---------------- プレビュー ---------------- */
-export function PreviewModal({ open, onClose, title, opts, pages = 3, accent, children }: { open: boolean; onClose: () => void; title: string; opts?: { from: string; to: string; output: string }; pages?: number; accent: string; children?: ReactNode }) {
+export function PreviewModal({ open, onClose, title, opts, pages = 3, accent, children, data }: { open: boolean; onClose: () => void; title: string; opts?: { from: string; to: string; output: string }; pages?: number; accent: string; children?: ReactNode; /** 印刷・Excel・PDF に使う表データ（省略時はサンプル表） */ data?: TableData }) {
   const [page, setPage] = useState(1);
   const [zoom, setZoom] = useState(1);
   const toast = useToast();
   const s = useSession();
+  const pageCount = data && !children ? 1 : pages;
+  const out = (kind: ExportKind) => {
+    const table = data ?? { header: SAMPLE_HEADER, rows: Array.from({ length: pages }, (_, i) => samplePageRows(i + 1)).flat() };
+    toast.show(runExport({ kind, title, meta: opts ? `（自）${opts.from}　（至）${opts.to}` : undefined, ...table }));
+  };
   return (
     <Modal open={open} onClose={onClose} width={900} title={<>印刷プレビュー <span style={{ fontSize: 12, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>{title}</span></>}>
       <ToastView msg={toast.msg} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderBottom: '1px solid #eef2f5', background: '#f8fafc', flexWrap: 'wrap' }}>
-        <button type="button" onClick={() => toast.show('プリンターの印刷ダイアログ：プロトタイプでは動作しません')} style={btn(accent, true, true)}>印刷</button>
+        <button type="button" onClick={() => out('print')} style={btn(accent, true, true)}>印刷</button>
         <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} style={btn('#5b6773', false, true)}>前ページ</button>
-        <span style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>{page} / {pages}</span>
-        <button type="button" onClick={() => setPage((p) => Math.min(pages, p + 1))} style={btn('#5b6773', false, true)}>次ページ</button>
+        <span style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>{page} / {pageCount}</span>
+        <button type="button" onClick={() => setPage((p) => Math.min(pageCount, p + 1))} style={btn('#5b6773', false, true)}>次ページ</button>
         <button type="button" onClick={() => setZoom((z) => Math.min(1.6, z + 0.2))} style={btn('#5b6773', false, true)}>拡大</button>
         <button type="button" onClick={() => setZoom((z) => Math.max(0.6, z - 0.2))} style={btn('#5b6773', false, true)}>縮小</button>
         <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
-          <button type="button" onClick={() => toast.show('Excel出力（.xlsx）：プロトタイプでは動作しません')} style={btn('#1f7a52', false, true)}>Excel出力</button>
-          <button type="button" onClick={() => toast.show('PDF出力：プロトタイプでは動作しません')} style={btn('#c0392b', false, true)}>PDF出力</button>
+          <button type="button" onClick={() => out('excel')} style={btn('#1f7a52', false, true)}>Excel出力</button>
+          <button type="button" onClick={() => out('pdf')} style={btn('#c0392b', false, true)}>PDF出力</button>
           <button type="button" onClick={onClose} style={btn('#5b6773', false, true)}>閉じる</button>
         </span>
       </div>
@@ -152,7 +182,7 @@ export function PreviewModal({ open, onClose, title, opts, pages = 3, accent, ch
           {s.print.items.corp && <div style={{ fontSize: 10 * zoom, color: '#5b6773' }}>社会福祉法人 チャイルド保育園　{s.division}</div>}
           <div style={{ textAlign: 'center', fontSize: 15 * zoom, fontWeight: 700, margin: `${8 * zoom}px 0 ${4 * zoom}px`, letterSpacing: '.1em' }}>{title}</div>
           {opts && <div style={{ textAlign: 'center', fontSize: 10 * zoom, color: '#5b6773', marginBottom: 12 * zoom }}>（自）{opts.from}　（至）{opts.to}　　単位：円</div>}
-          {children ?? <SamplePage zoom={zoom} page={page} shade={s.print.items.shade} />}
+          {children ?? (data ? <DataPage zoom={zoom} data={data} shade={s.print.items.shade} /> : <SamplePage zoom={zoom} page={page} shade={s.print.items.shade} />)}
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 * zoom, fontSize: 9 * zoom, color: '#7a8794' }}>
             <span>{s.print.items.date ? `印刷日 2026/09/10` : ''}</span>
             {s.print.items.stamp && <span style={{ display: 'flex', gap: 4 }}>{s.print.stamps.filter(Boolean).map((n) => <span key={n} style={{ width: 44 * zoom, height: 44 * zoom, border: '1px solid #9aa5b1', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{n}</span>)}</span>}
@@ -164,13 +194,27 @@ export function PreviewModal({ open, onClose, title, opts, pages = 3, accent, ch
     </Modal>
   );
 }
+const SAMPLE_HEADER = ['勘定科目', '前月繰越', '借方', '貸方', '残高'];
+const sampleCell = (i: number) => (i * 7919) % 1000000 + 12000;
+/** サンプル帳票の1ページ分（22行）。プレビュー表示と印刷・Excel・PDF 出力で共用 */
+function samplePageRows(page: number): (string | number)[][] {
+  return Array.from({ length: 22 }, (_, k) => k + (page - 1) * 22).map((i) => [i % 6 === 0 ? '流動資産' : ['現金', '普通預金', '当座預金', '事業未収金', '立替金'][i % 5], sampleCell(i), sampleCell(i + 1) % 90000, sampleCell(i + 2) % 70000, sampleCell(i) + (sampleCell(i + 1) % 90000) - (sampleCell(i + 2) % 70000)]);
+}
 function SamplePage({ zoom, page, shade }: { zoom: number; page: number; shade: boolean }) {
-  const rows = Array.from({ length: 22 }, (_, i) => i + (page - 1) * 22);
-  const c = (i: number) => (i * 7919) % 1000000 + 12000;
+  const rows = samplePageRows(page);
   return (
     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 * zoom }}>
-      <thead><tr>{['勘定科目', '前月繰越', '借方', '貸方', '残高'].map((h, i) => <th key={h} style={{ border: '1px solid #9aa5b1', padding: 3 * zoom, background: shade ? '#eef2f6' : '#fff', textAlign: i ? 'right' : 'left', fontWeight: 700 }}>{h}</th>)}</tr></thead>
-      <tbody>{rows.map((i) => <tr key={i} style={{ background: shade && i % 6 === 0 ? '#f6f8fa' : '#fff' }}><td style={{ border: '1px solid #c3ccd4', padding: 3 * zoom, fontWeight: i % 6 === 0 ? 700 : 400, paddingLeft: (i % 6 === 0 ? 3 : 12) * zoom }}>{i % 6 === 0 ? '流動資産' : ['現金', '普通預金', '当座預金', '事業未収金', '立替金'][i % 5]}</td>{[c(i), c(i + 1) % 90000, c(i + 2) % 70000, c(i) + (c(i + 1) % 90000) - (c(i + 2) % 70000)].map((v, k) => <td key={k} style={{ border: '1px solid #c3ccd4', padding: 3 * zoom, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{v.toLocaleString('ja-JP')}</td>)}</tr>)}</tbody>
+      <thead><tr>{SAMPLE_HEADER.map((h, i) => <th key={h} style={{ border: '1px solid #9aa5b1', padding: 3 * zoom, background: shade ? '#eef2f6' : '#fff', textAlign: i ? 'right' : 'left', fontWeight: 700 }}>{h}</th>)}</tr></thead>
+      <tbody>{rows.map((r, i) => <tr key={i} style={{ background: shade && i % 6 === 0 ? '#f6f8fa' : '#fff' }}><td style={{ border: '1px solid #c3ccd4', padding: 3 * zoom, fontWeight: i % 6 === 0 ? 700 : 400, paddingLeft: (i % 6 === 0 ? 3 : 12) * zoom }}>{r[0]}</td>{r.slice(1).map((v, k) => <td key={k} style={{ border: '1px solid #c3ccd4', padding: 3 * zoom, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{Number(v).toLocaleString('ja-JP')}</td>)}</tr>)}</tbody>
+    </table>
+  );
+}
+/** 画面の実データをそのまま帳票風に描画 */
+function DataPage({ zoom, data, shade }: { zoom: number; data: TableData; shade: boolean }) {
+  return (
+    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 * zoom }}>
+      <thead><tr>{data.header.map((h, i) => <th key={i} style={{ border: '1px solid #9aa5b1', padding: 3 * zoom, background: shade ? '#eef2f6' : '#fff', textAlign: typeof data.rows[0]?.[i] === 'number' ? 'right' : 'left', fontWeight: 700 }}>{h}</th>)}</tr></thead>
+      <tbody>{data.rows.map((r, i) => <tr key={i}>{r.map((v, k) => <td key={k} style={{ border: '1px solid #c3ccd4', padding: 3 * zoom, textAlign: typeof v === 'number' ? 'right' : 'left', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{typeof v === 'number' ? v.toLocaleString('ja-JP') : v}</td>)}</tr>)}</tbody>
     </table>
   );
 }
@@ -182,12 +226,21 @@ export function PrintCenterPage({ variant, accent, batch }: { variant: 'form' | 
   const [preview, setPreview] = useState<{ title: string; opts: { from: string; to: string; output: string } } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set(['j1', 'l1', 't1', 't2', 't3']));
   const [bOutput, setBOutput] = useState(OUTPUTS[1]);
+  const [exp, setExp] = useState<ExportSpec | null>(null);
   const toast = useToast();
   const list = REPORTS.filter((r) => cat === 'すべて' || r.cat === cat);
+  // 一括印刷：選んだ帳票を1つの出力にまとめる（帳票名列を付けて連結。本番では帳票ごとに改ページ）
+  const runBatch = () => {
+    if (!selected.size) return toast.show('帳票を選んでください');
+    const picked = REPORTS.filter((r) => selected.has(r.id));
+    if (bOutput === OUTPUTS[1]) { setPreview({ title: `一括印刷（${picked.length}帳票）`, opts: { from: '令和8年8月1日', to: '令和8年8月31日', output: bOutput } }); return; }
+    const rows = picked.flatMap((r) => sampleReportData(r.name).rows.map((row) => [r.name, ...row]));
+    setExp({ kind: outputKind(bOutput) ?? 'print', title: `一括印刷（${picked.length}帳票）`, fileName: `一括印刷_令和8年8月`, meta: `令和8年8月1日〜8月31日　対象：${picked.map((r) => r.name).join('、')}`, header: ['帳票名', '科目', '当月', '累計'], rows });
+  };
   return (
     <SettingsShell variant={variant} title={batch ? '一括印刷' : '印刷センター'} badge="印刷" desc={batch ? '複数の帳票をまとめて印刷します。期間と出力先を1回指定するだけで、選んだ帳票を順に出力します（既存のお気に入り「帳票一括印刷」に相当）。' : 'すべての帳票をここから印刷します。帳票を選ぶと、期間・出力先・詳細設定を1つのダイアログで指定してプレビューできます。各画面の「印刷」ボタンからも同じダイアログが開きます。'} draft actions={batch ? <>
       <select value={bOutput} onChange={(e) => setBOutput(e.target.value)} style={{ ...input, width: 240 }}>{OUTPUTS.map((o) => <option key={o}>{o}</option>)}</select>
-      <button type="button" className="submit-btn" onClick={() => { if (!selected.size) return toast.show('帳票を選んでください'); if (bOutput === OUTPUTS[1]) setPreview({ title: `一括印刷（${selected.size}帳票）`, opts: { from: '令和8年8月1日', to: '令和8年8月31日', output: bOutput } }); else toast.show(`${selected.size}帳票を出力（プロトタイプでは動作しません）`); }} style={btn(accent, true)}>選んだ {selected.size} 帳票を印刷</button>
+      <button type="button" className="submit-btn" onClick={runBatch} style={btn(accent, true)}>選んだ {selected.size} 帳票を印刷</button>
     </> : <button type="button" className="btn-outline" onClick={() => toast.show('「印刷」メニュー →「共通の印刷設定」で印刷位置・行間・捺印欄などを設定できます')} style={btn()}>共通の印刷設定</button>}>
       <ToastView msg={toast.msg} />
       <div style={{ display: 'grid', gridTemplateColumns: '200px minmax(0,1fr)', minHeight: 420 }}>
@@ -218,7 +271,8 @@ export function PrintCenterPage({ variant, accent, batch }: { variant: 'form' | 
         </div>
       </div>
       <PrintDialog open={!!target} onClose={() => setTarget(null)} report={target} accent={accent} onPreview={(title, opts) => setPreview({ title, opts })} />
-      <PreviewModal open={!!preview} onClose={() => setPreview(null)} title={preview?.title ?? ''} opts={preview?.opts} accent={accent} />
+      <PreviewModal open={!!preview} onClose={() => setPreview(null)} title={preview?.title ?? ''} opts={preview?.opts} accent={accent} data={preview ? (batch ? { header: ['帳票名', '科目', '当月', '累計'], rows: REPORTS.filter((r) => selected.has(r.id)).flatMap((r) => sampleReportData(r.name).rows.map((row) => [r.name, ...row])) } : sampleReportData(preview.title)) : undefined} />
+      <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
     </SettingsShell>
   );
 }

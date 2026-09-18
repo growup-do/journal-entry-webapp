@@ -8,7 +8,9 @@ import type { CSSProperties } from 'react';
 import { AssistField } from './AssistField';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { Modal } from './Modal';
-import { NOT_IMPL, ToastView, useToast } from './Toast';
+import { ToastView, useToast } from './Toast';
+import { DivisionDialog } from './DivisionPicker';
+import { getSession } from '../store/session';
 import { makeSheetSeed } from '../data';
 import { useAssist } from '../hooks/useAssist';
 import { applyMonth, fmtAmount } from '../lib/format';
@@ -52,6 +54,7 @@ export function TransferEntryPage({ variant, accent, accentRgb, single }: Props)
   });
   const [dontShow, setDontShow] = useState(false);
   const [service, setService] = useState('001 本部');
+  const [divOpen, setDivOpen] = useState(false);
   const [month, setMonth] = useState('8');
   const [day, setDay] = useState('5');
   const [rows, setRows] = useState<Row[]>(() => Array.from({ length: rowCount }, emptyRow));
@@ -274,9 +277,10 @@ export function TransferEntryPage({ variant, accent, accentRgb, single }: Props)
             <div style={{ textAlign: 'right', fontWeight: 700, fontSize: 16, color: PINK, fontVariantNumeric: 'tabular-nums' }}>{kashiTotal.toLocaleString('ja-JP')}</div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '4px 22px 16px' }}>
-            <button type="button" className="btn-outline" onClick={() => toast.show(NOT_IMPL)} style={{ padding: '9px 16px', border: '1px solid #cfd8e0', borderRadius: 8, background: '#fff', color: '#5b6773', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
+            <button type="button" className="btn-outline" onClick={() => setDivOpen(true)} style={{ padding: '9px 16px', border: '1px solid #cfd8e0', borderRadius: 8, background: '#fff', color: '#5b6773', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
               区分選択
             </button>
+            <DivisionDialog open={divOpen} accent={accent} onClose={() => { setDivOpen(false); const d = getSession().division; if (d !== service) { setService(d); toast.show(`伝票入力区分を「${d}」に切り替えました`); } }} />
             <button type="button" className="submit-btn" onClick={submit} style={{ padding: '9px 28px', background: accent, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', boxShadow: `0 3px 12px rgba(${accentRgb},.24)` }}>
               {title}を登録
             </button>

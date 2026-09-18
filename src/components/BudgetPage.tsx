@@ -5,7 +5,8 @@ import { useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
-import { NOT_IMPL, ToastView, useToast } from './Toast';
+import { ToastView, useToast } from './Toast';
+import { ExplainModal } from './ExplainModal';
 import { FISCAL_MONTHS } from './FiscalMonthTabs';
 import { Field, Notice, SettingsShell, Tabs, btn, input, numInput, toInt, yen } from './ui';
 import { VENDORS } from '../data';
@@ -56,6 +57,7 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
   const [next, setNext] = useState<Grid>(() => initGrid(0));
   const [ref, setRef] = useState<'当初予算' | '確定予算'>('当初予算');
   const [wizard, setWizard] = useState(false);
+  const [explainOpen, setExplainOpen] = useState(false);
   const [wMethod, setWMethod] = useState('当年度予算をそのまま');
   const [wRate, setWRate] = useState('102');
   const [wUnit, setWUnit] = useState('1円単位');
@@ -102,10 +104,20 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
   return (
     <SettingsShell variant={variant} title="予算" desc="資金収支計算書の予算（前年度／当初／補正／次年度）と業者別予算を入力します。補正予算は月ごとに入力でき、収支差額と期末支払資金残高を確認しながら設定できます。" badge="予算" actions={<>
       {tab === '次年度予算' && <button type="button" className="btn-outline" onClick={() => setWizard(true)} style={btn(accent)}>次年度予算作成</button>}
-      <button type="button" className="btn-outline" onClick={() => toast.show('説明：' + NOT_IMPL)} style={btn()}>説明</button>
+      <button type="button" className="btn-outline" onClick={() => setExplainOpen(true)} style={btn()}>説明</button>
       <button type="button" className="submit-btn" onClick={() => toast.show('予算を保存しました（プロトタイプ）')} style={btn(accent, true)}>保存</button>
     </>}>
       <ToastView msg={toast.msg} />
+      <ExplainModal open={explainOpen} onClose={() => setExplainOpen(false)} accent={accent} title="予算入力の説明" source="マニュアル 3.2 予算の入力（3.2.1 資金収支計算書の概要と設定／3.2.2 業者別予算の概要と設定）" sections={[
+        { h: '予算の種類（4種類）', body: <>資金収支計算書の予算には「前年度予算」「当年度当初予算」「補正予算」「次年度予算」の4種類があり、それぞれのタブで入力します。年度更新（処理年度の更新）をすると、前年度予算額→前々年度予算額、当年度予算額→前年度予算額、次年度予算額→当年度当初予算額へ自動的に移行されます。</>},
+        { h: '前年度予算', body: <>前年度の予算額を入力します。参考用に前々年度予算額を表示し、当初予算／確定予算（3月末時点の最終予算額）の切替ができます。運用2年目以降は年度更新で自動移行されるため、通常は初年度のみ入力します。</>},
+        { h: '当初予算', body: <>当年度の当初予算額を科目ごとに入力します。参考用に前年度予算額を表示します。予算対比・予算チェック（環境設定）の基準になります。</>},
+        { h: '補正予算（月別）', body: <>補正予算は4月から3月まで毎月入力できます。入力方法は「補正額」（増減額）と「補正後予算額」（累計予算額）を切り替えられ、どちらで入力するかは動作環境の「補正予算」で指定します。入力すると、その科目が属する資金収支差額（収入合計・支出合計）がどう変化するかを画面下で確認できます。</>},
+        { h: '次年度予算', body: <>次年度の予算額を入力します。参考用に当年度予算（当初予算／確定予算）を表示します。「次年度予算作成」で当年度予算からの一括作成（率・端数単位の指定）ができ、年度更新時に当年度当初予算へ自動移行されます。</>},
+        { h: '期末支払資金残高', body: <>「前期末決算額」は貸借対照表の繰越残高から「流動資産－流動負債」で計算した前期末支払資金残高です。「当期末予算額」は前期末決算額に資金収支差額合計を加算した当期末支払資金残高で、補正の結果を確認するための目安になります。</>},
+        { h: '業者別予算', body: <>業者コードごとの支払額に対する予算です。資金収支予算と同じく前年度／当年度当初／補正／次年度の4種類を持ち、年度更新で自動的に繰り下がります。業者推移・業者元帳で予算との対比に使います。</>},
+        { h: '登録・キャンセル', body: <>各画面の「F12：登録／OK」で入力を確定し、「Esc：キャンセル」で破棄します。Web版では「保存」ボタンが登録に相当します。</>},
+      ]} />
       <Tabs items={TABS} current={tab} onChange={(t) => { setTab(t as YearTab); setMonth('初'); }} accent={accent} />
       {tab === '業者別予算' ? (
         <div style={{ padding: 22 }}>

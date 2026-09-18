@@ -15,7 +15,7 @@ interface Props {
   onNavigate: (label: string) => void;
 }
 
-export function BudgetComparePage({ variant, accent, onNavigate }: Props) {
+export function BudgetComparePage({ variant, accent }: Props) {
   const [month, setMonth] = useState<MonthFilter>('10');
   const [view, setView] = useState<'table' | 'graph'>('table');
   const rows = rollup(BUDGET_ROWS, 2);
@@ -29,7 +29,6 @@ export function BudgetComparePage({ variant, accent, onNavigate }: Props) {
       title="予算対比"
       subtitle="現額予算と実績額を科目ごとに対比し、予算残高・達成率・構成比を表示します。"
       tools={[{ label: '表', onClick: () => setView('table'), primary: view === 'table' }, { label: 'グラフ', onClick: () => setView('graph'), primary: view === 'graph' }, { label: '計算' }]}
-      onBack={() => onNavigate('伝票入力')}
       controls={
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <span style={LABEL}>指定年月</span>

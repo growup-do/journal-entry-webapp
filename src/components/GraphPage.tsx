@@ -17,7 +17,7 @@ interface Props {
   onNavigate: (label: string) => void;
 }
 
-export function GraphPage({ mode, variant, accent, onNavigate }: Props) {
+export function GraphPage({ mode, variant, accent }: Props) {
   const isYearly = mode === 'yearly';
   const [part, setPart] = useState<GraphPart>('資産');
   const [selected, setSelected] = useState<string[]>(isYearly ? ['資産:1', '資産:7'] : ['0', '14']);
@@ -60,7 +60,6 @@ export function GraphPage({ mode, variant, accent, onNavigate }: Props) {
         { label: byMonth ? '年月切替（月→年度）' : '年月切替（年度→月）', onClick: () => setByMonth((b) => !b) },
         { label: commonScale ? 'スケール切替（共通→個別）' : 'スケール切替（個別→共通）', onClick: () => setCommonScale((c) => !c) },
       ]}
-      onBack={() => onNavigate('伝票入力')}
     >
       <div style={{ display: 'grid', gridTemplateColumns: '300px minmax(0,1fr)', gap: 0, minHeight: 520 }}>
         {/* 左：部タブ＋ツリー */}

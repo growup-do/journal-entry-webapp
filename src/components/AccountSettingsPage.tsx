@@ -3,9 +3,11 @@
 
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
+import { ExplainModal } from './ExplainModal';
+import { ExportDialog, type ExportKind, type ExportSpec } from './ExportDialog';
 import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
-import { NOT_IMPL, ToastView, useToast } from './Toast';
+import { ToastView, useToast } from './Toast';
 import { Field, Notice, SettingsShell, Tabs, btn, card, cardHead, input, lbl } from './ui';
 import { ACCOUNT_META, type AccountMeta } from '../lib/accounts';
 import { SERVICES, SUMMARIES } from '../data';
@@ -27,11 +29,25 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
   const [selKey, setSelKey] = useState<number | null>(rows[0]?.key ?? null);
   const [q, setQ] = useState('');
   const [preview, setPreview] = useState(false);
+  const [exp, setExp] = useState<ExportSpec | null>(null);
   const [recalc, setRecalc] = useState<null | number>(null);
   const [use, setUse] = useState<Record<string, boolean>>(() => Object.fromEntries(ACCOUNT_META.flatMap((m) => SERVICES.map((s) => [m.name + '|' + s, !(s.startsWith('005') && m.cls !== '現預金')]))));
   const [link, setLink] = useState<'しない' | '区分内' | '横一列'>('しない');
   const [himokuNames, setHimokuNames] = useState<Record<number, string>>({});
+  const [cautionOpen, setCautionOpen] = useState(false);
+  /** ▲入換▼：選択中の科目と同じグループ（貸借／損益の区分）の並び順を編集する */
+  const [swap, setSwap] = useState<{ cls: AccountMeta['cls']; keys: number[]; cur: number; drag: number | null } | null>(null);
   const sel = rows.find((r) => r.key === selKey) ?? null;
+  const openSwap = () => { if (!sel) return; const keys = rows.filter((r) => r.cls === sel.cls).map((r) => r.key); setSwap({ cls: sel.cls, keys, cur: keys.indexOf(sel.key), drag: null }); };
+  const moveSwap = (from: number, to: number) => setSwap((sw) => { if (!sw || to < 0 || to >= sw.keys.length || from === to) return sw; const keys = [...sw.keys]; const [k] = keys.splice(from, 1); keys.splice(to, 0, k); return { ...sw, keys, cur: to }; });
+  const applySwap = () => {
+    if (!swap) return;
+    // グループ内の行だけを新しい順序で差し替える（他グループの位置は変えない）
+    const ordered = swap.keys.map((k) => rows.find((r) => r.key === k)!);
+    let i = 0;
+    setRows((rs) => rs.map((r) => (r.cls === swap.cls ? ordered[i++] : r)));
+    setSwap(null); toast.show(`${swap.cls}グループの並び順を更新しました（${swap.keys.length} 科目）`);
+  };
   const upd = (p: Partial<AcctRow>) => sel && setRows((rs) => rs.map((r) => (r.key === sel.key ? { ...r, ...p } : r)));
   const list = rows.filter((r) => (tab === '資金科目' ? r.fund !== '—' && r.fund !== '（支払資金）' : true) && (!q || r.name.includes(q) || r.code.includes(q) || r.kana.includes(q)));
   const addNew = () => { const key = Math.max(...rows.map((r) => r.key)) + 1; const n: AcctRow = { ...toRow({ name: '新しい科目', code: '9900', kana: '', kind: 'PL', cls: '費用', fund: '新しい科目支出' }, key), key }; setRows((rs) => [...rs, n]); setSelKey(key); };
@@ -41,13 +57,31 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
     setUse((u) => { const n = { ...u, [k]: v }; if (link === '区分内') ACCOUNT_META.forEach((m) => { n[m.name + '|' + svc] = v; }); if (link === '横一列') SERVICES.forEach((s) => { n[name + '|' + s] = v; }); return n; });
   };
   const small: CSSProperties = { ...input, padding: '5px 8px', fontSize: 12.5 };
+  // Excel／ファイル（CSV）／印刷：表示中のタブ（勘定科目／資金科目）の一覧を出力（既存の「貸借科目 Excel 出力」「事業科目 Excel 出力」「ファイル」に相当）
+  const exportList = (kind: ExportKind) => {
+    const fund = tab === '資金科目';
+    setExp({
+      kind, title: fund ? '資金科目一覧' : '勘定科目一覧', meta: `${list.length} 件${q ? `　検索：${q}` : ''}`,
+      header: ['表示コード', '費目', '区分コード', fund ? '資金科目' : '科目名', '印刷用科目名称', 'フリガナ', 'A', 'B', 'C', 'D', 'E', 'F', '内部取引', fund ? '勘定科目' : '資金科目', 'キー'],
+      rows: list.map((r) => [r.code, fund ? r.fundHimoku : r.himoku, fund ? r.fundKubun : r.kubun, fund ? r.fund : r.dispName, r.printName, r.kana, r.a, r.b.split('：')[0], r.c, r.d, r.e.split('：')[0], r.f, r.internal.split('：')[0], fund ? r.dispName : r.fund, r.key]),
+    });
+  };
+  // 使用科目設定のファイル出力（CSV）：科目 × 区分の使用可否（1＝使用）
+  const exportUse = (which: 'fund' | 'bs') => {
+    const metas = ACCOUNT_META.filter((m) => (which === 'fund' ? m.fund !== '—' && m.fund !== '（支払資金）' : true));
+    setExp({
+      kind: 'csv', title: which === 'fund' ? '資金科目（使用科目設定）' : '貸借・事業科目（使用科目設定）', meta: `${metas.length} 科目 × ${SERVICES.length} 区分`,
+      header: ['科目', which === 'fund' ? '資金科目' : '区分', ...SERVICES],
+      rows: metas.map((m) => [m.name, which === 'fund' ? m.fund : m.cls, ...SERVICES.map((sv) => (use[m.name + '|' + sv] ? 1 : 0))]),
+    });
+  };
 
   return (
     <SettingsShell variant={variant} title="勘定科目" desc="勘定科目・資金科目の設定（表示コード・費目・区分コード・A〜F属性・資金科目との連動・キーコード）、費目、使用科目設定。既存の【科目設定】【費目入力】【使用科目設定】に相当します。" actions={<>
       <button type="button" className="btn-outline" onClick={() => setPreview(true)} style={btn()}>プレビュー</button>
-      <button type="button" className="btn-outline" onClick={() => toast.show('Excel出力：' + NOT_IMPL)} style={btn()}>Excel出力</button>
-      <button type="button" className="btn-outline" onClick={() => toast.show('CSV出力：' + NOT_IMPL)} style={btn()}>ファイル（CSV）</button>
-      <button type="button" className="btn-outline" onClick={() => toast.show('印刷：' + NOT_IMPL)} style={btn()}>印刷</button>
+      <button type="button" className="btn-outline" onClick={() => exportList('excel')} style={btn()}>Excel出力</button>
+      <button type="button" className="btn-outline" onClick={() => exportList('csv')} style={btn()}>ファイル（CSV）</button>
+      <button type="button" className="btn-outline" onClick={() => exportList('print')} style={btn()}>印刷</button>
       <button type="button" className="btn-outline" onClick={() => { if (confirm('仕訳更新を開始します。1年分の全伝票を対象に、勘定科目と資金科目の連動を整理・更新します。途中で中断はできません。よろしいですか？')) runRecalc(); }} style={btn('#b7791f')}>仕訳の再集計</button>
       {(tab === '勘定科目' || tab === '資金科目') && <button type="button" className="submit-btn" onClick={addNew} style={btn(accent, true)}>＋ 科目を追加</button>}
     </>}>
@@ -97,8 +131,8 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
-                  <button type="button" onClick={() => toast.show('注意事項（PDF）：' + NOT_IMPL)} style={btn()}>注意事項</button>
-                  <button type="button" onClick={() => toast.show('入換：編集中のデータをクリアして入換画面へ（' + NOT_IMPL + '）')} style={btn()}>▲入換▼</button>
+                  <button type="button" onClick={() => setCautionOpen(true)} style={btn()}>注意事項</button>
+                  <button type="button" onClick={openSwap} style={btn()}>▲入換▼</button>
                   <button type="button" onClick={() => setRows((rs) => rs.map((r) => (r.key === sel.key ? toRow(ACCOUNT_META.find((m) => m.name === r.name) ?? r, r.key - 1000) : r)))} style={btn()}>入力をクリア</button>
                   <button type="button" className="submit-btn" onClick={() => toast.show(`「${sel.dispName}」を登録／更新しました`)} style={btn(accent, true)}>登録 / 更新</button>
                 </div>
@@ -137,14 +171,45 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
               <tbody>{ACCOUNT_META.map((m) => <tr key={m.name}><td style={{ ...TD, fontWeight: 500 }}>{m.name}<span style={{ fontSize: 10.5, color: '#9aa5b1', marginLeft: 6 }}>{m.cls}</span></td>{SERVICES.map((s) => <td key={s} style={{ ...TD, textAlign: 'center' }}><input type="checkbox" checked={!!use[m.name + '|' + s]} onChange={() => toggleUse(m.name, s)} /></td>)}</tr>)}</tbody>
             </table>
           </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}><button type="button" onClick={() => toast.show('資金科目ファイル出力：' + NOT_IMPL)} style={btn()}>資金科目ファイル出力</button><button type="button" onClick={() => toast.show('貸借・事業科目ファイル出力：' + NOT_IMPL)} style={btn()}>貸借・事業科目ファイル出力</button><button type="button" className="submit-btn" onClick={() => toast.show('使用科目設定を保存しました')} style={{ ...btn(accent, true), marginLeft: 'auto' }}>OK</button></div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}><button type="button" onClick={() => exportUse('fund')} style={btn()}>資金科目ファイル出力</button><button type="button" onClick={() => exportUse('bs')} style={btn()}>貸借・事業科目ファイル出力</button><button type="button" className="submit-btn" onClick={() => toast.show('使用科目設定を保存しました')} style={{ ...btn(accent, true), marginLeft: 'auto' }}>OK</button></div>
         </div>
       )}
 
+      <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
       <Modal open={preview} onClose={() => setPreview(false)} width={760} title="プレビュー（登録されている科目の一覧）">
         <div style={{ padding: '10px 22px 18px', maxHeight: '70vh', overflow: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}><thead><tr><th style={TH}>コード</th><th style={TH}>科目名</th><th style={TH}>区分</th><th style={TH}>資金科目</th><th style={{ ...TH, textAlign: 'right' }}>キー</th></tr></thead><tbody>{rows.map((r) => <tr key={r.key}><td style={{ ...TD, fontVariantNumeric: 'tabular-nums' }}>{r.code}</td><td style={TD}>{r.dispName}</td><td style={TD}>{r.kind}・{r.cls}</td><td style={TD}>{r.fund}</td><td style={NUM}>{r.key}</td></tr>)}</tbody></table>
         </div>
+      </Modal>
+      <ExplainModal open={cautionOpen} onClose={() => setCautionOpen(false)} accent={accent} title="勘定科目設定の注意事項" source="マニュアル 2.3.4 勘定科目・資金科目の設定／2.2 キーコード" sections={[
+        { h: '変更前に必ずご相談ください', body: <>設定されている科目を変更する前に、担当者またはカスタマーセンター（Tel:050-3786-5432）までご相談ください。科目を変更・修正した結果の影響（帳票の計算結果・印刷順・過去伝票の表示）については補償の対象外です。</>},
+        { h: '科目の追加', body: <>「＋ 科目を追加」で新規科目を作り、表示コード（1〜9桁）・費目・区分コード（3-2-2-2-2）・印刷用科目名称・A〜F属性を設定して「登録／更新」します。費用・収益の科目は「資金科目との連動」（費目・区分コード）も必ず設定してください。連動が無いと資金収支計算書に反映されません。</>},
+        { h: '科目の削除・変更', body: <>伝票で使用済みの科目は削除できません（先に伝票側の科目を付け替えるか、「使用科目設定」で非表示にします）。表示コードや区分コードを変更しても過去の伝票はキーコードで紐付いているため壊れませんが、帳票上の並び順・集計位置が変わります。変更後は「仕訳の再集計」を実行してください。</>},
+        { h: '科目の移動（▲入換▼）', body: <>並び順の変更は「▲入換▼」で同じグループ内の科目を上下に入れ換えます。入換画面へ移動すると編集中の入力はクリアされます。費目をまたぐ移動は費目コード・区分コードの変更で行い、費目の集計行（費目No.99まで）は固定のため訂正・削除しないでください。</>},
+        { h: 'キーコード', body: <>登録された伝票が持つ科目情報は「キーコード」（登録順にシステムが自動付与・変更不可）のみです。複数の端末で運用する場合は、特定の1台でのみ科目の追加・変更を行い、全端末の科目マスターをキーコードのレベルで一致させてください。見かけ上同じ科目体系でもキーコードが異なると、法人合算で正しく集計されません。</>},
+        { h: '名称・コードの制限', body: <>印刷用科目名称は最大40文字。表示用科目名称は画面表示用で、新規登録時は印刷用名称が自動入力されます。表示コードは1〜9桁の数値で、同一区分内で重複しないようにしてください。フリガナ（半角カナ）は科目検索に使われます。</>},
+        { h: 'A〜F属性の意味', body: <>A：貸借区分（借方／貸方）、B：特質指定（現金・預金科目、予算専用、繰越額）、C：特殊摘要科目、D：伝票の科目欄に入力するか、E：資金区分（両加算／借方加算＆貸方減算／借方減算＆貸方加算／資金収支と無関係／資金科目）、F：事業種別。Eの設定を誤ると資金収支計算書の金額が合わなくなります。</>},
+      ]} />
+      <Modal open={!!swap} onClose={() => setSwap(null)} width={560} title={`▲入換▼ 科目の並び順（${swap?.cls ?? ''}グループ）`}>
+        {swap && (
+          <div style={{ padding: '12px 22px 18px', display: 'grid', gap: 10 }}>
+            <Notice>行をドラッグするか、選択して「▲上へ」「▼下へ」で並び順を変えます。OK で一覧・帳票の印刷順に反映します（表示コードは変わりません）。</Notice>
+            <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: 360, overflow: 'auto' }}>
+              {swap.keys.map((k, i) => { const r = rows.find((x) => x.key === k)!; const on = i === swap.cur; return (
+                <div key={k} draggable onDragStart={() => setSwap({ ...swap, drag: i, cur: i })} onDragOver={(e) => { e.preventDefault(); }} onDrop={(e) => { e.preventDefault(); if (swap.drag != null) moveSwap(swap.drag, i); }} onDragEnd={() => setSwap((sw) => (sw ? { ...sw, drag: null } : sw))} onClick={() => setSwap({ ...swap, cur: i })}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 12px', borderBottom: '1px solid #f1f4f6', background: on ? '#eef2f6' : '#fff', cursor: 'grab', fontSize: 13, opacity: swap.drag === i ? 0.4 : 1 }}>
+                  <span style={{ color: '#b7c2cc', fontSize: 14 }}>⋮⋮</span><span style={{ width: 28, color: '#8290a0', fontVariantNumeric: 'tabular-nums', fontSize: 12 }}>{i + 1}</span><span style={{ width: 60, fontVariantNumeric: 'tabular-nums', color: '#5b6773' }}>{r.code}</span><span style={{ flex: 1, fontWeight: on ? 700 : 500 }}>{r.dispName}</span><span style={{ fontSize: 11, color: '#9aa5b1' }}>キー {r.key}</span>
+                </div>); })}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" onClick={() => moveSwap(swap.cur, swap.cur - 1)} disabled={swap.cur <= 0} style={{ ...btn(), opacity: swap.cur <= 0 ? 0.5 : 1 }}>▲ 上へ</button>
+              <button type="button" onClick={() => moveSwap(swap.cur, swap.cur + 1)} disabled={swap.cur >= swap.keys.length - 1} style={{ ...btn(), opacity: swap.cur >= swap.keys.length - 1 ? 0.5 : 1 }}>▼ 下へ</button>
+              <button type="button" onClick={() => moveSwap(swap.cur, 0)} style={btn()}>先頭へ</button>
+              <button type="button" onClick={() => moveSwap(swap.cur, swap.keys.length - 1)} style={btn()}>末尾へ</button>
+              <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}><button type="button" onClick={() => setSwap(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={applySwap} style={btn(accent, true)}>OK</button></span>
+            </div>
+          </div>
+        )}
       </Modal>
       <Modal open={recalc != null} onClose={() => {}} closable={false} width={460} title="仕訳更新">
         <div style={{ padding: '18px 22px 22px' }}>

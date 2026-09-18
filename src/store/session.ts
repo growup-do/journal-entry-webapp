@@ -43,6 +43,9 @@ export interface EnvSettings {
   colorReports: boolean; lineColor: string; shadeColor: string;
   wideInitial: string; wideMonth: string; ledger1Init: string; ledger2Init: string; order: '日付順' | '入力順';
   eraGannen: boolean; trialCalc: string; reserveOutput: string; noteOnExcel: boolean;
+  /** 帳票・繰入金・注意書き（動作環境 4.2.2） */
+  budgetInternalOffset: boolean; onePageRow: boolean; termFromStart: boolean; hideCorpName: boolean;
+  transferWatch: '収入で監視' | '支払いで監視';
 }
 export const DEFAULT_ENV: EnvSettings = {
   confirmGeneral: true, confirmIncome: true, confirmExpense: true,
@@ -52,6 +55,7 @@ export const DEFAULT_ENV: EnvSettings = {
   colorReports: true, lineColor: '#c8d3de', shadeColor: '#eef2f6',
   wideInitial: '仕訳日記帳', wideMonth: '最新月', ledger1Init: '普通預金（保育園）', ledger2Init: '', order: '日付順',
   eraGannen: true, trialCalc: '費目行に表記されている計算方式で計算する', reserveOutput: '予備費を標準方式で印字', noteOnExcel: true,
+  budgetInternalOffset: true, onePageRow: false, termFromStart: false, hideCorpName: false, transferWatch: '収入で監視',
 };
 
 export interface InputSettings {

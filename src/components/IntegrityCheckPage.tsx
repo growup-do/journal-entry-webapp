@@ -2,6 +2,7 @@
 //   実行 → 進捗 → 結果（テキスト）。ファイル出力・コピー。
 
 import { useState } from 'react';
+import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { ToastView, useToast } from './Toast';
 import { Notice, SettingsShell, btn, card, cardHead } from './ui';
 
@@ -17,6 +18,7 @@ export function IntegrityCheckPage({ variant, accent }: { variant: 'form' | 'she
   const [running, setRunning] = useState<Kind | null>(null);
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<Partial<Record<Kind, string[]>>>({});
+  const [exp, setExp] = useState<ExportSpec | null>(null);
   const run = (k: Kind) => {
     if (running) return;
     setRunning(k); setProgress(0);
@@ -31,6 +33,7 @@ export function IntegrityCheckPage({ variant, accent }: { variant: 'form' | 'she
   return (
     <SettingsShell variant={variant} title="整合性チェック" badge="保守" desc="科目・伝票・帳票の整合性を診断します。決算前や科目を変更した後に実行してください。結果はテキストとしてコピー／ファイル出力できます。">
       <ToastView msg={toast.msg} />
+      <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
       <div style={{ padding: 22, display: 'grid', gap: 14 }}>
         <Notice>決算チェック（28項目）は「調査 › 決算調査」から。ここでは既存の「科目チェック」「伝票チェック」「帳票別 非使用科目チェック」をまとめています。</Notice>
         {DEFS.map((d) => {
@@ -43,7 +46,7 @@ export function IntegrityCheckPage({ variant, accent }: { variant: 'form' | 'she
                 {res && <span style={{ fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: d.ok ? '#eaf5ef' : '#fdeee9', color: d.ok ? '#1f7a52' : '#c0392b' }}>{d.ok ? '正常終了' : '要確認あり'}</span>}
                 <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
                   {res && <button type="button" onClick={() => copy(d.kind)} style={btn('#5b6773', false, true)}>コピー</button>}
-                  {res && <button type="button" onClick={() => toast.show('テキストファイルを出力しました（プロトタイプでは動作しません）')} style={btn('#5b6773', false, true)}>ファイル出力</button>}
+                  {res && <button type="button" onClick={() => setExp({ kind: 'text', title: `${d.kind} 診断結果`, fileName: `${d.kind.replace(/\s/g, '')}_診断結果`, meta: res[0], text: res.join('\n') })} style={btn('#5b6773', false, true)}>ファイル出力</button>}
                   <button type="button" className="submit-btn" disabled={!!running} onClick={() => run(d.kind)} style={{ ...btn(accent, true, true), opacity: running ? 0.5 : 1 }}>{busy ? 'チェック中…' : res ? '再実行' : '開始'}</button>
                 </span>
               </div>

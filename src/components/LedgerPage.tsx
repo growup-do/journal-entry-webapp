@@ -7,7 +7,9 @@ import type { CSSProperties } from 'react';
 import { AssistField } from './AssistField';
 import { BizSwitch, useDivisionTools } from './DivisionTools';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
+import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { CHECK, LABEL, NUM, ReportShell, TD, TH, yen } from './ReportShell';
+import { ToastView, useToast } from './Toast';
 import { EditVoucherModal, FlagCell } from './VoucherEdit';
 import { useVouchers, type Voucher } from '../store/journalStore';
 import { getSession, setSession } from '../store/session';
@@ -39,6 +41,8 @@ export function LedgerPage({ kind, variant, accent, accentRgb }: Props) {
   const isVendor = kind === 'vendor';
   const dt = useDivisionTools(all, accent);
   const [showBiz, setShowBiz] = useState(false);
+  const [exp, setExp] = useState<ExportSpec | null>(null);
+  const toast = useToast();
 
   const rows = all.filter((r) => (month == null || r.date.split('/')[0] === month) && dt.visible(r) && (isVendor ? r.gyosha === target : r.kari === target || r.kashi === target) && (!opts.check || r.check) && (!(opts.red || opts.blue || opts.yellow || opts.green) || (opts.red && r.fusen === '赤') || (opts.blue && r.fusen === '青') || (opts.yellow && r.fusen === '黄') || (opts.green && r.fusen === '緑')));
   let bal = CARRY;
@@ -52,6 +56,14 @@ export function LedgerPage({ kind, variant, accent, accentRgb }: Props) {
   const sumC = lines.reduce((a, l) => a + l.credit, 0);
   const m = month ?? '8';
   const toggle = (k: keyof typeof opts) => setOpts((o) => ({ ...o, [k]: !o[k] }));
+  // 印刷／Excel：表示中の明細（繰越・月計を含む）をそのまま出力
+  const openExport = (out: 'print' | 'excel') => {
+    const header = isVendor ? ['月日', 'Seq-No', '借方科目', '貸方科目', '摘要', '金額', '残高'] : ['月日', 'Seq-No', '相手科目', '摘要', '業者', '借方', '貸方', '残高'];
+    const rows: (string | number)[][] = isVendor
+      ? [['', '', '繰越金額', '', '', '', CARRY], ...lines.map((l) => [l.r.date, l.r.seq, l.r.kari, l.r.kashi, l.r.tekiyo, l.debit, l.bal]), ['月計', '', '', '', '', sumD, bal]]
+      : [['', '', '繰越金額', '', '', '', '', CARRY], ...lines.map((l) => [l.r.date, l.r.seq, l.other, l.r.tekiyo, l.r.gyosha ?? '', l.debit || '', l.credit || '', l.bal]), ['月計', '', '', '', '', sumD, sumC, bal]];
+    setExp({ kind: out, title: `${TITLE[kind]}　${target}`, fileName: `${TITLE[kind]}_${target}_令和8年${m}月`, meta: `令和8年 ${m}月1日〜${m}月末日${dt.filtered ? '　区分で絞り込み中' : ''}`, header, rows });
+  };
 
   const fieldBtn: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, width: 260, boxSizing: 'border-box', padding: '7px 10px', background: '#fff', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left', color: 'inherit' };
   const stat = (label: string, value: string, hi?: boolean): CSSProperties & { label: string; value: string; hi?: boolean } => ({ label, value, hi });
@@ -65,7 +77,7 @@ export function LedgerPage({ kind, variant, accent, accentRgb }: Props) {
       accent={accent}
       title={TITLE[kind]}
       subtitle={isVendor ? '指定した業者の取引を日付順に表示します。行をクリックすると伝票を訂正できます。' : '指定した科目の仕訳を日付順に表示し、残高を計算します。行をクリックすると伝票を訂正できます。'}
-      tools={[{ label: isVendor ? '業者' : '科目', onClick: () => assist.open('target', isVendor ? 'vendor' : 'account'), primary: true }, ...dt.tools, { label: '計算' }]}
+      tools={[{ label: isVendor ? '業者' : '科目', onClick: () => assist.open('target', isVendor ? 'vendor' : 'account'), primary: true }, { label: '印刷', onClick: () => openExport('print') }, { label: 'Excel', onClick: () => openExport('excel') }, ...dt.tools, { label: '計算', onClick: () => toast.show(`再計算しました（${lines.length} 件　残高 ${yen(bal)}）`) }]}
       controls={
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -103,6 +115,7 @@ export function LedgerPage({ kind, variant, accent, accentRgb }: Props) {
             <span style={LABEL}>指定年月日</span>
             <span>令和8年 {m}月1日 〜 令和8年 {m}月末日</span>
             {!isVendor && <BizSwitch on={showBiz} onChange={setShowBiz} accent={accent} />}
+            {dt.colorSwitch}
             {dt.clearButton}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
@@ -169,6 +182,8 @@ export function LedgerPage({ kind, variant, accent, accentRgb }: Props) {
         </table>
       </div>
       {dt.modal}
+      <ToastView msg={toast.msg} />
+      <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
       <EditVoucherModal voucher={edit} onClose={() => setEdit(null)} accent={accent} returnTo={TITLE[kind]} />
     </ReportShell>
   );

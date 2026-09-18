@@ -3,12 +3,12 @@
 //   会計月の仕訳を抽出条件で絞り込み、対象にチェックした伝票を Excel 出力（出力済みに変わる）。
 //   詳細設定（対象科目・決裁印影・タイトル／メッセージ）、未出力数（月別の集計）。
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { Modal } from './Modal';
 import { LABEL, NUM, ReportShell, TD, TH, yen } from './ReportShell';
-import { NOT_IMPL, ToastView, useToast } from './Toast';
+import { ToastView, useToast } from './Toast';
 import { JOURNAL_COUNTS, JOURNAL_ROWS, type JournalRow } from '../data';
 import type { MonthFilter } from '../types';
 
@@ -56,7 +56,25 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
   const [subjects, setSubjects] = useState<Set<string>>(new Set());
   const [signers, setSigners] = useState(['会計責任者', '出納責任者', '担 当 者']);
   const [titles, setTitles] = useState(TITLES);
+  // 決裁印影（左・中・右）。画像ファイルを読み込んで DataURL で保持（本番ではサーバーへ保存）
+  const [stamps, setStamps] = useState<(string | null)[]>([null, null, null]);
+  const [stampTarget, setStampTarget] = useState(0);
+  const stampFile = useRef<HTMLInputElement>(null);
   const toast = useToast();
+  const pickStamp = (i: number) => { setStampTarget(i); if (stampFile.current) { stampFile.current.value = ''; stampFile.current.click(); } };
+  const onStampFile = (f: File | undefined) => {
+    if (!f) return;
+    if (!f.type.startsWith('image/')) return toast.show('画像ファイル（PNG／JPEG／GIF）を選択してください');
+    if (f.size > 1024 * 1024) return toast.show('印影画像は 1MB 以下にしてください');
+    const rd = new FileReader();
+    rd.onload = () => { setStamps((ss) => ss.map((x, k) => (k === stampTarget ? String(rd.result) : x))); toast.show(`${['左', '中', '右'][stampTarget]} の印影を登録しました`); };
+    rd.readAsDataURL(f);
+  };
+  const removeStamp = (i: number) => {
+    if (!stamps[i]) return toast.show('印影は登録されていません');
+    setStamps((ss) => ss.map((x, k) => (k === i ? null : x)));
+    toast.show(`${['左', '中', '右'][i]} の印影を削除しました`);
+  };
   const k = KINDS.find((x) => x.key === kind)!;
   const rowKey = (r: JournalRow) => `${r.no}:${r.kari}:${r.amount}`;
   const rows = useMemo(() => JOURNAL_ROWS.filter((r) => (month == null || r.date.split('/')[0] === month) && k.filter(r)), [month, k]);
@@ -153,12 +171,16 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
                 {['左', '中', '右'].map((pos, i) => (
                   <div key={pos} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ width: 20, fontSize: 13 }}>{pos}</span>
-                    <span style={{ width: 52, height: 52, border: '1px solid #cfd8e0', borderRadius: 6, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: '#c3ccd4' }}>印影</span>
+                    <span style={{ width: 52, height: 52, border: '1px solid #cfd8e0', borderRadius: 6, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: '#c3ccd4', overflow: 'hidden', flex: 'none' }}>
+                      {stamps[i] ? <img src={stamps[i] as string} alt="印影" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : '印影'}
+                    </span>
                     <input className="field-input" value={signers[i]} onChange={(e) => setSigners(signers.map((s, k) => (k === i ? e.target.value : s)))} style={{ ...input, flex: 1 }} />
-                    <button type="button" className="btn-outline" onClick={() => toast.show('印影登録：' + NOT_IMPL)} style={btn()}>印影登録</button>
-                    <button type="button" className="btn-outline" onClick={() => toast.show('印影削除：' + NOT_IMPL)} style={btn()}>印影削除</button>
+                    <button type="button" className="btn-outline" onClick={() => pickStamp(i)} style={btn()}>印影登録</button>
+                    <button type="button" className="btn-outline" onClick={() => removeStamp(i)} style={{ ...btn(), color: stamps[i] ? '#c0392b' : '#c3ccd4' }}>印影削除</button>
                   </div>
                 ))}
+                <input ref={stampFile} type="file" accept="image/*" onChange={(e) => onStampFile(e.target.files?.[0])} style={{ display: 'none' }} />
+                <div style={{ fontSize: 11, color: '#9aa5b1' }}>PNG／JPEG（背景透過推奨）・1MBまで。印影は伺書の決裁欄に印刷されます。</div>
               </div>
             </div>
           </div>
@@ -174,7 +196,7 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
             ))}
           </div>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
-            <button type="button" className="btn-outline" onClick={() => { setTitles(TITLES); setSigners(['会計責任者', '出納責任者', '担 当 者']); setSubjects(new Set()); }} style={{ ...btn(), marginRight: 'auto' }}>リセット</button>
+            <button type="button" className="btn-outline" onClick={() => { setTitles(TITLES); setSigners(['会計責任者', '出納責任者', '担 当 者']); setSubjects(new Set()); setStamps([null, null, null]); }} style={{ ...btn(), marginRight: 'auto' }}>リセット</button>
             <button type="button" className="submit-btn" onClick={() => { setDetailOpen(false); toast.show('詳細設定を保存しました（プロトタイプ）'); }} style={btn(true)}>決定</button>
             <button type="button" onClick={() => setDetailOpen(false)} style={btn()}>中止</button>
           </div>
