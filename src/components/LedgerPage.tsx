@@ -5,10 +5,11 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { AssistField } from './AssistField';
+import { BizSwitch, useDivisionTools } from './DivisionTools';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { CHECK, LABEL, NUM, ReportShell, TD, TH, yen } from './ReportShell';
 import { EditVoucherModal, FlagCell } from './VoucherEdit';
-import { FUSEN_COLORS, useVouchers, type Voucher } from '../store/journalStore';
+import { useVouchers, type Voucher } from '../store/journalStore';
 import { getSession, setSession } from '../store/session';
 import { useAssist } from '../hooks/useAssist';
 import type { MonthFilter } from '../types';
@@ -25,7 +26,7 @@ interface Props {
   onNavigate: (label: string) => void;
 }
 
-export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Props) {
+export function LedgerPage({ kind, variant, accent, accentRgb }: Props) {
   // 推移・試算表からのドリルダウン（科目・月を引き継ぐ）
   const [boot] = useState(() => getSession().ledgerTarget);
   useEffect(() => { if (boot) setSession({ ledgerTarget: null }); }, [boot]);
@@ -36,8 +37,10 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
   const [opts, setOpts] = useState({ check: false, red: false, blue: false, yellow: false, green: false, daily: true, spare: true, internal: false });
   const assist = useAssist();
   const isVendor = kind === 'vendor';
+  const dt = useDivisionTools(all, accent);
+  const [showBiz, setShowBiz] = useState(false);
 
-  const rows = all.filter((r) => (month == null || r.date.split('/')[0] === month) && (isVendor ? r.gyosha === target : r.kari === target || r.kashi === target) && (!opts.check || r.check) && (!(opts.red || opts.blue || opts.yellow || opts.green) || (opts.red && r.fusen === '赤') || (opts.blue && r.fusen === '青') || (opts.yellow && r.fusen === '黄') || (opts.green && r.fusen === '緑')));
+  const rows = all.filter((r) => (month == null || r.date.split('/')[0] === month) && dt.visible(r) && (isVendor ? r.gyosha === target : r.kari === target || r.kashi === target) && (!opts.check || r.check) && (!(opts.red || opts.blue || opts.yellow || opts.green) || (opts.red && r.fusen === '赤') || (opts.blue && r.fusen === '青') || (opts.yellow && r.fusen === '黄') || (opts.green && r.fusen === '緑')));
   let bal = CARRY;
   const lines = rows.map((r) => {
     const debit = isVendor ? r.amount : r.kari === target ? r.amount : 0;
@@ -62,8 +65,7 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
       accent={accent}
       title={TITLE[kind]}
       subtitle={isVendor ? '指定した業者の取引を日付順に表示します。行をクリックすると伝票を訂正できます。' : '指定した科目の仕訳を日付順に表示し、残高を計算します。行をクリックすると伝票を訂正できます。'}
-      tools={isVendor ? [{ label: '業者', onClick: () => assist.open('target', 'vendor'), primary: true }, { label: '部門色' }, { label: '部門' }, { label: '摘要' }, { label: '計算' }] : [{ label: '科目', onClick: () => assist.open('target', 'account'), primary: true }, { label: '色' }, { label: '区分色' }, { label: '区分' }, { label: '摘要' }, { label: '業者' }, { label: '計算' }]}
-      onBack={() => onNavigate('伝票入力')}
+      tools={[{ label: isVendor ? '業者' : '科目', onClick: () => assist.open('target', isVendor ? 'vendor' : 'account'), primary: true }, ...dt.tools, { label: '計算' }]}
       controls={
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -100,6 +102,8 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
             />
             <span style={LABEL}>指定年月日</span>
             <span>令和8年 {m}月1日 〜 令和8年 {m}月末日</span>
+            {!isVendor && <BizSwitch on={showBiz} onChange={setShowBiz} accent={accent} />}
+            {dt.clearButton}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
             <label style={CHECK}><input type="checkbox" checked={opts.check} onChange={() => toggle('check')} />チェック</label>
@@ -111,6 +115,7 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
             {!isVendor && <label style={CHECK}><input type="checkbox" checked={opts.spare} onChange={() => toggle('spare')} />入力予備１，２を表示する</label>}
             {!isVendor && <label style={CHECK}><input type="checkbox" checked={opts.internal} onChange={() => toggle('internal')} />内部取引のみを表示する</label>}
           </div>
+          {dt.legend}
         </>
       }
     >
@@ -121,7 +126,7 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
               <th style={{ ...TH, width: 70 }}>月日</th>
               <th style={{ ...TH, width: 84 }}>証・チ・付</th>
               <th style={{ ...TH, width: 60 }}>Seq-No</th>
-              <th style={TH}>{isVendor ? '借方 ― 貸方 ／ 摘要' : '相手科目 ／ 摘要'}</th>
+              <th style={TH}>{isVendor ? '借方 ― 貸方 ／ 摘要' : `相手科目 ／ ${showBiz ? '業者' : '摘要'}`}</th>
               <th style={{ ...TH, width: 130, textAlign: 'right' }}>{isVendor ? '金額' : '借方'}</th>
               {!isVendor && <th style={{ ...TH, width: 130, textAlign: 'right' }}>貸方</th>}
               <th style={{ ...TH, width: 140, textAlign: 'right' }}>残高</th>
@@ -137,13 +142,13 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
             {!target && <tr><td colSpan={7} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>{isVendor ? '業者' : '科目'}を指定してください。</td></tr>}
             {target && lines.length === 0 && <tr><td colSpan={7} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>この月に該当する仕訳はありません。</td></tr>}
             {lines.map((l, i) => (
-              <tr key={i} onClick={() => setEdit(l.r)} title="クリックで伝票を訂正" style={{ cursor: 'pointer', background: l.r.fusen ? FUSEN_COLORS[l.r.fusen] + '14' : 'transparent' }}>
+              <tr key={i} onClick={() => setEdit(l.r)} title="クリックで伝票を訂正" style={{ cursor: 'pointer', background: dt.rowBg(l.r) }}>
                 <td style={TD}>{l.r.date}</td>
                 <td style={TD}><FlagCell v={l.r} compact /></td>
                 <td style={TD}>{l.r.seq}</td>
                 <td style={TD}>
                   <div style={{ fontWeight: 500 }}>{isVendor ? `${l.r.kari} ― ${l.r.kashi}` : l.other}</div>
-                  <div style={{ fontSize: 11.5, color: '#7a8794' }}>{l.r.tekiyo}</div>
+                  <div style={{ fontSize: 11.5, color: '#7a8794' }}>{!isVendor && showBiz ? (l.r.gyosha || '業者なし') : l.r.tekiyo}{!isVendor && !showBiz && l.r.gyosha ? `　／ ${l.r.gyosha}` : ''}</div>
                 </td>
                 <td style={NUM}>{l.debit ? yen(l.debit) : ''}</td>
                 {!isVendor && <td style={NUM}>{l.credit ? yen(l.credit) : ''}</td>}
@@ -163,6 +168,7 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
           )}
         </table>
       </div>
+      {dt.modal}
       <EditVoucherModal voucher={edit} onClose={() => setEdit(null)} accent={accent} returnTo={TITLE[kind]} />
     </ReportShell>
   );

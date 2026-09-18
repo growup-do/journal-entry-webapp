@@ -48,7 +48,6 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
       title={TITLE[kind]}
       subtitle={<>{isVendor ? '指定した業者' : '指定した科目'}の月ごとの推移を年度で一覧します。行をクリックするとその月の元帳を開き、元帳から伝票を訂正できます。<span style={{ color: '#b7791f' }}>（表示中の値はサンプルです）</span></>}
       tools={[{ label: isVendor ? '業者検索' : '科目検索', onClick: () => assist.open('target', isVendor ? 'vendor' : 'account'), primary: true }]}
-      onBack={() => onNavigate('伝票入力')}
       controls={
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <span style={LABEL}>{isVendor ? '業者指定' : kind === 'fund' ? '指定科目（費目－区分コード）' : '科目指定'}</span>

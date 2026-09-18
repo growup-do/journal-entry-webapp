@@ -52,7 +52,7 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { vouch
           </span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-          <Field label="サービス区分"><select value={f.service} onChange={(e) => set({ service: e.target.value })} style={input}>{SERVICES.map((s) => <option key={s}>{s}</option>)}<option>002 チャイルド保育園</option></select></Field>
+          <Field label="サービス区分"><select value={f.service} onChange={(e) => set({ service: e.target.value })} style={input}>{SERVICES.map((s) => <option key={s}>{s}</option>)}</select></Field>
           <Field label="年月日（令和8年）"><input className="field-input ring" value={f.date} onChange={(e) => set({ date: e.target.value })} style={input} /></Field>
           <Field label="伝票No"><input className="field-input" value={f.no} onChange={(e) => set({ no: e.target.value })} style={input} /></Field>
           <Field label="借方 BS&PL">{sel(f.kari, (v) => set({ kari: v }), ACCTS)}</Field>
@@ -123,7 +123,7 @@ export function AdvancedSearchModal({ open, onClose, cond, onApply, accent }: { 
           <Field label="業者">{sel(c.gyosha, (v) => set({ gyosha: v }), VENDORS.filter((x) => x !== '（なし）'))}</Field>
           <Field label="伝票No"><input className="field-input" value={c.no} onChange={(e) => set({ no: e.target.value })} style={input} /></Field>
           <Field label="小切手No"><input className="field-input" value={c.cheque} onChange={(e) => set({ cheque: e.target.value })} style={input} /></Field>
-          <Field label="部門（親区分で起動時）">{sel(c.dept, (v) => set({ dept: v }), ['002 チャイルド保育園', ...SERVICES])}</Field>
+          <Field label="部門（親区分で起動時）">{sel(c.dept, (v) => set({ dept: v }), ['（親区分）チャイルド保育園', ...SERVICES])}</Field>
           <Field label="証憑">{tri(c.shohyo, (v) => set({ shohyo: v }))}</Field>
           <Field label="チェック">{tri(c.check, (v) => set({ check: v }))}</Field>
           <Field label="伝票種別"><div style={{ display: 'flex', gap: 10, paddingTop: 8, fontSize: 13 }}><label style={{ display: 'flex', gap: 4 }}><input type="checkbox" checked={c.normal} onChange={(e) => set({ normal: e.target.checked })} />通常伝票</label><label style={{ display: 'flex', gap: 4 }}><input type="checkbox" checked={c.migrated} onChange={(e) => set({ migrated: e.target.checked })} />移行伝票</label></div></Field>

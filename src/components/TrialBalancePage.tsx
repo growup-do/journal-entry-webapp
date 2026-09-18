@@ -57,7 +57,6 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
       title={isClosing ? '月次決算' : '月次試算'}
       subtitle={isClosing ? '拠点ごとの当年度末（決算）残高を、内部取引消去を含めて一覧します。科目行をクリックすると元帳を開きます。' : '拠点ごとの前月繰越・当月の借方／貸方・残高を一覧します。科目行をクリックすると元帳を開きます。'}
       tools={[...DEPTHS.map((d, i) => ({ label: d, onClick: () => setDepth(i), primary: depth === i })), ...(isClosing ? [{ label: '残高', onClick: () => setGraph(true) }] : []), { label: `ライン色：${LINE_COLORS[lineColor]}`, onClick: () => setLineColor((c) => (c + 1) % LINE_COLORS.length) }, ...(isClosing ? [{ label: breakdown ? '内訳を隠す' : '内訳表示', onClick: () => setBreakdown((b) => !b), primary: breakdown }] : [])]}
-      onBack={() => onNavigate('伝票入力')}
       controls={
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>

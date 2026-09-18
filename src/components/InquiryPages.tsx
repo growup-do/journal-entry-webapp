@@ -53,7 +53,7 @@ interface Cond {
 }
 const EMPTY: Cond = { other: '', sub: '', tax: '', tekiyo: '' };
 
-export function LedgerInquiryPage({ slot, variant, accent, accentRgb, onNavigate }: LedgerProps) {
+export function LedgerInquiryPage({ slot, variant, accent, accentRgb }: LedgerProps) {
   const [account, setAccount] = useState(slot === 'ledger1' ? '普通預金（保育園）' : '');
   const [month, setMonth] = useState<MonthFilter>('8');
   const [cond, setCond] = useState<Cond>(EMPTY);
@@ -123,7 +123,6 @@ export function LedgerInquiryPage({ slot, variant, accent, accentRgb, onNavigate
       title={title}
       subtitle="科目を指定して仕訳と残高を照会します。相手勘定科目・補助科目・税区分・摘要でさらに絞り込めます。元帳１と元帳２は別々の条件を保持します。"
       tools={[{ label: '科目', onClick: () => assist.open('acc', 'account'), primary: true }, { label: '印刷' }, { label: 'Excel' }]}
-      onBack={() => onNavigate('伝票入力')}
       controls={
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -231,7 +230,7 @@ export function LedgerInquiryPage({ slot, variant, accent, accentRgb, onNavigate
 }
 
 /* ---- 残高照合：現預金科目ごとに通帳残高とシステム残高を突合 ---- */
-export function BalanceCheckPage({ variant, accent, onNavigate }: { variant: 'form' | 'sheet'; accent: string; onNavigate: (label: string) => void }) {
+export function BalanceCheckPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: string; onNavigate: (label: string) => void }) {
   const [book, setBook] = useState<number[]>(() => BALANCE_ACCOUNTS.map(() => 0));
   const [editing, setEditing] = useState(false);
   const toast = useToast();
@@ -246,7 +245,6 @@ export function BalanceCheckPage({ variant, accent, onNavigate }: { variant: 'fo
       title="残高照合"
       subtitle="現預金科目ごとに、通帳（実残高）とシステム残高を突合して OK／NG を表示します。"
       tools={[{ label: editing ? '設定を終了' : '通帳残高の設定', onClick: () => setEditing((e) => !e), primary: true }, { label: '印刷', onClick: () => toast.show(NOT_IMPL) }]}
-      onBack={() => onNavigate('伝票入力')}
       controls={
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
           <span style={LABEL}>照合日</span>

@@ -198,8 +198,10 @@ export interface JournalRow {
   gyosha?: string;
   shohyo: boolean;
 }
+/** 伝票入力区分（サンプルでは Seq から機械的に割り振り：本部／保育事業／子育て支援／一時預かり） */
+const serviceOf = (seq: number) => (seq % 7 === 0 ? '001 本部' : seq % 5 === 0 ? '003 子育て支援' : seq % 11 === 0 ? '004 一時預かり' : '002 保育事業');
 const J = (seq: number, kind: JournalRow['kind'], no: string, date: string, kari: string, kashi: string, tekiyo: string, amount: number, gyosha?: string): JournalRow => ({
-  seq, kind, no, date, kari, kashi, tekiyo, amount, service: '002 チャイルド保育園', gyosha, shohyo: true,
+  seq, kind, no, date, kari, kashi, tekiyo, amount, service: serviceOf(seq), gyosha, shohyo: true,
 });
 export const JOURNAL_ROWS: JournalRow[] = [
   J(1, '特摘', '8-1', '8/1', '健康保険', '普通預金（保育園）', '健康保険', 237873),
@@ -368,7 +370,7 @@ export const SUFFICIENCY_DEFAULT = {
 /* ============ 当年／前年仕訳・元帳・残高照合・法人印刷 ============ */
 
 /** 前年仕訳（令和7年度・決算仕訳のサンプル）。閲覧のみ */
-const P = (kari: string, kashi: string, tekiyo: string, amount: number): JournalRow => ({ seq: 0, kind: '伝票', no: '決', date: '決', kari, kashi, tekiyo, amount, service: '002 チャイルド保育園', shohyo: true });
+const P = (kari: string, kashi: string, tekiyo: string, amount: number): JournalRow => ({ seq: 0, kind: '伝票', no: '決', date: '決', kari, kashi, tekiyo, amount, service: '002 保育事業', shohyo: true });
 export const PREV_YEAR_ROWS: JournalRow[] = [
   P('未収補助金', '市区町村補助金収益', '児童福祉施設等補助金', 305000),
   P('利用者等外給食費', '給食費', '利用者等外給食費　振替', 453000),
