@@ -3,11 +3,13 @@
 
 import { useState } from 'react';
 import { NOT_IMPL, ToastView, useToast } from './Toast';
+import { DivisionInfoDialog } from './DivisionInfoDialog';
 import { Field, Notice, SettingsShell, Tabs, Toggle, btn, card, cardHead, input } from './ui';
 import { DEFAULT_ENV, setSession, useSession, type EnvSettings } from '../store/session';
 import { ACCOUNTS } from '../data';
 
 export function EnvSettingsPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: string }) {
+  const [infoOpen, setInfoOpen] = useState(false);
   const s = useSession();
   const [v, setV] = useState<EnvSettings>(s.env);
   const [tab, setTab] = useState('入力');
@@ -23,11 +25,13 @@ export function EnvSettingsPage({ variant, accent }: { variant: 'form' | 'sheet'
 
   return (
     <SettingsShell variant={variant} title="環境設定" desc="入力時の確認・補完、金額や帳票の表示、試算表の計算方式、右パネルの初期表示など、区分ごとの動作条件を設定します。" actions={<>
+      <button type="button" className="btn-outline" onClick={() => setInfoOpen(true)} style={btn()}>部門情報の変更</button>
       <button type="button" className="btn-outline" onClick={() => toast.show('設定の保存（.ini）／読込：' + NOT_IMPL)} style={btn()}>設定の保存／読込</button>
       <button type="button" className="btn-outline" onClick={() => { setV(DEFAULT_ENV); toast.show('初期値に戻しました（未保存）'); }} style={btn()}>初期値に戻す</button>
       <button type="button" className="submit-btn" onClick={save} style={btn(accent, true)}>OK（保存）</button>
     </>}>
       <ToastView msg={toast.msg} />
+      <DivisionInfoDialog open={infoOpen} onClose={() => setInfoOpen(false)} accent={accent} />
       <Tabs items={['入力', '表示・金額書式', '帳票・試算表', '右パネル（ワイド画面）']} current={tab} onChange={setTab} accent={accent} />
       <div style={{ padding: 22, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 18, alignItems: 'start' }}>
         {tab === '入力' && (

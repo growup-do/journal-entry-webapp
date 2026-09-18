@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Modal } from './Modal';
+import { DivisionInfoDialog } from './DivisionInfoDialog';
 import { ToastView, useToast } from './Toast';
 import { btn, input, lbl } from './ui';
 import { divisionLabel, flattenDivisions, setSession, useSession, type DivisionNode } from '../store/session';
@@ -48,6 +49,7 @@ export function DivisionDialog({ open, onClose, accent }: { open: boolean; onClo
   const [mergeOpen, setMergeOpen] = useState(false);
   const [mergeMembers, setMergeMembers] = useState<string[]>([]);
   const [mergeName, setMergeName] = useState('');
+  const [infoOpen, setInfoOpen] = useState(false);
   const toast = useToast();
   const all = flattenDivisions(s.tree);
   const entries = all.filter((x) => x.node.entry && x.node.use !== false);
@@ -144,7 +146,7 @@ export function DivisionDialog({ open, onClose, accent }: { open: boolean; onClo
         <div style={{ fontSize: 11.5, color: '#9aa5b1', marginTop: 8 }}>先頭に3桁コードのある区分（伝票入力区分）を選べます。ダブルクリックでも確定できます。赤＝通常の合算、橙＝階層で合算する会計単位。</div>
         <div style={{ display: 'flex', gap: 8, marginTop: 14, alignItems: 'center' }}>
           <button type="button" className="btn-outline" onClick={() => setMergeOpen(true)} style={btn()}>合算追加</button>
-          <button type="button" className="btn-outline" onClick={() => { onClose(); toast.show('設定「事業者」の「区分階層」で編集できます'); }} style={btn()}>部門情報の変更</button>
+          <button type="button" className="btn-outline" onClick={() => setInfoOpen(true)} style={btn()}>部門情報の変更</button>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
             <button type="button" onClick={onClose} style={btn()}>キャンセル</button>
             <button type="button" className="submit-btn" onClick={apply} style={btn(accent, true)}>OK</button>
@@ -169,6 +171,7 @@ export function DivisionDialog({ open, onClose, accent }: { open: boolean; onClo
           </div>
         </div>
       </Modal>
+      <DivisionInfoDialog open={infoOpen} onClose={() => setInfoOpen(false)} accent={accent} />
     </Modal>
   );
 }

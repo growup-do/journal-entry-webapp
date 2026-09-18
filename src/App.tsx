@@ -40,11 +40,27 @@ const TABS: { key: Mode; label: string; hint: string; accent: string }[] = [
   { key: 'sheet', label: 'スプレッドシート型', hint: '1行で連続入力＋検索', accent: '#2c5f9e' },
 ];
 
+/** 静的ページ（機能一覧）のメモ画面キー。アプリ内から遷移するときは ?page=features を開く */
+const FEATURES_KEY = 'static:features';
+const labelOf = (key: string) => {
+  if (key === 'login') return 'ログイン画面';
+  if (key === FEATURES_KEY) return '機能一覧（サイトマップ）';
+  const [m, p] = key.split(':');
+  return `${TABS.find((t) => t.key === m)?.label ?? m}／${p ?? ''}`;
+};
+
 export default function App() {
   // 静的ページ（フッターから同じタブで開く）：機能一覧／利用規約／個人情報保護方針
   const params = new URLSearchParams(window.location.search);
   const staticPage = params.get('page');
-  if (staticPage === 'features') return <FeatureListPage />;
+  if (staticPage === 'features') {
+    return (
+      <>
+        <FeatureListPage />
+        <MemoLayer screenKey={FEATURES_KEY} screenLabel={labelOf} onNavigate={(key) => { if (key === FEATURES_KEY) return; const [m, pg] = key.split(':'); window.location.href = key === 'login' ? '?open=ログイン' : `?open=${encodeURIComponent(pg ?? '')}&mode=${m}`; }} />
+      </>
+    );
+  }
   if (staticPage === 'terms') return <LegalPage />;
   const boot = BOOT;
   const bootPage = boot && boot.open !== 'ログイン' && !MODAL_MENU.includes(boot.open) ? boot.open : null;
@@ -95,11 +111,9 @@ export default function App() {
     else setPage(label);
   };
 
-  const screenLabel = (key: string) => {
-    const [m, p] = key.split(':');
-    return `${TABS.find((t) => t.key === m)?.label ?? m}／${p ?? ''}`;
-  };
+  const screenLabel = labelOf;
   const navigateTo = (key: string) => {
+    if (key === FEATURES_KEY) { window.location.href = '?page=features'; return; }
     const [m, p] = key.split(':');
     if (m === 'form' || m === 'sheet') setMode(m);
     if (p) setPage(p);
@@ -109,7 +123,7 @@ export default function App() {
     return (
       <>
         <LoginPage onLogin={login} />
-        <MemoLayer screenKey="login" screenLabel={(k) => (k === 'login' ? 'ログイン画面' : screenLabel(k))} onNavigate={navigateTo} />
+        <MemoLayer screenKey="login" screenLabel={screenLabel} onNavigate={navigateTo} />
       </>
     );
   }

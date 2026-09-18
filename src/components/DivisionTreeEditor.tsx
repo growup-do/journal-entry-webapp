@@ -7,16 +7,16 @@ import { Field, Notice, btn, card, cardHead, input, lbl } from './ui';
 import { divisionLabel, flattenDivisions, setSession, useSession, type DivisionNode } from '../store/session';
 
 const CHILD_KIND: Partial<Record<DivisionNode['kind'], DivisionNode['kind']>> = { 法人: '事業区分', 事業区分: '拠点区分', 拠点区分: 'サービス区分', サービス区分: '小サービス区分' };
-const CATEGORIES = ['法人本部', '保育事業', '子育て支援', '一時預かり', '地域支援', 'その他'];
-const COLORS = ['#e8f0fb', '#eaf5ef', '#fff7e6', '#fdeef3', '#f1f4f6', '#efe6fb', '#fbe9d0', '#e0f4f7'];
+export const CATEGORIES = ['法人本部', '保育事業', '子育て支援', '一時預かり', '地域支援', 'その他'];
+export const COLORS = ['#e8f0fb', '#eaf5ef', '#fff7e6', '#fdeef3', '#f1f4f6', '#efe6fb', '#fbe9d0', '#e0f4f7'];
 
-function mapTree(n: DivisionNode, f: (x: DivisionNode) => DivisionNode | null): DivisionNode | null {
+export function mapTree(n: DivisionNode, f: (x: DivisionNode) => DivisionNode | null): DivisionNode | null {
   const r = f(n);
   if (!r) return null;
   return { ...r, children: (r.children ?? []).map((c) => mapTree(c, f)).filter((c): c is DivisionNode => !!c) };
 }
 
-export function DivisionTreeEditor({ accent }: { accent: string }) {
+export function DivisionTreeEditor({ accent, compact }: { accent: string; compact?: boolean }) {
   const s = useSession();
   const [selId, setSelId] = useState<string>('hoiku');
   const toast = useToast();
@@ -57,7 +57,7 @@ export function DivisionTreeEditor({ accent }: { accent: string }) {
   );
 
   return (
-    <div style={{ padding: 22, display: 'grid', gridTemplateColumns: 'minmax(360px, 1.1fr) minmax(320px, 1fr)', gap: 18, alignItems: 'start' }}>
+    <div style={{ padding: compact ? 16 : 22, display: 'grid', gridTemplateColumns: 'minmax(360px, 1.1fr) minmax(320px, 1fr)', gap: 18, alignItems: 'start' }}>
       <ToastView msg={toast.msg} />
       <div style={card}>
         <div style={cardHead}>区分階層 <span style={{ fontSize: 11, fontWeight: 500, color: '#8290a0' }}>クリックで選択・各行の「＋」で配下に追加</span></div>
@@ -88,7 +88,7 @@ export function DivisionTreeEditor({ accent }: { accent: string }) {
             </div>
           )}
         </div>
-        <div style={card}>
+        {!compact && <div style={card}>
           <div style={cardHead}>合算区分（任意の組合せ） <span style={{ fontSize: 11, fontWeight: 500, color: '#8290a0' }}>区分選択の「合算追加」からも作成できます</span></div>
           <div style={{ padding: 14 }}>
             {s.merges.length === 0 && <div style={{ fontSize: 12.5, color: '#9aa5b1' }}>合算区分はありません。</div>}
@@ -100,9 +100,9 @@ export function DivisionTreeEditor({ accent }: { accent: string }) {
             ))}
             <div style={{ marginTop: 10 }}><Notice>合算区分で起動すると、試算表・決算書で配下区分の内訳を表示できます（「区分」メニュー →「区分確認」に相当する一覧は、ヘッダーの区分ボタンから確認できます）。</Notice></div>
           </div>
-        </div>
+        </div>}
       </div>
-      <div style={{ gridColumn: '1 / -1', fontSize: 11.5, color: '#9aa5b1' }}><span style={lbl}>選択中の伝票入力区分</span>{all.filter((x) => x.node.entry).map((x) => divisionLabel(x.node)).join('　')}</div>
+      {!compact && <div style={{ gridColumn: '1 / -1', fontSize: 11.5, color: '#9aa5b1' }}><span style={lbl}>選択中の伝票入力区分</span>{all.filter((x) => x.node.entry).map((x) => divisionLabel(x.node)).join('　')}</div>}
     </div>
   );
 }

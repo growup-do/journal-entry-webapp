@@ -10,9 +10,10 @@ import { AssistField } from './AssistField';
 import { AssistPanel } from './AssistPanel';
 import { Chips } from './Chips';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
-import { NOT_IMPL, ToastView, useToast } from './Toast';
+import { ToastView, useToast } from './Toast';
 import { PrevYearJournal } from './PrevYearJournal';
 import { TemplatePickerModal } from './EntryExtras';
+import { AccountBalanceModal, CalendarModal, CashBalanceModal, yearOfMonth } from './SingleEntryTools';
 import { makeSingleSeed } from '../data';
 import { useEntryForm } from '../hooks/useEntryForm';
 import { applyMonth } from '../lib/format';
@@ -44,7 +45,7 @@ function weekdayOf(month: string, day: string): string {
   const m = parseInt(month, 10);
   const d = parseInt(day, 10);
   if (!m || !d) return '';
-  const dt = new Date(2026, m - 1, d);
+  const dt = new Date(yearOfMonth(month), m - 1, d);
   if (dt.getMonth() !== m - 1) return '';
   return WEEKDAYS[dt.getDay()];
 }
@@ -79,6 +80,7 @@ export function SingleEntryPage({ variant, accent, accentRgb, prevYear }: Props)
   const [shohyo, setShohyo] = useState(true);
   const [cheque, setCheque] = useState('');
   const [tplOpen, setTplOpen] = useState(false);
+  const [tool, setTool] = useState<'科目別残' | '現預金残' | 'カレンダー' | null>(null);
   const toast = useToast();
 
   // 登録後：小切手Noをクリアし、借方科目へフォーカス（証憑・日付・区分は保持して連続入力）
@@ -172,6 +174,9 @@ export function SingleEntryPage({ variant, accent, accentRgb, prevYear }: Props)
   return (
     <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
       <ToastView msg={toast.msg} />
+      {tool === '科目別残' && <AccountBalanceModal open onClose={() => setTool(null)} accent={accent} entries={v.journal} month={f.month || '8'} focus={[f.kariKamoku, f.kashiKamoku]} />}
+      {tool === '現預金残' && <CashBalanceModal open onClose={() => setTool(null)} accent={accent} entries={v.journal} month={f.month || '8'} focus={[f.kariKamoku, f.kashiKamoku]} />}
+      {tool === 'カレンダー' && <CalendarModal open onClose={() => setTool(null)} accent={accent} entries={v.journal} month={f.month || '8'} day={f.day} onPick={(m, d) => { v.setFields({ month: m, day: d }); v.setMonth(m); focusId('se-kari'); toast.show(`日付を ${m}/${d} にしました`); }} />}
       <TemplatePickerModal open={tplOpen} onClose={() => setTplOpen(false)} accent={accent} onPick={(t) => { const l = t.lines[0]; if (l) v.setFields({ kariKamoku: l.kari, kashiKamoku: l.kashi, tekiyo: l.tekiyo, gyosha: l.gyosha ?? '', amount: l.amount }); setTplOpen(false); focusId('se-amount'); toast.show(`定型仕訳「${t.name}」を入力欄に呼び出しました`); }} />
       <div
         style={{
@@ -197,37 +202,10 @@ export function SingleEntryPage({ variant, accent, accentRgb, prevYear }: Props)
             </div>
             <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
               {TOOLS.map((t) => (
-                <button key={t} type="button" className="btn-outline" onClick={() => (t === '連続定型' ? setTplOpen(true) : toast.show(NOT_IMPL))} style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid #cfd8e0', background: '#fff', color: '#5b6773', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
+                <button key={t} type="button" className="btn-outline" onClick={() => (t === '連続定型' ? setTplOpen(true) : setTool(t as '科目別残' | '現預金残' | 'カレンダー'))} style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid #cfd8e0', background: '#fff', color: '#5b6773', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
                   {t}
                 </button>
               ))}
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 18, flex: 'none' }}>
-            <div style={{ width: 170 }}>
-              <span style={colLabel}>サービス区分</span>
-              <AssistField
-                value={f.service}
-                placeholder="選択"
-                open={v.isActive('service')}
-                onOpen={() => v.openAssist('service', 'service')}
-                accent={accent}
-                accentRgb={accentRgb}
-                buttonStyle={fieldBtn}
-                panelStyle={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, width: '100%', minWidth: 220, zIndex: 60 }}
-                groups={v.assistGroups}
-                query={v.assist.query}
-                empty={v.assistEmpty}
-                onInput={v.onQueryInput}
-                onPick={pickAndAdvance}
-              />
-            </div>
-            <div>
-              <span style={colLabel}>取引区分</span>
-              <Chips current={f.torihiki} accent={accent} onToggle={v.setTorihiki} />
-            </div>
-            <div style={{ fontSize: 12.5, color: '#68757f', paddingBottom: 9, whiteSpace: 'nowrap' }}>
-              会計期間　<b style={{ color: '#22303c', fontWeight: 600 }}>令和8年度</b>
             </div>
           </div>
         </div>
@@ -314,6 +292,34 @@ export function SingleEntryPage({ variant, accent, accentRgb, prevYear }: Props)
 
         {/* 入力行（既存画面の下部に相当） */}
         <div style={{ borderTop: `2px solid ${accent}`, background: '#fbfcfd', padding: '14px 22px 12px' }}>
+          {/* 伝票の属性（サービス区分・取引区分）：入力行と同じ下部にまとめて配置 */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 18, marginBottom: 12, flexWrap: 'wrap' }}>
+            <div style={{ width: 200 }}>
+              <span style={colLabel}>サービス区分</span>
+              <AssistField
+                value={f.service}
+                placeholder="選択"
+                open={v.isActive('service')}
+                onOpen={() => v.openAssist('service', 'service')}
+                accent={accent}
+                accentRgb={accentRgb}
+                buttonStyle={fieldBtn}
+                panelStyle={panel(220)}
+                groups={v.assistGroups}
+                query={v.assist.query}
+                empty={v.assistEmpty}
+                onInput={v.onQueryInput}
+                onPick={pickAndAdvance}
+              />
+            </div>
+            <div>
+              <span style={colLabel}>取引区分</span>
+              <Chips current={f.torihiki} accent={accent} onToggle={v.setTorihiki} />
+            </div>
+            <div style={{ marginLeft: 'auto', fontSize: 12.5, color: '#68757f', paddingBottom: 9, whiteSpace: 'nowrap' }}>
+              会計期間　<b style={{ color: '#22303c', fontWeight: 600 }}>令和8年度</b>
+            </div>
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: 12, alignItems: 'end' }}>
             <div>
               <span style={colLabel}>伝票No</span>

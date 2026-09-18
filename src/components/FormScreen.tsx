@@ -131,15 +131,12 @@ export function FormScreen({ page, onNavigate, year, onYear, onLogout }: Props) 
     finalize();
   };
   const [topOffset, setTopOffset] = useState(102);
-  const headerRef = useRef<HTMLElement>(null);
-  const navRef = useRef<HTMLElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
 
   // アプリバー＋ナビの合計高さを実測（ナビ折返しに追従）
   useLayoutEffect(() => {
     const measure = () => {
-      const h = headerRef.current?.offsetHeight ?? 0;
-      const n = navRef.current?.offsetHeight ?? 0;
-      const o = h + n;
+      const o = headerRef.current?.offsetHeight ?? 0;
       if (o) setTopOffset((prev) => (o !== prev ? o : prev));
     };
     measure();
@@ -176,13 +173,10 @@ export function FormScreen({ page, onNavigate, year, onYear, onLogout }: Props) 
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* アプリバー */}
+      {/* アプリバー＋年度帯＋ナビ：まとめて上部に固定（スクロールしない） */}
+      <div ref={headerRef} style={{ position: 'sticky', top: 0, zIndex: 100 }}>
       <header
-        ref={headerRef}
         style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 100,
           background: '#fff',
           borderBottom: '1px solid #dde4ea',
           height: 58,
@@ -213,9 +207,8 @@ export function FormScreen({ page, onNavigate, year, onYear, onLogout }: Props) 
       </header>
       <FiscalYearBanner />
 
-      {/* ナビ（横スクロール） */}
+      {/* ナビ（折返し・固定） */}
       <nav
-        ref={navRef}
         style={{
           background: '#fff',
           borderBottom: '1px solid #eef2f5',
@@ -230,6 +223,7 @@ export function FormScreen({ page, onNavigate, year, onYear, onLogout }: Props) 
       >
         <Menu orientation="h" accent={GREEN} active={page} onSelect={onNavigate} />
       </nav>
+      </div>
 
       {page !== '伝票入力' ? (
         renderPage(page, 'form', GREEN, GREEN_RGB, onNavigate, year, onLogout)
