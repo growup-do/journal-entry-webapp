@@ -9,7 +9,9 @@ import { ToastView, useToast } from './Toast';
 import { ExplainModal } from './ExplainModal';
 import { FISCAL_MONTHS } from './FiscalMonthTabs';
 import { Field, Notice, SettingsShell, Tabs, btn, input, numInput, toInt, yen } from './ui';
-import { VENDORS } from '../data';
+import { VENDORS, displayName } from '../data';
+import { ScopeBadge } from './PrintCenter';
+import { setSession, useSession } from '../store/session';
 
 type YearTab = '前年度予算' | '当初予算' | '補正予算' | '次年度予算' | '業者別予算';
 const TABS: YearTab[] = ['前年度予算', '当初予算', '補正予算', '次年度予算', '業者別予算'];
@@ -51,7 +53,9 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
   const toast = useToast();
   const [tab, setTab] = useState<YearTab>('当初予算');
   const [month, setMonth] = useState('初');
-  const [mode, setMode] = useState<'補正額' | '補正後予算額'>('補正額');
+  const session = useSession();
+  const mode = session.env.supplementMode;
+  const setMode = (m: '補正額' | '補正後予算額') => { setSession((x) => ({ env: { ...x.env, supplementMode: m } })); toast.show(`補正予算の入力方法を「${m}で入力」に切り替えました`); };
   const [prev, setPrev] = useState<Grid>(() => initGrid(0.96));
   const [cur, setCur] = useState<Grid>(() => initGrid(1));
   const [next, setNext] = useState<Grid>(() => initGrid(0));
@@ -69,7 +73,8 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
   const totalOf = (g: Grid, code: string, upto = 13) => (g[code] ?? []).slice(0, upto + 1).reduce((a, b) => a + b, 0);
   const rollup = (item: BItem, f: (c: string) => number) => (item.leaf ? f(item.code) : ITEMS.filter((x) => x.leaf && x.code.startsWith(item.code + '-')).reduce((a, x) => a + f(x.code), 0));
   const sumSide = (side: '収入' | '支出', f: (c: string) => number) => ITEMS.filter((x) => x.leaf && x.side === side).reduce((a, x) => a + f(x.code), 0);
-  const setCell = (code: string, val: number) => setGrid((g) => ({ ...g, [code]: g[code].map((v, i) => (i === mi ? val : v)) }));
+  /** 補正後予算額で入力しているときは、前月までの累計との差額を当月の補正額として保持する */
+  const setCell = (code: string, val: number) => setGrid((g) => ({ ...g, [code]: g[code].map((v, i) => (i === mi ? (mi > 0 && mode === '補正後予算額' ? val - totalOf(g, code, mi - 1) : val) : v)) }));
 
   // 表示列
   const cols = useMemo(() => {
@@ -102,7 +107,7 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
   const chip = (on: boolean): CSSProperties => ({ minWidth: 30, height: 26, padding: '0 8px', borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', border: '1px solid ' + (on ? accent : '#d3dbe3') });
 
   return (
-    <SettingsShell variant={variant} title="予算" desc="資金収支計算書の予算（前年度／当初／補正／次年度）と業者別予算を入力します。補正予算は月ごとに入力でき、収支差額と期末支払資金残高を確認しながら設定できます。" badge="予算" actions={<>
+    <SettingsShell variant={variant} title={displayName('予算')} desc="資金収支計算書の予算（前年度／当初／補正／次年度）と業者別予算を入力します。補正予算は月ごとに入力でき、収支差額と期末支払資金残高を確認しながら設定できます。" badge="予算" actions={<>
       {tab === '次年度予算' && <button type="button" className="btn-outline" onClick={() => setWizard(true)} style={btn(accent)}>次年度予算作成</button>}
       <button type="button" className="btn-outline" onClick={() => setExplainOpen(true)} style={btn()}>説明</button>
       <button type="button" className="submit-btn" onClick={() => toast.show('予算を保存しました（プロトタイプ）')} style={btn(accent, true)}>保存</button>
@@ -111,12 +116,12 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
       <ExplainModal open={explainOpen} onClose={() => setExplainOpen(false)} accent={accent} title="予算入力の説明" source="マニュアル 3.2 予算の入力（3.2.1 資金収支計算書の概要と設定／3.2.2 業者別予算の概要と設定）" sections={[
         { h: '予算の種類（4種類）', body: <>資金収支計算書の予算には「前年度予算」「当年度当初予算」「補正予算」「次年度予算」の4種類があり、それぞれのタブで入力します。年度更新（処理年度の更新）をすると、前年度予算額→前々年度予算額、当年度予算額→前年度予算額、次年度予算額→当年度当初予算額へ自動的に移行されます。</>},
         { h: '前年度予算', body: <>前年度の予算額を入力します。参考用に前々年度予算額を表示し、当初予算／確定予算（3月末時点の最終予算額）の切替ができます。運用2年目以降は年度更新で自動移行されるため、通常は初年度のみ入力します。</>},
-        { h: '当初予算', body: <>当年度の当初予算額を科目ごとに入力します。参考用に前年度予算額を表示します。予算対比・予算チェック（環境設定）の基準になります。</>},
-        { h: '補正予算（月別）', body: <>補正予算は4月から3月まで毎月入力できます。入力方法は「補正額」（増減額）と「補正後予算額」（累計予算額）を切り替えられ、どちらで入力するかは動作環境の「補正予算」で指定します。入力すると、その科目が属する資金収支差額（収入合計・支出合計）がどう変化するかを画面下で確認できます。</>},
+        { h: '当初予算', body: <>当年度の当初予算額を科目ごとに入力します。参考用に前年度予算額を表示します。予算対比・予算チェック（動作環境）の基準になります。</>},
+        { h: '補正予算（月別）', body: <>補正予算は4月から3月まで毎月入力できます。入力方法は「補正額」（増減額）と「補正後予算額」（累計予算額）を切り替えられ、どちらで入力するかは「補正予算」タブの上部にある「入力方法」で切り替えます（以前は動作環境にあった設定です）。入力すると、その科目が属する資金収支差額（収入合計・支出合計）がどう変化するかを画面下で確認できます。</>},
         { h: '次年度予算', body: <>次年度の予算額を入力します。参考用に当年度予算（当初予算／確定予算）を表示します。「次年度予算作成」で当年度予算からの一括作成（率・端数単位の指定）ができ、年度更新時に当年度当初予算へ自動移行されます。</>},
         { h: '期末支払資金残高', body: <>「前期末決算額」は貸借対照表の繰越残高から「流動資産－流動負債」で計算した前期末支払資金残高です。「当期末予算額」は前期末決算額に資金収支差額合計を加算した当期末支払資金残高で、補正の結果を確認するための目安になります。</>},
         { h: '業者別予算', body: <>業者コードごとの支払額に対する予算です。資金収支予算と同じく前年度／当年度当初／補正／次年度の4種類を持ち、年度更新で自動的に繰り下がります。業者推移・業者元帳で予算との対比に使います。</>},
-        { h: '登録・キャンセル', body: <>各画面の「F12：登録／OK」で入力を確定し、「Esc：キャンセル」で破棄します。Web版では「保存」ボタンが登録に相当します。</>},
+        { h: '登録・キャンセル', body: <>画面右上の「保存」ボタンで入力を確定します。保存せずに別の画面へ移動すると、入力した内容は破棄されます。</>},
       ]} />
       <Tabs items={TABS} current={tab} onChange={(t) => { setTab(t as YearTab); setMonth('初'); }} accent={accent} />
       {tab === '業者別予算' ? (
@@ -137,12 +142,24 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
         </div>
       ) : (
         <>
+          {(tab === '補正予算' || (tab === '当初予算' && month !== '初')) && (
+            <div style={{ margin: '14px 22px 4px', padding: '12px 14px', border: '1px solid ' + accent, borderRadius: 12, background: '#fbfcfd', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><b style={{ fontSize: 13 }}>補正予算の入力方法</b><ScopeBadge kind="区分ごと" label={`区分ごと（${session.division}）`} /></div>
+              <div role="radiogroup" aria-label="補正予算の入力方法" style={{ display: 'inline-flex', border: '1px solid ' + accent, borderRadius: 9, overflow: 'hidden' }}>
+                {(['補正額', '補正後予算額'] as const).map((m) => <button key={m} type="button" role="radio" aria-checked={mode === m} onClick={() => { if (mode !== m) setMode(m); }} style={{ padding: '8px 18px', border: 'none', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: mode === m ? accent : '#fff', color: mode === m ? '#fff' : accent }}>{m}で入力</button>)}
+              </div>
+              <div style={{ fontSize: 12, color: '#5b6773', lineHeight: 1.7, flex: '1 1 320px' }}>
+                {mode === '補正額' ? '補正額で入力：その月に増減させる金額（＋／−）を入力します。' : '補正後予算額で入力：補正した後の予算額（累計）を入力します。差額が補正額になります。'}
+                {month === '初' && <>　予算月で 4月〜3月・決算 を選ぶと入力欄に反映されます。</>}
+                <br /><span style={{ color: '#8290a0' }}>※ 以前は「{displayName('環境設定')}」にあった設定です。この画面で切り替えられるようにしました。</span>
+              </div>
+            </div>
+          )}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 22px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
             {(tab === '当初予算' || tab === '補正予算') && (
               <>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#8290a0' }}>予算月</span>
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>{MONTHS.map((m) => <button key={m} type="button" className="chip" onClick={() => setMonth(m)} style={chip(month === m)}>{m}</button>)}</div>
-                {month !== '初' && <div style={{ display: 'flex', gap: 4, marginLeft: 8 }}>{(['補正額', '補正後予算額'] as const).map((m) => <button key={m} type="button" onClick={() => setMode(m)} style={{ ...btn(mode === m ? accent : '#5b6773', mode === m, true) }}>{m}を入力</button>)}</div>}
               </>
             )}
             {(tab === '前年度予算' || tab === '次年度予算' || (tab === '当初予算' && month === '初')) && (

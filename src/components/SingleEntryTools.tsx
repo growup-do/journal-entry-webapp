@@ -1,8 +1,9 @@
-// 単一入力の機能ボタン（既存 F4 科目別残／F5 現預金残／F8 カレンダ）の中身。
+// 伝票入力の「参照」「入力補助」ボタンの中身（科目別残高／現預金残高／カレンダー）。4形式で共通に使う。
 //   科目別残高 … 表示月の科目ごとの 前月繰越／当月借方／当月貸方／残高（入力中の科目を先頭に）
 //   現預金残高 … 現金・預金科目の当月入出金と残高、選んだ科目の日別推移
-//   カレンダー … 入力月のカレンダー。日ごとの伝票件数・金額を表示し、クリックで入力行の「日」に反映
-// ※ 既存システムのマニュアルにはこの3ボタンの詳細説明がないため、挙動は推定（_社内資料/要確認 参照）。
+//   カレンダー … 入力月のカレンダー。日ごとの伝票件数・金額を表示し、日を選ぶと入力欄の「月・日」に反映
+//               （←→↑↓ で日を移動、PageUp／PageDown で月を移動、Enter で決定）
+// ※ 既存システムのマニュアルにはこの3機能の詳細説明がないため、挙動は推定（_社内資料/要確認 参照）。
 
 import { useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
@@ -164,6 +165,7 @@ export const yearOfMonth = (m: string) => (parseInt(m, 10) >= 4 ? 2026 : 2027);
 
 export function CalendarModal({ open, onClose, accent, entries, month, day, onPick }: { open: boolean; onClose: () => void; accent: string; entries: JournalEntry[]; month: string; day: string; onPick: (month: string, day: string) => void }) {
   const [view, setView] = useState(month || '8');
+  const [cur, setCur] = useState(() => parseInt(day, 10) || 1);
   const y = yearOfMonth(view);
   const m = parseInt(view, 10);
   const first = new Date(y, m - 1, 1).getDay();
@@ -178,9 +180,24 @@ export function CalendarModal({ open, onClose, accent, entries, month, day, onPi
   while (cells.length % 7) cells.push(null);
   const isSel = (d: number) => view === month && String(d) === day;
   const monthTotal = [...per.values()].reduce((a, b) => ({ n: a.n + b.n, amt: a.amt + b.amt }), { n: 0, amt: 0 });
+  const cursor = Math.min(Math.max(cur, 1), days);
+  const shiftMonth = (d: 1 | -1) => { const n = vi + d; if (n >= 0 && n < ORDER.length) setView(ORDER[n]); };
+  const onKey = (e: React.KeyboardEvent) => {
+    if (e.nativeEvent.isComposing || e.altKey) return;
+    const step: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
+    if (e.key in step) {
+      e.preventDefault();
+      const n = cursor + step[e.key];
+      if (n < 1) { if (vi > 0) { const pd = new Date(yearOfMonth(ORDER[vi - 1]), parseInt(ORDER[vi - 1], 10), 0).getDate(); setView(ORDER[vi - 1]); setCur(pd + n); } }
+      else if (n > days) { if (vi < ORDER.length - 1) { setView(ORDER[vi + 1]); setCur(n - days); } }
+      else setCur(n);
+    } else if (e.key === 'PageUp') { e.preventDefault(); shiftMonth(-1); }
+    else if (e.key === 'PageDown') { e.preventDefault(); shiftMonth(1); }
+    else if (e.key === 'Enter') { e.preventDefault(); onPick(view, String(cursor)); onClose(); }
+  };
   return (
     <Modal open={open} onClose={onClose} width={640} title="カレンダー">
-      <div style={{ padding: '12px 22px 18px' }}>
+      <div tabIndex={0} ref={(el) => { if (el && !el.dataset.f) { el.dataset.f = '1'; el.focus(); } }} onKeyDown={onKey} style={{ padding: '12px 22px 18px', outline: 'none' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
           <button type="button" className="btn-outline" disabled={vi <= 0} onClick={() => setView(ORDER[vi - 1])} style={{ ...btn(), opacity: vi <= 0 ? 0.4 : 1 }}>‹ 前月</button>
           <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 17, flex: 1, textAlign: 'center' }}>令和{y - 2018}年 {m}月 <span style={{ fontSize: 11.5, fontWeight: 500, color: '#7a8794' }}>（{y}年）</span></div>
@@ -194,8 +211,9 @@ export function CalendarModal({ open, onClose, accent, entries, month, day, onPi
             const hol = HOLIDAYS.has(`${y}/${m}/${d}`);
             const info = per.get(d);
             const on = isSel(d);
+            const at = d === cursor;
             return (
-              <button key={d} type="button" onClick={() => { onPick(view, String(d)); onClose(); }} title={`${m}/${d} を入力行の日付にする`} style={{ minHeight: 58, padding: '5px 6px', textAlign: 'left', border: '1px solid ' + (on ? accent : '#e2e8ee'), background: on ? accent + '14' : hol || dow === 0 ? '#fff7f5' : dow === 6 ? '#f5f8fc' : '#fff', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <button key={d} type="button" tabIndex={-1} aria-current={at ? 'date' : undefined} onClick={() => { onPick(view, String(d)); onClose(); }} title={`${m}/${d} を入力行の日付にする`} style={{ minHeight: 58, padding: '5px 6px', textAlign: 'left', outline: at ? `3px solid ${accent}` : 'none', outlineOffset: 1, border: '1px solid ' + (on ? accent : '#e2e8ee'), background: on ? accent + '14' : hol || dow === 0 ? '#fff7f5' : dow === 6 ? '#f5f8fc' : '#fff', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ fontSize: 12.5, fontWeight: 700, color: hol || dow === 0 ? '#c0392b' : dow === 6 ? '#2c5f9e' : '#22303c' }}>{d}{hol && <span style={{ fontSize: 9.5, fontWeight: 600, marginLeft: 4 }}>祝</span>}</span>
                 {info && <><span style={{ fontSize: 10.5, color: accent, fontWeight: 700 }}>{info.n}件</span><span style={{ fontSize: 10, color: '#7a8794', fontVariantNumeric: 'tabular-nums' }}>{yen(info.amt)}</span></>}
               </button>
@@ -204,7 +222,7 @@ export function CalendarModal({ open, onClose, accent, entries, month, day, onPi
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10, fontSize: 11.5, color: '#7a8794' }}>
           <span>当月 <b style={{ color: '#22303c' }}>{monthTotal.n}</b> 件　<b style={{ color: '#22303c', fontVariantNumeric: 'tabular-nums' }}>{yen(monthTotal.amt)}</b> 円</span>
-          <span style={{ marginLeft: 'auto' }}>日をクリックすると入力行の「月／日」に反映します</span>
+          <span style={{ marginLeft: 'auto' }}>←→↑↓ で日を選び Enter で決定（PageUp／PageDown で月を移動）。クリックでも選べます</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}><button type="button" onClick={onClose} style={btn()}>閉じる</button></div>
       </div>

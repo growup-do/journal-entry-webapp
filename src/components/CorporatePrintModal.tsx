@@ -92,6 +92,7 @@ export function CorporatePrintModal({ open, onClose }: Props) {
           </table>
         </div>
         <div style={{ fontSize: 11, color: '#9aa5b1', marginTop: 8 }}>青い背景＝必須帳票、白＝省略可能、灰＝その区分では出力対象外</div>
+        <div style={{ fontSize: 11.5, color: '#5b6773', marginTop: 6 }}>印刷の流れ：① 帳票を選ぶ → ② 「プレビュー」で内容を確認 → ③ 「印刷」または Excel出力／PDF出力（この画面内で完結します）。金額の書式などは各帳票の印刷（詳細設定）と同じ設定が反映されます。</div>
         <div style={{ display: 'flex', gap: 8, marginTop: 16, alignItems: 'center' }}>
           <button type="button" className="btn-outline" onClick={() => out('excel')} style={btn()}>Excel出力</button>
           <button type="button" className="btn-outline" onClick={() => out('pdf')} style={btn()}>PDF出力</button>

@@ -1,14 +1,24 @@
 // 伝票入力の強化部品（提案D／E／L）
 //   入力設定ダイアログ、取引区分（7種）の表示、確認ダイアログ（誤伝票／費用間／収益間）、予算状況グラフ、
-//   連続定型仕訳の呼出し、自動按分仕訳の実行、特殊金額入力、決算附属明細書への登録ダイアログ。
+//   定型仕訳・連続定型仕訳の呼出し、自動按分仕訳の実行、特殊金額入力、決算附属明細書への登録ダイアログ。
+//   useEntryTools … 4形式共通の機能ボタン（伝票の操作／行の操作／入力補助／参照）とショートカット、付随するダイアログ一式
+//   （依頼書 5.3.3／5.3.4／5.3.6／付録A：ファンクションキーの代替）。
 
 import { useMemo, useState } from 'react';
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
 import { Field, Notice, Toggle, btn, input, lbl, numInput, toInt, yen } from './ui';
+import { ActButton, ActDivider, ActionGroup, ConfirmModal, ENTRY_FORMATS, FORMAT_KIND, FUND_MODES, FUND_MODE_NOTE, FormatSwitcher, Kbd, ReadOnlyBanner, ShortcutHelpModal, nextFusen, openCandidatesOfFocused, useShortcuts, type EntryFormat, type FundMode, type FusenColor, type Shortcut } from './EntryCommon';
+import { AccountBalanceModal, CalendarModal, CashBalanceModal } from './SingleEntryTools';
+import { AllocationWizardModal, TemplateWizardModal, blankAllocation, blankTemplate, type AllocationWiz, type TemplateWiz } from './TemplateWizards';
+import { DeleteVoucherModal, EditVoucherModal, VoucherPickerModal } from './VoucherEdit';
+import { displayName } from '../data';
 import { TORIHIKI_COLOR, budgetSample, judgeTorihiki, type Torihiki7 } from '../lib/accounts';
-import { setSession, useSession, type AllocationTemplate, type InputSettings, type JournalTemplate } from '../store/session';
+import { addVoucher, useVouchers, type Voucher } from '../store/journalStore';
+import { canEdit, editBlockReason, setSession, useSession, type AllocationTemplate, type InputSettings, type JournalTemplate, type TemplateLine } from '../store/session';
+
+export { WATCHED, watchedStatement } from './EntryCommon';
 
 /* ---------------- 入力設定（既存「入力の変更」＋詳細設定） ---------------- */
 export function InputSettingsModal({ open, onClose, accent }: { open: boolean; onClose: () => void; accent: string }) {
@@ -38,22 +48,46 @@ export function InputSettingsModal({ open, onClose, accent }: { open: boolean; o
 }
 
 /* ---------------- 取引区分バッジ ---------------- */
-export function TorihikiBadge({ kari, kashi, force, onForce }: { kari: string; kashi: string; force: boolean; onForce: (v: boolean) => void }) {
+export function TorihikiBadge({ kari, kashi, force, onForce, blocked, fundMode }: { kari: string; kashi: string; force: boolean; /** 指定したときだけ「強制資金」の切替を表示（資金モードを別の場所で切り替える画面では省略） */ onForce?: (v: boolean) => void; /** 登録できない仕訳（赤で表示） */ blocked?: boolean; fundMode?: string }) {
   const j = judgeTorihiki(kari, kashi, force);
-  const c = TORIHIKI_COLOR[j.kind];
+  const c = blocked ? { bg: '#fdeee9', fg: '#c0392b', note: '登録できない仕訳です。科目の下の表示を確認してください' } : j.kind === '要確認' ? { bg: '#fff6dd', fg: '#7a5600', note: '確認のうえ登録できます' } : TORIHIKI_COLOR[j.kind];
+  const text = blocked ? '登録できません' : j.kind === '要確認' ? `確認が必要${j.reason ? `（${j.reason}）` : ''}` : j.kind;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-      <span title={c.note} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, background: c.bg, color: c.fg, fontSize: 12.5, fontWeight: 800, border: '1px solid ' + c.fg + '33' }}>
-        <span style={{ width: 8, height: 8, borderRadius: '50%', background: c.fg }} />{j.kind}{j.reason ? `（${j.reason}）` : ''}
+      <span title={c.note} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, background: c.bg, color: c.fg, fontSize: 12.5, fontWeight: 800, border: '1px solid ' + c.fg + '33', whiteSpace: 'nowrap' }}>
+        <span style={{ width: 8, height: 8, borderRadius: '50%', background: c.fg }} />{text}
       </span>
-      <label style={{ fontSize: 11, color: '#7a8794', display: 'flex', gap: 5, alignItems: 'center', cursor: 'pointer' }}><input type="checkbox" checked={force} onChange={(e) => onForce(e.target.checked)} />強制資金（F9）</label>
+      {fundMode && <span style={{ fontSize: 11, color: fundMode === '自動資金' ? '#7a8794' : '#6b3fb5', fontWeight: fundMode === '自動資金' ? 500 : 700 }}>資金モード：{fundMode}</span>}
+      {onForce && <label style={{ fontSize: 11, color: '#7a8794', display: 'flex', gap: 5, alignItems: 'center', cursor: 'pointer' }}><input type="checkbox" checked={force} onChange={(e) => onForce(e.target.checked)} />強制資金</label>}
     </div>
   );
 }
 
 /* ---------------- 確認ダイアログ（誤伝票／費用間／収益間） ---------------- */
-export function EntryConfirmModal({ open, kind, reason, onClose, onProceed, accent }: { open: boolean; kind: Torihiki7; reason?: string; onClose: () => void; onProceed: (dontShow: boolean) => void; accent: string }) {
+export function EntryConfirmModal({ open, kind, reason, onClose, onProceed, accent, issues }: { open: boolean; kind: Torihiki7; reason?: string; onClose: () => void; onProceed: (dontShow: boolean) => void; accent: string; /** 確認して続行できる警告の一覧（指定時はこの内容を表示） */ issues?: { code: string; title: string; detail: string }[] }) {
   const [dont, setDont] = useState(false);
+  if (issues && issues.length > 0) {
+    const canHide = issues.some((i) => i.code === 'expense' || i.code === 'income');
+    return (
+      <Modal open={open} onClose={onClose} width={560} title="確認画面" strict>
+        <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+            <span aria-hidden style={{ width: 40, height: 40, borderRadius: '50%', background: '#fff1c9', color: '#8a6200', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 900, flex: 'none' }}>!</span>
+            <div style={{ fontSize: 13.5, lineHeight: 1.8 }}>登録の前に、次の内容を確認してください。<br /><span style={{ color: '#7a8794', fontSize: 12.5 }}>登録できない仕訳（エラー）ではありません。内容に問題がなければ、このまま登録できます。</span></div>
+          </div>
+          <div style={{ border: '1px solid #ecd08a', borderLeft: '5px solid #7a5600', background: '#fff6dd', borderRadius: 9, padding: '9px 12px', color: '#7a5600', fontSize: 12.5, lineHeight: 1.7 }}>
+            <ul style={{ margin: 0, paddingLeft: 20 }}>{issues.map((i) => <li key={i.code}><b>{i.title}</b>　<span style={{ fontWeight: 400 }}>{i.detail}</span></li>)}</ul>
+          </div>
+          {canHide && <label style={{ fontSize: 12.5, display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={dont} onChange={(e) => setDont(e.target.checked)} />費用科目間・収益科目間の振替の確認を、今後は表示しない（動作環境で戻せます）</label>}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <button type="button" className="ef-act" onClick={onClose} style={btn()}>入力に戻る</button>
+            <button type="button" className="ef-act" autoFocus onClick={() => onProceed(dont)} style={{ ...btn('#d99a00', true), borderColor: '#b07d00' }}>確認して登録</button>
+          </div>
+        </div>
+      </Modal>
+    );
+  }
+  void accent;
   const blocked = kind === '要確認' && reason === '誤伝票';
   const msg = reason === '費用間' ? '費用の科目から費用の科目に金額を振り替えようとしています。' : reason === '収益間' ? '収入の科目から収入の科目に金額を振り替えようとしています。' : '誤った伝票、または通常は入力することのない伝票です。';
   return (
@@ -61,12 +95,12 @@ export function EntryConfirmModal({ open, kind, reason, onClose, onProceed, acce
       <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
           <span style={{ width: 40, height: 40, borderRadius: '50%', background: '#fdeee9', color: '#c0392b', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 900, flex: 'none' }}>!</span>
-          <div style={{ fontSize: 13.5, lineHeight: 1.8 }}>{msg}<br />{blocked ? <b style={{ color: '#c0392b' }}>この伝票は登録できません。借方・貸方の科目を確認してください。</b> : '内容を確認のうえ、このまま登録する場合は「登録する」を押してください。'}</div>
+          <div style={{ fontSize: 13.5, lineHeight: 1.8 }}>{msg}<br />{blocked ? <b style={{ color: '#c0392b' }}>この伝票は登録できません。借方・貸方の科目を確認してください。</b> : '内容を確認のうえ、このまま登録する場合は「確認して登録」を押してください。'}</div>
         </div>
         {!blocked && <label style={{ fontSize: 12.5, display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={dont} onChange={(e) => setDont(e.target.checked)} />今後、この画面を表示しない（環境設定で戻せます）</label>}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button type="button" onClick={onClose} style={btn()}>{blocked ? 'OK' : '戻る'}</button>
-          {!blocked && <button type="button" className="submit-btn" onClick={() => onProceed(dont)} style={btn(accent, true)}>登録する</button>}
+          {!blocked && <button type="button" className="submit-btn" onClick={() => onProceed(dont)} style={btn(accent, true)}>確認して登録</button>}
         </div>
       </div>
     </Modal>
@@ -131,17 +165,22 @@ export function BudgetGraphModal({ open, onClose, account }: { open: boolean; on
   );
 }
 
-/* ---------------- 連続定型仕訳の呼出し ---------------- */
-export function TemplatePickerModal({ open, onClose, accent, onPick, onNew }: { open: boolean; onClose: () => void; accent: string; onPick: (t: JournalTemplate) => void; onNew?: () => void }) {
+/* ---------------- 定型仕訳・連続定型仕訳の呼出し ---------------- */
+export function TemplatePickerModal({ open, onClose, accent, onPick, onNew, mode = '連続' }: { open: boolean; onClose: () => void; accent: string; onPick: (t: JournalTemplate) => void; onNew?: () => void; /** 定型＝入力中の伝票に呼び出す／連続＝テンプレートの行を1枚ずつ続けて登録する */ mode?: '定型' | '連続' }) {
   const s = useSession();
   const [sel, setSel] = useState<string | null>(null);
   const t = s.templates.find((x) => x.id === sel) ?? null;
+  const move = (dir: 1 | -1) => {
+    if (s.templates.length === 0) return;
+    const i = s.templates.findIndex((x) => x.id === sel);
+    setSel(s.templates[Math.max(0, Math.min(s.templates.length - 1, i < 0 ? 0 : i + dir))].id);
+  };
   return (
-    <Modal open={open} onClose={onClose} width={720} title="連続定型仕訳ウィザード">
+    <Modal open={open} onClose={onClose} width={720} title={mode === '定型' ? '定型仕訳の呼び出し' : '連続定型仕訳ウィザード'}>
       <div style={{ padding: '14px 22px 18px', display: 'grid', gridTemplateColumns: '260px minmax(0,1fr)', gap: 16 }}>
         <div>
-          <span style={lbl}>定型伝票一覧（ダブルクリックで呼出し）</span>
-          <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'hidden' }}>
+          <span style={lbl}>定型伝票一覧（↑↓ で選び Enter で呼出し）</span>
+          <div tabIndex={0} role="listbox" aria-label="定型伝票一覧" ref={(el) => { if (el && open && !el.dataset.f) { el.dataset.f = '1'; el.focus(); } }} onKeyDown={(e) => { if (e.key === 'ArrowDown') { e.preventDefault(); move(1); } if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); } if (e.key === 'Enter' && t) { e.preventDefault(); onPick(t); } }} className="ef-input" style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'hidden', background: '#fff' }}>
             {s.templates.map((x) => <div key={x.id} onClick={() => setSel(x.id)} onDoubleClick={() => onPick(x)} style={{ padding: '9px 12px', borderBottom: '1px solid #f1f4f6', cursor: 'pointer', background: sel === x.id ? accent : '#fff', color: sel === x.id ? '#fff' : '#22303c', fontSize: 13 }}><div style={{ fontWeight: 700 }}>{x.name}</div><div style={{ fontSize: 11, opacity: 0.8 }}>{x.form}・{x.lines.length}行</div></div>)}
             {s.templates.length === 0 && <div style={{ padding: 20, color: '#9aa5b1', fontSize: 12.5 }}>定型仕訳がありません。「新規登録」または設定「仕訳辞書」で登録してください。</div>}
           </div>
@@ -152,7 +191,7 @@ export function TemplatePickerModal({ open, onClose, accent, onPick, onNew }: { 
           {!t ? <div style={{ color: '#9aa5b1', fontSize: 12.5, padding: 20, border: '1px dashed #dde4ea', borderRadius: 10 }}>左の一覧から定型仕訳を選ぶと内容を表示します。</div> : (
             <>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}><thead><tr><th style={TH}>借方</th><th style={TH}>貸方</th><th style={TH}>摘要／業者</th><th style={{ ...TH, textAlign: 'right' }}>金額</th></tr></thead><tbody>{t.lines.map((l, i) => <tr key={i}><td style={TD}>{l.kari}</td><td style={TD}>{l.kashi}</td><td style={TD}>{l.tekiyo}{l.gyosha ? `／${l.gyosha}` : ''}</td><td style={NUM}>{l.amount ? yen(Number(l.amount)) : <span style={{ color: '#9aa5b1' }}>入力</span>}</td></tr>)}</tbody></table>
-              <div style={{ marginTop: 10 }}><Notice>呼び出すと入力欄に科目・摘要・業者が入ります。日付と金額を入力（または訂正）して登録してください。複数行の定型は1行ずつ順に呼び出します。</Notice></div>
+              <div style={{ marginTop: 10 }}><Notice>{mode === '定型' ? '呼び出すと、入力中の伝票に科目・摘要・業者・金額が入ります。日付と金額を入力（または訂正）して登録してください。' : '呼び出すと、定型の1行目が入力欄に入ります。登録すると次の行を順に呼び出し、複数の伝票を続けて登録できます。'}</Notice></div>
             </>
           )}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
@@ -165,7 +204,7 @@ export function TemplatePickerModal({ open, onClose, accent, onPick, onNew }: { 
   );
 }
 
-/* ---------------- 自動按分仕訳の実行（F7） ---------------- */
+/* ---------------- 自動按分仕訳の実行 ---------------- */
 export interface AllocatedVoucher { division: string; kari: string; kashi: string; tekiyo: string; amount: number }
 export function allocate(t: AllocationTemplate, total: number): AllocatedVoucher[] {
   const round = (v: number) => (t.rounding === '切り捨て' ? Math.floor(v) : t.rounding === '切り上げ' ? Math.ceil(v) : Math.round(v));
@@ -249,13 +288,6 @@ export function SpecialAmountModal({ open, total, onClose, accent, onOk }: { ope
 }
 
 /* ---------------- 決算附属明細書への登録（伝票入力時の監視） ---------------- */
-export const WATCHED: { key: string; label: string; test: RegExp }[] = [
-  { key: 'kifu', label: '寄附金収益明細書', test: /寄附/ },
-  { key: 'hojo', label: '補助金事業等収益明細書', test: /補助金/ },
-  { key: 'kihon', label: '基本金明細書', test: /基本金/ },
-  { key: 'kurii', label: '事業区分間及び拠点区分間繰入金明細書', test: /繰入/ },
-];
-export function watchedStatement(kari: string, kashi: string) { return WATCHED.find((w) => w.test.test(kari) || w.test.test(kashi)) ?? null; }
 export function AttachedStatementModal({ open, statement, entry, onClose, onDone, accent }: { open: boolean; statement: string; entry: { kari: string; kashi: string; tekiyo: string; amount: number } | null; onClose: () => void; onDone: (register: boolean) => void; accent: string }) {
   const [reg, setReg] = useState(true);
   const [purpose, setPurpose] = useState('');
@@ -277,3 +309,242 @@ export function AttachedStatementModal({ open, statement, entry, onClose, onDone
 }
 
 export const chipStyle = (on: boolean, accent: string): CSSProperties => ({ padding: '6px 14px', fontSize: 12.5, fontWeight: 600, borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', border: '1px solid ' + (on ? accent : '#cfd8e0') });
+
+/* ------------------------------------------------------------------ */
+/* 4形式共通：機能ボタン・ショートカット・付随ダイアログ                 */
+/*   ファンクションキーは使わず、機能を性質ごとにまとめて常に表示する。    */
+/*   ショートカットは Alt＋英数字で、どの入力欄にいても同じ機能が動く。   */
+/* ------------------------------------------------------------------ */
+export interface EntryFlags { check: boolean; fusen: FusenColor; shohyo: boolean }
+export interface EntryToolsOptions {
+  format: EntryFormat;
+  accent: string;
+  /** 形式の切替・画面問合・処理終了の遷移先。未指定のときは切替を出さない */
+  onNavigate?: (label: string) => void;
+  toast: (m: string) => void;
+  /** 入力中の内容があるか（中止・形式切替・画面移動の確認に使う） */
+  dirty: boolean;
+  service: string;
+  month: string;
+  day: string;
+  /** 入力中（対象行）の科目：残高照会の先頭表示に使う */
+  kari: string;
+  kashi: string;
+  /** 入力中の内容（「仕訳登録＝定型として登録」の初期値） */
+  lines: TemplateLine[];
+  /** 複数行の形式か（行追加・行挿入・行削除を出す） */
+  multiRow: boolean;
+  /** 行の操作の対象（例 '2行目'） */
+  rowLabel: string;
+  flags: EntryFlags;
+  onFlags: (p: Partial<EntryFlags>) => void;
+  fundMode: FundMode;
+  onFundMode: (m: FundMode) => void;
+  onSubmit: () => void;
+  /** 入力中の伝票を破棄（確認後に呼ばれる） */
+  onCancel: () => void;
+  onRowAdd?: () => void;
+  onRowInsert?: () => void;
+  onRowDelete?: () => void;
+  internal: boolean;
+  onInternal: () => void;
+  onLoadTemplate: (t: JournalTemplate, mode: '定型' | '連続') => void;
+  /** 自動按分などで登録した仕訳の id（一覧の強調表示用） */
+  onRegistered?: (ids: number[]) => void;
+  onPickDate: (month: string, day: string) => void;
+  /** 参照パネルを開く（画面問合の先頭に出す） */
+  onOpenPanel?: () => void;
+  /** 伝票登録ボタンの id（Enter 送りの最後にフォーカスする） */
+  submitId: string;
+  /** Enter 送りの順序（キーボード操作一覧に表示） */
+  enterOrder: string;
+}
+
+const TEMPLATE_FORM: Record<EntryFormat, JournalTemplate['form']> = { 伝票入力: '伝票式', 単一入力: '単一式', 振替入力: '振替伝票式', 振替単一: '振替単一式' };
+const INQUIRY_TARGETS = ['仕訳一覧', '勘定元帳', '資金元帳', '業者元帳', '月次試算', '元帳１', '元帳２', '残高照合'];
+
+export function useEntryTools(o: EntryToolsOptions) {
+  const sess = useSession();
+  const vouchers = useVouchers();
+  const editable = canEdit(sess);
+  const reason = editBlockReason(sess);
+  const ro = !editable;
+  const [dlg, setDlg] = useState<null | '定型' | '連続' | '按分' | '科目別残' | '現預金残' | 'カレンダー' | '入力の変更' | '訂正' | '削除' | 'ヘルプ' | '問合' | '中止'>(null);
+  const [wiz, setWiz] = useState<TemplateWiz>(null);
+  const [awiz, setAwiz] = useState<AllocationWiz>(null);
+  const [edit, setEdit] = useState<Voucher | null>(null);
+  const [del, setDel] = useState<Voucher[] | null>(null);
+  const [leave, setLeave] = useState<string | null>(null);
+  const name = displayName(o.format);
+
+  const go = (label: string) => {
+    if (!o.onNavigate) return;
+    if (o.dirty) setLeave(label);
+    else o.onNavigate(label);
+  };
+  const cancel = () => {
+    if (ro) return;
+    if (!o.dirty) { o.toast('入力中の伝票はありません'); return; }
+    setDlg('中止');
+  };
+  const cycleFund = () => o.onFundMode(FUND_MODES[(FUND_MODES.indexOf(o.fundMode) + 1) % FUND_MODES.length]);
+  const saveAsTemplate = () => {
+    const lines = o.lines.filter((l) => l.kari || l.kashi || l.tekiyo || l.amount);
+    const t = blankTemplate(lines[0], TEMPLATE_FORM[o.format]);
+    setWiz({ step: 0, t: { ...t, lines: lines.length ? lines : t.lines } });
+  };
+  const candidates = () => { if (!openCandidatesOfFocused()) o.toast('科目・摘要・業者の入力欄で使えます（入力欄で文字を打つと候補が出ます）'); };
+
+  const G1 = '伝票の操作', G2 = '行の操作', G3 = '入力補助', G4 = '参照';
+  const shortcuts: Shortcut[] = [
+    { key: 'S', label: '伝票登録', group: G1, run: o.onSubmit, disabled: ro },
+    { key: 'Q', label: '伝票中止（入力中の伝票を破棄）', group: G1, run: cancel, disabled: ro },
+    { key: 'E', label: '伝票訂正（登録済みの伝票を選ぶ）', group: G1, run: () => setDlg('訂正'), disabled: ro },
+    { key: 'X', label: '伝票削除（登録済みの伝票を選ぶ）', group: G1, run: () => setDlg('削除'), disabled: ro },
+    { key: 'O', label: '入力の変更（表示項目）', group: G1, run: () => setDlg('入力の変更') },
+    ...(o.onNavigate ? ENTRY_FORMATS.map((k, i): Shortcut => ({ key: String(i + 1), label: `形式の切替：${displayName(k)}`, group: G1, run: () => { if (k !== o.format) go(k); } })) : []),
+    ...(o.onNavigate ? [{ key: 'L', label: '処理終了（伝票入力を終わる）', group: G1, run: () => go('ホーム') }] : []),
+    ...(o.multiRow ? [
+      { key: 'N', label: '行追加（最後に追加）', group: G2, run: () => o.onRowAdd?.(), disabled: ro },
+      { key: 'I', label: '行挿入（対象行の上に挿入）', group: G2, run: () => o.onRowInsert?.(), disabled: ro },
+      { key: 'D', label: '行削除（対象行を削除）', group: G2, run: () => o.onRowDelete?.(), disabled: ro },
+    ] : []),
+    { key: 'C', label: 'チェック', group: G2, run: () => o.onFlags({ check: !o.flags.check }), disabled: ro },
+    { key: 'F', label: '付箋（赤→青→黄→緑→なし）', group: G2, run: () => o.onFlags({ fusen: nextFusen(o.flags.fusen) }), disabled: ro },
+    { key: 'V', label: '証憑（有／無）', group: G2, run: () => o.onFlags({ shohyo: !o.flags.shohyo }), disabled: ro },
+    { key: 'J', label: '候補一覧を開く（科目・摘要・業者・区分の検索）', group: G3, run: candidates, disabled: ro },
+    { key: 'K', label: 'カレンダー', group: G3, run: () => setDlg('カレンダー'), disabled: ro },
+    { key: 'T', label: '定型仕訳', group: G3, run: () => setDlg('定型'), disabled: ro },
+    { key: 'R', label: '連続定型', group: G3, run: () => setDlg('連続'), disabled: ro },
+    { key: 'A', label: '自動按分', group: G3, run: () => setDlg('按分'), disabled: ro },
+    { key: 'G', label: '仕訳登録（入力中の伝票を定型として登録）', group: G3, run: saveAsTemplate, disabled: ro },
+    { key: 'U', label: '内部取引（相手区分の入力欄を開く）', group: G3, run: o.onInternal, disabled: ro },
+    { key: 'M', label: '資金モードの切替（自動資金→強制資金→非資金）', group: G3, run: cycleFund, disabled: ro },
+    { key: 'B', label: '科目別残高', group: G4, run: () => setDlg('科目別残') },
+    { key: 'Z', label: '現預金残高', group: G4, run: () => setDlg('現預金残') },
+    { key: 'W', label: '画面問合（問合せ画面・参照パネル）', group: G4, run: () => setDlg('問合') },
+    { key: 'H', label: 'キーボード操作一覧', group: 'ヘルプ', run: () => setDlg('ヘルプ') },
+  ];
+  useShortcuts(shortcuts, 'page');
+
+  const topBar: ReactNode = (
+    <FormatSwitcher
+      current={o.format}
+      accent={o.accent}
+      onSwitch={o.onNavigate ? (k) => go(k) : undefined}
+      right={
+        <>
+          <ActButton label="入力の変更" k="O" accent={o.accent} onClick={() => setDlg('入力の変更')} title="伝票No・証憑・小切手No・予備入力などの表示項目を変更します" />
+          <ActButton label="キーボード操作一覧" k="H" accent={o.accent} onClick={() => setDlg('ヘルプ')} title="マウスを使わない操作方法の一覧" />
+        </>
+      }
+    />
+  );
+  const banner: ReactNode = <ReadOnlyBanner reason={reason} />;
+
+  const why = (t: string) => (ro ? reason : t);
+  const actionBar: ReactNode = (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 8 }}>
+      <ActionGroup caption="伝票の操作" note={name}>
+        <ActButton id={o.submitId} label="伝票登録" k="S" tone="primary" accent={o.accent} disabled={ro} title={why('入力中の伝票を登録します')} onClick={o.onSubmit} />
+        <ActButton label="伝票中止" k="Q" accent={o.accent} disabled={ro} title={why('入力中の伝票を破棄します（確認あり）')} onClick={cancel} />
+        <ActButton label="伝票訂正" k="E" accent={o.accent} disabled={ro} title={why('登録済みの伝票を選んで訂正します')} onClick={() => setDlg('訂正')} />
+        {o.onNavigate && <ActButton label="処理終了" k="L" accent={o.accent} title="伝票入力を終わり、ホームへ戻ります" onClick={() => go('ホーム')} />}
+        <ActDivider />
+        <ActButton label="伝票削除" k="X" tone="danger" disabled={ro} title={why('登録済みの伝票を選んで削除します（確認画面のあとに削除）')} onClick={() => setDlg('削除')} />
+      </ActionGroup>
+      <ActionGroup caption="行の操作" note={<span style={{ color: o.accent }}>対象：{o.rowLabel}</span>}>
+        {o.multiRow && <ActButton label="行追加" k="N" accent={o.accent} disabled={ro} title={why('最後に1行追加します')} onClick={() => o.onRowAdd?.()} />}
+        {o.multiRow && <ActButton label="行挿入" k="I" accent={o.accent} disabled={ro} title={why(`${o.rowLabel}の上に1行挿入します`)} onClick={() => o.onRowInsert?.()} />}
+        {o.multiRow && <ActButton label="行削除" k="D" accent={o.accent} disabled={ro} title={why(`${o.rowLabel}を削除します`)} onClick={() => o.onRowDelete?.()} />}
+        <ActButton label="チェック" k="C" accent={o.accent} disabled={ro} active={o.flags.check} title={why('チェック印を付ける／外す')} onClick={() => o.onFlags({ check: !o.flags.check })} />
+        <ActButton label={<>付箋{o.flags.fusen ? `：${o.flags.fusen}` : ''}</>} menu="付箋" k="F" accent={o.accent} disabled={ro} active={!!o.flags.fusen} title={why('押すごとに 赤→青→黄→緑→なし')} onClick={() => o.onFlags({ fusen: nextFusen(o.flags.fusen) })} />
+        <ActButton label={<>証憑：{o.flags.shohyo ? '有' : '無'}</>} menu="証憑" k="V" accent={o.accent} disabled={ro} active={o.flags.shohyo} title={why('証憑の 有／無 を切り替えます')} onClick={() => o.onFlags({ shohyo: !o.flags.shohyo })} />
+      </ActionGroup>
+      <ActionGroup caption="入力補助">
+        <ActButton label="定型仕訳" k="T" accent={o.accent} disabled={ro} title={why('登録済みの定型仕訳を、入力中の伝票に呼び出します')} onClick={() => setDlg('定型')} />
+        <ActButton label="連続定型" k="R" accent={o.accent} disabled={ro} title={why('テンプレートから複数の伝票を続けて登録します')} onClick={() => setDlg('連続')} />
+        <ActButton label="自動按分" k="A" accent={o.accent} disabled={ro} title={why('按分テンプレートで、複数の区分・科目に金額を配分します')} onClick={() => setDlg('按分')} />
+        <ActButton label="仕訳登録" k="G" accent={o.accent} disabled={ro} title={why('入力中の伝票を、定型仕訳として登録します')} onClick={saveAsTemplate} />
+        <ActButton label="カレンダー" k="K" accent={o.accent} disabled={ro} title={why('カレンダーから日付を選びます')} onClick={() => setDlg('カレンダー')} />
+        <ActButton label="候補一覧" k="J" accent={o.accent} disabled={ro} title={why('入力中の欄（科目・摘要・業者・区分）の候補一覧を開きます。入力欄で文字を打っても候補が出ます')} onClick={candidates} />
+        <ActButton label="内部取引" k="U" accent={o.accent} disabled={ro} active={o.internal} title={why('内部取引として指定し、相手区分の入力欄を開きます')} onClick={o.onInternal} />
+        <span role="radiogroup" aria-label="資金モード" title={ro ? reason : FUND_MODE_NOTE[o.fundMode]} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, padding: 2, border: '1px solid #cfd8e0', borderRadius: 8, background: '#eef2f5' }}>
+          {FUND_MODES.map((m) => {
+            const on = m === o.fundMode;
+            return <button key={m} type="button" role="radio" aria-checked={on} className="ef-act" data-menu={'資金モード:' + m} disabled={ro} onClick={() => o.onFundMode(m)} title={ro ? reason : FUND_MODE_NOTE[m]} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: on ? (m === '自動資金' ? o.accent : '#6b3fb5') : 'transparent', color: on ? '#fff' : '#48565f', fontSize: 12, fontWeight: on ? 800 : 600, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>{m}</button>;
+          })}
+          <span style={{ color: '#5b6773', paddingRight: 5 }}><Kbd k="Alt+M" /></span>
+        </span>
+      </ActionGroup>
+      <ActionGroup caption="参照">
+        <ActButton label="科目別残高" k="B" accent={o.accent} onClick={() => setDlg('科目別残')} />
+        <ActButton label="現預金残高" k="Z" accent={o.accent} onClick={() => setDlg('現預金残')} />
+        <ActButton label="画面問合" k="W" accent={o.accent} title="参照パネルや問合せ画面（日記帳・元帳・試算表など）を開きます" onClick={() => setDlg('問合')} />
+      </ActionGroup>
+    </div>
+  );
+
+  const month = o.month || '8';
+  const dialogs: ReactNode = (
+    <>
+      <InputSettingsModal open={dlg === '入力の変更'} onClose={() => setDlg(null)} accent={o.accent} />
+      <ShortcutHelpModal open={dlg === 'ヘルプ'} onClose={() => setDlg(null)} shortcuts={shortcuts} formatName={name} enterOrder={o.enterOrder} />
+      <TemplatePickerModal
+        key={dlg === '定型' ? 't' : 'r'}
+        open={dlg === '定型' || dlg === '連続'}
+        mode={dlg === '定型' ? '定型' : '連続'}
+        onClose={() => setDlg(null)}
+        accent={o.accent}
+        onPick={(t) => { const m = dlg === '定型' ? '定型' : '連続'; setDlg(null); o.onLoadTemplate(t, m); }}
+        onNew={() => { setDlg(null); saveAsTemplate(); }}
+      />
+      <TemplateWizardModal wiz={wiz} setWiz={setWiz} accent={o.accent} onSaved={() => o.toast('定型仕訳として登録しました。「定型仕訳」「連続定型」から呼び出せます')} />
+      <AllocationWizardModal awiz={awiz} setAwiz={setAwiz} accent={o.accent} onSaved={() => setDlg('按分')} />
+      <AllocationRunModal
+        open={dlg === '按分'}
+        onClose={() => setDlg(null)}
+        accent={o.accent}
+        onRegister={(rows, date) => {
+          const ids = rows.map((r) => addVoucher({ kind: FORMAT_KIND[o.format], date, kari: r.kari, kashi: r.kashi, tekiyo: `${r.tekiyo}（${r.division.split(' ')[1] ?? r.division}）`, amount: r.amount, service: r.division, shohyo: true }).id);
+          o.onRegistered?.(ids);
+          o.toast(`自動按分：${rows.length} 枚の伝票を登録しました`);
+        }}
+        onNew={() => { setDlg(null); setAwiz({ step: 0, t: blankAllocation({ kari: o.kari, kashi: o.kashi, tekiyo: o.lines[0]?.tekiyo ?? '' }) }); }}
+      />
+      {dlg === '科目別残' && <AccountBalanceModal open onClose={() => setDlg(null)} accent={o.accent} entries={vouchers} month={month} focus={[o.kari, o.kashi]} />}
+      {dlg === '現預金残' && <CashBalanceModal open onClose={() => setDlg(null)} accent={o.accent} entries={vouchers} month={month} focus={[o.kari, o.kashi]} />}
+      {dlg === 'カレンダー' && <CalendarModal open onClose={() => setDlg(null)} accent={o.accent} entries={vouchers} month={month} day={o.day} onPick={(m, d) => { o.onPickDate(m, d); o.toast(`日付を ${m}月${d}日 にしました`); }} />}
+      <VoucherPickerModal key={dlg === '削除' ? 'd' : 'e'} open={dlg === '訂正' || dlg === '削除'} mode={dlg === '削除' ? '削除' : '訂正'} onClose={() => setDlg(null)} accent={o.accent} onPick={(g) => { if (dlg === '削除') setDel(g.rows); else setEdit(g.head); setDlg(null); }} />
+      <EditVoucherModal voucher={edit} onClose={() => setEdit(null)} accent={o.accent} returnTo={name} />
+      <DeleteVoucherModal rows={del} onClose={() => setDel(null)} onDeleted={() => o.toast('伝票を削除しました')} />
+      <ConfirmModal open={dlg === '中止'} title="伝票中止の確認" okLabel="入力中の伝票を破棄する" danger accent={o.accent} onClose={() => setDlg(null)} onOk={() => { setDlg(null); o.onCancel(); o.toast('入力中の伝票を破棄しました'); }}>
+        入力中の伝票を破棄します。<b>登録済みの伝票には影響しません。</b>
+      </ConfirmModal>
+      <ConfirmModal open={leave != null} title="入力中の伝票があります" okLabel={`破棄して${leave && (ENTRY_FORMATS as readonly string[]).includes(leave) ? '形式を切り替える' : '移動する'}`} danger accent={o.accent} onClose={() => setLeave(null)} onOk={() => { const to = leave; setLeave(null); if (to) o.onNavigate?.(to); }}>
+        「{leave ? displayName(leave) : ''}」へ移動すると、<b>入力中（未登録）の伝票は破棄されます。</b><br />登録してから移動する場合は「入力に戻る」を押し、伝票登録を行ってください。
+      </ConfirmModal>
+      <Modal open={dlg === '問合'} onClose={() => setDlg(null)} width={520} title="画面問合">
+        <div
+          style={{ padding: '12px 22px 18px', display: 'grid', gap: 6 }}
+          onKeyDown={(e) => {
+            if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+            const list = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>('button[data-inq]'));
+            const i = list.indexOf(document.activeElement as HTMLButtonElement);
+            e.preventDefault();
+            list[Math.max(0, Math.min(list.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))]?.focus();
+          }}
+        >
+          <div style={{ fontSize: 12, color: '#7a8794', marginBottom: 4 }}>↑↓ で選び Enter で開きます。</div>
+          {o.onOpenPanel && <button type="button" data-inq className="ef-act ef-input" autoFocus onClick={() => { setDlg(null); o.onOpenPanel?.(); }} style={{ ...btn(o.accent), textAlign: 'left', padding: '10px 14px' }}>参照パネルを開く<span style={{ fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>伝票入力のまま、日記帳・元帳・残高照合を横に表示</span></button>}
+          {o.onNavigate ? INQUIRY_TARGETS.map((t, i) => (
+            <button key={t} type="button" data-inq className="ef-act ef-input" autoFocus={!o.onOpenPanel && i === 0} onClick={() => { setDlg(null); go(t); }} style={{ ...btn(), textAlign: 'left', padding: '10px 14px' }}>{displayName(t)}<span style={{ fontWeight: 500, color: '#9aa5b1', marginLeft: 8 }}>画面を移動</span></button>
+          )) : <Notice>問合せ画面への移動は、上部のメニューから行えます。</Notice>}
+          {o.dirty && o.onNavigate && <Notice tone="warn">入力中（未登録）の伝票があります。画面を移動する前に確認を表示します。</Notice>}
+        </div>
+      </Modal>
+    </>
+  );
+
+  return { topBar, banner, actionBar, dialogs, editable, reason, openEdit: (v: Voucher) => setEdit(v), openDelete: (rows: Voucher[]) => setDel(rows) };
+}

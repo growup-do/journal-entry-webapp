@@ -56,14 +56,14 @@ export interface MenuGroup {
   option?: boolean;
 }
 export const MENU_GROUPS: MenuGroup[] = [
-  { key: 'input', label: '入力', icon: 'input', items: ['単一入力', '伝票入力', '振替入力', '振替単一'] },
-  { key: 'ledger', label: '仕訳・元帳', icon: 'ledger', items: ['仕訳一覧', '勘定元帳', '資金元帳', '業者元帳'] },
+  { key: 'input', label: '伝票入力', icon: 'input', items: ['伝票入力', '単一入力', '振替入力', '振替単一'] },
+  { key: 'ledger', label: '日記帳・元帳', icon: 'ledger', items: ['仕訳一覧', '勘定元帳', '資金元帳', '業者元帳'] },
   { key: 'trend', label: '推移', icon: 'trend', items: ['科目推移', '資金推移', '業者推移'] },
-  { key: 'compare', label: '試算・対比', icon: 'compare', items: ['月次試算', '予算対比', '月次決算'] },
-  { key: 'audit', label: '調査', icon: 'audit', items: ['仕訳数', '日次調査', '決算調査'] },
-  { key: 'graph', label: 'グラフ', icon: 'graph', items: ['経年グラフ', '分析グラフ', '充実残額'] },
-  { key: 'print', label: '印刷', icon: 'print', items: ['印刷センター', '一括印刷', '共通の印刷設定'] },
-  { key: 'option', label: 'オプション', icon: 'option', items: ['小口現金', '減価償却', '預金出納', '収入支出'], option: true },
+  { key: 'compare', label: '試算表・決算書', icon: 'compare', items: ['月次試算', '予算対比', '月次決算'] },
+  { key: 'audit', label: '調査・チェック', icon: 'audit', items: ['仕訳数', '日次調査', '決算調査'] },
+  { key: 'graph', label: 'グラフ・分析', icon: 'graph', items: ['経年グラフ', '分析グラフ', '充実残額'] },
+  { key: 'print', label: '帳票・印刷', icon: 'print', items: ['印刷センター', '一括印刷', '別紙（注記・明細書・財産目録）', '共通の印刷設定'] },
+  { key: 'option', label: 'オプション', icon: 'option', items: ['小口現金', '減価償却', '預金出納', '収入支出', '電子印'], option: true },
 ];
 /** 互換用：フラットなグループ配列 */
 export const MENU: string[][] = MENU_GROUPS.map((g) => g.items);
@@ -71,7 +71,7 @@ export const MENU: string[][] = MENU_GROUPS.map((g) => g.items);
 export const groupOf = (label: string) => MENU_GROUPS.find((g) => g.items.includes(label));
 
 /** オプション契約の機能（メニュー上で色分け表示） */
-export const OPTION_MENU = ['小口現金', '減価償却', '預金出納', '収入支出'];
+export const OPTION_MENU = ['小口現金', '減価償却', '預金出納', '収入支出', '電子印'];
 export const isOptionMenu = (label: string) => OPTION_MENU.includes(label);
 
 /** 法人メニュー（通常メニューと別枠でアプリバーに配置） */
@@ -81,7 +81,7 @@ export const CORP_MENU = ['法人調査', '法人印刷'];
 export const DEFAULT_MENU = 'ホーム';
 
 /** プロトタイプとして画面を用意しているメニュー項目 */
-export const IMPLEMENTED_MENU = ['単一入力', '伝票入力', '振替入力', '振替単一', '仕訳一覧', '勘定元帳', '資金元帳', '業者元帳', '科目推移', '資金推移', '業者推移', '月次試算', '予算対比', '月次決算', '仕訳数', '日次調査', '決算調査', '経年グラフ', '分析グラフ', '充実残額', '当年仕訳', '前年仕訳', '元帳１', '元帳２', '残高照合', '法人調査', '法人印刷', 'ホーム', 'ユーザー設定', 'メンバーの追加、管理', 'ログアウト', '小口現金', '預金出納', '収入支出', '減価償却', '事業者', '開始残高', '勘定科目', '税区分', '部門', 'タグ', '摘要辞書', '仕訳辞書', '取引先', '他社ソフトデータの移行', '予算', '年度更新・切替', '環境設定', '決算附属明細書', '整合性チェック', '印刷センター', '一括印刷', '共通の印刷設定'];
+export const IMPLEMENTED_MENU = ['単一入力', '伝票入力', '振替入力', '振替単一', '仕訳一覧', '勘定元帳', '資金元帳', '業者元帳', '科目推移', '資金推移', '業者推移', '月次試算', '予算対比', '月次決算', '仕訳数', '日次調査', '決算調査', '経年グラフ', '分析グラフ', '充実残額', '当年仕訳', '前年仕訳', '元帳１', '元帳２', '残高照合', '法人調査', '法人印刷', 'ホーム', 'ユーザー設定', 'メンバーの追加、管理', 'ログアウト', '小口現金', '預金出納', '収入支出', '減価償却', '事業者', '開始残高', '勘定科目', '税区分', '部門', 'タグ', '摘要辞書', '仕訳辞書', '取引先', '他社ソフトデータの移行', '予算', '年度更新・切替', '環境設定', '決算附属明細書', '整合性チェック', '印刷センター', '一括印刷', '共通の印刷設定', '年度の切替', '年度更新', '年度更新（減価のみ）', '財務分析設定', '決算チェック設定', 'パスワード', '仕訳更新', 'データのバックアップ', '別紙（注記・明細書・財産目録）', '電子印'];
 
 /** 仕訳帳シード（フォーム型・8件） */
 const SEED_FORM: Omit<JournalEntry, 'id'>[] = [
@@ -198,8 +198,8 @@ export interface JournalRow {
   gyosha?: string;
   shohyo: boolean;
 }
-/** 伝票入力区分（サンプルでは Seq から機械的に割り振り：本部／保育事業／子育て支援／一時預かり） */
-const serviceOf = (seq: number) => (seq % 7 === 0 ? '001 本部' : seq % 5 === 0 ? '003 子育て支援' : seq % 11 === 0 ? '004 一時預かり' : '002 保育事業');
+/** 伝票入力区分（サンプルでは Seq から機械的に割り振り：本部／保育事業／一時預かり。伝票は末端の入力区分に登録する） */
+const serviceOf = (seq: number) => (seq % 7 === 0 ? '001 本部' : seq % 5 === 0 ? '004 一時預かり' : '002 保育事業');
 const J = (seq: number, kind: JournalRow['kind'], no: string, date: string, kari: string, kashi: string, tekiyo: string, amount: number, gyosha?: string): JournalRow => ({
   seq, kind, no, date, kari, kashi, tekiyo, amount, service: serviceOf(seq), gyosha, shohyo: true,
 });
@@ -421,7 +421,31 @@ export const CLOSING_REPORT_ROWS: { name: string; avail: string[]; required: str
 /** 設定メニュー（ヘッダーの歯車） */
 /** ヘッダー「照会」の項目（1画面で開く） */
 export const INQUIRY_MENU = ['元帳１', '元帳２', '残高照合'];
-export const SETTINGS_MENU = ['事業者', '年度更新・切替', '開始残高', '予算', '勘定科目', '税区分', '部門', 'タグ', '摘要辞書', '仕訳辞書', '取引先', '決算附属明細書', '整合性チェック', '環境設定', '他社ソフトデータの移行'];
+/** 各種設定（旧 保守メニュー）：性質ごとに分類（依頼書 5.1.2）。年度の切替と年度更新は別グループに分離（5.5.2） */
+export interface SettingsGroup { key: string; label: string; note?: string; danger?: boolean; items: string[] }
+export const SETTINGS_GROUPS: SettingsGroup[] = [
+  { key: 'master', label: 'マスター設定', note: '科目・業者・摘要・残高・予算など', items: ['事業者', '勘定科目', '取引先', '摘要辞書', '開始残高', '予算', '決算附属明細書', '財務分析設定', '税区分'] },
+  { key: 'register', label: '登録機能', note: '定型仕訳・自動按分のひな形', items: ['仕訳辞書'] },
+  { key: 'maint', label: '保守・運用', note: 'チェック・動作環境・バックアップ', items: ['整合性チェック', '決算チェック設定', 'パスワード', '環境設定', '仕訳更新', 'データのバックアップ'] },
+  { key: 'year', label: '年度の切替', note: '参照する会計年度を変える（元に戻せます）', items: ['年度の切替'] },
+  { key: 'update', label: '年度更新', note: '次年度へ繰り越す（取り消しできません）', danger: true, items: ['年度更新', '年度更新（減価のみ）'] },
+  { key: 'web', label: 'Web版の追加案', note: '現行にない機能（要否を確認中）', items: ['部門', 'タグ', '他社ソフトデータの移行'] },
+];
+export const SETTINGS_MENU = [...SETTINGS_GROUPS.flatMap((g) => g.items), '年度更新・切替'];
+
+/** 画面キー → 表示名。キー（メモ・URLで使用）は変えず、表示だけ現行システムの用語に合わせる（依頼書 1.3／5.1.1） */
+export const DISPLAY_NAME: Record<string, string> = {
+  単一入力: '単一形式', 伝票入力: '仕訳伝票形式', 振替入力: '振替伝票形式', 振替単一: '振替単一形式',
+  仕訳一覧: '日記帳（仕訳一覧）', 勘定元帳: '総勘定元帳', 業者元帳: '業者元帳（業者別支払一覧）',
+  科目推移: '科目推移表', 資金推移: '資金推移表', 業者推移: '業者推移表',
+  月次試算: '試算表（月次試算）', 月次決算: '決算書（月次決算）', 予算対比: '予算対比表',
+  仕訳数: '仕訳数の問合せ', 日次調査: '同額・不一致検索（日次調査）', 決算調査: '決算チェック（決算調査）',
+  充実残額: '社会福祉充実残額', 印刷センター: '帳票の印刷',
+  小口現金: '小口現金出納', 預金出納: '預金出納帳', 収入支出: '伺い書（収入・支出調書）',
+  事業者: '法人・区分', 勘定科目: '科目設定（勘定科目・資金科目）', 取引先: '業者', 摘要辞書: '摘要', 開始残高: '残高（繰越・前年実績）', 予算: '予算額の設定',
+  決算附属明細書: '決算附属明細書設定', 税区分: '消費税（税区分）', 仕訳辞書: '連続定型仕訳・自動按分仕訳の登録', 整合性チェック: '伝票・科目チェック', 環境設定: '動作環境',
+};
+export const displayName = (key: string) => DISPLAY_NAME[key] ?? key;
 
 /** ホーム：銀行の預金残高（サンプル） */
 export const HOME_BANKS: { name: string; bank: string; balance: number; diff: number; updated: string }[] = [

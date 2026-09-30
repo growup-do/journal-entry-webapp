@@ -1,13 +1,13 @@
 // 経年グラフ／分析グラフ（共通部品）
+//   骨格は ReportShell 共通：集計期間 → 表示切替（金額単位・年度／月・スケール）→ グラフ。
 //   左：部タブ（経年のみ）＋科目ツリー（チェックで選択）／右：選択した科目ごとのグラフを縦に並べる。
-//   既存Fキー：F1選択解除・F2単位切替（千円⇄円）・F3年月切替（年度⇄月）・F11スケール切替（個別⇄共通）。
 //   値はサンプル（決定的な疑似乱数）。
 
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { BarChart } from './BarChart';
-import { LABEL, ReportShell } from './ReportShell';
-import { ANALYSIS_ITEMS, ERA_YEARS, GRAPH_BAR_COLOR, GRAPH_PARTS, GRAPH_TREES, MONTH_LABELS, type GraphPart } from '../data';
+import { LABEL, ReportShell, Segmented } from './ReportShell';
+import { displayName, ANALYSIS_ITEMS, ERA_YEARS, GRAPH_BAR_COLOR, GRAPH_PARTS, GRAPH_TREES, MONTH_LABELS, type GraphPart } from '../data';
 import { seededSeries } from '../lib/hier';
 
 interface Props {
@@ -52,14 +52,22 @@ export function GraphPage({ mode, variant, accent }: Props) {
     <ReportShell
       variant={variant}
       accent={accent}
-      title={isYearly ? '経年グラフ' : '分析グラフ'}
+      title={displayName(isYearly ? '経年グラフ' : '分析グラフ')}
       subtitle={<>{isYearly ? '科目を選ぶと、直近8年度の推移グラフを表示します。' : '経営分析の指標を選ぶと、直近8年度の推移グラフを表示します。'}<span style={{ color: '#b7791f' }}>（値はサンプルです）</span></>}
-      tools={[
-        { label: '選択解除', onClick: () => setSelected([]) },
-        ...(isYearly ? [{ label: unitK ? '単位切替（千円→円）' : '単位切替（円→千円）', onClick: () => setUnitK((u) => !u) }] : []),
-        { label: byMonth ? '年月切替（月→年度）' : '年月切替（年度→月）', onClick: () => setByMonth((b) => !b) },
-        { label: commonScale ? 'スケール切替（共通→個別）' : 'スケール切替（個別→共通）', onClick: () => setCommonScale((c) => !c) },
-      ]}
+      tools={[{ label: '選択解除', onClick: () => setSelected([]) }]}
+      period={
+        <>
+          <span style={LABEL}>集計期間</span>
+          <span style={{ fontSize: 12.5, color: '#48565f' }}>{byMonth ? '当年度の月別（4月〜3月）' : `直近${ERA_YEARS.length}年度`}</span>
+        </>
+      }
+      switches={
+        <>
+          <Segmented label="横軸" items={['年度', '月'] as const} value={byMonth ? '月' : '年度'} onChange={(v) => setByMonth(v === '月')} accent={accent} />
+          {isYearly && <Segmented label="金額単位" items={['円', '千円'] as const} value={unitK ? '千円' : '円'} onChange={(v) => setUnitK(v === '千円')} accent={accent} />}
+          <Segmented label="目盛り" items={['個別', '共通'] as const} value={commonScale ? '共通' : '個別'} onChange={(v) => setCommonScale(v === '共通')} accent={accent} />
+        </>
+      }
     >
       <div style={{ display: 'grid', gridTemplateColumns: '300px minmax(0,1fr)', gap: 0, minHeight: 520 }}>
         {/* 左：部タブ＋ツリー */}

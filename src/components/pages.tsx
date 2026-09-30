@@ -19,12 +19,38 @@ import { CommonPrintSettingsPage, PrintCenterPage } from './PrintCenter';
 import { TrendPage } from './TrendPage';
 import { TrialBalancePage } from './TrialBalancePage';
 import { PlaceholderPage } from './PlaceholderPage';
+import { OptionGate } from './OptionGuidePage';
+import { FiscalYearPage } from './FiscalYearPage';
+import { AppendixPrintPage } from './AppendixPrintPage';
+import { AuditSettingsPage, BackupPage, FinancialAnalysisSettingsPage, JournalRefreshPage, PasswordSettingsPage } from './MaintenancePages';
 import { renderSettingsPage } from './SettingsPages';
 import { SETTINGS_MENU } from '../data';
 import { SingleEntryPage } from './SingleEntryPage';
 import { TransferEntryPage } from './TransferEntryPage';
 
 export function renderPage(page: string, variant: 'form' | 'sheet', accent: string, accentRgb: string, onNavigate: (label: string) => void, year: 'current' | 'prev' = 'current', onLogout: () => void = () => {}) {
+  // 各種設定のうち、依頼書対応で追加・分離した画面（年度の切替／年度更新、保守・運用、別紙）
+  switch (page) {
+    case '年度の切替':
+    case '年度更新・切替':
+      return <FiscalYearPage key="fy-switch" variant={variant} accent={accent} initial="switch" onNavigate={onNavigate} />;
+    case '年度更新':
+      return <FiscalYearPage key="fy-update" variant={variant} accent={accent} initial="update" onNavigate={onNavigate} />;
+    case '年度更新（減価のみ）':
+      return <FiscalYearPage key="fy-dep" variant={variant} accent={accent} initial="dep" onNavigate={onNavigate} />;
+    case '財務分析設定':
+      return <FinancialAnalysisSettingsPage variant={variant} accent={accent} onNavigate={onNavigate} />;
+    case '決算チェック設定':
+      return <AuditSettingsPage variant={variant} accent={accent} onNavigate={onNavigate} />;
+    case 'パスワード':
+      return <PasswordSettingsPage variant={variant} accent={accent} />;
+    case '仕訳更新':
+      return <JournalRefreshPage variant={variant} accent={accent} onNavigate={onNavigate} />;
+    case 'データのバックアップ':
+      return <BackupPage variant={variant} accent={accent} />;
+    case '別紙（注記・明細書・財産目録）':
+      return <AppendixPrintPage variant={variant} accent={accent} onNavigate={onNavigate} />;
+  }
   if (SETTINGS_MENU.includes(page)) return renderSettingsPage(page, variant, accent);
   switch (page) {
     case 'ホーム':
@@ -36,11 +62,11 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
     case 'ログアウト':
       return <LogoutPage accent={accent} onNavigate={onNavigate} onLogout={onLogout} />;
     case '単一入力':
-      return <SingleEntryPage variant={variant} accent={accent} accentRgb={accentRgb} prevYear={year === 'prev'} />;
+      return <SingleEntryPage variant={variant} accent={accent} accentRgb={accentRgb} prevYear={year === 'prev'} onNavigate={onNavigate} />;
     case '振替入力':
-      return <TransferEntryPage key="transfer" variant={variant} accent={accent} accentRgb={accentRgb} />;
+      return <TransferEntryPage key="transfer" variant={variant} accent={accent} accentRgb={accentRgb} onNavigate={onNavigate} />;
     case '振替単一':
-      return <TransferEntryPage key="transfer-single" variant={variant} accent={accent} accentRgb={accentRgb} single />;
+      return <TransferEntryPage key="transfer-single" variant={variant} accent={accent} accentRgb={accentRgb} single onNavigate={onNavigate} />;
     case '日次調査':
       return <DailyAuditPage variant={variant} accent={accent} onNavigate={onNavigate} />;
     case '仕訳一覧':
@@ -80,13 +106,15 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
     case '充実残額':
       return <SufficiencyPage variant={variant} accent={accent} onNavigate={onNavigate} />;
     case '小口現金':
-      return <CashbookPage key="petty" kind="petty" variant={variant} accent={accent} accentRgb={accentRgb} />;
+      return <OptionGate label="小口現金" accent={accent} onNavigate={onNavigate}><CashbookPage key="petty" kind="petty" variant={variant} accent={accent} accentRgb={accentRgb} /></OptionGate>;
     case '預金出納':
-      return <CashbookPage key="bank" kind="bank" variant={variant} accent={accent} accentRgb={accentRgb} />;
+      return <OptionGate label="預金出納" accent={accent} onNavigate={onNavigate}><CashbookPage key="bank" kind="bank" variant={variant} accent={accent} accentRgb={accentRgb} /></OptionGate>;
     case '収入支出':
-      return <ReceiptsPaymentsPage variant={variant} accent={accent} />;
+      return <OptionGate label="収入支出" accent={accent} onNavigate={onNavigate}><ReceiptsPaymentsPage variant={variant} accent={accent} /></OptionGate>;
     case '減価償却':
-      return <DepreciationPage variant={variant} accent={accent} />;
+      return <OptionGate label="減価償却" accent={accent} onNavigate={onNavigate}><DepreciationPage variant={variant} accent={accent} /></OptionGate>;
+    case '電子印':
+      return <OptionGate label="電子印" accent={accent} onNavigate={onNavigate}><PlaceholderPage title="電子印" accent={accent} /></OptionGate>;
     case '予算対比':
       return <BudgetComparePage variant={variant} accent={accent} onNavigate={onNavigate} />;
     default:

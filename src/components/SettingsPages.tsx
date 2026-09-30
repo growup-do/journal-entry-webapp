@@ -290,7 +290,7 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
   const [importOpen, setImportOpen] = useState(false);
   /** 前年度（令和7年度）決算の期末残高（サンプル）。本番では前年度データの貸借対照表から取得 */
   const PRIOR: number[][] = [[0, 31200], [21500, 0], [0, 9870500], [0, 142300], [0, 1350000], [0, 22000000], [0, 15100000], [0, 1620000], [0, 385000], [0, 262000], [0, 1550000], [0, 25800000], [0, 9300000], [21500, 12817000]];
-  const importPrior = () => { setVals(PRIOR.map((r) => [...r])); setImportOpen(false); toast.show('前年度（令和7年度）の決算残高を貸借科目繰越残高に取り込みました（F12 OK で確定）'); };
+  const importPrior = () => { setVals(PRIOR.map((r) => [...r])); setImportOpen(false); toast.show('前年度（令和7年度）の決算残高を貸借科目繰越残高に取り込みました（「OK」で確定）'); };
   const PL_ITEMS: { name: string; side: '借方' | '貸方'; v: number }[] = [{ name: '保育事業収益', side: '貸方', v: 40_200_000 }, { name: '補助金事業収益', side: '貸方', v: 700_000 }, { name: '人件費', side: '借方', v: 28_100_000 }, { name: '事業費', side: '借方', v: 5_050_000 }, { name: '事務費', side: '借方', v: 3_480_000 }, { name: '減価償却費', side: '借方', v: 3_034_380 }];
   const FUND_ITEMS: { name: string; side: '収入' | '支出'; v: number }[] = [{ name: '委託費収入', side: '収入', v: 13_662_150 }, { name: '利用者等利用料収入', side: '収入', v: 84_000 }, { name: '補助金事業収入', side: '収入', v: 660_000 }, { name: '人件費支出', side: '支出', v: 9_600_000 }, { name: '事業費支出', side: '支出', v: 1_720_000 }, { name: '事務費支出', side: '支出', v: 1_150_000 }];
   const sum = (side: '借方' | '貸方') => ITEMS.reduce((s, it, i) => s + (it.side === side ? vals[i][site] : 0), 0);
@@ -302,14 +302,14 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
       <button type="button" className="btn-outline" onClick={() => setImportOpen(true)} style={btn()}>前年度決算から取込</button>
       <button type="button" className="btn-outline" onClick={() => toast.show('繰越残高の設定 - 貸借科目期中：期中から使い始めた場合に使用（カスタマーセンターへご相談ください）')} style={btn()}>借貸残高（期中）</button>
       <button type="button" className="btn-outline" onClick={() => toast.show('貸借対照表 繰越 内部取引残高：年度更新時に自動設定されます。通常は変更不要')} style={btn()}>内部取引</button>
-      <button type="button" className="submit-btn" disabled={!ok} onClick={() => toast.show('開始残高を確定しました（プロトタイプ）')} style={{ ...btn(accent, true), opacity: ok ? 1 : 0.5 }}>F12 OK</button>
+      <button type="button" className="submit-btn" disabled={!ok} onClick={() => toast.show('開始残高を確定しました（プロトタイプ）')} style={{ ...btn(accent, true), opacity: ok ? 1 : 0.5 }}>OK</button>
     </>}>
       <ToastView msg={toast.msg} />
       <Modal open={importOpen} onClose={() => setImportOpen(false)} width={480} title="前年度決算から取込" strict>
         <div style={{ padding: '16px 22px 18px', fontSize: 13, lineHeight: 1.8 }}>
           <div>前年度（令和7年度）の決算残高を貸借科目繰越残高に取り込みます。</div>
           <div style={{ color: '#c0392b', fontWeight: 700 }}>現在の入力値は上書きされます。</div>
-          <div style={{ fontSize: 12, color: '#7a8794', marginTop: 6 }}>対象：本部／チャイルド保育園の全拠点。取り込み後は貸借一致を確認し「F12 OK」で確定してください。</div>
+          <div style={{ fontSize: 12, color: '#7a8794', marginTop: 6 }}>対象：本部／チャイルド保育園の全拠点。取り込み後は貸借一致を確認し「OK」で確定してください。</div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
             <button type="button" onClick={() => setImportOpen(false)} style={btn()}>キャンセル</button>
             <button type="button" className="submit-btn" onClick={importPrior} style={btn(accent, true)}>OK（取り込む）</button>

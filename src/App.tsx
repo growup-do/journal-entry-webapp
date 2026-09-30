@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { FormScreen } from './components/FormScreen';
 import { SheetScreen } from './components/SheetScreen';
 import { MemoLayer } from './memo/MemoLayer';
+import { getSession } from './store/session';
 import { SettlementAuditModal } from './components/SettlementAuditModal';
 import { JournalCountModal } from './components/JournalCountModal';
 import { CorporatePrintModal } from './components/CorporatePrintModal';
@@ -83,8 +84,10 @@ export default function App() {
   });
   const login = () => {
     try { sessionStorage.setItem('proto-logged-in', '1'); } catch { /* ignore */ }
+    // 起動時は区分・年度の選択を先に表示し、その後は設定された初期画面（ホーム／伝票入力）へ
+    try { sessionStorage.setItem('proto-pick-division', '1'); } catch { /* ignore */ }
     setLoggedIn(true);
-    setPage(DEFAULT_MENU);
+    setPage(getSession().startScreen ?? DEFAULT_MENU);
   };
   const logout = () => {
     try { sessionStorage.removeItem('proto-logged-in'); } catch { /* ignore */ }
@@ -186,7 +189,7 @@ export default function App() {
       </div>
       <CorporatePrintModal open={corpPrintOpen} onClose={() => setCorpPrintOpen(false)} />
 
-      <SettlementAuditModal open={auditOpen} onClose={() => setAuditOpen(false)} />
+      <SettlementAuditModal open={auditOpen} onClose={() => setAuditOpen(false)} onNavigate={(p) => { setAuditOpen(false); setPage(p); }} />
       <JournalCountModal open={countOpen} onClose={() => setCountOpen(false)} />
 
       <MemoLayer screenKey={screenKey} screenLabel={screenLabel} onNavigate={navigateTo} />

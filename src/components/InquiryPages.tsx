@@ -1,6 +1,7 @@
 // 照会画面（ヘッダー右側の「照会」から開く）：元帳１／元帳２／残高照合
-//   他の帳票画面と同じ1画面構成。元帳１と元帳２は別々の条件を保持する（key で分離）。
-//   元帳は科目のほか、相手勘定科目・補助科目・税区分・摘要でも絞り込める。
+//   元帳１・元帳２は総勘定元帳の参照用ビュー（旧「ワイド画面」）。伝票入力の横の参照パネルにも表示できる。
+//   参照用のため印刷・Excel は置かない（印刷は総勘定元帳の画面で行う）。
+//   元帳１と元帳２は別々の条件を保持する（key で分離）。科目のほか、相手勘定科目・補助科目・税区分・摘要でも絞り込める。
 
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
@@ -8,7 +9,7 @@ import { AssistField } from './AssistField';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { LABEL, NUM, ReportShell, TD, TH, yen } from './ReportShell';
-import { BALANCE_ACCOUNTS, JOURNAL_ROWS, type JournalRow } from '../data';
+import { BALANCE_ACCOUNTS, JOURNAL_ROWS, displayName, type JournalRow } from '../data';
 import { useAssist } from '../hooks/useAssist';
 import type { MonthFilter } from '../types';
 
@@ -53,14 +54,13 @@ interface Cond {
 }
 const EMPTY: Cond = { other: '', sub: '', tax: '', tekiyo: '' };
 
-export function LedgerInquiryPage({ slot, variant, accent, accentRgb }: LedgerProps) {
+export function LedgerInquiryPage({ slot, variant, accent, accentRgb, onNavigate }: LedgerProps) {
   const [account, setAccount] = useState(slot === 'ledger1' ? '普通預金（保育園）' : '');
   const [month, setMonth] = useState<MonthFilter>('8');
   const [cond, setCond] = useState<Cond>(EMPTY);
   const [applied, setApplied] = useState<Cond>(EMPTY);
-  const [exp, setExp] = useState<ExportSpec | null>(null);
   const assist = useAssist();
-  const title = slot === 'ledger1' ? '元帳１' : '元帳２';
+  const title = displayName(slot === 'ledger1' ? '元帳１' : '元帳２');
 
   const subOptions = Array.from(new Set(JOURNAL_ROWS.map(subOf).filter(Boolean)));
   const rows = JOURNAL_ROWS.filter((r) => {
@@ -86,18 +86,6 @@ export function LedgerInquiryPage({ slot, variant, accent, accentRgb }: LedgerPr
   const sumC = lines.reduce((a, l) => a + l.c, 0);
   const isFiltered = applied.other || applied.sub || applied.tax || applied.tekiyo;
   const dirty = JSON.stringify(cond) !== JSON.stringify(applied);
-  // 印刷／Excel：表示中の明細（繰越・月計を含む）をそのまま出力
-  const openExport = (kind: 'print' | 'excel') => {
-    const header = ['月日', 'Seq', account ? '相手勘定科目' : '借方科目 ／ 貸方科目', '摘要', '補助科目', '税区分', '借方', '貸方', ...(account ? ['残高'] : [])];
-    const rows: (string | number)[][] = [
-      ...(account ? [['', '', '繰越金額', '', '', '', '', '', CARRY]] : []),
-      ...lines.map((l) => [l.r.date, l.r.seq, l.other, l.r.tekiyo, l.sub, l.tax, l.d || '', l.c || '', ...(account ? [l.bal] : [])]),
-      [month == null ? '合計' : '月計', '', '', '', '', '', sumD, sumC, ...(account ? [bal] : [])],
-    ];
-    const filt = [applied.other && `相手科目：${applied.other}`, applied.sub && `補助科目：${applied.sub}`, applied.tax && `税区分：${applied.tax}`, applied.tekiyo && `摘要：${applied.tekiyo}`].filter(Boolean).join('　');
-    setExp({ kind, title: `${title}　${account || '全科目'}`, fileName: `${title}_${account || '全科目'}_令和8年${month ?? '全'}月`, meta: `令和8年 ${month == null ? '4月〜3月' : `${month}月`}${filt ? `　絞り込み：${filt}` : ''}`, header, rows });
-  };
-
   const fieldBtn: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, width: 240, boxSizing: 'border-box', padding: '7px 10px', background: '#fff', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left', color: 'inherit' };
   const input: CSSProperties = { padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', outline: 'none', background: '#fff', color: '#22303c', boxSizing: 'border-box' };
   const btn = (primary?: boolean): CSSProperties => ({ padding: '7px 14px', border: '1px solid ' + (primary ? accent : '#cfd8e0'), borderRadius: 8, background: primary ? accent : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
@@ -133,26 +121,35 @@ export function LedgerInquiryPage({ slot, variant, accent, accentRgb }: LedgerPr
       variant={variant}
       accent={accent}
       title={title}
-      subtitle="科目を指定して仕訳と残高を照会します。相手勘定科目・補助科目・税区分・摘要でさらに絞り込めます。元帳１と元帳２は別々の条件を保持します。"
-      tools={[{ label: '科目', onClick: () => assist.open('acc', 'account'), primary: true }, { label: '印刷', onClick: () => openExport('print') }, { label: 'Excel', onClick: () => openExport('excel') }]}
+      subtitle="総勘定元帳の参照用の画面です。科目を指定して仕訳と残高を照会します。相手勘定科目・補助科目・税区分・摘要でさらに絞り込めます。元帳１と元帳２は別々の条件を保持します。"
+      tools={[{ label: '科目検索', onClick: () => assist.open('acc', 'account'), primary: true }]}
+      period={
+        <>
+          <span style={LABEL}>集計期間</span>
+          <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} withAll />
+        </>
+      }
+      periodAside={[['借方計', yen(sumD)], ['貸方計', yen(sumC)], ...(account ? [['残高', yen(bal)]] : [])].map(([l, v]) => (
+        <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px', border: '1px solid #e2e8ee', borderRadius: 8, background: '#fbfcfd' }}>
+          <span style={{ fontSize: 10.5, fontWeight: 700, color: '#8290a0' }}>{l}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{v}</span>
+        </div>
+      ))}
+      target={
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
+          {field('指定科目', assistField('acc', account, '<<科目未選択>>', setAccount))}
+          <span style={{ fontSize: 12, color: '#7a8794', paddingBottom: 9 }}>未選択の場合は全科目の仕訳を一覧します（残高は計算しません）。</span>
+        </div>
+      }
+      notice={
+        <span data-reference-note style={{ color: '#48565f' }}>
+          {title}は参照用の画面です。伝票入力の横の「参照パネル」にも表示でき、入力しながら残高を確認できます。印刷・Excel 出力や伝票の訂正は
+          <button type="button" onClick={() => onNavigate('勘定元帳')} style={{ margin: '0 4px', padding: '1px 8px', borderRadius: 6, border: '1px solid ' + accent, background: '#fff', color: accent, fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{displayName('勘定元帳')}</button>
+          で行います。
+        </span>
+      }
       controls={
         <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <span style={LABEL}>会計月</span>
-            <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} withAll />
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
-              {[['借方計', yen(sumD)], ['貸方計', yen(sumC)], ...(account ? [['残高', yen(bal)]] : [])].map(([l, v]) => (
-                <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px', border: '1px solid #e2e8ee', borderRadius: 8, background: '#fbfcfd' }}>
-                  <span style={{ fontSize: 10.5, fontWeight: 700, color: '#8290a0' }}>{l}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{v}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
-            {field('指定科目', assistField('acc', account, '<<科目未選択>>', setAccount))}
-            <span style={{ fontSize: 12, color: '#7a8794', paddingBottom: 9 }}>未選択の場合は全科目の仕訳を一覧します（残高は計算しません）。</span>
-          </div>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e8edf2', borderRadius: 10 }}>
             <span style={{ ...LABEL, alignSelf: 'center', marginRight: 2 }}>絞り込み</span>
             {field('相手勘定科目', assistField('other', cond.other, '指定なし', (v) => setCond((c) => ({ ...c, other: v }))))}
@@ -186,7 +183,6 @@ export function LedgerInquiryPage({ slot, variant, accent, accentRgb }: LedgerPr
         </>
       }
     >
-      <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
       <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 430px)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
@@ -261,16 +257,16 @@ export function BalanceCheckPage({ variant, accent }: { variant: 'form' | 'sheet
     <ReportShell
       variant={variant}
       accent={accent}
-      title="残高照合"
+      title={displayName('残高照合')}
       subtitle="現預金科目ごとに、通帳（実残高）とシステム残高を突合して OK／NG を表示します。"
       tools={[{ label: editing ? '設定を終了' : '通帳残高の設定', onClick: () => setEditing((e) => !e), primary: true }, { label: '印刷', onClick: openExport }]}
-      controls={
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-          <span style={LABEL}>照合日</span>
+      period={
+        <>
+          <span style={LABEL}>集計期間</span>
           <span style={{ fontSize: 12.5 }}>令和8年 8月31日 時点</span>
-          <span style={{ marginLeft: 'auto', fontSize: 12.5, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: ngCount ? '#fdeee9' : '#eaf5ef', color: ngCount ? '#c0392b' : '#1f7a52' }}>{ngCount ? `不一致 ${ngCount} 件` : 'すべて一致'}</span>
-        </div>
+        </>
       }
+      periodAside={<span style={{ fontSize: 12.5, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: ngCount ? '#fdeee9' : '#eaf5ef', color: ngCount ? '#c0392b' : '#1f7a52' }}>{ngCount ? `不一致 ${ngCount} 件` : 'すべて一致'}</span>}
     >
       <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>

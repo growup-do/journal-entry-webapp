@@ -217,7 +217,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
     setBulkOpen(false);
     toast.show(`インポート伝票 ${n} 件を一括削除しました`);
   };
-  const lockedMsg = () => toast.show('集計済みの明細は訂正・削除できません（F10：集計取消 を実行してください）');
+  const lockedMsg = () => toast.show('集計済みの明細は訂正・削除できません（「集計取消」を実行してください）');
 
   // ---- 会計連動：集計済み（未連動）の明細を仕訳伝票にする ----
   const cashAccount = isPetty ? '小口現金' : book; // 出納帳の相手科目
@@ -488,7 +488,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
             <button type="button" onClick={() => setAggConfirm(false)} style={btn()}>キャンセル</button>
           </div>
           <div style={{ marginTop: 16, padding: '10px 14px', background: '#f3f6f9', borderRadius: 10, fontSize: 12, color: '#48565f' }}>
-            集計された明細に対しては以下の操作が出来なくなります。<br />①日付・金額・科目・摘要など、明細内容の訂正　②前期繰越の金額訂正　③行の挿入　④行の削除<br />※一度集計した明細に対して修正を行う場合は『F10：集計取消』を実行してから行ってください。
+            集計された明細に対しては以下の操作が出来なくなります。<br />①日付・金額・科目・摘要など、明細内容の訂正　②前期繰越の金額訂正　③行の挿入　④行の削除<br />※一度集計した明細に対して修正を行う場合は『集計取消』を実行してから行ってください。
           </div>
         </div>
       </Modal>

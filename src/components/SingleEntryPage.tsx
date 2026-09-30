@@ -1,31 +1,30 @@
-// 単一入力（既存「単一式入力」の再現）
-//   上部 … 入力した伝票が積み上がる一覧（会計月タブで絞り込み。既存の右側「当年仕訳」一覧を統合）
+// 単一入力（単一形式：1伝票＝1行）
+//   上部 … 伝票の形式の切替、入力した伝票が積み上がる一覧（会計月タブで絞り込み。行ごとに「訂正」「削除」）
 //   下部 … 1行分の入力欄。Enterで次の項目へ、金額でEnterすると登録して次の伝票へ。
-//   既存Fキー：F2伝票訂正/F3伝票削除 → 一覧の行ごとの「訂正」「削除」。F4科目別残/F5現預金残/F8カレンダ/F9連続定型 → 機能ボタン。
+//   機能ボタン（伝票の操作／行の操作／入力補助／参照）は入力欄の下に常に表示し、Alt＋英字のショートカットでも動く。
 // フォーム型（緑）・スプレッドシート型（青）のどちらのシェルからも同じ部品を使う。
 
-import { useCallback, useState } from 'react';
-import type { CSSProperties, KeyboardEvent } from 'react';
-import { AssistField } from './AssistField';
-import { AssistPanel } from './AssistPanel';
-import { Chips } from './Chips';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { ToastView, useToast } from './Toast';
 import { PrevYearJournal } from './PrevYearJournal';
-import { TemplatePickerModal } from './EntryExtras';
-import { AccountBalanceModal, CalendarModal, CashBalanceModal, yearOfMonth } from './SingleEntryTools';
+import { TorihikiBadge, useEntryTools, type EntryFlags } from './EntryExtras';
+import { ComboField, ConfirmModal, EntryStyles, FieldLabel, FlagButtons, FundAccountLine, IssueList, fieldState, focusId, hasError, hasWarn, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor } from './EntryCommon';
+import { WidePanel, useWidePanel } from './WidePanel';
+import { yearOfMonth } from './SingleEntryTools';
 import { makeSingleSeed } from '../data';
 import { useEntryForm } from '../hooks/useEntryForm';
 import { applyMonth } from '../lib/format';
+import { FUSEN_COLORS, addVoucher, deleteVoucher, getVouchers, updateVoucher } from '../store/journalStore';
+import { useSession, type TemplateLine } from '../store/session';
 import type { FormState, JournalEntry } from '../types';
 
 const PINK = '#b0426a';
-const PINK_RGB = '176,66,106';
 const BLUE = '#2c5f9e';
-const BLUE_RGB = '44,95,158';
 
 /** 一覧・入力行で共通の列構成（最後は操作列） */
-const COLS = '52px 88px 44px minmax(0,1.15fr) minmax(0,1.15fr) minmax(0,1.35fr) 118px 96px';
+const COLS = '52px 92px 84px minmax(0,1.15fr) minmax(0,1.15fr) minmax(0,1.35fr) 118px 96px';
 
 const initialForm: FormState = {
   service: '001 本部',
@@ -54,19 +53,10 @@ function weekdayOfDate(date: string): string {
   return weekdayOf(m ?? '', d ?? '');
 }
 
-/** IME変換確定のEnterを無視して fn を実行 */
-function onEnter(fn: () => void) {
-  return (e: KeyboardEvent) => {
-    if (e.key !== 'Enter') return;
-    if (e.nativeEvent.isComposing || (e.nativeEvent as unknown as { keyCode: number }).keyCode === 229) return;
-    e.preventDefault();
-    fn();
-  };
-}
-const focusId = (id: string) => setTimeout(() => document.getElementById(id)?.focus(), 0);
+const ENTER_ORDER = '月 → 日 → 借方科目 → 貸方科目 →（内部取引のとき：相手区分）→ 摘要 → 業者 → 金額。金額で Enter を押すと登録し、次の伝票の借方科目へ移ります';
 
-/** 既存Fキーのうち、単一入力で使う機能（プロトタイプではボタン化） */
-const TOOLS = ['科目別残', '現預金残', 'カレンダー', '連続定型'];
+/** 一覧の行に付ける情報（チェック・付箋・内部取引相手区分・共有ストア側の id） */
+interface RowMeta { storeId?: number; check: boolean; fusen: FusenColor; aite: string }
 
 interface Props {
   variant: 'form' | 'sheet';
@@ -74,14 +64,25 @@ interface Props {
   accentRgb: string;
   /** ヘッダーで「前年仕訳」を選んだとき：一覧を前年仕訳（閲覧のみ）に差し替え、入力行は隠す */
   prevYear?: boolean;
+  /** 形式の切替・問合せ画面への移動。未指定のときは切替を出さず、現在の形式だけを表示 */
+  onNavigate?: (label: string) => void;
 }
 
-export function SingleEntryPage({ variant, accent, accentRgb, prevYear }: Props) {
-  const [shohyo, setShohyo] = useState(true);
-  const [cheque, setCheque] = useState('');
-  const [tplOpen, setTplOpen] = useState(false);
-  const [tool, setTool] = useState<'科目別残' | '現預金残' | 'カレンダー' | null>(null);
+export function SingleEntryPage({ variant, accent, prevYear, onNavigate }: Props) {
+  const sess = useSession();
   const toast = useToast();
+  const wide = useWidePanel('wide-single', true);
+  const [flags, setFlags] = useState<EntryFlags>({ check: false, fusen: '', shohyo: true });
+  const [cheque, setCheque] = useState('');
+  const [fundMode, setFundMode] = useState<FundMode>('自動資金');
+  const [internal, setInternal] = useState(false);
+  const [aite, setAite] = useState('');
+  /** 連続定型：テンプレートの行を1枚ずつ続けて登録する */
+  const [queue, setQueue] = useState<{ name: string; lines: TemplateLine[]; i: number } | null>(null);
+  const [delTarget, setDelTarget] = useState<JournalEntry | null>(null);
+  const [meta, setMeta] = useState<Record<number, RowMeta>>({});
+  const [hi, setHi] = useState<number[]>([]);
+  const pending = useRef<RowMeta | null>(null);
 
   // 登録後：小切手Noをクリアし、借方科目へフォーカス（証憑・日付・区分は保持して連続入力）
   const afterSubmit = useCallback(() => {
@@ -91,58 +92,154 @@ export function SingleEntryPage({ variant, accent, accentRgb, prevYear }: Props)
   const v = useEntryForm({ initialForm, seed: makeSingleSeed(), afterSubmit, initialMonth: '8' });
   const f = v.form;
 
-  const doSubmit = () => v.submit({ shohyo, cheque: cheque.trim() || undefined });
+  // 登録した行の id が決まったら、行の情報（チェック・付箋・相手区分）をひも付ける
+  useEffect(() => {
+    const p = pending.current;
+    if (v.lastAdded == null || !p) return;
+    pending.current = null;
+    const id = v.lastAdded;
+    setMeta((m) => ({ ...m, [id]: p }));
+  }, [v.lastAdded]);
 
-  // 訂正：行を入力欄に戻す（既存 F2 伝票訂正）
+  const partner = needsPartner({ kari: f.kariKamoku, kashi: f.kashiKamoku, internal });
+  const issues = judgeEntry({ kari: f.kariKamoku, kashi: f.kashiKamoku, amount: toNum(f.amount), fundMode, internal, aite, division: f.service }, sess.env);
+  const blocked = hasError(issues);
+  const dirty = !!(f.kariKamoku || f.kashiKamoku || f.tekiyo || f.gyosha || f.amount);
+
+  const fill = (l: TemplateLine) => v.setFields({ kariKamoku: l.kari, kashiKamoku: l.kashi, tekiyo: l.tekiyo, gyosha: l.gyosha ?? '', amount: String(l.amount ?? '').replace(/[^0-9]/g, '') });
+  const clearEntry = () => {
+    v.setFields({ kariKamoku: '', kashiKamoku: '', tekiyo: '', gyosha: '', amount: '' });
+    setCheque('');
+    setInternal(false);
+    setAite('');
+    setQueue(null);
+    setFlags((s) => ({ ...s, check: false, fusen: '' }));
+  };
+
+  const doSubmit = (confirmed = false) => {
+    if (prevYear) { toast.show('前年仕訳は閲覧のみです。当年の表示に切り替えてから入力してください'); return; }
+    if (!tools.editable) { toast.show(tools.reason); return; }
+    if (!f.kariKamoku || !f.kashiKamoku || !toNum(f.amount)) {
+      v.submit(); // 未入力のメッセージを表示
+      focusId(!f.kariKamoku ? 'se-kari' : !f.kashiKamoku ? 'se-kashi' : 'se-amount');
+      return;
+    }
+    if (blocked) {
+      const first = issues.find((i) => i.level === 'error');
+      toast.show('登録できない内容があります。入力欄の下の表示を確認してください');
+      focusId(first?.field === 'aite' ? 'se-aite' : first?.field === 'kari' ? 'se-kari' : 'se-kashi');
+      return;
+    }
+    if (hasWarn(issues) && !confirmed) {
+      toast.show('確認が必要な内容があります。「確認して登録」を押すと登録します');
+      focusId('se-confirm');
+      return;
+    }
+    const stored = addVoucher({ kind: '単一', date: `${f.month}/${f.day}`, kari: f.kariKamoku, kashi: f.kashiKamoku, tekiyo: f.tekiyo, amount: toNum(f.amount), service: f.service, gyosha: f.gyosha || undefined, shohyo: flags.shohyo, cheque: cheque.trim() || undefined, internal: partner || undefined });
+    if (flags.check || flags.fusen) updateVoucher(stored.id, { check: flags.check, fusen: flags.fusen });
+    if (partner) setPartner(stored.id, aite);
+    pending.current = { storeId: stored.id, check: flags.check, fusen: flags.fusen, aite: partner ? aite : '' };
+    setHi([stored.id]);
+    v.submit({ shohyo: flags.shohyo, cheque: cheque.trim() || undefined });
+    setFlags((s) => ({ ...s, check: false, fusen: '' }));
+    setInternal(false);
+    setAite('');
+    // 連続定型：次の行を入力欄に呼び出す
+    if (queue) {
+      const next = queue.i + 1;
+      if (next < queue.lines.length) {
+        fill(queue.lines[next]);
+        setQueue({ ...queue, i: next });
+        focusId('se-amount');
+        toast.show(`伝票を登録しました。連続定型「${queue.name}」 ${next + 1}／${queue.lines.length} 枚目を呼び出しました`);
+        return;
+      }
+      setQueue(null);
+      toast.show(`連続定型「${queue.name}」の ${queue.lines.length} 枚を登録しました`);
+      return;
+    }
+    toast.show('伝票を登録しました');
+  };
+
+  const tools = useEntryTools({
+    format: '単一入力',
+    accent,
+    onNavigate,
+    toast: toast.show,
+    dirty: dirty && !prevYear,
+    service: f.service,
+    month: f.month,
+    day: f.day,
+    kari: f.kariKamoku,
+    kashi: f.kashiKamoku,
+    lines: [{ kari: f.kariKamoku, kashi: f.kashiKamoku, tekiyo: f.tekiyo, amount: f.amount, gyosha: f.gyosha || undefined }],
+    multiRow: false,
+    rowLabel: '入力中の伝票',
+    flags,
+    onFlags: (p) => setFlags((s) => ({ ...s, ...p })),
+    fundMode,
+    onFundMode: setFundMode,
+    onSubmit: () => doSubmit(),
+    onCancel: () => { clearEntry(); focusId('se-kari'); },
+    internal: partner,
+    onInternal: () => {
+      if (internal) { setInternal(false); return; }
+      setInternal(true);
+      focusId('se-aite');
+    },
+    onLoadTemplate: (t, mode) => {
+      const l = t.lines[0];
+      if (!l) { toast.show(`定型仕訳「${t.name}」には行がありません`); return; }
+      fill(l);
+      setQueue(mode === '連続' && t.lines.length > 1 ? { name: t.name, lines: t.lines, i: 0 } : null);
+      focusId('se-amount');
+      toast.show(mode === '連続' && t.lines.length > 1 ? `連続定型「${t.name}」 1／${t.lines.length} 枚目を呼び出しました。登録すると次の伝票を呼び出します` : `定型仕訳「${t.name}」を入力欄に呼び出しました`);
+    },
+    onRegistered: (ids) => {
+      // 自動按分で登録した伝票を一覧にも追加
+      const added = getVouchers().filter((r) => ids.includes(r.id));
+      v.addEntries(added.map((r) => ({ date: r.date, kari: r.kari, kashi: r.kashi, tekiyo: r.tekiyo, amount: r.amount, gyosha: r.gyosha, shohyo: r.shohyo })));
+      setHi(ids);
+    },
+    onPickDate: (m, d) => { v.setFields({ month: m, day: d }); v.setMonth(m); focusId('se-kari'); },
+    onOpenPanel: prevYear ? undefined : () => { wide.setCollapsed(false); toast.show('画面の下に参照パネルを開きました'); },
+    submitId: 'se-submit',
+    enterOrder: ENTER_ORDER,
+  });
+  const ro = !tools.editable;
+
+  // 訂正：行を入力欄に戻す（一覧の行ごとの「訂正」）
   const edit = (e: JournalEntry) => {
+    if (ro) return;
     const [m, d] = e.date.split('/');
+    const mt = meta[e.id];
     v.setFields({ month: m ?? '', day: d ?? '', kariKamoku: e.kari, kashiKamoku: e.kashi, tekiyo: e.tekiyo, gyosha: e.gyosha ?? '', amount: String(e.amount) });
-    setShohyo(!!e.shohyo);
+    setFlags({ shohyo: !!e.shohyo, check: !!mt?.check, fusen: mt?.fusen ?? '' });
     setCheque(e.cheque ?? '');
+    setAite(mt?.aite ?? '');
+    setInternal(!!mt?.aite);
+    setQueue(null);
+    if (mt?.storeId != null) deleteVoucher(mt.storeId);
     v.removeEntry(e.id);
     focusId('se-kari');
     toast.show('伝票を入力欄に戻しました。修正して登録してください');
   };
-  // 削除（既存 F3 伝票削除）
-  const del = (e: JournalEntry) => {
-    if (confirm(`${e.date} ${e.kari}／${e.kashi} ${e.amount.toLocaleString('ja-JP')}円 を削除しますか？`)) v.removeEntry(e.id);
-  };
-
-  // 補助ドロップダウンで選択したら次の項目へフォーカス
-  const NEXT: Record<string, string> = {
-    service: 'se-month',
-    kariKamoku: 'se-kashi',
-    kashiKamoku: 'se-tekiyo',
-    tekiyo: 'se-gyosha',
-    gyosha: 'se-amount',
-  };
-  const pickAndAdvance = (val: string) => {
-    const next = NEXT[v.assist.field];
-    v.pick(val);
-    if (next) focusId(next);
+  // 削除（一覧の行ごとの「削除」。確認のあとに削除）
+  const doDelete = () => {
+    const e = delTarget;
+    setDelTarget(null);
+    if (!e) return;
+    const mt = meta[e.id];
+    if (mt?.storeId != null) deleteVoucher(mt.storeId);
+    v.removeEntry(e.id);
+    toast.show('伝票を削除しました');
   };
 
   const wd = weekdayOf(f.month, f.day);
   const rows = applyMonth(v.journal, v.monthFilter);
   const isSheet = variant === 'sheet';
+  const showCheque = sess.input.cheque;
 
-  const fieldBtn: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 6,
-    width: '100%',
-    boxSizing: 'border-box',
-    padding: '9px 10px',
-    background: '#fff',
-    border: '1px solid #cfd8e0',
-    borderRadius: 8,
-    fontSize: 13.5,
-    fontFamily: 'inherit',
-    cursor: 'pointer',
-    textAlign: 'left',
-    color: 'inherit',
-  };
   const textInput: CSSProperties = {
     width: '100%',
     boxSizing: 'border-box',
@@ -153,12 +250,10 @@ export function SingleEntryPage({ variant, accent, accentRgb, prevYear }: Props)
     fontFamily: 'inherit',
     outline: 'none',
     color: '#22303c',
-    background: '#fff',
+    background: ro ? '#f5f7f9' : '#fff',
     minWidth: 0,
   };
   const dateInput: CSSProperties = { ...textInput, width: 40, padding: '9px 2px', textAlign: 'center' };
-  const colLabel: CSSProperties = { fontSize: 10.5, fontWeight: 700, color: '#8290a0', marginBottom: 6, display: 'block' };
-  const panel = (w: number): CSSProperties => ({ position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, width: '100%', minWidth: w, zIndex: 60 });
   const rowBtn = (color: string): CSSProperties => ({
     padding: '4px 9px',
     borderRadius: 6,
@@ -170,18 +265,28 @@ export function SingleEntryPage({ variant, accent, accentRgb, prevYear }: Props)
     fontFamily: 'inherit',
     cursor: 'pointer',
   });
+  const afterKashi = () => focusId(needsPartner({ kari: f.kariKamoku, kashi: f.kashiKamoku, internal }) ? 'se-aite' : 'se-tekiyo');
 
   return (
-    <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
+    <main className="ef-scope" style={{ ...scopeStyle(accent), flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
+      <EntryStyles />
       <ToastView msg={toast.msg} />
-      {tool === '科目別残' && <AccountBalanceModal open onClose={() => setTool(null)} accent={accent} entries={v.journal} month={f.month || '8'} focus={[f.kariKamoku, f.kashiKamoku]} />}
-      {tool === '現預金残' && <CashBalanceModal open onClose={() => setTool(null)} accent={accent} entries={v.journal} month={f.month || '8'} focus={[f.kariKamoku, f.kashiKamoku]} />}
-      {tool === 'カレンダー' && <CalendarModal open onClose={() => setTool(null)} accent={accent} entries={v.journal} month={f.month || '8'} day={f.day} onPick={(m, d) => { v.setFields({ month: m, day: d }); v.setMonth(m); focusId('se-kari'); toast.show(`日付を ${m}/${d} にしました`); }} />}
-      <TemplatePickerModal open={tplOpen} onClose={() => setTplOpen(false)} accent={accent} onPick={(t) => { const l = t.lines[0]; if (l) v.setFields({ kariKamoku: l.kari, kashiKamoku: l.kashi, tekiyo: l.tekiyo, gyosha: l.gyosha ?? '', amount: l.amount }); setTplOpen(false); focusId('se-amount'); toast.show(`定型仕訳「${t.name}」を入力欄に呼び出しました`); }} />
+      {tools.dialogs}
+      <ConfirmModal open={delTarget != null} title="伝票削除の確認" okLabel="この伝票を削除する" cancelLabel="削除しない" danger accent={accent} onClose={() => setDelTarget(null)} onOk={doDelete}>
+        {delTarget && (
+          <>
+            次の伝票を削除します。<b>削除した伝票は元に戻せません。</b>
+            <div style={{ marginTop: 8, padding: '8px 12px', background: '#f6f8fa', border: '1px solid #e2e8ee', borderRadius: 8, fontSize: 13 }}>
+              {delTarget.date}　{delTarget.kari} ／ {delTarget.kashi}　<b>{delTarget.amount.toLocaleString('ja-JP')}円</b>
+              {delTarget.tekiyo && <div style={{ color: '#7a8794', fontSize: 12 }}>{delTarget.tekiyo}</div>}
+            </div>
+          </>
+        )}
+      </ConfirmModal>
+      <div style={{ width: '100%', maxWidth: isSheet ? 'none' : 1280, display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
       <div
         style={{
           width: '100%',
-          maxWidth: isSheet ? 'none' : 1280,
           background: '#fff',
           border: '1px solid #dde4ea',
           borderRadius: isSheet ? 14 : 16,
@@ -191,8 +296,12 @@ export function SingleEntryPage({ variant, accent, accentRgb, prevYear }: Props)
           flexDirection: 'column',
         }}
       >
+        {/* 伝票の形式の切替 */}
+        {tools.topBar}
+        {tools.banner}
+
         {/* 見出し */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 20, padding: '18px 22px 14px', borderBottom: '1px solid #eef2f5' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 20, padding: '14px 22px 12px', borderBottom: '1px solid #eef2f5' }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21, letterSpacing: '.02em' }}>
               単一入力 <span style={{ fontSize: 12.5, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>チャイルド保育園　拠点区分</span>
@@ -201,13 +310,8 @@ export function SingleEntryPage({ variant, accent, accentRgb, prevYear }: Props)
               1行＝1伝票を連続入力。<b style={{ color: '#5b6773', fontWeight: 600 }}>Enter</b>で次の項目へ、金額で<b style={{ color: '#5b6773', fontWeight: 600 }}>Enter</b>すると登録して次の伝票へ進みます。
             </div>
           </div>
-          {/* 機能ボタン（既存 F4／F5／F8／F9）：見出しの右上 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 'none', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            {TOOLS.map((t) => (
-              <button key={t} type="button" className="btn-outline" onClick={() => (t === '連続定型' ? setTplOpen(true) : setTool(t as '科目別残' | '現預金残' | 'カレンダー'))} style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #cfd8e0', background: '#fff', color: '#5b6773', fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
-                {t}
-              </button>
-            ))}
+          <div style={{ flex: 'none', fontSize: 12.5, color: '#68757f', whiteSpace: 'nowrap', paddingTop: 4 }}>
+            会計期間　<b style={{ color: '#22303c', fontWeight: 600 }}>令和8年度</b>
           </div>
         </div>
 
@@ -215,7 +319,7 @@ export function SingleEntryPage({ variant, accent, accentRgb, prevYear }: Props)
           <PrevYearJournal accent={accent} />
         ) : (
         <>
-        {/* 会計月タブ（既存の 4〜3・決 ボタン） */}
+        {/* 会計月タブ */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 22px', borderBottom: '1px solid #eef2f5' }}>
           <span style={{ fontSize: 11, color: '#8895a3', fontWeight: 700, flex: 'none' }}>表示月</span>
           <FiscalMonthTabs current={v.monthFilter} accent={accent} onSelect={v.setMonth} withAll />
@@ -224,23 +328,24 @@ export function SingleEntryPage({ variant, accent, accentRgb, prevYear }: Props)
           </span>
         </div>
 
-        {/* 入力済み一覧（既存画面の上部スペース＋右側「当年仕訳」を統合） */}
+        {/* 入力済み一覧 */}
         <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: 12, padding: '9px 22px', background: '#f6f8fa', fontSize: 10.5, fontWeight: 700, color: '#8290a0', borderBottom: '1px solid #eef2f5' }}>
           <div>伝票No</div>
           <div>日（曜日）</div>
-          <div>証憑</div>
+          <div>証憑・印</div>
           <div style={{ color: BLUE }}>借方 勘定科目 <span style={{ color: '#b3bcc5', fontWeight: 500 }}>／ 資金科目</span></div>
           <div style={{ color: PINK }}>貸方 勘定科目 <span style={{ color: '#b3bcc5', fontWeight: 500 }}>／ 資金科目</span></div>
           <div>摘要 <span style={{ color: '#b3bcc5', fontWeight: 500 }}>／ 業者</span></div>
           <div style={{ textAlign: 'right' }}>金額</div>
           <div style={{ textAlign: 'right' }}>操作</div>
         </div>
-        <div id="journal-scroll" style={{ overflowY: 'auto', minHeight: 180, maxHeight: 'calc(100vh - 470px)' }}>
+        <div id="journal-scroll" style={{ overflowY: 'auto', minHeight: 150, maxHeight: 'calc(100vh - 690px)' }}>
           {rows.length === 0 && (
             <div style={{ padding: '40px 22px', textAlign: 'center', color: '#9aa5b1', fontSize: 13 }}>この月の伝票はありません。下の入力行から登録してください。</div>
           )}
           {rows.map((e, i) => {
             const isNew = e.id === v.lastAdded;
+            const mt = meta[e.id];
             return (
               <div
                 key={e.id}
@@ -261,10 +366,12 @@ export function SingleEntryPage({ variant, accent, accentRgb, prevYear }: Props)
                   {e.date}
                   <span style={{ color: '#9aa5b1', fontSize: 11 }}>（{weekdayOfDate(e.date) || '－'}）</span>
                 </div>
-                <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                   <span style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: e.shohyo ? '#eaf5ef' : '#f1f4f6', color: e.shohyo ? '#1f7a52' : '#9aa5b1' }}>
                     {e.shohyo ? '有' : '無'}
                   </span>
+                  {mt?.check && <span title="チェック" style={{ fontSize: 11, fontWeight: 900, color: '#22303c' }}>✓</span>}
+                  {mt?.fusen && <span title={`付箋：${mt.fusen}`} style={{ width: 10, height: 10, borderRadius: 2, background: FUSEN_COLORS[mt.fusen], display: 'inline-block' }} />}
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.kari}</div>
@@ -272,7 +379,7 @@ export function SingleEntryPage({ variant, accent, accentRgb, prevYear }: Props)
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ color: '#48565f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.kashi}</div>
-                  <div style={{ fontSize: 10.5, color: '#b3bcc5' }}>資金科目：自動</div>
+                  <div style={{ fontSize: 10.5, color: '#b3bcc5', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mt?.aite ? `内部取引　相手：${mt.aite}` : '資金科目：自動'}</div>
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ color: '#48565f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.tekiyo || '—'}</div>
@@ -283,187 +390,124 @@ export function SingleEntryPage({ variant, accent, accentRgb, prevYear }: Props)
                 </div>
                 <div style={{ textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{e.amount.toLocaleString('ja-JP')}</div>
                 <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                  <button type="button" className="btn-outline" onClick={() => edit(e)} style={rowBtn('#2c5f9e')}>訂正</button>
-                  <button type="button" className="btn-outline" onClick={() => del(e)} style={rowBtn('#c0392b')}>削除</button>
+                  <button type="button" className="ef-act" disabled={ro} title={ro ? tools.reason : 'この伝票を入力欄に戻して訂正します'} onClick={() => edit(e)} style={rowBtn('#2c5f9e')}>訂正</button>
+                  <button type="button" className="ef-act" disabled={ro} title={ro ? tools.reason : 'この伝票を削除します（確認あり）'} onClick={() => setDelTarget(e)} style={rowBtn('#c0392b')}>削除</button>
                 </div>
               </div>
             );
           })}
         </div>
 
-        {/* 入力行（既存画面の下部に相当） */}
-        <div style={{ borderTop: `2px solid ${accent}`, background: '#fbfcfd', padding: '14px 22px 12px' }}>
-          {/* 伝票の属性（サービス区分・取引区分）：入力行と同じ下部にまとめて配置 */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 18, marginBottom: 12, flexWrap: 'wrap' }}>
-            <div style={{ width: 200 }}>
-              <span style={colLabel}>サービス区分</span>
-              <AssistField
-                value={f.service}
-                placeholder="選択"
-                open={v.isActive('service')}
-                onOpen={() => v.openAssist('service', 'service')}
-                accent={accent}
-                accentRgb={accentRgb}
-                buttonStyle={fieldBtn}
-                panelStyle={panel(220)}
-                groups={v.assistGroups}
-                query={v.assist.query}
-                empty={v.assistEmpty}
-                onInput={v.onQueryInput}
-                onPick={pickAndAdvance}
-              />
+        {/* 入力行 */}
+        <div style={{ borderTop: `2px solid ${accent}`, background: '#fbfcfd', padding: '12px 22px 12px' }}>
+          {/* 伝票の属性（サービス区分・取引区分） */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 18, marginBottom: 10, flexWrap: 'wrap' }}>
+            <div className="ef-field" style={{ width: 220 }}>
+              <FieldLabel>サービス区分</FieldLabel>
+              <ComboField id="se-service" kind="service" value={f.service} onChange={(x) => v.setField('service', x)} onCommit={() => focusId('se-month')} placeholder="コード・名称で指定" dropUp disabled={ro} />
             </div>
-            <div>
-              <span style={colLabel}>取引区分</span>
-              <Chips current={f.torihiki} accent={accent} onToggle={v.setTorihiki} />
-            </div>
-            <div style={{ marginLeft: 'auto', fontSize: 12.5, color: '#68757f', paddingBottom: 9, whiteSpace: 'nowrap' }}>
-              会計期間　<b style={{ color: '#22303c', fontWeight: 600 }}>令和8年度</b>
+            {partner && (
+              <div className="ef-field" style={{ width: 240 }}>
+                <FieldLabel color="#6b3fb5">内部取引相手区分</FieldLabel>
+                <ComboField id="se-aite" kind="service" value={aite} onChange={setAite} onCommit={() => focusId('se-tekiyo')} placeholder="相手先の区分を指定" dropUp disabled={ro} invalid={fieldState(issues, 'aite')} />
+              </div>
+            )}
+            {queue && (
+              <div style={{ alignSelf: 'flex-end', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 8, background: '#eef4fb', border: '1px solid #c9dbf0', color: '#2c5f9e', fontSize: 12.5, fontWeight: 700 }}>
+                連続定型「{queue.name}」 {queue.i + 1}／{queue.lines.length} 枚目
+                <button type="button" className="ef-act" onClick={() => { setQueue(null); toast.show('連続定型を終了しました（入力中の内容は残っています）'); }} style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #c9dbf0', background: '#fff', color: '#2c5f9e', fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>終了</button>
+              </div>
+            )}
+            <div style={{ marginLeft: 'auto' }}>
+              <TorihikiBadge kari={f.kariKamoku} kashi={f.kashiKamoku} force={fundMode === '強制資金'} blocked={blocked} fundMode={fundMode} />
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: 12, alignItems: 'end' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: 12, alignItems: 'start' }}>
             <div>
-              <span style={colLabel}>伝票No</span>
+              <FieldLabel>伝票No</FieldLabel>
               <div style={{ height: 38, display: 'flex', alignItems: 'center', fontSize: 12, color: '#9aa5b1' }}>自動採番</div>
             </div>
-            <div>
-              <span style={colLabel}>日（曜日）</span>
+            <div className="ef-field">
+              <FieldLabel>日（曜日）</FieldLabel>
               <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <input id="se-month" className="field-input" value={f.month} onChange={(e) => v.setField('month', e.target.value)} onKeyDown={onEnter(() => focusId('se-day'))} inputMode="numeric" style={dateInput} />
+                <input id="se-month" className="ef-input" aria-label="月" disabled={ro} value={f.month} onChange={(e) => v.setField('month', e.target.value)} onKeyDown={onEnter(() => focusId('se-day'))} inputMode="numeric" style={dateInput} />
                 <span style={{ color: '#9aa5b1' }}>/</span>
-                <input id="se-day" className="field-input" value={f.day} onChange={(e) => v.setField('day', e.target.value)} onKeyDown={onEnter(() => focusId('se-kari'))} inputMode="numeric" style={dateInput} />
-                <span style={{ fontSize: 12, color: wd ? '#48565f' : '#c3ccd4', width: 26, textAlign: 'center' }}>{wd || '－'}</span>
+                <input id="se-day" className="ef-input" aria-label="日" disabled={ro} value={f.day} onChange={(e) => v.setField('day', e.target.value)} onKeyDown={onEnter(() => focusId('se-kari'))} inputMode="numeric" style={dateInput} />
+                <span style={{ fontSize: 12, color: wd ? '#48565f' : '#c3ccd4', width: 22, textAlign: 'center' }}>{wd || '－'}</span>
               </div>
             </div>
             <div>
-              <span style={colLabel}>証憑</span>
-              <button
-                type="button"
-                className="chip"
-                onClick={() => setShohyo((s) => !s)}
-                title="クリックで 有／無 を切替"
-                style={{ height: 38, width: '100%', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, background: shohyo ? '#eaf5ef' : '#fff', color: shohyo ? '#1f7a52' : '#9aa5b1', border: '1px solid ' + (shohyo ? '#bfe0cf' : '#cfd8e0') }}
-              >
-                {shohyo ? '有' : '無'}
-              </button>
+              <FieldLabel>証憑・印</FieldLabel>
+              <div style={{ height: 38, display: 'flex', alignItems: 'center' }}>
+                <FlagButtons shohyo={flags.shohyo} check={flags.check} fusen={flags.fusen} disabled={ro} onChange={(p) => setFlags((s) => ({ ...s, ...p }))} />
+              </div>
             </div>
-            <div>
-              <span style={{ ...colLabel, color: BLUE }}>借方科目</span>
-              <AssistField
-                buttonId="se-kari"
-                value={f.kariKamoku}
-                placeholder="科目を選択"
-                open={v.isActive('kariKamoku')}
-                onOpen={() => v.openAssist('kariKamoku', 'account')}
-                accent={BLUE}
-                accentRgb={BLUE_RGB}
-                buttonStyle={fieldBtn}
-                panelStyle={panel(260)}
-                groups={v.assistGroups}
-                query={v.assist.query}
-                empty={v.assistEmpty}
-                onInput={v.onQueryInput}
-                onPick={pickAndAdvance}
-              />
+            <div className="ef-field" style={{ minWidth: 0 }}>
+              <FieldLabel color={BLUE}>借方科目</FieldLabel>
+              <ComboField id="se-kari" kind="account" value={f.kariKamoku} onChange={(x) => v.setField('kariKamoku', x)} onCommit={() => focusId('se-kashi')} placeholder="コード・名称・フリガナ" dropUp listWidth={400} disabled={ro} invalid={fieldState(issues, 'kari', 'pair')} />
+              <FundAccountLine name={f.kariKamoku} other={f.kashiKamoku} mode={fundMode} />
             </div>
-            <div>
-              <span style={{ ...colLabel, color: PINK }}>貸方科目</span>
-              <AssistField
-                buttonId="se-kashi"
-                value={f.kashiKamoku}
-                placeholder="科目を選択"
-                open={v.isActive('kashiKamoku')}
-                onOpen={() => v.openAssist('kashiKamoku', 'account')}
-                accent={PINK}
-                accentRgb={PINK_RGB}
-                buttonStyle={fieldBtn}
-                panelStyle={panel(260)}
-                groups={v.assistGroups}
-                query={v.assist.query}
-                empty={v.assistEmpty}
-                onInput={v.onQueryInput}
-                onPick={pickAndAdvance}
-              />
+            <div className="ef-field" style={{ minWidth: 0 }}>
+              <FieldLabel color={PINK}>貸方科目</FieldLabel>
+              <ComboField id="se-kashi" kind="account" value={f.kashiKamoku} onChange={(x) => v.setField('kashiKamoku', x)} onCommit={afterKashi} placeholder="コード・名称・フリガナ" dropUp listWidth={400} disabled={ro} invalid={fieldState(issues, 'kashi', 'pair')} />
+              <FundAccountLine name={f.kashiKamoku} other={f.kariKamoku} mode={fundMode} />
             </div>
-            <div>
-              <span style={colLabel}>摘要 ／ 業者</span>
+            <div style={{ minWidth: 0 }}>
               <div style={{ display: 'flex', gap: 6 }}>
-                <div style={{ position: 'relative', display: 'flex', gap: 4, flex: 1.2, minWidth: 0 }} data-assist>
-                  <input
-                    id="se-tekiyo"
-                    className="field-input ring"
-                    value={f.tekiyo}
-                    onChange={(e) => v.setField('tekiyo', e.target.value)}
-                    onKeyDown={onEnter(() => focusId('se-gyosha'))}
-                    placeholder="摘要"
-                    autoComplete="off"
-                    style={{ ...textInput, flex: 1 }}
-                  />
-                  <button type="button" className="tekiyo-toggle" onClick={() => v.openAssist('tekiyo', 'summary')} style={{ flex: 'none', width: 30, border: '1px solid #cfd8e0', borderRadius: 8, background: '#eef2f5', cursor: 'pointer', color: '#7a8794', fontSize: 9 }}>
-                    ▼
-                  </button>
-                  {v.isActive('tekiyo') && (
-                    <AssistPanel groups={v.assistGroups} query={v.assist.query} empty={v.assistEmpty} onInput={v.onQueryInput} onPick={pickAndAdvance} style={{ position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, width: 250, zIndex: 60 }} />
-                  )}
+                <div className="ef-field" style={{ flex: 1.2, minWidth: 0 }}>
+                  <FieldLabel>摘要</FieldLabel>
+                  <ComboField id="se-tekiyo" kind="summary" freeText value={f.tekiyo} onChange={(x) => v.setField('tekiyo', x)} onCommit={() => focusId('se-gyosha')} placeholder="摘要" dropUp listWidth={320} disabled={ro} />
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <AssistField
-                    buttonId="se-gyosha"
-                    value={f.gyosha}
-                    placeholder="業者"
-                    open={v.isActive('gyosha')}
-                    onOpen={() => v.openAssist('gyosha', 'vendor')}
-                    accent={accent}
-                    accentRgb={accentRgb}
-                    buttonStyle={fieldBtn}
-                    panelStyle={panel(200)}
-                    groups={v.assistGroups}
-                    query={v.assist.query}
-                    empty={v.assistEmpty}
-                    onInput={v.onQueryInput}
-                    onPick={pickAndAdvance}
-                  />
+                <div className="ef-field" style={{ flex: 1, minWidth: 0 }}>
+                  <FieldLabel>業者</FieldLabel>
+                  <ComboField id="se-gyosha" kind="vendor" value={f.gyosha} onChange={(x) => v.setField('gyosha', x)} onCommit={() => focusId('se-amount')} placeholder="業者" dropUp listWidth={280} disabled={ro} />
                 </div>
               </div>
             </div>
-            <div>
-              <span style={{ ...colLabel, textAlign: 'right' }}>金額</span>
+            <div className="ef-field">
+              <FieldLabel style={{ textAlign: 'right' }}>金額</FieldLabel>
               <input
                 id="se-amount"
-                className="field-input ring"
+                className="ef-input"
+                disabled={ro}
                 value={v.amountFmt}
                 onChange={(e) => v.setField('amount', e.target.value)}
-                onKeyDown={onEnter(doSubmit)}
+                onKeyDown={onEnter(() => doSubmit())}
                 inputMode="numeric"
                 placeholder="0"
+                autoComplete="off"
                 style={{ ...textInput, textAlign: 'right', fontSize: 16, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}
               />
             </div>
-            <div>
-              <button
-                type="button"
-                className="submit-btn"
-                onClick={doSubmit}
-                style={{ height: 38, width: '100%', background: accent, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', boxShadow: `0 3px 12px rgba(${accentRgb},.24)`, whiteSpace: 'nowrap' }}
-              >
-                登録 ↵
-              </button>
+            <div className="ef-field">
+              {showCheque ? (
+                <>
+                  <FieldLabel>小切手No</FieldLabel>
+                  <input id="se-cheque" className="ef-input" disabled={ro} value={cheque} onChange={(e) => setCheque(e.target.value)} onKeyDown={onEnter(() => focusId('se-amount'))} placeholder="任意" autoComplete="off" style={textInput} />
+                </>
+              ) : (
+                <div style={{ paddingTop: 26, fontSize: 11, color: '#9aa5b1', lineHeight: 1.5 }}>金額で Enter<br />→ 登録</div>
+              )}
             </div>
           </div>
 
-          {/* 2行目：補助情報・小切手No */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 10, fontSize: 11.5, color: '#9aa5b1' }}>
-            <span>資金科目：<b style={{ color: '#7a8794', fontWeight: 600 }}>勘定科目から自動判定</b></span>
-            <span>資金-予算残 <b style={{ color: '#7a8794', fontWeight: 600 }}>—</b>　達成率 <b style={{ color: '#7a8794', fontWeight: 600 }}>—</b></span>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              小切手No
-              <input id="se-cheque" className="field-input" value={cheque} onChange={(e) => setCheque(e.target.value)} onKeyDown={onEnter(() => focusId('se-kari'))} placeholder="任意" autoComplete="off" style={{ ...textInput, width: 110, padding: '5px 8px', fontSize: 12 }} />
-            </label>
-            <span style={{ marginLeft: 'auto', color: '#c0392b', fontSize: 12.5, fontWeight: 500 }}>{v.err}</span>
-          </div>
+          {/* 入力内容の判定（エラー＝登録不可／確認＝確認して登録） */}
+          {(issues.length > 0 || v.err) && (
+            <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
+              {v.err && <div role="alert" style={{ color: '#c0392b', fontSize: 12.5, fontWeight: 600 }}>{v.err}</div>}
+              <IssueList issues={issues} confirmId="se-confirm" onConfirm={() => doSubmit(true)} confirmDisabled={ro ? tools.reason : !toNum(f.amount) ? '金額を入力すると登録できます' : undefined} />
+            </div>
+          )}
+
+          {/* 機能ボタン（常に表示。カーソル位置に関係なく同じ機能） */}
+          <div style={{ marginTop: 10 }}>{tools.actionBar}</div>
         </div>
         </>
         )}
+      </div>
+
+      {/* 参照パネル（初期は折りたたみ） */}
+      {!prevYear && <WidePanel accent={accent} layout="inline" state={wide} highlightIds={hi} returnTo="単一入力" />}
       </div>
     </main>
   );

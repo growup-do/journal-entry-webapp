@@ -2,19 +2,24 @@
 //   ヘッダーの「令和8年度／保育事業」をクリック → 区分ツリー（階層表示／一覧表示）と会計年度を選ぶダイアログ。
 //   既存の【伝票入力区分の選択】（マニュアル 1.2.3）と合算追加（1.7）に相当。
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Modal } from './Modal';
 import { DivisionInfoDialog } from './DivisionInfoDialog';
 import { ToastView, useToast } from './Toast';
 import { btn, input, lbl } from './ui';
-import { divisionLabel, flattenDivisions, setSession, useSession, type DivisionNode } from '../store/session';
+import { divisionLabel, flattenDivisions, setSession, startKindOf, useSession, type DivisionNode } from '../store/session';
 
 const YEARS = ['令和6年度', '令和7年度', '令和8年度', '令和9年度'];
 
 export function DivisionPicker({ accent, compact }: { accent: string; compact?: boolean }) {
   const s = useSession();
   const [open, setOpen] = useState(false);
+  // 起動時（ログイン直後）は、まず区分・年度の選択を表示する（依頼書 2.1／5.2.1）
+  useEffect(() => {
+    try { if (sessionStorage.getItem('proto-pick-division') === '1') { sessionStorage.removeItem('proto-pick-division'); setOpen(true); } } catch { /* ignore */ }
+  }, []);
+  const kind = startKindOf(s);
   const isPast = YEARS.indexOf(s.fiscalYear) < YEARS.indexOf(s.currentYear);
   const isFuture = YEARS.indexOf(s.fiscalYear) > YEARS.indexOf(s.currentYear);
   return (
@@ -34,6 +39,7 @@ export function DivisionPicker({ accent, compact }: { accent: string; compact?: 
         <span style={{ color: '#68757f' }}>{s.divisionPath.slice(-2, -1)[0]}</span>
         <span style={{ color: '#c3ccd4' }}>›</span>
         <b style={{ fontWeight: 700 }}>{s.division}</b>
+        {kind !== '入力区分' && <span style={{ fontSize: 10, fontWeight: 800, padding: '1px 6px', borderRadius: 8, background: kind === '合算区分' ? '#fbe9d0' : '#e8f0fb', color: kind === '合算区分' ? '#b45309' : '#2c5f9e' }}>{kind}</span>}
         <span style={{ color: '#9aa5b1', fontSize: 9 }}>▼</span>
       </button>
       <DivisionDialog open={open} onClose={() => setOpen(false)} accent={accent} />
@@ -72,19 +78,22 @@ export function DivisionDialog({ open, onClose, accent }: { open: boolean; onClo
 
   const Node = ({ n, depth }: { n: DivisionNode; depth: number }) => {
     const label = divisionLabel(n);
-    const selectable = !!n.entry && n.use !== false;
+    // 入力区分だけでなく、法人・事業区分・拠点などの親区分でも起動できる（集計・参照用）
+    const selectable = n.use !== false;
+    const isEntry = !!n.entry && !(n.children ?? []).some((c) => c.entry && c.use !== false);
     const on = sel === label;
     return (
       <>
         <div
           onClick={() => selectable && setSel(label)}
           onDoubleClick={() => { if (selectable) { setSel(label); setTimeout(apply, 0); } }}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', paddingLeft: 10 + depth * 22, borderRadius: 8, cursor: selectable ? 'pointer' : 'default', background: on ? accent : 'transparent', color: on ? '#fff' : selectable ? '#22303c' : '#7a8794', fontSize: 13, fontWeight: selectable ? 600 : 500, opacity: n.use === false ? 0.5 : 1 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', paddingLeft: 10 + depth * 22, borderRadius: 8, cursor: selectable ? 'pointer' : 'default', background: on ? accent : 'transparent', color: on ? '#fff' : isEntry ? '#22303c' : '#48565f', fontSize: 13, fontWeight: isEntry ? 700 : 500, opacity: n.use === false ? 0.5 : 1 }}
         >
           <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: on ? 'rgba(255,255,255,.25)' : '#eef2f6', color: on ? '#fff' : '#5b6773', flex: 'none' }}>{n.kind}</span>
           {n.code && <span style={{ fontVariantNumeric: 'tabular-nums', color: on ? '#fff' : '#8290a0' }}>{n.code}</span>}
           <span>{n.name}</span>
           {n.use === false && <span style={{ fontSize: 10.5 }}>（非使用）</span>}
+          {selectable && <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 8, background: on ? 'rgba(255,255,255,.25)' : isEntry ? '#eaf5ef' : '#f1f4f6', color: on ? '#fff' : isEntry ? '#1f7a52' : '#7a8794', flex: 'none' }}>{isEntry ? '入力区分' : '親区分（集計・参照）'}</span>}
         </div>
         {(n.children ?? []).map((c) => <Node key={c.id} n={c} depth={depth + 1} />)}
       </>
@@ -143,7 +152,7 @@ export function DivisionDialog({ open, onClose, accent }: { open: boolean; onClo
             </table>
           )}
         </div>
-        <div style={{ fontSize: 11.5, color: '#9aa5b1', marginTop: 8 }}>先頭に3桁コードのある区分（伝票入力区分）を選べます。ダブルクリックでも確定できます。赤＝通常の合算、橙＝階層で合算する会計単位。</div>
+        <div style={{ fontSize: 11.5, color: '#9aa5b1', marginTop: 8 }}>入力区分＝伝票を入力できる区分。親区分（法人・事業区分・拠点など）と合算区分は集計・参照用で、伝票入力など一部のメニューが使えなくなります。ダブルクリックでも確定できます。</div>
         <div style={{ display: 'flex', gap: 8, marginTop: 14, alignItems: 'center' }}>
           <button type="button" className="btn-outline" onClick={() => setMergeOpen(true)} style={btn()}>合算追加</button>
           <button type="button" className="btn-outline" onClick={() => setInfoOpen(true)} style={btn()}>部門情報の変更</button>

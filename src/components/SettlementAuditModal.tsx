@@ -1,7 +1,8 @@
-// 決算調査（既存「決算チェック」モーダルの再現）＋ 設定・結果詳細・結果印刷（提案K）
-//   28項目を一覧し「調査開始」で順に調査 → 各項目に結果（OK／要確認／スキップ）を表示。
-//   「説明」で項目ごとの解説ページ（既存の見開き表示に相当）。設定で項目のON/OFFと項目ごとの勘定科目選択。
-//   結果詳細表示＝トレース情報（コピー可）、結果印刷＝プレビュー。既存の「連絡先表示」はサポートサイトへ。
+// 決算チェック（決算調査）＋ 決算チェック設定・結果詳細・結果印刷（依頼書 5.4.5／5.5.6）
+//   28項目を一覧し「調査開始」で順に調査 → 各項目の状態（未調査／調査中／OK／要調査／スキップ）をアイコン＋色で表示。
+//   上部に状態ごとの件数（凡例を兼ねる）と「要調査のみ」の絞り込み。要調査の行からは「説明」「結果詳細」に1クリックで到達。
+//   見出しの「決算チェック設定」から、項目のON/OFFと項目ごとの勘定科目選択を開く。
+//   「説明」は項目ごとの解説ページ（表示中は「一覧に戻る」のみ）。結果詳細＝トレース情報（コピー可）、結果印刷＝プレビュー。
 
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
@@ -9,12 +10,21 @@ import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
 import { PreviewModal } from './PrintCenter';
 import { Notice, btn as uiBtn } from './ui';
-import { AUDIT_EXPLANATIONS, AUDIT_ITEMS } from '../data';
+import { AUDIT_EXPLANATIONS, AUDIT_ITEMS, displayName } from '../data';
 import { ACCOUNT_META } from '../lib/accounts';
 import { setSession, useSession } from '../store/session';
 
-type Status = '未調査' | '調査中' | 'OK' | '要確認' | 'スキップ';
-/** サンプルとして「要確認」になる項目（構造確認用） */
+type Status = '未調査' | '調査中' | 'OK' | '要調査' | 'スキップ';
+const STATES: Status[] = ['未調査', '調査中', 'OK', '要調査', 'スキップ'];
+/** 状態ごとのアイコン・配色（一覧・凡例・印刷で共通） */
+const STATE_STYLE: Record<Status, { icon: string; bg: string; fg: string; bd: string }> = {
+  未調査: { icon: '？', bg: '#eef2f6', fg: '#5b6773', bd: '#d3dbe3' },
+  調査中: { icon: '…', bg: '#fff1b8', fg: '#8a6d00', bd: '#ecd98a' },
+  OK: { icon: '✓', bg: '#eaf5ef', fg: '#1f7a52', bd: '#bfe0cf' },
+  要調査: { icon: '！', bg: '#c0392b', fg: '#ffffff', bd: '#c0392b' },
+  スキップ: { icon: '－', bg: '#ffffff', fg: '#9aa5b1', bd: '#dde4ea' },
+};
+/** サンプルとして「要調査」になる項目（構造確認用） */
 const NEEDS_CHECK = new Set([3, 14, 20]);
 /** オプション連動（減価償却 15〜17／小口現金 28）。プロトタイプでは有効扱い */
 const OPTION_ITEMS = new Set([15, 16, 17, 28]);
@@ -22,9 +32,11 @@ const OPTION_ITEMS = new Set([15, 16, 17, 28]);
 interface Props {
   open: boolean;
   onClose: () => void;
+  /** 各種設定の「決算チェック設定」画面へ移動する（渡されたときだけ、設定ダイアログ内にリンクを表示） */
+  onNavigate?: (page: string) => void;
 }
 
-export function SettlementAuditModal({ open, onClose }: Props) {
+export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
   const s = useSession();
   const [status, setStatus] = useState<Record<number, Status>>({});
   const [running, setRunning] = useState(false);
@@ -32,7 +44,9 @@ export function SettlementAuditModal({ open, onClose }: Props) {
   const [settings, setSettings] = useState(false);
   const [corpTab, setCorpTab] = useState<'区分' | '法人'>('区分');
   const [itemCfg, setItemCfg] = useState<number | null>(null);
-  const [trace, setTrace] = useState(false);
+  /** 結果詳細（トレース情報）：'all'＝全項目／番号＝その項目のみ */
+  const [trace, setTrace] = useState<number | 'all' | null>(null);
+  const [onlyNg, setOnlyNg] = useState(false);
   const [print, setPrint] = useState(false);
   const [done, setDone] = useState(false);
   const timer = useRef<number | undefined>(undefined);
@@ -52,7 +66,7 @@ export function SettlementAuditModal({ open, onClose }: Props) {
       const n = Math.min(AUDIT_ITEMS.length, Math.floor((Date.now() - t0) / 90));
       const next: Record<number, Status> = {};
       AUDIT_ITEMS.slice(0, n).forEach((it) => {
-        next[it.no] = !enabled(it.no) ? 'スキップ' : NEEDS_CHECK.has(it.no) ? '要確認' : 'OK';
+        next[it.no] = !enabled(it.no) ? 'スキップ' : NEEDS_CHECK.has(it.no) ? '要調査' : 'OK';
       });
       if (n < AUDIT_ITEMS.length) next[AUDIT_ITEMS[n].no] = '調査中';
       setStatus(next);
@@ -63,26 +77,32 @@ export function SettlementAuditModal({ open, onClose }: Props) {
     }, 100);
   };
 
-  const badge = (st: Status | undefined): CSSProperties => ({
-    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 54, height: 22, borderRadius: 6, fontSize: 11, fontWeight: 700, flex: 'none',
-    background: st === 'OK' ? '#eaf5ef' : st === '要確認' ? '#fdeee9' : st === '調査中' ? '#fff1b8' : st === 'スキップ' ? '#eef2f6' : '#f1f4f6',
-    color: st === 'OK' ? '#1f7a52' : st === '要確認' ? '#c0392b' : st === '調査中' ? '#8a6d00' : st === 'スキップ' ? '#9aa5b1' : '#8290a0',
+  /** 項目の現在の状態（設定で無効の項目は、調査前でもスキップ扱い） */
+  const stateOf = (no: number): Status => status[no] ?? (enabled(no) ? '未調査' : 'スキップ');
+  const badge = (st: Status): CSSProperties => ({
+    display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'center', minWidth: 72, height: 22, padding: '0 6px', borderRadius: 6, fontSize: 11, fontWeight: 700, flex: 'none', boxSizing: 'border-box',
+    background: STATE_STYLE[st].bg, color: STATE_STYLE[st].fg, border: '1px solid ' + STATE_STYLE[st].bd,
   });
+  const StateBadge = ({ st }: { st: Status }) => <span data-state={st} style={badge(st)}><span aria-hidden style={{ fontWeight: 800 }}>{STATE_STYLE[st].icon}</span>{st}</span>;
   const btn = (primary?: boolean): CSSProperties => ({ padding: '10px 22px', borderRadius: 9, border: primary ? 'none' : '1px solid #cfd8e0', background: primary ? '#1f7a52' : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 13.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
-  const okCount = Object.values(status).filter((x) => x === 'OK').length;
-  const ngCount = Object.values(status).filter((x) => x === '要確認').length;
-  const skipCount = Object.values(status).filter((x) => x === 'スキップ').length;
+  const counts = STATES.reduce<Record<Status, number>>((acc, st) => ({ ...acc, [st]: AUDIT_ITEMS.filter((it) => stateOf(it.no) === st).length }), { 未調査: 0, 調査中: 0, OK: 0, 要調査: 0, スキップ: 0 });
+  const shown = AUDIT_ITEMS.filter((it) => !onlyNg || stateOf(it.no) === '要調査');
+  const half = onlyNg ? shown.length : 20;
+  const rowBtn = (color: string, solid?: boolean): CSSProperties => ({ flex: 'none', padding: '3px 9px', borderRadius: 6, border: '1px solid ' + color, background: solid ? color : '#fff', color: solid ? '#fff' : color, fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
 
-  const Item = ({ no, name }: { no: number; name: string }) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid #f1f4f6', opacity: enabled(no) ? 1 : 0.55 }}>
-      <span style={{ width: 26, fontSize: 13, fontWeight: 800, color: '#22303c', fontVariantNumeric: 'tabular-nums', flex: 'none' }}>{String(no).padStart(2, '0')}</span>
-      <span style={badge(status[no])}>{status[no] ?? (enabled(no) ? '未調査' : 'スキップ')}</span>
-      <span style={{ flex: 1, fontSize: 13, color: '#22303c', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}{OPTION_ITEMS.has(no) && <span style={{ marginLeft: 6, fontSize: 9.5, fontWeight: 700, color: '#b45309', background: '#fbe9d0', padding: '1px 5px', borderRadius: 4 }}>OP</span>}</span>
-      <button type="button" className="btn-outline" onClick={() => setExplain(no)} style={{ flex: 'none', padding: '3px 9px', borderRadius: 6, border: '1px solid #f2c9c2', background: '#fff', color: '#c0392b', fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
-        説明
-      </button>
-    </div>
-  );
+  const Item = ({ no, name }: { no: number; name: string }) => {
+    const st = stateOf(no);
+    const ng = st === '要調査';
+    return (
+      <div data-audit-item={no} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderBottom: '1px solid #f1f4f6', background: ng ? '#fdf3f1' : 'transparent', borderLeft: '3px solid ' + (ng ? '#c0392b' : 'transparent'), opacity: st === 'スキップ' ? 0.6 : 1 }}>
+        <span style={{ width: 26, fontSize: 13, fontWeight: 800, color: '#22303c', fontVariantNumeric: 'tabular-nums', flex: 'none' }}>{String(no).padStart(2, '0')}</span>
+        <StateBadge st={st} />
+        <span title={name} style={{ flex: 1, fontSize: 13, color: '#22303c', fontWeight: ng ? 700 : 400, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}{OPTION_ITEMS.has(no) && <span title="別売オプションと連動する項目" style={{ marginLeft: 6, fontSize: 9.5, fontWeight: 700, color: '#b45309', background: '#fbe9d0', padding: '1px 5px', borderRadius: 4 }}>オプション</span>}</span>
+        {ng && <button type="button" className="btn-outline" data-action="結果詳細" onClick={() => setTrace(no)} style={rowBtn('#c0392b', true)}>結果詳細</button>}
+        <button type="button" className="btn-outline" data-action="説明" onClick={() => setExplain(no)} style={rowBtn(ng ? '#c0392b' : '#8290a0')}>説明</button>
+      </div>
+    );
+  };
 
   useEffect(() => {
     if (!open || explain == null) return;
@@ -93,41 +113,79 @@ export function SettlementAuditModal({ open, onClose }: Props) {
   const ex = explain != null ? AUDIT_EXPLANATIONS[explain] : undefined;
   const exItem = explain != null ? AUDIT_ITEMS.find((a) => a.no === explain) : undefined;
 
-  const traceText = AUDIT_ITEMS.map((it) => {
-    const st = status[it.no] ?? '未調査';
-    const detail = st === '要確認' ? (it.no === 3 ? '資金収支計算書(11) 当期資金収支差額合計 △1,100,000 ≠ 貸借対照表の支払資金残高の増減 △1,150,000（差額 50,000）' : it.no === 14 ? '10万円以上の費用 3 件：Seq16 委託費収益 2,732,430／Seq17 職員俸給 1,502,512／Seq2 法定福利費 670,361 → 固定資産計上の要否を確認' : '前年度決算額と当年度繰越額：次期繰越活動増減差額 12,662,300 ≠ 12,677,100（差額 14,800）') : st === 'OK' ? '条件式：一致' : st === 'スキップ' ? '設定で無効' : '';
+  const detailOf = (no: number, st: Status) => (st === '要調査' ? (no === 3 ? '資金収支計算書(11) 当期資金収支差額合計 △1,100,000 ≠ 貸借対照表の支払資金残高の増減 △1,150,000（差額 50,000）' : no === 14 ? '10万円以上の費用 3 件：Seq16 委託費収益 2,732,430／Seq17 職員俸給 1,502,512／Seq2 法定福利費 670,361 → 固定資産計上の要否を確認' : '前年度決算額と当年度繰越額：次期繰越活動増減差額 12,662,300 ≠ 12,677,100（差額 14,800）') : st === 'OK' ? '条件式：一致' : st === 'スキップ' ? '設定で無効' : '');
+  const traceItems = AUDIT_ITEMS.filter((it) => trace === 'all' || it.no === trace);
+  const traceText = traceItems.map((it) => {
+    const st = stateOf(it.no);
+    const detail = detailOf(it.no, st);
     return `[${String(it.no).padStart(2, '0')}] ${st.padEnd(4, '　')} ${it.name}${detail ? '\n      ' + detail : ''}`;
   }).join('\n');
+  const traceItem = typeof trace === 'number' ? AUDIT_ITEMS.find((a) => a.no === trace) : undefined;
 
   return (
     <>
     {/* 説明を表示している間はモーダルを閉じられない（「一覧に戻る」のみ）。Esc も一覧に戻る扱い */}
-    <Modal open={open} onClose={onClose} closable={explain == null} width={1000} title={<>決算調査 <span style={{ fontSize: 12, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>{s.fiscalYear}　4月1日 〜 3月31日　{corpTab === '法人' ? '法人全体' : s.division}</span></>}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      closable={explain == null}
+      width={1040}
+      title={
+        <span style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <span>{displayName('決算調査')}</span>
+          <span style={{ fontSize: 12, fontWeight: 500, color: '#7a8794' }}>{s.fiscalYear}　4月1日 〜 3月31日　{corpTab === '法人' ? '法人全体' : s.division}</span>
+          {explain == null && (
+            <button type="button" className="btn-outline" data-action="決算チェック設定" onClick={() => setSettings(true)} title="チェックする項目と、項目ごとの条件（勘定科目）を設定します" style={{ marginLeft: 'auto', padding: '6px 14px', borderRadius: 8, border: '1px solid #1f7a52', background: '#fff', color: '#1f7a52', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              決算チェック設定
+            </button>
+          )}
+        </span>
+      }
+    >
       <ToastView msg={toast.msg} />
       {explain == null ? (
-        <div style={{ padding: '14px 22px 20px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 32px' }}>
-            <div>{AUDIT_ITEMS.filter((a) => a.no <= 20).map((a) => <Item key={a.no} {...a} />)}</div>
-            <div>
-              {AUDIT_ITEMS.filter((a) => a.no > 20).map((a) => <Item key={a.no} {...a} />)}
-              {[29, 30].map((n) => (
-                <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid #f1f4f6', opacity: 0.45 }}>
-                  <span style={{ width: 26, fontSize: 13, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{n}</span>
-                  <span style={{ fontSize: 12, color: '#9aa5b1' }}>（予備）</span>
-                </div>
-              ))}
-              <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
-                <div style={{ fontSize: 12, color: '#7a8794', minHeight: 18 }}>
-                  {running ? '調査中…' : done ? <>結果：<b style={{ color: '#1f7a52' }}>OK {okCount}</b>　<b style={{ color: '#c0392b' }}>要確認 {ngCount}</b>{skipCount > 0 && <>　<span style={{ color: '#9aa5b1' }}>スキップ {skipCount}</span></>}</> : '「調査開始」で全項目を調査します（設定で無効にした項目はスキップ）'}
-                </div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                  <button type="button" className="btn-outline" onClick={() => setSettings(true)} style={btn()}>設定</button>
-                  <button type="button" className="btn-outline" onClick={() => window.open('https://www.child.co.jp/', '_blank', 'noopener')} style={btn()}>サポートサイト</button>
-                  <button type="button" className="btn-outline" disabled={!done} onClick={() => setPrint(true)} style={{ ...btn(), opacity: done ? 1 : 0.5 }}>結果印刷</button>
-                  <button type="button" className="btn-outline" disabled={!done} onClick={() => setTrace(true)} style={{ ...btn(), opacity: done ? 1 : 0.5 }}>結果詳細表示</button>
-                  {done ? <button type="button" className="submit-btn" onClick={onClose} style={btn(true)}>調査終了</button> : <button type="button" className="submit-btn" onClick={start} disabled={running} style={{ ...btn(true), opacity: running ? 0.6 : 1 }}>調査開始</button>}
-                </div>
+        <div style={{ padding: '12px 22px 20px' }}>
+          {/* 状態ごとの件数（凡例を兼ねる）＋ 要調査のみ */}
+          <div data-audit-summary style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '8px 12px', marginBottom: 10, background: '#f8fafc', border: '1px solid #e8edf2', borderRadius: 10 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#8290a0' }}>状態</span>
+            {STATES.map((st) => (
+              <span key={st} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}>
+                <StateBadge st={st} />
+                <b style={{ fontVariantNumeric: 'tabular-nums', color: st === '要調査' && counts[st] > 0 ? '#c0392b' : '#22303c' }}>{counts[st]}</b>
+              </span>
+            ))}
+            <label style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 20, border: '1px solid ' + (onlyNg ? '#c0392b' : '#dde4ea'), background: onlyNg ? '#fdeee9' : '#fff', color: onlyNg ? '#c0392b' : '#5b6773', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>
+              <input type="checkbox" checked={onlyNg} onChange={(e) => setOnlyNg(e.target.checked)} />
+              要調査のみ
+            </label>
+          </div>
+          {onlyNg && shown.length === 0 && (
+            <div style={{ padding: '28px 12px', textAlign: 'center', color: '#9aa5b1', fontSize: 13 }}>{done ? '要調査の項目はありません。' : '要調査の項目はまだありません（「調査開始」で調査します）。'}</div>
+          )}
+          <div style={{ display: 'grid', gridTemplateColumns: onlyNg ? '1fr' : '1fr 1fr', gap: '0 24px' }}>
+            <div>{shown.slice(0, half).map((a) => <Item key={a.no} {...a} />)}</div>
+            {!onlyNg && (
+              <div>
+                {shown.slice(half).map((a) => <Item key={a.no} {...a} />)}
+                {[29, 30].map((n) => (
+                  <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderBottom: '1px solid #f1f4f6', opacity: 0.45 }}>
+                    <span style={{ width: 26, fontSize: 13, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{n}</span>
+                    <span style={{ fontSize: 12, color: '#9aa5b1' }}>（予備）</span>
+                  </div>
+                ))}
               </div>
+            )}
+          </div>
+          <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: 12, color: '#7a8794', minHeight: 18 }}>
+              {running ? '調査中…' : done ? (counts.要調査 > 0 ? <>要調査が <b style={{ color: '#c0392b' }}>{counts.要調査} 件</b> あります。行の「結果詳細」「説明」で内容を確認してください。</> : 'すべての項目が OK です。') : '「調査開始」で全項目を調査します（決算チェック設定で無効にした項目はスキップ）'}
+            </div>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <button type="button" className="btn-outline" onClick={() => window.open('https://www.child.co.jp/', '_blank', 'noopener')} style={btn()}>サポートサイト</button>
+              <span title={done ? '' : '調査が終わると使えます'}><button type="button" className="btn-outline" disabled={!done} onClick={() => setPrint(true)} style={{ ...btn(), opacity: done ? 1 : 0.5 }}>結果印刷</button></span>
+              <span title={done ? '' : '調査が終わると使えます'}><button type="button" className="btn-outline" disabled={!done} onClick={() => setTrace('all')} style={{ ...btn(), opacity: done ? 1 : 0.5 }}>結果詳細表示（全項目）</button></span>
+              {done && <button type="button" className="btn-outline" onClick={start} style={btn()}>再調査</button>}
+              {done ? <button type="button" className="submit-btn" onClick={onClose} style={btn(true)}>調査終了</button> : <button type="button" className="submit-btn" onClick={start} disabled={running} style={{ ...btn(true), opacity: running ? 0.6 : 1 }}>調査開始</button>}
             </div>
           </div>
         </div>
@@ -160,9 +218,10 @@ export function SettlementAuditModal({ open, onClose }: Props) {
                 （現在は「04. 次期繰越活動増減差額」のみ転記済み）
               </p>
             )}
-            {status[explain] === '要確認' && <div style={{ marginTop: 16 }}><Notice tone="warn">この項目は「要確認」です。結果詳細表示（トレース情報）で対象の金額・伝票を確認してください。</Notice></div>}
+            {stateOf(explain) === '要調査' && <div style={{ marginTop: 16 }}><Notice tone="warn">この項目は「要調査」です。{detailOf(explain, '要調査')}</Notice></div>}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
+            {stateOf(explain) === '要調査' && <button type="button" className="btn-outline" onClick={() => setTrace(explain)} style={btn()}>結果詳細を表示</button>}
             <button type="button" className="btn-outline" onClick={() => setExplain(null)} style={btn()}>一覧に戻る</button>
           </div>
         </div>
@@ -170,7 +229,7 @@ export function SettlementAuditModal({ open, onClose }: Props) {
     </Modal>
 
     {/* 決算チェック設定 */}
-    <Modal open={settings} onClose={() => setSettings(false)} width={760} title="決算チェックシステム - 設定">
+    <Modal open={settings} onClose={() => setSettings(false)} width={760} title="決算チェック設定">
       <div style={{ padding: '12px 22px 18px' }}>
         <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>{(['区分', '法人'] as const).map((t) => <button key={t} type="button" onClick={() => setCorpTab(t)} style={uiBtn(corpTab === t ? '#1f7a52' : '#5b6773', corpTab === t, true)}>{t === '区分' ? '決算チェック設定（表示中の区分）' : '法人決算チェック設定（法人全体）'}</button>)}</div>
         <div style={{ fontSize: 12, color: '#7a8794', marginBottom: 8 }}>チェックする項目を有効／無効に切り替え、項目名をクリックすると診断用条件式を構成する勘定科目を選択できます。</div>
@@ -183,12 +242,15 @@ export function SettlementAuditModal({ open, onClose }: Props) {
             </div>
           ))}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}><button type="button" onClick={() => setSettings(false)} style={uiBtn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { setSettings(false); toast.show('決算チェック設定を保存しました'); }} style={uiBtn('#1f7a52', true)}>OK</button></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+          {onNavigate && <button type="button" data-action="設定画面で開く" onClick={() => { setSettings(false); onClose(); onNavigate('決算チェック設定'); }} title="決算調査を閉じて、各種設定の「決算チェック設定」画面へ移動します" style={uiBtn('#1f7a52')}>各種設定の「決算チェック設定」画面で開く ›</button>}
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}><button type="button" onClick={() => setSettings(false)} style={uiBtn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { setSettings(false); toast.show('決算チェック設定を保存しました'); }} style={uiBtn('#1f7a52', true)}>OK</button></div>
+        </div>
       </div>
     </Modal>
 
     {/* 項目ごとの勘定科目選択 */}
-    <Modal open={itemCfg != null} onClose={() => setItemCfg(null)} width={620} title={`決算チェックシステム - 設定 - ${itemCfg != null ? String(itemCfg).padStart(2, '0') + '. ' + (AUDIT_ITEMS.find((a) => a.no === itemCfg)?.name ?? '') : ''}`}>
+    <Modal open={itemCfg != null} onClose={() => setItemCfg(null)} width={620} title={`決算チェック設定 - ${itemCfg != null ? String(itemCfg).padStart(2, '0') + '. ' + (AUDIT_ITEMS.find((a) => a.no === itemCfg)?.name ?? '') : ''}`}>
       <div style={{ padding: '12px 22px 18px' }}>
         <div style={{ fontSize: 12.5, color: '#5b6773', marginBottom: 8 }}>診断用条件式の各要素を構成する勘定科目を、チェックにより有効／無効に切り替えます。</div>
         <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: 320, overflow: 'auto' }}>
@@ -199,12 +261,15 @@ export function SettlementAuditModal({ open, onClose }: Props) {
     </Modal>
 
     {/* 結果詳細（トレース情報） */}
-    <Modal open={trace} onClose={() => setTrace(false)} width={760} title="決算チェックトレース情報">
+    <Modal open={trace != null} onClose={() => setTrace(null)} width={760} title={traceItem ? `結果詳細 - ${String(traceItem.no).padStart(2, '0')}. ${traceItem.name}` : '結果詳細（決算チェックトレース情報）'}>
       <div style={{ padding: '12px 22px 18px' }}>
+        {traceItem && <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, fontSize: 12.5 }}><StateBadge st={stateOf(traceItem.no)} /><span style={{ color: '#5b6773' }}>対象の金額・伝票を確認してください。</span></div>}
         <pre style={{ margin: 0, padding: 14, background: '#1e2630', color: '#d7dee6', borderRadius: 10, fontSize: 12, lineHeight: 1.7, whiteSpace: 'pre-wrap', maxHeight: 420, overflow: 'auto', fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace" }}>{traceText}</pre>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
           <button type="button" onClick={() => navigator.clipboard?.writeText(traceText).then(() => toast.show('テキストとしてコピーしました（メモ帳やExcelに貼り付けできます）')).catch(() => toast.show('コピーできませんでした'))} style={uiBtn()}>コピー</button>
-          <button type="button" onClick={() => setTrace(false)} style={uiBtn('#1f7a52', true)}>閉じる</button>
+          {traceItem && <button type="button" onClick={() => { const no = traceItem.no; setTrace(null); setExplain(no); }} style={uiBtn()}>この項目の説明</button>}
+          {traceItem && <button type="button" onClick={() => setTrace('all')} style={uiBtn()}>全項目を表示</button>}
+          <button type="button" onClick={() => setTrace(null)} style={uiBtn('#1f7a52', true)}>閉じる</button>
         </div>
       </div>
     </Modal>
@@ -213,7 +278,7 @@ export function SettlementAuditModal({ open, onClose }: Props) {
     <PreviewModal open={print} onClose={() => setPrint(false)} title="決算チェック結果" opts={{ from: `${s.fiscalYear} 4月1日`, to: '3月31日', output: '画面へプレビューする' }} pages={1} accent="#1f7a52">
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
         <thead><tr>{['No', '項目', '結果', '内容'].map((h) => <th key={h} style={{ border: '1px solid #9aa5b1', padding: 3, textAlign: 'left', background: '#eef2f6' }}>{h}</th>)}</tr></thead>
-        <tbody>{AUDIT_ITEMS.map((it) => <tr key={it.no}><td style={{ border: '1px solid #c3ccd4', padding: 3 }}>{String(it.no).padStart(2, '0')}</td><td style={{ border: '1px solid #c3ccd4', padding: 3 }}>{it.name}</td><td style={{ border: '1px solid #c3ccd4', padding: 3, fontWeight: 700, color: status[it.no] === '要確認' ? '#c0392b' : '#22303c' }}>{status[it.no] ?? '未調査'}</td><td style={{ border: '1px solid #c3ccd4', padding: 3, color: '#5b6773' }}>{status[it.no] === '要確認' ? '要確認（トレース情報参照）' : status[it.no] === 'OK' ? '一致' : ''}</td></tr>)}</tbody>
+        <tbody>{AUDIT_ITEMS.map((it) => <tr key={it.no}><td style={{ border: '1px solid #c3ccd4', padding: 3 }}>{String(it.no).padStart(2, '0')}</td><td style={{ border: '1px solid #c3ccd4', padding: 3 }}>{it.name}</td><td style={{ border: '1px solid #c3ccd4', padding: 3, fontWeight: 700, color: stateOf(it.no) === '要調査' ? '#c0392b' : '#22303c' }}>{STATE_STYLE[stateOf(it.no)].icon} {stateOf(it.no)}</td><td style={{ border: '1px solid #c3ccd4', padding: 3, color: '#5b6773' }}>{stateOf(it.no) === '要調査' ? '要調査（結果詳細を参照）' : stateOf(it.no) === 'OK' ? '一致' : ''}</td></tr>)}</tbody>
       </table>
     </PreviewModal>
     </>

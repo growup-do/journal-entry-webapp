@@ -1,8 +1,9 @@
-// 仕訳数の確認（既存の小ダイアログの再現）
+// 仕訳数の問合せ（既存の小ダイアログの再現）。見出しに会計年度・区分名を表示する
 
 import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
-import { JOURNAL_COUNTS } from '../data';
+import { JOURNAL_COUNTS, displayName } from '../data';
+import { useSession } from '../store/session';
 
 interface Props {
   open: boolean;
@@ -10,9 +11,10 @@ interface Props {
 }
 
 export function JournalCountModal({ open, onClose }: Props) {
+  const s = useSession();
   const total = JOURNAL_COUNTS.reduce((t, r) => t.map((x, i) => x + r.c[i]), [0, 0, 0, 0, 0, 0]);
   return (
-    <Modal open={open} onClose={onClose} width={560} title="仕訳数の確認">
+    <Modal open={open} onClose={onClose} width={560} title={<>{displayName('仕訳数')} <span style={{ fontSize: 12, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>{s.fiscalYear}　{s.division}</span></>}>
       <div style={{ padding: '6px 20px 18px' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>

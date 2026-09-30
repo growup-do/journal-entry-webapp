@@ -5,7 +5,20 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { MENU_GROUPS, groupOf, type MenuGroup } from '../data';
+import { MENU_GROUPS, displayName, groupOf, isOptionMenu, type MenuGroup } from '../data';
+import { startKindOf, useSession, type Session } from '../store/session';
+
+/** メニュー項目の状態（依頼書 5.1.1／5.1.4）：起動区分の種類・オプション導入状況で変わる。使えない項目は隠さず、理由つきの無効表示にする */
+function itemState(label: string, s: Session): { disabled?: string; tag?: string } {
+  const kind = startKindOf(s);
+  if (['単一入力', '伝票入力', '振替入力', '振替単一'].includes(label) && kind !== '入力区分') return { disabled: `${kind}で起動中は伝票を入力できません（入力区分に切り替えてください）` };
+  if (['業者元帳', '業者推移'].includes(label) && kind === '合算区分') return { disabled: '合算区分で起動中は利用できません' };
+  if (isOptionMenu(label)) {
+    if (!s.options[label]) return { tag: '未導入' };
+    if (kind === '合算区分') return { disabled: '合算区分で起動中はオプションを利用できません' };
+  }
+  return {};
+}
 
 
 interface Props {
@@ -21,6 +34,7 @@ export function Menu({ orientation, accent, active, onSelect }: Props) {
 
 /* ---------------- 横：大メニュー＋ドロップダウン ---------------- */
 function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
+  const session = useSession();
   const [open, setOpen] = useState<string | null>(null);
   const timer = useRef<number | undefined>(undefined);
   const activeGroup = groupOf(active)?.key;
@@ -88,7 +102,7 @@ function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
                 }}
               >
                 {g.items.map((label) => (
-                  <SubItem key={label} label={label} active={label === active} accent={accent} onClick={() => { onSelect(label); setOpen(null); }} />
+                  <SubItem key={label} label={label} state={itemState(label, session)} active={label === active} accent={accent} onClick={() => { onSelect(label); setOpen(null); }} />
                 ))}
               </div>
             )}
@@ -101,6 +115,7 @@ function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
 
 /* ---------------- 縦：アコーディオン ---------------- */
 function VMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
+  const session = useSession();
   const activeGroup = groupOf(active)?.key;
   const [opened, setOpened] = useState<Set<string>>(() => new Set(activeGroup ? [activeGroup] : []));
   // 別の階層の項目が選ばれたら（メモからの遷移など）その階層を開く
@@ -148,7 +163,7 @@ function VMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
             {isOpen && (
               <div style={{ padding: '0 4px 6px 4px' }}>
                 {g.items.map((label) => (
-                  <SubItem key={label} label={label} active={label === active} accent={accent} indent onClick={() => onSelect(label)} />
+                  <SubItem key={label} label={label} state={itemState(label, session)} active={label === active} accent={accent} indent onClick={() => onSelect(label)} />
                 ))}
               </div>
             )}
@@ -194,7 +209,8 @@ function HomeButton({ active, accent, onClick, vertical }: { active: boolean; ac
   );
 }
 
-function SubItem({ label, active, accent, indent, onClick }: { label: string; active: boolean; accent: string; indent?: boolean; onClick: () => void }) {
+function SubItem({ label, active, accent, indent, onClick, state = {} }: { label: string; active: boolean; accent: string; indent?: boolean; onClick: () => void; state?: { disabled?: string; tag?: string } }) {
+  const off = !!state.disabled;
   const style: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
@@ -204,18 +220,20 @@ function SubItem({ label, active, accent, indent, onClick }: { label: string; ac
     padding: indent ? '7px 10px 7px 34px' : '8px 12px',
     fontSize: 13,
     fontFamily: 'inherit',
-    cursor: 'pointer',
+    cursor: off ? 'not-allowed' : 'pointer',
     background: active ? '#eef2f6' : 'transparent',
     border: 'none',
     borderRadius: 7,
     borderLeft: indent ? '3px solid ' + (active ? accent : 'transparent') : 'none',
-    color: active ? accent : '#3d4a56',
+    color: off ? '#b3bcc5' : active ? accent : '#3d4a56',
     fontWeight: active ? 700 : 500,
     whiteSpace: 'nowrap',
   };
   return (
-    <button type="button" className="menu-sub" data-menu={label} onClick={onClick} style={style}>
-      {label}
+    <button type="button" className="menu-sub" data-menu={label} onClick={off ? undefined : onClick} aria-disabled={off} title={state.disabled ?? (state.tag === '未導入' ? '未導入のオプションです（クリックで導入のご案内）' : undefined)} style={style}>
+      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName(label)}</span>
+      {off && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 8, background: '#f1f4f6', color: '#9aa5b1', flex: 'none' }}>利用不可</span>}
+      {state.tag && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 8, background: '#fff7e6', color: '#b7791f', flex: 'none' }}>{state.tag}</span>}
     </button>
   );
 }

@@ -73,7 +73,7 @@ export function TemplateJournalPage({ variant, accent }: { variant: 'form' | 'sh
 
       {tab === '連続定型仕訳' && (
         <div style={{ padding: 22 }}>
-          <Notice>事前に登録した仕訳を伝票入力の「連続定型（F9）」で呼び出し、日付・金額を入れて登録できます。伝票形式ごとにテンプレートを持てます（伝票追加／挿入／削除、強制資金に対応）。</Notice>
+          <Notice>事前に登録した仕訳を伝票入力の「連続定型」で呼び出し、日付・金額を入れて登録できます。伝票形式ごとにテンプレートを持てます（伝票追加／挿入／削除、強制資金に対応）。</Notice>
           <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
             <thead><tr><th style={TH}>名称</th><th style={{ ...TH, width: 110 }}>伝票の形式</th><th style={TH}>内容</th><th style={{ ...TH, width: 70, textAlign: 'right' }}>行数</th><th style={{ ...TH, width: 150, textAlign: 'right' }}>操作</th></tr></thead>
             <tbody>
@@ -93,7 +93,7 @@ export function TemplateJournalPage({ variant, accent }: { variant: 'form' | 'sh
 
       {tab === '自動按分仕訳' && (
         <div style={{ padding: 22 }}>
-          <Notice>水道代・ガス代などを、あらかじめ設定した比率で複数の区分（事務費／事業費など）の伝票に分けて登録します。伝票入力の「自動按分（F7）」で総金額と日付を入れると、1回の操作で複数枚の伝票を登録できます。</Notice>
+          <Notice>水道代・ガス代などを、あらかじめ設定した比率で複数の区分（事務費／事業費など）の伝票に分けて登録します。伝票入力の「自動按分」で総金額と日付を入れると、1回の操作で複数枚の伝票を登録できます。</Notice>
           <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
             <thead><tr><th style={TH}>名称</th><th style={{ ...TH, width: 90 }}>形式</th><th style={TH}>按分（区分：率）</th><th style={{ ...TH, width: 90 }}>端数処理</th><th style={{ ...TH, width: 200, textAlign: 'right' }}>操作</th></tr></thead>
             <tbody>

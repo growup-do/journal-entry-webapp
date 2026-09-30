@@ -23,10 +23,11 @@ export const DEFAULT_TREE: DivisionNode = {
     { id: 'shafuku', code: '', name: '社会福祉事業', kind: '事業区分', children: [
       { id: 'honbu', code: '001', name: '本部', kind: '拠点区分', entry: true, use: true, color: '#e8f0fb', category: '法人本部', startYear: '令和6年度', children: [] },
       { id: 'hoikuen', code: '', name: 'チャイルド保育園', kind: '拠点区分', children: [
-        { id: 'hoiku', code: '002', name: '保育事業', kind: 'サービス区分', entry: true, use: true, color: '#eaf5ef', category: '保育事業', startYear: '令和6年度', children: [
-          { id: 'ichiji', code: '004', name: '一時預かり', kind: '小サービス区分', entry: true, use: true, color: '#fff7e6', category: '保育事業', startYear: '令和7年度' },
+        { id: 'hoiku', code: '002', name: '保育事業', kind: 'サービス区分', entry: true, use: true, color: '#eaf5ef', category: '保育事業', startYear: '令和6年度', children: [] },
+        // 子育て支援は小サービス区分を持つ親区分（集計・参照用）の例。伝票は末端の入力区分で登録する
+        { id: 'kosodate', code: '003', name: '子育て支援', kind: 'サービス区分', entry: true, use: true, color: '#fdeef3', category: '子育て支援', startYear: '令和6年度', children: [
+          { id: 'ichiji', code: '004', name: '一時預かり', kind: '小サービス区分', entry: true, use: true, color: '#fff7e6', category: '子育て支援', startYear: '令和7年度' },
         ] },
-        { id: 'kosodate', code: '003', name: '子育て支援', kind: 'サービス区分', entry: true, use: true, color: '#fdeef3', category: '子育て支援', startYear: '令和6年度' },
         { id: 'chiiki', code: '005', name: '地域支援', kind: 'サービス区分', entry: true, use: false, color: '#f1f4f6', category: '地域支援', startYear: '令和8年度' },
       ] },
     ] },
@@ -46,6 +47,12 @@ export interface EnvSettings {
   /** 帳票・繰入金・注意書き（動作環境 4.2.2） */
   budgetInternalOffset: boolean; onePageRow: boolean; termFromStart: boolean; hideCorpName: boolean;
   transferWatch: '収入で監視' | '支払いで監視';
+  /** 依頼書 2.6／5.5.1：動作環境の残り項目（全区分共通：フリガナ検索の無効化・帳票印刷の速度重視／区分ごと：負数の表記位置・バックアップ先・画面背景・金額フォントの自動調整） */
+  noFurigana: boolean; printSpeed: boolean;
+  negativePos: '前' | '後'; backupDest: 'クラウド（標準）' | 'フォルダ指定' | 'Dropbox'; backupFolder: string;
+  bgMode: '色' | '画像'; bgColor: string; bgColorRight: string; autoAmountFont: boolean;
+  /** 補正予算額の入力方式（依頼書 5.5.5：切替は「予算額の設定」画面内で行う。区分ごと） */
+  supplementMode: '補正額' | '補正後予算額';
 }
 export const DEFAULT_ENV: EnvSettings = {
   confirmGeneral: true, confirmIncome: true, confirmExpense: true,
@@ -56,6 +63,9 @@ export const DEFAULT_ENV: EnvSettings = {
   wideInitial: '仕訳日記帳', wideMonth: '最新月', ledger1Init: '普通預金（保育園）', ledger2Init: '', order: '日付順',
   eraGannen: true, trialCalc: '費目行に表記されている計算方式で計算する', reserveOutput: '予備費を標準方式で印字', noteOnExcel: true,
   budgetInternalOffset: true, onePageRow: false, termFromStart: false, hideCorpName: false, transferWatch: '収入で監視',
+  noFurigana: false, printSpeed: false,
+  negativePos: '前', backupDest: 'クラウド（標準）', backupFolder: '', bgMode: '色', bgColor: '#f3f6f9', bgColorRight: '#eef5fb', autoAmountFont: true,
+  supplementMode: '補正額',
 };
 
 export interface InputSettings {
@@ -68,6 +78,10 @@ export interface PrintCommon {
   items: Record<string, boolean>; offsetX: number; offsetY: number;
   widthName: number; widthAmount: number; fontHeader: string; fontName: string; fontAmount: string;
   stamps: string[]; footnotes: Record<string, string>;
+  /** ページ番号の開始番号 */
+  pageStart: number;
+  /** 備考・摘要（依頼書 3.2）：単位ごとに保持する（法人の決算書／拠点の決算書／サービス区分の資金収支計算書）。1つには統合しない */
+  unitRemarks: Record<string, string>;
 }
 export const PRINT_ITEMS: [string, string][] = [
   ['zero', '0データを印刷しない'], ['shade', '費目行を網掛け、太字にする'], ['bold', '費目下を太線にする'], ['stamp', '捺印欄を印刷する'], ['corp', '法人名を印刷する'],
@@ -79,6 +93,7 @@ export const DEFAULT_PRINT: PrintCommon = {
   items: Object.fromEntries(PRINT_ITEMS.map(([k]) => [k, ['zero', 'shade', 'corp', 'autofont', 'page', 'date'].includes(k)])),
   offsetX: 0, offsetY: 0, widthName: 60, widthAmount: 28, fontHeader: 'Noto Sans JP 11pt', fontName: 'Noto Sans JP 9pt', fontAmount: 'Noto Sans JP 9pt',
   stamps: ['理事長', '園長', '事務長', ''], footnotes: {},
+  pageStart: 1, unitRemarks: {},
 };
 
 /* ---------- 定型仕訳・自動按分 ---------- */
@@ -116,21 +131,28 @@ export interface Session {
   allocations: AllocationTemplate[];
   specialRates: { division: string; rate: number }[];
   /** 推移・試算表からの元帳ドリルダウン */
-  ledgerTarget: { account: string; month: string } | null;
+  ledgerTarget: { account: string; month: string; /** 呼び出し元の画面（戻り導線に使う。例 '月次試算'） */ from?: string } | null;
   /** 決算チェック設定（項目番号→有効） */
   auditEnabled: Record<number, boolean>;
   /** 法人情報（部門情報の変更）：データ開始年月日（西暦8桁）・法人税納税の有無 */
   corpStartDate: string;
   corpTax: string;
+  /** 利用者の権限（依頼書 2.1-7）。参照のみ＝伝票の入力・訂正・削除・入換ができない */
+  role: '入力可' | '参照のみ';
+  /** 別売オプションの導入状況（依頼書 5.1.4）。未導入は導入案内として表示 */
+  options: Record<string, boolean>;
+  /** 起動直後（区分選択後）に表示する画面（依頼書 5.2.2） */
+  startScreen: 'ホーム' | '伝票入力';
 }
 
-const KEY = 'proto-session-v1';
+const KEY = 'proto-session-v2'; // v2：区分ツリーの見直し（入力区分／親区分）に伴い保存形式を更新
 const DEFAULT: Session = {
   division: '002 保育事業', divisionPath: ['社会福祉法人 チャイルド保育園', '社会福祉事業', 'チャイルド保育園', '保育事業'],
   fiscalYear: '令和8年度', currentYear: '令和8年度', tree: DEFAULT_TREE, merges: [{ name: '合算_001（保育園＋子育て支援）', members: ['002 保育事業', '003 子育て支援'] }],
   favorites: ['単一入力', '伝票入力', '仕訳一覧', '勘定元帳', '月次試算', '日次調査'],
   env: DEFAULT_ENV, input: DEFAULT_INPUT, print: DEFAULT_PRINT, templates: DEFAULT_TEMPLATES, allocations: DEFAULT_ALLOCATIONS, specialRates: DEFAULT_SPECIAL_RATES,
   ledgerTarget: null, auditEnabled: {}, corpStartDate: '20240401', corpTax: '非課税',
+  role: '入力可', options: { 小口現金: true, 減価償却: true, 預金出納: true, 収入支出: true, 電子印: false }, startScreen: 'ホーム',
 };
 
 let state: Session = (() => {
@@ -138,7 +160,7 @@ let state: Session = (() => {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULT;
     const saved = JSON.parse(raw) as Partial<Session>;
-    return { ...DEFAULT, ...saved, env: { ...DEFAULT_ENV, ...(saved.env ?? {}) }, input: { ...DEFAULT_INPUT, ...(saved.input ?? {}) }, print: { ...DEFAULT_PRINT, ...(saved.print ?? {}) }, ledgerTarget: null };
+    return { ...DEFAULT, ...saved, env: { ...DEFAULT_ENV, ...(saved.env ?? {}) }, input: { ...DEFAULT_INPUT, ...(saved.input ?? {}) }, print: { ...DEFAULT_PRINT, ...(saved.print ?? {}) }, options: { ...DEFAULT.options, ...(saved.options ?? {}) }, ledgerTarget: null };
   } catch {
     return DEFAULT;
   }
@@ -166,3 +188,20 @@ export function flattenDivisions(node: DivisionNode, path: string[] = []): { nod
   return out;
 }
 export const divisionLabel = (n: DivisionNode) => (n.code ? `${n.code} ${n.name}` : n.name);
+
+/* ---------- 起動区分の種類と権限（依頼書 2.1） ---------- */
+/** 入力区分＝ツリー末端の伝票入力区分／親区分＝それらを集計する区分（法人・事業区分・拠点など）／合算区分＝任意の合算 */
+export type StartKind = '入力区分' | '親区分' | '合算区分';
+export function startKindOf(s: Session): StartKind {
+  if (s.merges.some((m) => m.name === s.division)) return '合算区分';
+  const hit = flattenDivisions(s.tree).find((x) => divisionLabel(x.node) === s.division)?.node;
+  if (!hit) return '入力区分';
+  const hasEntryChild = (hit.children ?? []).some((c) => c.entry && c.use !== false);
+  return hit.entry && !hasEntryChild ? '入力区分' : '親区分';
+}
+/** 伝票の入力・訂正・削除ができるか（参照のみ権限、親区分・合算区分での起動では不可） */
+export const canEdit = (s: Session) => s.role === '入力可' && startKindOf(s) === '入力区分';
+/** 一覧の表示順入換ができるか（参照のみ権限・合算区分では不可） */
+export const canReorder = (s: Session) => s.role === '入力可' && startKindOf(s) !== '合算区分';
+/** 使えない理由（ツールチップ用）。使えるときは空文字 */
+export const editBlockReason = (s: Session) => (s.role !== '入力可' ? '参照のみの権限のため操作できません' : startKindOf(s) === '合算区分' ? '合算区分で起動中のため操作できません（内訳の確認用）' : startKindOf(s) === '親区分' ? '親区分で起動中のため操作できません（伝票は入力区分で登録します）' : '');

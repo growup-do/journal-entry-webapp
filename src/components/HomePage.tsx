@@ -3,9 +3,9 @@
 import { useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { ToastView, useToast } from './Toast';
-import { HOME_BANKS, HOME_FAQ, HOME_NOTICES, IMPLEMENTED_MENU, MENU_GROUPS, SETTINGS_MENU } from '../data';
+import { HOME_BANKS, HOME_FAQ, HOME_NOTICES, IMPLEMENTED_MENU, MENU_GROUPS, SETTINGS_GROUPS, SETTINGS_MENU, displayName, isOptionMenu } from '../data';
 import { Modal } from './Modal';
-import { setSession, useSession } from '../store/session';
+import { setSession, startKindOf, useSession } from '../store/session';
 import { SUPPORT_URL } from './SettingsMenu';
 
 const yen = (n: number) => n.toLocaleString('ja-JP');
@@ -25,6 +25,7 @@ interface Props {
 export function HomePage({ variant, accent, onNavigate }: Props) {
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
   const [favEdit, setFavEdit] = useState(false);
+  const [find, setFind] = useState('');
   // お知らせ一覧（タグ絞り込み・クリックで本文を展開）
   const [noticeOpen, setNoticeOpen] = useState(false);
   const [noticeTag, setNoticeTag] = useState<string>('すべて');
@@ -53,6 +54,37 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
       <div style={{ width: '100%', maxWidth: isSheet ? 'none' : 1280, display: 'grid', gridTemplateColumns: 'minmax(0,1.6fr) minmax(280px,1fr)', gap: 20, alignItems: 'start' }}>
         {/* 左列 */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
+          {/* 機能から探す（依頼書 5.2.2：機能一覧型。どこに何があるかを最初に見せる） */}
+          <section style={card}>
+            <div style={h2}>
+              機能から探す
+              <input className="search-input" value={find} onChange={(e) => setFind(e.target.value)} placeholder="例：試算表、年度の切替、科目" autoComplete="off" style={{ marginLeft: 8, width: 230, padding: '6px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 12.5, fontFamily: 'inherit', fontWeight: 400, outline: 'none' }} />
+              <button type="button" className="submit-btn" disabled={startKindOf(s) !== '入力区分'} title={startKindOf(s) !== '入力区分' ? '入力区分で起動すると伝票を入力できます' : undefined} onClick={() => onNavigate('伝票入力')} style={{ marginLeft: 'auto', padding: '8px 16px', borderRadius: 9, border: 'none', background: accent, color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: startKindOf(s) !== '入力区分' ? 'not-allowed' : 'pointer', opacity: startKindOf(s) !== '入力区分' ? 0.45 : 1 }}>伝票入力をはじめる</button>
+            </div>
+            <div style={{ padding: '12px 16px 6px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 12 }}>
+              {[...MENU_GROUPS.map((g) => ({ key: g.key, label: g.label, note: '', danger: false, items: g.items })), ...SETTINGS_GROUPS.filter((g) => g.key !== 'web').map((g) => ({ key: 's-' + g.key, label: '各種設定 › ' + g.label, note: g.note ?? '', danger: !!g.danger, items: g.items }))]
+                .map((g) => ({ ...g, items: g.items.filter((l) => !find || displayName(l).includes(find) || l.includes(find) || g.label.includes(find)) }))
+                .filter((g) => g.items.length > 0)
+                .map((g) => (
+                  <div key={g.key} style={{ border: '1px solid ' + (g.danger ? '#f2c9c2' : '#e2e8ee'), background: g.danger ? '#fdf5f3' : '#fbfcfd', borderRadius: 12, padding: '10px 12px' }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: g.danger ? '#c0392b' : '#3d4a56' }}>{g.label}</div>
+                    {g.note && <div style={{ fontSize: 10.5, color: g.danger ? '#b5564a' : '#9aa5b1', marginTop: 1 }}>{g.note}</div>}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
+                      {g.items.map((l) => {
+                        const missing = isOptionMenu(l) && !s.options[l];
+                        return <button key={l} type="button" className="btn-outline" onClick={() => onNavigate(l)} style={{ padding: '5px 10px', border: '1px solid ' + (g.danger ? '#f2c9c2' : '#cfd8e0'), borderRadius: 8, background: '#fff', color: g.danger ? '#c0392b' : '#22303c', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>{displayName(l)}{missing && <span style={{ marginLeft: 5, fontSize: 9.5, color: '#b7791f' }}>未導入</span>}</button>;
+                      })}
+                    </div>
+                  </div>
+                ))}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 16px 12px', fontSize: 11.5, color: '#7a8794' }}>
+              <span>起動直後に表示する画面</span>
+              {(['ホーム', '伝票入力'] as const).map((o) => <button key={o} type="button" onClick={() => setSession({ startScreen: o })} style={{ padding: '3px 10px', borderRadius: 8, border: '1px solid ' + (s.startScreen === o ? accent : '#d3dbe3'), background: s.startScreen === o ? accent : '#fff', color: s.startScreen === o ? '#fff' : '#3d4a56', fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{o === 'ホーム' ? 'ホーム（機能一覧）' : '伝票入力（仕訳伝票形式）'}</button>)}
+              <span style={{ color: '#9aa5b1' }}>次回の起動から反映</span>
+            </div>
+          </section>
+
           {/* 銀行の預金残高 */}
           <section style={card}>
             <div style={h2}>
@@ -81,7 +113,7 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
             <div style={h2}>よく使う操作（お気に入り）<button type="button" style={link} onClick={() => setFavEdit(true)}>編集 ›</button></div>
             <div style={{ display: 'flex', gap: 8, padding: 16, flexWrap: 'wrap' }}>
               {s.favorites.map((l) => (
-                <button key={l} type="button" className="btn-outline" onClick={() => onNavigate(l)} style={{ padding: '9px 16px', border: '1px solid #cfd8e0', borderRadius: 9, background: '#fff', color: '#22303c', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{l}</button>
+                <button key={l} type="button" className="btn-outline" onClick={() => onNavigate(l)} style={{ padding: '9px 16px', border: '1px solid #cfd8e0', borderRadius: 9, background: '#fff', color: '#22303c', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}> {displayName(l)}</button>
               ))}
               {s.favorites.length === 0 && <span style={{ fontSize: 12.5, color: '#9aa5b1' }}>「編集」からよく使う画面を登録できます。</span>}
             </div>
