@@ -11,7 +11,7 @@ import { ToastView, useToast } from './Toast';
 import { PrevYearJournal } from './PrevYearJournal';
 import { TorihikiBadge, useEntryTools, type EntryFlags } from './EntryExtras';
 import { ComboField, ConfirmModal, EntryStyles, FieldLabel, FlagButtons, FundAccountLine, IssueList, fieldState, focusId, hasError, hasWarn, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor } from './EntryCommon';
-import { WidePanel, useWidePanel } from './WidePanel';
+import { useWidePanel } from './WidePanel';
 import { yearOfMonth } from './SingleEntryTools';
 import { makeSingleSeed } from '../data';
 import { useEntryForm } from '../hooks/useEntryForm';
@@ -71,7 +71,7 @@ interface Props {
 export function SingleEntryPage({ variant, accent, prevYear, onNavigate }: Props) {
   const sess = useSession();
   const toast = useToast();
-  const wide = useWidePanel('wide-single', true);
+  const wide = useWidePanel('form-entry'); // 右側の参照パネル（4形式で共有。表示は FormScreen 側）
   const [flags, setFlags] = useState<EntryFlags>({ check: false, fusen: '', shohyo: true });
   const [cheque, setCheque] = useState('');
   const [fundMode, setFundMode] = useState<FundMode>('自動資金');
@@ -81,7 +81,7 @@ export function SingleEntryPage({ variant, accent, prevYear, onNavigate }: Props
   const [queue, setQueue] = useState<{ name: string; lines: TemplateLine[]; i: number } | null>(null);
   const [delTarget, setDelTarget] = useState<JournalEntry | null>(null);
   const [meta, setMeta] = useState<Record<number, RowMeta>>({});
-  const [hi, setHi] = useState<number[]>([]);
+  const [, setHi] = useState<number[]>([]);
   const pending = useRef<RowMeta | null>(null);
 
   // 登録後：小切手Noをクリアし、借方科目へフォーカス（証憑・日付・区分は保持して連続入力）
@@ -506,8 +506,6 @@ export function SingleEntryPage({ variant, accent, prevYear, onNavigate }: Props
         )}
       </div>
 
-      {/* 参照パネル（初期は折りたたみ） */}
-      {!prevYear && <WidePanel accent={accent} layout="inline" state={wide} highlightIds={hi} returnTo="単一入力" />}
       </div>
     </main>
   );

@@ -12,7 +12,7 @@ import { ToastView, useToast } from './Toast';
 import { DivisionDialog } from './DivisionPicker';
 import { useEntryTools } from './EntryExtras';
 import { ComboField, EntryStyles, FieldLabel, FlagButtons, FundAccountLine, IssueList, fieldState, fmtNum, focusId, hasError, hasWarn, isInternalAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor, type Issue } from './EntryCommon';
-import { WidePanel, useWidePanel } from './WidePanel';
+import { useWidePanel } from './WidePanel';
 import { makeSheetSeed } from '../data';
 import { applyMonth } from '../lib/format';
 import { addVoucher, getVouchers, updateVoucher } from '../store/journalStore';
@@ -77,10 +77,10 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
   const [journal, setJournal] = useState<JournalEntry[]>(() => makeSheetSeed());
   const [monthFilter, setMonthFilter] = useState<MonthFilter>('8');
   const [lastIds, setLastIds] = useState<number[]>([]);
-  const [hi, setHi] = useState<number[]>([]);
+  const [, setHi] = useState<number[]>([]);
   const nextId = useRef(1);
   const toast = useToast();
-  const wide = useWidePanel(single ? 'wide-transfer-single' : 'wide-transfer', true);
+  const wide = useWidePanel('form-entry'); // 右側の参照パネル（4形式で共有。表示は FormScreen 側）
 
   const closeAlert = () => {
     if (dontShow) {
@@ -473,8 +473,6 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
           </div>
         </div>
 
-        {/* 参照パネル（初期は折りたたみ） */}
-        <WidePanel accent={accent} layout="inline" state={wide} highlightIds={hi} returnTo={title} />
       </div>
     </main>
   );

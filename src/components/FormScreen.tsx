@@ -6,7 +6,7 @@
 //   機能ボタンは性質ごとにまとめて常に表示し、Alt＋英字のショートカットで操作する（5.3.6）。
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { DivisionPicker } from './DivisionPicker';
 import { FiscalYearBanner } from './FiscalYearPage';
 import { AttachedStatementModal, BudgetGraphModal, BudgetHintLive, EntryConfirmModal, SpecialAmountModal, TorihikiBadge, useEntryTools } from './EntryExtras';
@@ -124,10 +124,12 @@ export function FormScreen({ page, onNavigate, year, onYear, onLogout }: Props) 
       </nav>
       </div>
 
-      {page !== '伝票入力' ? (
-        renderPage(page, 'form', GREEN, GREEN_RGB, onNavigate, year, onLogout)
-      ) : (
+      {page === '伝票入力' ? (
         <VoucherEntry onNavigate={onNavigate} year={year} topOffset={topOffset} />
+      ) : page === '単一入力' || page === '振替入力' || page === '振替単一' ? (
+        <EntryWithPanel page={page} topOffset={topOffset}>{renderPage(page, 'form', GREEN, GREEN_RGB, onNavigate, year, onLogout)}</EntryWithPanel>
+      ) : (
+        renderPage(page, 'form', GREEN, GREEN_RGB, onNavigate, year, onLogout)
       )}
       <Footer />
     </div>
@@ -627,3 +629,16 @@ function boxHeader(bg: string, color: string): CSSProperties {
   };
 }
 
+
+/** 単一形式／振替伝票形式／振替単一形式：仕訳伝票形式と同じ右側の参照パネル（日記帳／前年度日記帳／元帳１・２／残高照合）を付ける。
+ *  パネルの状態（表示内容・開閉）は4形式で共有（storageKey 'form-entry'）。 */
+function EntryWithPanel({ page, topOffset, children }: { page: string; topOffset: number; children: ReactNode }) {
+  const wide = useWidePanel('form-entry');
+  const panelOpen = !wide.collapsed && !wide.narrow;
+  return (
+    <>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', paddingRight: panelOpen ? WIDE_WIDTH : 0, transition: 'padding-right .28s ease' }}>{children}</div>
+      <WidePanel accent={GREEN} layout="side" state={wide} top={topOffset} returnTo={page} />
+    </>
+  );
+}
