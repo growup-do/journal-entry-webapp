@@ -9,7 +9,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
 import { Field, Notice, Toggle, btn, input, lbl, numInput, toInt, yen } from './ui';
-import { ActButton, ActDivider, ActionGroup, ConfirmModal, ENTRY_FORMATS, FORMAT_KIND, FUND_MODES, FUND_MODE_NOTE, FormatSwitcher, ReadOnlyBanner, ShortcutHelpModal, nextFusen, openCandidatesOfFocused, useShortcuts, type EntryFormat, type FundMode, type FusenColor, type Shortcut } from './EntryCommon';
+import { ActButton, ActionGroup, ConfirmModal, ENTRY_FORMATS, FORMAT_KIND, FUND_MODES, FUND_MODE_NOTE, FormatSwitcher, ReadOnlyBanner, ShortcutHelpModal, nextFusen, openCandidatesOfFocused, useShortcuts, type EntryFormat, type FundMode, type FusenColor, type Shortcut } from './EntryCommon';
 import { AccountBalanceModal, CalendarModal, CashBalanceModal } from './SingleEntryTools';
 import { AllocationWizardModal, TemplateWizardModal, blankAllocation, blankTemplate, type AllocationWiz, type TemplateWiz } from './TemplateWizards';
 import { DeleteVoucherModal, EditVoucherModal, VoucherPickerModal } from './VoucherEdit';
@@ -382,11 +382,6 @@ export function useEntryTools(o: EntryToolsOptions) {
     if (o.dirty) setLeave(label);
     else o.onNavigate(label);
   };
-  const cancel = () => {
-    if (ro) return;
-    if (!o.dirty) { o.toast('入力中の伝票はありません'); return; }
-    setDlg('中止');
-  };
   const cycleFund = () => o.onFundMode(FUND_MODES[(FUND_MODES.indexOf(o.fundMode) + 1) % FUND_MODES.length]);
   const saveAsTemplate = () => {
     const lines = o.lines.filter((l) => l.kari || l.kashi || l.tekiyo || l.amount);
@@ -398,12 +393,8 @@ export function useEntryTools(o: EntryToolsOptions) {
   const G1 = '伝票の操作', G2 = '行の操作', G3 = '入力補助', G4 = '参照';
   const shortcuts: Shortcut[] = [
     { key: 'S', label: '伝票登録', group: G1, run: o.onSubmit, disabled: ro },
-    { key: 'Q', label: '伝票中止（入力中の伝票を破棄）', group: G1, run: cancel, disabled: ro },
-    { key: 'E', label: '伝票訂正（登録済みの伝票を選ぶ）', group: G1, run: () => setDlg('訂正'), disabled: ro },
-    { key: 'X', label: '伝票削除（登録済みの伝票を選ぶ）', group: G1, run: () => setDlg('削除'), disabled: ro },
     { key: 'O', label: '入力の変更（表示項目）', group: G1, run: () => setDlg('入力の変更') },
     ...(o.onNavigate ? ENTRY_FORMATS.map((k, i): Shortcut => ({ key: String(i + 1), label: `形式の切替：${displayName(k)}`, group: G1, run: () => { if (k !== o.format) go(k); } })) : []),
-    ...(o.onNavigate ? [{ key: 'L', label: '処理終了（伝票入力を終わる）', group: G1, run: () => go('ホーム') }] : []),
     ...(o.multiRow ? [
       { key: 'N', label: '行追加（最後に追加）', group: G2, run: () => o.onRowAdd?.(), disabled: ro },
       { key: 'I', label: '行挿入（対象行の上に挿入）', group: G2, run: () => o.onRowInsert?.(), disabled: ro },
@@ -443,24 +434,10 @@ export function useEntryTools(o: EntryToolsOptions) {
   const banner: ReactNode = <ReadOnlyBanner reason={reason} />;
 
   const why = (t: string) => (ro ? reason : t);
+  /** 伝票登録ボタン（各形式の入力欄の中に置く。伝票の操作グループは廃止） */
+  const submitButton: ReactNode = <ActButton id={o.submitId} label={`${name}を登録`} k="S" tone="primary" accent={o.accent} disabled={ro} title={why('入力中の伝票を登録します')} onClick={o.onSubmit} />;
   const actionBar: ReactNode = (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 8 }}>
-      <ActionGroup caption="伝票の操作" note={name}>
-        <ActButton id={o.submitId} label="伝票登録" k="S" tone="primary" accent={o.accent} disabled={ro} title={why('入力中の伝票を登録します')} onClick={o.onSubmit} />
-        <ActButton label="伝票中止" k="Q" accent={o.accent} disabled={ro} title={why('入力中の伝票を破棄します（確認あり）')} onClick={cancel} />
-        <ActButton label="伝票訂正" k="E" accent={o.accent} disabled={ro} title={why('登録済みの伝票を選んで訂正します')} onClick={() => setDlg('訂正')} />
-        {o.onNavigate && <ActButton label="処理終了" k="L" accent={o.accent} title="伝票入力を終わり、ホームへ戻ります" onClick={() => go('ホーム')} />}
-        <ActDivider />
-        <ActButton label="伝票削除" k="X" tone="danger" disabled={ro} title={why('登録済みの伝票を選んで削除します（確認画面のあとに削除）')} onClick={() => setDlg('削除')} />
-      </ActionGroup>
-      <ActionGroup caption="行の操作" note={<span style={{ color: o.accent }}>対象：{o.rowLabel}</span>}>
-        {o.multiRow && <ActButton label="行追加" k="N" accent={o.accent} disabled={ro} title={why('最後に1行追加します')} onClick={() => o.onRowAdd?.()} />}
-        {o.multiRow && <ActButton label="行挿入" k="I" accent={o.accent} disabled={ro} title={why(`${o.rowLabel}の上に1行挿入します`)} onClick={() => o.onRowInsert?.()} />}
-        {o.multiRow && <ActButton label="行削除" k="D" accent={o.accent} disabled={ro} title={why(`${o.rowLabel}を削除します`)} onClick={() => o.onRowDelete?.()} />}
-        <ActButton label="チェック" k="C" accent={o.accent} disabled={ro} active={o.flags.check} title={why('チェック印を付ける／外す')} onClick={() => o.onFlags({ check: !o.flags.check })} />
-        <ActButton label={<>付箋{o.flags.fusen ? `：${o.flags.fusen}` : ''}</>} menu="付箋" k="F" accent={o.accent} disabled={ro} active={!!o.flags.fusen} title={why('押すごとに 赤→青→黄→緑→なし')} onClick={() => o.onFlags({ fusen: nextFusen(o.flags.fusen) })} />
-        <ActButton label={<>証憑：{o.flags.shohyo ? '有' : '無'}</>} menu="証憑" k="V" accent={o.accent} disabled={ro} active={o.flags.shohyo} title={why('証憑の 有／無 を切り替えます')} onClick={() => o.onFlags({ shohyo: !o.flags.shohyo })} />
-      </ActionGroup>
       <ActionGroup caption="入力補助">
         <ActButton label="定型仕訳" k="T" accent={o.accent} disabled={ro} title={why('登録済みの定型仕訳を、入力中の伝票に呼び出します')} onClick={() => setDlg('定型')} />
         <ActButton label="連続定型" k="R" accent={o.accent} disabled={ro} title={why('テンプレートから複数の伝票を続けて登録します')} onClick={() => setDlg('連続')} />
@@ -545,5 +522,5 @@ export function useEntryTools(o: EntryToolsOptions) {
     </>
   );
 
-  return { topBar, banner, actionBar, dialogs, editable, reason, openEdit: (v: Voucher) => setEdit(v), openDelete: (rows: Voucher[]) => setDel(rows) };
+  return { topBar, banner, actionBar, submitButton, dialogs, editable, reason, openEdit: (v: Voucher) => setEdit(v), openDelete: (rows: Voucher[]) => setDel(rows) };
 }

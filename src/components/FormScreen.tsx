@@ -220,6 +220,16 @@ function VoucherEntry({ onNavigate, year, topOffset }: { onNavigate: (label: str
   /* ---- 行の操作 ---- */
   const rowAdd = () => { if (!editable) return; setRows((list) => [...list, blankRow()]); setCur(rows.length); focusId(`fe-tek-${rows.length}`); };
   const rowInsert = () => { if (!editable) return; setRows((list) => [...list.slice(0, curIdx), blankRow(), ...list.slice(curIdx)]); setCur(curIdx); focusId(`fe-tek-${curIdx}`); };
+  /** 行ごとのボタン用：i 行目の上に挿入／i 行目を削除 */
+  const insertAt = (i: number) => { if (!editable) return; setRows((list) => [...list.slice(0, i), blankRow(), ...list.slice(i)]); setCur(i); focusId(`fe-tek-${i}`); };
+  const deleteAt = (i: number) => {
+    if (!editable) return;
+    if (rows.length === 1) { setRows([blankRow()]); setCur(0); focusId('fe-tek-0'); toast.show('1行目の入力内容を消しました'); return; }
+    const next = Math.min(i, rows.length - 2);
+    setRows((list) => list.filter((_, j) => j !== i));
+    setCur(next);
+    focusId(`fe-tek-${next}`);
+  };
   const rowDelete = () => {
     if (!editable) return;
     if (rows.length === 1) { setRows([blankRow()]); setCur(0); focusId('fe-tek-0'); toast.show('1行目の入力内容を消しました'); return; }
@@ -350,7 +360,8 @@ function VoucherEntry({ onNavigate, year, topOffset }: { onNavigate: (label: str
   const panelOpen = !wide.collapsed && !wide.narrow;
   const cellInput: CSSProperties = { width: '100%', boxSizing: 'border-box', border: '1px solid #cfd8e0', borderRadius: 8, fontFamily: 'inherit', color: '#22303c', background: editable ? '#fff' : '#f5f7f9' };
   const smallInput: CSSProperties = { padding: '4px 8px', border: '1px solid #cfd8e0', borderRadius: 7, fontSize: 12, fontFamily: 'inherit' };
-  const GRID = '34px minmax(0,1.5fr) minmax(0,1fr) 132px 88px';
+  const GRID = '34px minmax(0,1.5fr) minmax(0,1fr) 132px 88px 70px';
+  const rowBtn: CSSProperties = { padding: '3px 7px', borderRadius: 6, border: '1px solid #cfd8e0', background: '#fff', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', color: '#5b6773' };
 
   return (
     <>
@@ -483,6 +494,7 @@ function VoucherEntry({ onNavigate, year, topOffset }: { onNavigate: (label: str
                 <div>業者</div>
                 <div style={{ textAlign: 'right' }}>金額</div>
                 <div style={{ textAlign: 'center' }}>{inp.shohyo ? '証憑・' : ''}チェック・付箋</div>
+                <div style={{ textAlign: 'center' }}>行操作</div>
               </div>
               {rows.map((r, i) => {
                 const on = i === curIdx;
@@ -513,6 +525,10 @@ function VoucherEntry({ onNavigate, year, topOffset }: { onNavigate: (label: str
                     <div style={{ textAlign: 'center' }}>
                       <FlagButtons shohyo={r.shohyo} check={r.check} fusen={r.fusen} onChange={(p) => { setCur(i); patchRow(i, p); }} disabled={!editable} showShohyo={inp.shohyo} />
                     </div>
+                    <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                      <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={() => insertAt(i)} title={editable ? `${i + 1}行目の上に1行挿入` : tools.reason} style={rowBtn}>挿入</button>
+                      <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={() => deleteAt(i)} title={editable ? `${i + 1}行目を削除` : tools.reason} style={{ ...rowBtn, color: '#c0392b', borderColor: '#f2c9c2' }}>削除</button>
+                    </div>
                   </div>
                 );
               })}
@@ -524,6 +540,7 @@ function VoucherEntry({ onNavigate, year, topOffset }: { onNavigate: (label: str
                 </div>
                 <div style={{ textAlign: 'right', fontSize: 12, fontWeight: 700, color: '#5b6773' }}>合計</div>
                 <div style={{ textAlign: 'right', fontSize: 18, fontWeight: 800, fontVariantNumeric: 'tabular-nums', paddingRight: 10 }}><span style={{ fontSize: 12, color: '#8290a0', marginRight: 4 }}>¥</span>{total.toLocaleString('ja-JP')}</div>
+                <div />
                 <div />
               </div>
             </div>
@@ -542,10 +559,13 @@ function VoucherEntry({ onNavigate, year, topOffset }: { onNavigate: (label: str
                 <button type="button" className="ef-act" onClick={() => { setQueue([]); toast.show('定型仕訳の続きを取り消しました'); }} style={{ marginLeft: 'auto', padding: '3px 10px', borderRadius: 7, border: '1px solid #b7d6c5', background: '#fff', color: '#1f6a48', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>続きを取り消す</button>
               </div>
             )}
-            <div role="alert" style={{ minHeight: 20, marginBottom: 4, color: '#c0392b', fontSize: 12.5, fontWeight: 600 }}>{err}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div role="alert" style={{ flex: 1, minHeight: 20, color: '#c0392b', fontSize: 12.5, fontWeight: 600 }}>{err}</div>
+              {tools.submitButton}
+            </div>
           </div>
 
-          {/* 機能ボタン（常に表示。伝票の操作／行の操作／入力補助／参照） */}
+          {/* 機能ボタン（常に表示。入力補助／参照） */}
           <div className="fe-actions" style={{ padding: '10px 18px 14px', borderTop: '1px solid #e2e8ee', borderRadius: '0 0 15px 15px' }}>
             {tools.actionBar}
           </div>

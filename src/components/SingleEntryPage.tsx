@@ -491,6 +491,7 @@ export function SingleEntryPage({ variant, accent, prevYear, onNavigate }: Props
             </div>
           </div>
 
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>{tools.submitButton}</div>
           {/* 入力内容の判定（エラー＝登録不可／確認＝確認して登録） */}
           {(issues.length > 0 || v.err) && (
             <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
@@ -499,7 +500,7 @@ export function SingleEntryPage({ variant, accent, prevYear, onNavigate }: Props
             </div>
           )}
 
-          {/* 機能ボタン（常に表示。カーソル位置に関係なく同じ機能） */}
+          {/* 機能ボタン（入力補助／参照） */}
           <div style={{ marginTop: 10 }}>{tools.actionBar}</div>
         </div>
         </>

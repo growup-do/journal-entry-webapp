@@ -58,7 +58,6 @@ const NODES: Node[] = [
   N('calendar', 'カレンダー', 'dialog', 'entry', { open: '単一入力' }),
   N('balance', '科目別残高／現預金残高', 'dialog', 'entry', { open: '単一入力' }),
   N('confirm', '確認画面', 'dialog', 'entry', { open: '伝票入力', note: '費用間・収益間・予算超過・連動' }),
-  N('vpick', '伝票訂正／伝票削除', 'dialog', 'entry', { open: '伝票入力', note: '伝票を選ぶ → 訂正／削除確認' }),
   N('inputset', '入力の変更', 'dialog', 'entry', { open: '伝票入力' }),
   N('keys', 'キーボード操作一覧', 'dialog', 'entry', { open: '伝票入力' }),
   // 日記帳・元帳
@@ -143,7 +142,7 @@ const EDGES: Edge[] = [
   E('finder', 'trial', '機能を選ぶ', true),
   E('e-voucher', 'e-single', '形式切替'), E('e-single', 'e-transfer', '形式切替'), E('e-transfer', 'e-tsingle', '形式切替'),
   E('e-voucher', 'widepanel', '右側に常設'), E('widepanel', 'vedit', '行の訂正', true),
-  E('e-voucher', 'template', '定型仕訳／連続定型', true), E('e-voucher', 'alloc', '自動按分', true), E('e-voucher', 'confirm', '伝票登録', true), E('e-voucher', 'vpick', '伝票訂正／削除', true), E('e-voucher', 'inputset', '入力の変更', true), E('e-voucher', 'keys', 'キーボード操作一覧', true),
+  E('e-voucher', 'template', '定型仕訳／連続定型', true), E('e-voucher', 'alloc', '自動按分', true), E('e-voucher', 'confirm', '伝票登録', true), E('e-voucher', 'inputset', '入力の変更', true), E('e-voucher', 'keys', 'キーボード操作一覧', true),
   E('e-single', 'calendar', 'カレンダー', true), E('e-single', 'balance', '科目別残高／現預金残高', true),
   E('e-voucher', 'journal', '画面問合', true),
   E('journal', 'search', '検索条件', true), E('journal', 'vedit', '訂正'), E('journal', 'vdelete', '削除', true), E('journal', 'saveas', 'CSV出力', true),

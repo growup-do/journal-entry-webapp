@@ -288,7 +288,17 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
     minWidth: 0,
   };
   const amt: CSSProperties = { ...input, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums' };
-  const GRID = '44px 130px minmax(0,1fr) minmax(0,1fr) 130px 84px';
+  const GRID = '44px 130px minmax(0,1fr) minmax(0,1fr) 130px 84px 74px';
+  const rowBtn: CSSProperties = { padding: '3px 7px', borderRadius: 6, border: '1px solid #cfd8e0', background: '#fff', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', color: '#5b6773' };
+  /** 行ごとのボタン用：i 行目の上に挿入／i 行目を削除 */
+  const insertAt = (i: number) => { setRows((rs) => [...rs.slice(0, i), emptyRow(), ...rs.slice(i)]); setActive(i); focusId(fid(i, 'ka')); };
+  const deleteAt = (i: number) => {
+    if (rows.length <= 1) { setRows([emptyRow()]); toast.show('行の内容を消しました（最後の1行は削除できません）'); return; }
+    setRows((rs) => rs.filter((_, k) => k !== i));
+    const n = Math.min(i, rows.length - 2);
+    setActive(n);
+    focusId(fid(n, 'ka'));
+  };
   const radius = isSheet ? 14 : 16;
 
   return (
@@ -386,6 +396,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
             <div style={{ color: PINK }}>貸方科目 <span style={{ color: '#b3bcc5', fontWeight: 500 }}>／ 資金科目（自動）</span></div>
             <div style={{ textAlign: 'right', color: PINK }}>貸方 金額</div>
             <div>証憑・印</div>
+            <div>行操作</div>
           </div>
 
           {rows.map((r, i) => (
@@ -411,6 +422,12 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                 <div style={{ paddingTop: 6 }}>
                   <FlagButtons shohyo={r.shohyo} check={r.check} fusen={r.fusen} disabled={ro} onChange={(p) => setRow(i, p)} />
                 </div>
+                {!single ? (
+                  <div style={{ display: 'flex', gap: 4, paddingTop: 8 }}>
+                    <button type="button" className="ef-act" tabIndex={-1} disabled={ro} onClick={() => insertAt(i)} title={ro ? tools.reason : `${i + 1}行目の上に1行挿入`} style={rowBtn}>挿入</button>
+                    <button type="button" className="ef-act" tabIndex={-1} disabled={ro} onClick={() => deleteAt(i)} title={ro ? tools.reason : `${i + 1}行目を削除`} style={{ ...rowBtn, color: '#c0392b', borderColor: '#f2c9c2' }}>削除</button>
+                  </div>
+                ) : <div />}
               </div>
               {rowIssues[i].length > 0 && <div style={{ marginTop: 8, marginLeft: 56 }}><IssueList issues={rowIssues[i]} compact /></div>}
             </div>
@@ -429,6 +446,12 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
             </div>
             <div style={{ textAlign: 'right', fontWeight: 700, fontSize: 16, color: PINK, fontVariantNumeric: 'tabular-nums' }}>{kashiTotal.toLocaleString('ja-JP')}</div>
             <div />
+            <div />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 22px 12px', background: '#fbfcfd' }}>
+            {!single && <button type="button" className="ef-act" tabIndex={-1} disabled={ro} onClick={() => { const n = rows.length; setRows((rs) => [...rs, emptyRow()]); setActive(n); focusId(fid(n, 'ka')); }} title={ro ? tools.reason : '最後に1行追加します'} style={rowBtn}>＋ 行追加</button>}
+            <span style={{ fontSize: 11.5, color: '#8290a0' }}>{rows.length} 行</span>
+            <span style={{ marginLeft: 'auto' }}>{tools.submitButton}</span>
           </div>
 
           {/* 伝票全体の判定（エラー＝登録不可／確認＝確認して登録） */}
@@ -438,7 +461,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
             </div>
           )}
 
-          {/* 機能ボタン（常に表示。カーソル位置に関係なく同じ機能） */}
+          {/* 機能ボタン（入力補助／参照） */}
           <div style={{ padding: '4px 22px 16px', background: '#fbfcfd', borderRadius: `0 0 ${radius}px ${radius}px` }}>{tools.actionBar}</div>
         </div>
 
