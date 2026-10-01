@@ -1,7 +1,7 @@
 // フッター：コピーライト／利用規約／個人情報保護方針／機能一覧。
 // 全画面（ログイン画面を含む）の最下部に置く。リンク先は同じタブで開く静的ページ（?page=…）。
 
-export type StaticPage = 'features' | 'terms';
+export type StaticPage = 'features' | 'terms' | 'flow';
 
 /** 静的ページへ移動（同じタブ）。アプリの状態は sessionStorage に保持しているので戻れば元の画面に復帰する。 */
 export const goStatic = (key: StaticPage) => {
@@ -19,6 +19,7 @@ const LINKS: { label: string; key?: StaticPage; href?: string }[] = [
   { label: '利用規約', key: 'terms' },
   { label: '個人情報保護方針', href: PRIVACY_URL },
   { label: '機能一覧', key: 'features' },
+  { label: '画面遷移図', key: 'flow' },
 ];
 const follow = (l: { key?: StaticPage; href?: string }) => {
   if (l.href) window.open(l.href, '_blank', 'noopener');

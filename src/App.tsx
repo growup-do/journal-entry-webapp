@@ -16,6 +16,7 @@ import { DEFAULT_MENU } from './data';
 import { LoginPage } from './components/LoginPage';
 import { FeatureListPage } from './components/FeatureListPage';
 import { LegalPage } from './components/LegalPage';
+import { FlowMapPage } from './components/FlowMapPage';
 
 type Mode = 'form' | 'sheet';
 /** ページ遷移ではなくモーダルで開くメニュー */
@@ -56,6 +57,7 @@ export default function App() {
     );
   }
   if (staticPage === 'terms') return <LegalPage />;
+  if (staticPage === 'flow') return <FlowMapPage />;
   const boot = BOOT;
   const bootPage = boot && boot.open !== 'ログイン' && !MODAL_MENU.includes(boot.open) ? boot.open : null;
   // ログイン状態（プロトタイプ：タブを閉じるまで保持）
