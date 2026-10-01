@@ -20,6 +20,7 @@ import { TrendPage } from './TrendPage';
 import { TrialBalancePage } from './TrialBalancePage';
 import { PlaceholderPage } from './PlaceholderPage';
 import { OptionGate } from './OptionGuidePage';
+import { FunctionFinderPage } from './FunctionFinder';
 import { FiscalYearPage } from './FiscalYearPage';
 import { AppendixPrintPage } from './AppendixPrintPage';
 import { AuditSettingsPage, BackupPage, FinancialAnalysisSettingsPage, JournalRefreshPage, PasswordSettingsPage } from './MaintenancePages';
@@ -55,6 +56,8 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
   switch (page) {
     case 'ホーム':
       return <HomePage variant={variant} accent={accent} onNavigate={onNavigate} />;
+    case '機能から探す':
+      return <FunctionFinderPage accent={accent} onNavigate={onNavigate} />;
     case 'ユーザー設定':
       return <UserSettingsPage variant={variant} accent={accent} />;
     case 'メンバーの追加、管理':

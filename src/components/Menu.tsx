@@ -109,6 +109,18 @@ function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
           </div>
         );
       })}
+      {/* 右端：機能から探す（全機能の一覧と検索） */}
+      <button
+        type="button"
+        className="menu-item-h"
+        data-menu="機能から探す"
+        onClick={() => onSelect('機能から探す')}
+        title="すべての機能を分類ごとに見る・キーワードで探す"
+        style={{ display: 'flex', alignItems: 'center', gap: 7, marginLeft: 'auto', padding: '8px 13px', fontSize: 13, fontWeight: active === '機能から探す' ? 700 : 600, fontFamily: 'inherit', cursor: 'pointer', background: 'transparent', border: 'none', borderRadius: 8, borderBottom: '2px solid ' + (active === '機能から探す' ? accent : 'transparent'), color: active === '機能から探す' ? accent : '#3d4a56', whiteSpace: 'nowrap' }}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none' }}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
+        機能から探す
+      </button>
     </div>
   );
 }

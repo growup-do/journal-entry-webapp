@@ -6,7 +6,6 @@
 
 import { useState } from 'react';
 import { FormScreen } from './components/FormScreen';
-import { SheetScreen } from './components/SheetScreen';
 import { MemoLayer } from './memo/MemoLayer';
 import { getSession } from './store/session';
 import { SettlementAuditModal } from './components/SettlementAuditModal';
@@ -22,32 +21,26 @@ type Mode = 'form' | 'sheet';
 /** ページ遷移ではなくモーダルで開くメニュー */
 const MODAL_MENU = ['決算調査', '法人調査', '仕訳数', '法人印刷'];
 
-/** 機能一覧（サイトマップ）からの「画面を開く」：?open=画面名&mode=form|sheet&year=prev
+/** 機能一覧（サイトマップ）からの「画面を開く」：?open=画面名&year=prev（mode は互換のため無視）
  *  読み込み時に1回だけ解釈し、URLは元に戻す（再描画で消えないようモジュール初期化時に処理） */
 const BOOT = (() => {
   const p = new URLSearchParams(window.location.search);
   const open = p.get('open');
   if (!open) return null;
-  const mode: Mode | null = p.get('mode') === 'sheet' ? 'sheet' : p.get('mode') === 'form' ? 'form' : null;
   try { window.history.replaceState(null, '', window.location.pathname); } catch { /* ignore */ }
-  return { open, mode, year: p.get('year') === 'prev' };
+  return { open, year: p.get('year') === 'prev' };
 })();
 
 const readSaved = (k: string) => { try { return sessionStorage.getItem(k) ?? ''; } catch { return ''; } };
 const save = (k: string, v: string) => { try { sessionStorage.setItem(k, v); } catch { /* ignore */ } };
-
-const TABS: { key: Mode; label: string; hint: string; accent: string }[] = [
-  { key: 'form', label: 'フォーム型', hint: '1件ずつ丁寧に入力', accent: '#1f7a52' },
-  { key: 'sheet', label: 'スプレッドシート型', hint: '1行で連続入力＋検索', accent: '#2c5f9e' },
-];
 
 /** 静的ページ（機能一覧）のメモ画面キー。アプリ内から遷移するときは ?page=features を開く */
 const FEATURES_KEY = 'static:features';
 const labelOf = (key: string) => {
   if (key === 'login') return 'ログイン画面';
   if (key === FEATURES_KEY) return '機能一覧（サイトマップ）';
-  const [m, p] = key.split(':');
-  return `${TABS.find((t) => t.key === m)?.label ?? m}／${p ?? ''}`;
+  const p = key.split(':')[1];
+  return p ?? key;
 };
 
 export default function App() {
@@ -94,9 +87,9 @@ export default function App() {
     setLoggedIn(false);
   };
   // 表示中のUI案・画面は sessionStorage に保持（静的ページから戻ったときに元の画面へ復帰）
-  const [mode, setModeRaw] = useState<Mode>(() => (boot?.mode ?? (readSaved('proto-mode') === 'sheet' ? 'sheet' : 'form')) as Mode);
+  // 画面構成はフォーム型のみ（スプレッドシート型の案は廃止。メモの画面キーは互換のため 'form:' を維持）
+  const mode: Mode = 'form';
   const [page, setPageRaw] = useState<string>(() => bootPage ?? (readSaved('proto-page') || DEFAULT_MENU));
-  const setMode = (m: Mode) => { setModeRaw(m); save('proto-mode', m); };
   const setPage = (p: string) => { setPageRaw(p); save('proto-page', p); };
   const [auditOpen, setAuditOpen] = useState(boot?.open === '決算調査' || boot?.open === '法人調査');
   const [countOpen, setCountOpen] = useState(boot?.open === '仕訳数');
@@ -117,8 +110,7 @@ export default function App() {
   const screenLabel = labelOf;
   const navigateTo = (key: string) => {
     if (key === FEATURES_KEY) { window.location.href = '?page=features'; return; }
-    const [m, p] = key.split(':');
-    if (m === 'form' || m === 'sheet') setMode(m);
+    const p = key.split(':')[1];
     if (p) setPage(p);
   };
 
@@ -133,60 +125,7 @@ export default function App() {
 
   return (
     <>
-      {/* 画面切替バー（プロトタイプ比較用。本番では単一画面に置換） */}
-      <div
-        style={{
-          position: 'fixed',
-          left: '50%',
-          bottom: 18,
-          transform: 'translateX(-50%)',
-          zIndex: 200,
-          display: 'flex',
-          gap: 4,
-          padding: 4,
-          background: '#fff',
-          border: '1px solid #dde4ea',
-          borderRadius: 12,
-          boxShadow: '0 6px 22px rgba(30,50,70,.16)',
-        }}
-      >
-        {TABS.map((t) => {
-          const on = mode === t.key;
-          return (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setMode(t.key)}
-              title={t.hint}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'flex-start',
-                gap: 1,
-                padding: '7px 16px',
-                border: 'none',
-                borderRadius: 9,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                background: on ? t.accent : 'transparent',
-                color: on ? '#fff' : '#5b6773',
-                transition: 'background .12s, color .12s',
-              }}
-            >
-              <span style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.2 }}>{t.label}</span>
-              <span style={{ fontSize: 10.5, opacity: on ? 0.85 : 0.7 }}>{t.hint}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      <div>
-        {mode === 'form' ? (
-          <FormScreen page={page} onNavigate={selectMenu} year={year} onYear={setYear} onLogout={logout} />
-        ) : (
-          <SheetScreen page={page} onNavigate={selectMenu} year={year} onYear={setYear} onLogout={logout} />
-        )}
-      </div>
+      <FormScreen page={page} onNavigate={selectMenu} year={year} onYear={setYear} onLogout={logout} />
       <CorporatePrintModal open={corpPrintOpen} onClose={() => setCorpPrintOpen(false)} />
 
       <SettlementAuditModal open={auditOpen} onClose={() => setAuditOpen(false)} onNavigate={(p) => { setAuditOpen(false); setPage(p); }} />
