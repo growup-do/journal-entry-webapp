@@ -4,6 +4,7 @@
 //   ・矢印は主な遷移（操作名つき）。アートボードにマウスを乗せると関係する矢印だけ強調
 //   ・アートボードをクリックすると、その画面をプロトタイプで開く（ダイアログは親画面を開く）
 //   依頼書 8章「情報設計（メニュー構成・画面遷移図）」の成果物。
+//   【運用ルール】画面・モーダル・ダイアログを追加／削除／改名したら、必ず下の NODES（id・label・kind・group・open）と EDGES を同じコミットで更新する。
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
