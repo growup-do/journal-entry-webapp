@@ -96,7 +96,8 @@ export default function App() {
   const [corpPrintOpen, setCorpPrintOpen] = useState(boot?.open === '法人印刷');
   // 仕訳の年（当年／前年）はアプリ全体で共有
   const [year, setYear] = useState<JournalYear>(boot?.year ? 'prev' : 'current');
-  const screenKey = `${mode}:${page}`;
+  // モーダル（決算調査／仕訳数／法人印刷）を開いている間は、確認メモをそのモーダルの画面として扱う
+  const screenKey = auditOpen ? `${mode}:決算調査` : countOpen ? `${mode}:仕訳数` : corpPrintOpen ? `${mode}:法人印刷` : `${mode}:${page}`;
 
   // メニュー選択：決算調査はページ遷移ではなくモーダルで開く（既存システムと同じ）
   const selectMenu = (label: string) => {
@@ -111,7 +112,11 @@ export default function App() {
   const navigateTo = (key: string) => {
     if (key === FEATURES_KEY) { window.location.href = '?page=features'; return; }
     const p = key.split(':')[1];
-    if (p) setPage(p);
+    if (!p) return;
+    if (p === '決算調査') setAuditOpen(true);
+    else if (p === '仕訳数') setCountOpen(true);
+    else if (p === '法人印刷') setCorpPrintOpen(true);
+    else setPage(p);
   };
 
   if (!loggedIn) {

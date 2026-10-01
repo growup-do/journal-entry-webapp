@@ -50,7 +50,7 @@ function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
   return (
-    <div style={{ display: 'flex', alignItems: 'stretch', gap: 2 }}>
+    <div style={{ display: 'flex', alignItems: 'stretch', gap: 2, paddingRight: 150 }}>
       <HomeButton active={active === 'ホーム'} accent={accent} onClick={() => onSelect('ホーム')} />
       {MENU_GROUPS.map((g) => {
         const on = activeGroup === g.key;
@@ -116,7 +116,7 @@ function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
         data-menu="機能から探す"
         onClick={() => onSelect('機能から探す')}
         title="すべての機能を分類ごとに見る・キーワードで探す"
-        style={{ display: 'flex', alignItems: 'center', gap: 7, marginLeft: 'auto', padding: '8px 13px', fontSize: 13, fontWeight: active === '機能から探す' ? 700 : 600, fontFamily: 'inherit', cursor: 'pointer', background: 'transparent', border: 'none', borderRadius: 8, borderBottom: '2px solid ' + (active === '機能から探す' ? accent : 'transparent'), color: active === '機能から探す' ? accent : '#3d4a56', whiteSpace: 'nowrap' }}
+        style={{ position: 'absolute', right: 16, top: 3, display: 'flex', alignItems: 'center', gap: 7, padding: '8px 13px', fontSize: 13, fontWeight: active === '機能から探す' ? 700 : 600, fontFamily: 'inherit', cursor: 'pointer', background: 'transparent', border: 'none', borderRadius: 8, borderBottom: '2px solid ' + (active === '機能から探す' ? accent : 'transparent'), color: active === '機能から探す' ? accent : '#3d4a56', whiteSpace: 'nowrap' }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none' }}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
         機能から探す
