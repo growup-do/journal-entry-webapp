@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import { FormScreen } from './components/FormScreen';
 import { MemoLayer } from './memo/MemoLayer';
-import { getSession } from './store/session';
+import { getSession, setSession, useSession } from './store/session';
 import { SettlementAuditModal } from './components/SettlementAuditModal';
 import { JournalCountModal } from './components/JournalCountModal';
 import { CorporatePrintModal } from './components/CorporatePrintModal';
@@ -131,6 +131,7 @@ export default function App() {
   return (
     <>
       <FormScreen page={page} onNavigate={selectMenu} year={year} onYear={setYear} onLogout={logout} />
+      <RoleSwitchBar />
       <CorporatePrintModal open={corpPrintOpen} onClose={() => setCorpPrintOpen(false)} />
 
       <SettlementAuditModal open={auditOpen} onClose={() => setAuditOpen(false)} onNavigate={(p) => { setAuditOpen(false); setPage(p); }} />
@@ -138,5 +139,28 @@ export default function App() {
 
       <MemoLayer screenKey={screenKey} screenLabel={screenLabel} onNavigate={navigateTo} />
     </>
+  );
+}
+
+/** プロトタイプ用：権限の切替バー（画面下中央）。参照のみ権限のときの見え方（訂正・削除・入換の無効表示）を確認するための仕掛けで、本番の画面要素ではない */
+function RoleSwitchBar() {
+  const s = useSession();
+  const ROLES: { key: typeof s.role; label: string; hint: string; accent: string }[] = [
+    { key: '入力可', label: '入力権限', hint: '伝票の入力・訂正・削除ができる', accent: '#1f7a52' },
+    { key: '参照のみ', label: '参照のみ権限', hint: '閲覧のみ（訂正・削除・入換は無効表示）', accent: '#b7791f' },
+  ];
+  return (
+    <div title="プロトタイプ用：利用者権限の表示確認" style={{ position: 'fixed', left: '50%', bottom: 18, transform: 'translateX(-50%)', zIndex: 200, display: 'flex', alignItems: 'center', gap: 4, padding: 4, background: '#fff', border: '1px solid #dde4ea', borderRadius: 12, boxShadow: '0 6px 22px rgba(30,50,70,.16)' }}>
+      <span style={{ fontSize: 10.5, fontWeight: 700, color: '#8290a0', padding: '0 6px 0 8px', letterSpacing: '.03em' }}>権限の表示確認</span>
+      {ROLES.map((r) => {
+        const on = s.role === r.key;
+        return (
+          <button key={r.key} type="button" onClick={() => setSession({ role: r.key })} title={r.hint} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1, padding: '7px 16px', border: 'none', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit', background: on ? r.accent : 'transparent', color: on ? '#fff' : '#5b6773', transition: 'background .12s, color .12s' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.2 }}>{r.label}</span>
+            <span style={{ fontSize: 10.5, opacity: on ? 0.85 : 0.7 }}>{r.hint}</span>
+          </button>
+        );
+      })}
+    </div>
   );
 }

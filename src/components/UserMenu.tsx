@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { setSession, useSession } from '../store/session';
+import { useSession } from '../store/session';
 
 export const USER_MENU_ITEMS = ['事業者設定', 'ユーザー設定', 'メンバーの追加、管理'];
 
@@ -63,13 +63,6 @@ export function UserMenu({ accent, soft, onNavigate }: Props) {
             </button>
           ))}
           <div style={{ borderTop: '1px solid #eef2f5', margin: '4px 0' }} />
-          {/* プロトタイプの表示確認用：権限の切替（参照のみ＝入力・訂正・削除・入換が無効表示になる） */}
-          <div style={{ padding: '6px 12px 8px' }}>
-            <div style={{ fontSize: 10.5, fontWeight: 700, color: '#8290a0', marginBottom: 5 }}>権限の表示確認（プロトタイプ用）</div>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {(['入力可', '参照のみ'] as const).map((r) => <button key={r} type="button" onClick={() => setSession({ role: r })} style={{ flex: 1, padding: '5px 0', borderRadius: 7, border: '1px solid ' + (session.role === r ? accent : '#d3dbe3'), background: session.role === r ? accent : '#fff', color: session.role === r ? '#fff' : '#3d4a56', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{r}</button>)}
-            </div>
-          </div>
           <div style={{ borderTop: '1px solid #eef2f5', margin: '4px 0' }} />
           <button type="button" className="menu-sub" data-menu="ログアウト" onClick={() => { setOpen(false); onNavigate('ログアウト'); }} style={{ ...item, color: '#c0392b' }}>
             <MenuIcon kind="ログアウト" />

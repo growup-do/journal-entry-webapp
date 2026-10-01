@@ -57,13 +57,15 @@ export function SettingsMenu({ accent, active, onNavigate }: Props) {
     );
   };
   const group = (g: SettingsGroup) => (
-    <section key={g.key} style={{ breakInside: 'avoid', marginBottom: 10, padding: g.danger ? '8px 6px 6px' : '0 0 2px', border: g.danger ? '1px solid #f2c9c2' : 'none', background: g.danger ? '#fdf5f3' : 'transparent', borderRadius: 10 }}>
-      <div style={{ padding: '4px 10px 2px', fontSize: 11, fontWeight: 800, color: g.danger ? DANGER : '#5b6773', letterSpacing: '.04em', display: 'flex', alignItems: 'center', gap: 6 }}>
-        {g.danger && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={DANGER} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l10 18H2z" /><path d="M12 10v5M12 18v.5" /></svg>}
-        {g.label}
+    <section key={g.key} style={{ breakInside: 'avoid', border: '1px solid ' + (g.danger ? '#f2c9c2' : '#dde4ea'), borderRadius: 10, overflow: 'hidden', background: g.danger ? '#fdf5f3' : '#fff' }}>
+      <div style={{ padding: '7px 12px', background: g.danger ? '#f9e4df' : '#eef2f6', borderBottom: '1px solid ' + (g.danger ? '#f2c9c2' : '#dde4ea') }}>
+        <div style={{ fontSize: 11.5, fontWeight: 800, color: g.danger ? DANGER : '#22303c', letterSpacing: '.04em', display: 'flex', alignItems: 'center', gap: 6 }}>
+          {g.danger && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={DANGER} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l10 18H2z" /><path d="M12 10v5M12 18v.5" /></svg>}
+          {g.label}
+        </div>
+        {g.note && <div style={{ fontSize: 10.5, color: g.danger ? '#b5564a' : '#7a8794', marginTop: 1 }}>{g.note}</div>}
       </div>
-      {g.note && <div style={{ padding: '0 10px 4px', fontSize: 10.5, color: g.danger ? '#b5564a' : '#9aa5b1' }}>{g.note}</div>}
-      {g.items.map((l) => item(l, g))}
+      <div style={{ padding: 6 }}>{g.items.map((l) => item(l, g))}</div>
     </section>
   );
   const by = (k: string) => SETTINGS_GROUPS.find((g) => g.key === k)!;
@@ -90,18 +92,18 @@ export function SettingsMenu({ accent, active, onNavigate }: Props) {
             <span style={{ fontSize: 13.5, fontWeight: 800 }}>各種設定</span>
             <span style={{ fontSize: 11, color: '#9aa5b1' }}>起動中の区分：{session.division}（{kind}）</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-            <div>{group(by('master'))}</div>
-            <div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignItems: 'start' }}>
+            {group(by('master'))}
+            <div style={{ display: 'grid', gap: 12 }}>
               {group(by('register'))}
               {group(by('maint'))}
               {group(by('web'))}
             </div>
           </div>
           {/* 年度：切替（元に戻せる）と 更新（取り消し不可）を左右に離し、更新側は警告色で囲む */}
-          <div style={{ borderTop: '1px solid #eef2f5', marginTop: 4, paddingTop: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, alignItems: 'start' }}>
-            <div>{group(by('year'))}</div>
-            <div>{group(by('update'))}</div>
+          <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignItems: 'start' }}>
+            {group(by('year'))}
+            {group(by('update'))}
           </div>
           <div style={{ height: 1, background: '#eef2f5', margin: '2px 4px 6px' }} />
           <button
