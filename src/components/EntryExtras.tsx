@@ -9,7 +9,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
 import { Field, Notice, Toggle, btn, input, lbl, numInput, toInt, yen } from './ui';
-import { ActButton, ActDivider, ActionGroup, ConfirmModal, ENTRY_FORMATS, FORMAT_KIND, FUND_MODES, FUND_MODE_NOTE, FormatSwitcher, Kbd, ReadOnlyBanner, ShortcutHelpModal, nextFusen, openCandidatesOfFocused, useShortcuts, type EntryFormat, type FundMode, type FusenColor, type Shortcut } from './EntryCommon';
+import { ActButton, ActDivider, ActionGroup, ConfirmModal, ENTRY_FORMATS, FORMAT_KIND, FUND_MODES, FUND_MODE_NOTE, FormatSwitcher, ReadOnlyBanner, ShortcutHelpModal, nextFusen, openCandidatesOfFocused, useShortcuts, type EntryFormat, type FundMode, type FusenColor, type Shortcut } from './EntryCommon';
 import { AccountBalanceModal, CalendarModal, CashBalanceModal } from './SingleEntryTools';
 import { AllocationWizardModal, TemplateWizardModal, blankAllocation, blankTemplate, type AllocationWiz, type TemplateWiz } from './TemplateWizards';
 import { DeleteVoucherModal, EditVoucherModal, VoucherPickerModal } from './VoucherEdit';
@@ -474,7 +474,6 @@ export function useEntryTools(o: EntryToolsOptions) {
             const on = m === o.fundMode;
             return <button key={m} type="button" role="radio" aria-checked={on} className="ef-act" data-menu={'資金モード:' + m} disabled={ro} onClick={() => o.onFundMode(m)} title={ro ? reason : FUND_MODE_NOTE[m]} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: on ? (m === '自動資金' ? o.accent : '#6b3fb5') : 'transparent', color: on ? '#fff' : '#48565f', fontSize: 12, fontWeight: on ? 800 : 600, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>{m}</button>;
           })}
-          <span style={{ color: '#5b6773', paddingRight: 5 }}><Kbd k="Alt+M" /></span>
         </span>
       </ActionGroup>
       <ActionGroup caption="参照">

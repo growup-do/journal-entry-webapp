@@ -483,9 +483,8 @@ export function ActButton({ label, k, onClick, tone = 'normal', accent = '#1f7a5
   const c = tone === 'danger' ? '#c0392b' : tone === 'primary' ? accent : '#48565f';
   const solid = tone === 'primary';
   return (
-    <button id={id} type="button" className="ef-act" data-menu={menu ?? (typeof label === 'string' ? label : undefined)} disabled={disabled} aria-pressed={active} title={title} onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', padding: solid ? '8px 16px' : '6px 10px', borderRadius: 8, border: '1px solid ' + (solid ? c : tone === 'danger' ? '#e6b3ab' : active ? accent : '#cfd8e0'), background: solid ? c : active ? accent + '18' : '#fff', color: solid ? '#fff' : active ? accent : c, fontSize: solid ? 13.5 : 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: solid ? '0 3px 10px rgba(30,50,70,.18)' : 'none' }}>
+    <button id={id} type="button" className="ef-act" data-menu={menu ?? (typeof label === 'string' ? label : undefined)} disabled={disabled} aria-pressed={active} title={[title, k ? `ショートカット：Alt+${k}` : ''].filter(Boolean).join('　')} onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', padding: solid ? '8px 16px' : '6px 10px', borderRadius: 8, border: '1px solid ' + (solid ? c : tone === 'danger' ? '#e6b3ab' : active ? accent : '#cfd8e0'), background: solid ? c : active ? accent + '18' : '#fff', color: solid ? '#fff' : active ? accent : c, fontSize: solid ? 13.5 : 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: solid ? '0 3px 10px rgba(30,50,70,.18)' : 'none' }}>
       {label}
-      {k && <Kbd k={'Alt+' + k} />}
     </button>
   );
 }
@@ -590,13 +589,12 @@ export function FormatSwitcher({ current, onSwitch, accent, right }: { current: 
       <span style={{ fontSize: 11, fontWeight: 800, color: '#8290a0', letterSpacing: '.05em', flex: 'none' }}>伝票の形式</span>
       {onSwitch ? (
         <div role="tablist" aria-label="伝票の形式" style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 3, padding: 3, border: '1px solid #cfd8e0', borderRadius: 11, background: '#e9eef2' }}>
-          {ENTRY_FORMATS.map((k, i) => {
+          {ENTRY_FORMATS.map((k) => {
             const on = k === current;
             return (
               <button key={k} type="button" role="tab" aria-selected={on} className="ef-act" data-menu={'形式:' + k} title={FORMAT_NOTE[k]} onClick={() => { if (!on) onSwitch(k); }} style={{ display: 'inline-flex', alignItems: 'center', padding: '6px 13px', borderRadius: 8, border: 'none', background: on ? accent : 'transparent', color: on ? '#fff' : '#48565f', fontSize: 13, fontWeight: on ? 800 : 600, fontFamily: 'inherit', cursor: on ? 'default' : 'pointer', whiteSpace: 'nowrap', boxShadow: on ? '0 2px 8px rgba(30,50,70,.2)' : 'none' }}>
                 {on && <span aria-hidden style={{ marginRight: 5, fontSize: 11 }}>●</span>}
                 {displayName(k)}
-                <Kbd k={'Alt+' + (i + 1)} />
               </button>
             );
           })}
