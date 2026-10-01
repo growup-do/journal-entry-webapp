@@ -48,7 +48,7 @@ export function UserSettingsPage({ variant, accent }: Props) {
   const [profile, setProfile] = useState({ name: '経理 担当者', kana: 'ケイリ タントウシャ', email: 'keiri@example.jp', dept: '本部 経理', role: '経理担当（入力・照会）' });
   const [pw, setPw] = useState({ cur: '', next: '', confirm: '' });
   const [notify, setNotify] = useState({ closing: true, audit: true, news: false, mail: true });
-  const [view, setView] = useState({ start: 'ホーム', mode: 'フォーム型', density: '標準' });
+  const [view, setView] = useState({ start: 'ホーム', density: '標準' });
   // プロフィール画像（DataURL で保持。本番ではサーバーへアップロード）
   const [avatar, setAvatar] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -170,8 +170,6 @@ export function UserSettingsPage({ variant, accent }: Props) {
             <div style={{ padding: 18, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div><span style={label}>ログイン後に開く画面</span>
                 <select value={view.start} onChange={(e) => setView({ ...view, start: e.target.value })} style={input}>{['ホーム', '単一入力', '伝票入力', '仕訳一覧'].map((o) => <option key={o}>{o}</option>)}</select></div>
-              <div><span style={label}>入力画面のレイアウト</span>
-                <select value={view.mode} onChange={(e) => setView({ ...view, mode: e.target.value })} style={input}>{['フォーム型', 'スプレッドシート型'].map((o) => <option key={o}>{o}</option>)}</select></div>
               <div><span style={label}>表の行間</span>
                 <select value={view.density} onChange={(e) => setView({ ...view, density: e.target.value })} style={input}>{['標準', 'コンパクト', 'ゆったり'].map((o) => <option key={o}>{o}</option>)}</select></div>
               <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end' }}><button type="button" className="submit-btn" onClick={() => toast.show('表示設定を保存しました（プロトタイプ）')} style={btn(true)}>保存</button></div>
