@@ -10,8 +10,8 @@ import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
 import { DivisionDialog } from './DivisionPicker';
-import { useEntryTools } from './EntryExtras';
-import { ComboField, EntryStyles, isIme, FieldLabel, FlagButtons, FundAccountLine, IssueList, fieldState, fmtNum, focusId, hasError, hasWarn, isInternalAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor, type Issue } from './EntryCommon';
+import { BudgetGraphModal, BudgetHintLive, useEntryTools } from './EntryExtras';
+import { ComboField, EntryStyles, isIme, FlagButtons, FundAccountLine, IssueList, PAPER, PaperBox, PaperDate, PaperFootItems, PaperStyles, PaperTitle, PaperToggle, fieldState, fmtNum, focusId, hasError, hasWarn, isInternalAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor, type Issue } from './EntryCommon';
 import { useWidePanel } from './WidePanel';
 import { makeSheetSeed } from '../data';
 import { applyMonth } from '../lib/format';
@@ -78,6 +78,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
   const [monthFilter, setMonthFilter] = useState<MonthFilter>('8');
   const [lastIds, setLastIds] = useState<number[]>([]);
   const [, setHi] = useState<number[]>([]);
+  const [graphAcct, setGraphAcct] = useState<string | null>(null);
   const nextId = useRef(1);
   const toast = useToast();
   const wide = useWidePanel('form-entry'); // 右側の参照パネル（4形式で共有。表示は FormScreen 側）
@@ -276,17 +277,18 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
     width: '100%',
     boxSizing: 'border-box',
     padding: '8px 10px',
-    border: '1px solid #cfd8e0',
-    borderRadius: 8,
+    border: '1px solid transparent',
+    borderRadius: 4,
     fontSize: 13.5,
     fontFamily: 'inherit',
     outline: 'none',
     color: '#22303c',
-    background: ro ? '#f5f7f9' : '#fff',
+    background: 'transparent',
     minWidth: 0,
   };
-  const amt: CSSProperties = { ...input, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums' };
-  const GRID = '44px 130px minmax(0,1fr) minmax(0,1fr) 130px 84px 74px';
+  const amt: CSSProperties = { ...input, textAlign: 'right', fontWeight: 700, fontSize: 15, fontVariantNumeric: 'tabular-nums' };
+  /** 用紙の列：金額／率／予算残 ｜ 借方科目 ｜ 貸方科目 ｜ 金額／率／予算残 ｜ 証憑・印／行の操作 */
+  const GRID = '158px minmax(0,1fr) minmax(0,1fr) 158px 118px';
   const rowBtn: CSSProperties = { padding: '3px 7px', borderRadius: 6, border: '1px solid #cfd8e0', background: '#fff', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', color: '#5b6773' };
   /** 行ごとのボタン用：i 行目の上に挿入／i 行目を削除 */
   const insertAt = (i: number) => { setRows((rs) => [...rs.slice(0, i), emptyRow(), ...rs.slice(i)]); setActive(i); focusId(fid(i, 'ka')); };
@@ -298,12 +300,20 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
     focusId(fid(n, 'ka'));
   };
   const radius = isSheet ? 14 : 16;
+  const budgetTh = sess.env.budgetCheck ? sess.env.budgetThreshold : 101;
+  const divisionName = service.replace(/^\d+\s*/, '');
+  const fillerRows = single ? 0 : Math.max(0, ROW_COUNT - rows.length);
+  const curRow = rows[cur];
+  const cell: CSSProperties = { padding: '6px 8px' };
+  const bandCell: CSSProperties = { padding: '2px 8px 6px', minHeight: 32 };
 
   return (
     <main className="ef-scope" style={{ ...scopeStyle(accent), flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
       <EntryStyles />
+      <PaperStyles />
       <ToastView msg={toast.msg} />
       {tools.dialogs}
+      <BudgetGraphModal open={!!graphAcct} onClose={() => setGraphAcct(null)} account={graphAcct ?? ''} />
 
       {/* 振替伝票形式の注意（複数行の内部取引には非対応） */}
       <Modal open={alertOpen} onClose={closeAlert} width={520} strict>
@@ -336,132 +346,195 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
             {/* 伝票の形式の切替 */}
             {tools.topBar}
             {tools.banner}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 20, padding: '14px 22px 12px', borderBottom: '2px solid #28323c', flexWrap: 'wrap' }}>
-              <div>
-                <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21, letterSpacing: '.04em' }}>
-                  {title} <span style={{ fontSize: 12.5, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>チャイルド保育園　拠点区分</span>
+          </div>
+
+          <div style={{ padding: '18px 22px 12px', background: '#eef1ef', borderBottom: '1px solid #e2e8ee' }}>
+            {/* 伝票用紙 */}
+            <div className="pp-sheet" style={{ padding: '16px 20px 16px' }}>
+              <PaperTitle
+                title={title}
+                division={`${divisionName} 拠点区分`}
+                badge={<span style={{ fontSize: 11.5, fontWeight: 700, color: accent, whiteSpace: 'nowrap' }}>{single ? '振替単一形式（1行）' : '振替伝票形式（複数行）'}　<span style={{ color: '#7a8794', fontWeight: 500 }}>借方合計と貸方合計が一致すると登録できます</span></span>}
+                right={tools.templateButton}
+              />
+
+              {/* 1段目：サービス区分（区分選択）／年月日／伝票No／小切手No／内部取引相手区分 */}
+              <div style={{ display: 'flex', alignItems: 'stretch', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+                <div className="ef-field" style={{ display: 'flex', width: 300 }}>
+                  <PaperBox label="サービス区分" grow>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', minWidth: 0 }}>
+                      <ComboField id={`${pre}-service`} kind="service" value={service} onChange={setService} onCommit={() => focusId(`${pre}-month`)} placeholder="コード・名称で指定" disabled={ro} padY={6} />
+                      <button type="button" className="ef-act" onClick={() => setDivOpen(true)} title="区分の階層から伝票入力区分を選びます" style={{ flex: 'none', padding: '6px 9px', border: '1px solid #cfd8e0', borderRadius: 7, background: '#fff', color: '#5b6773', fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        区分選択
+                      </button>
+                    </div>
+                  </PaperBox>
                 </div>
-                <div style={{ color: '#7a8794', fontSize: 12, marginTop: 4 }}>{single ? '1行の振替伝票です（内部取引にも使えます）。' : '行ごとに借方・貸方の科目と金額を入力します（行の追加・挿入・削除ができます）。'}借方合計と貸方合計が一致すると登録できます。</div>
-              </div>
-              <div style={{ alignSelf: 'flex-end', paddingBottom: 2 }}>{tools.templateButton}</div>
-            </div>
-          </div>
-
-          {/* 伝票の属性（サービス区分・年月日・伝票No・内部取引相手区分） */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '12px 22px', background: '#fbfcfd', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
-            <div className="ef-field" style={{ width: 210 }}>
-              <FieldLabel>サービス区分</FieldLabel>
-              <ComboField id={`${pre}-service`} kind="service" value={service} onChange={setService} onCommit={() => focusId(`${pre}-month`)} placeholder="コード・名称で指定" disabled={ro} padY={8} />
-            </div>
-            <div style={{ alignSelf: 'flex-end' }}>
-              <button type="button" className="ef-act" onClick={() => setDivOpen(true)} title="区分の階層から伝票入力区分を選びます" style={{ padding: '8px 12px', border: '1px solid #cfd8e0', borderRadius: 8, background: '#fff', color: '#5b6773', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                区分選択
-              </button>
-            </div>
-            <div className="ef-field">
-              <FieldLabel>年月日</FieldLabel>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13.5, color: '#5b6773', height: 36 }}>
-                <span>令和8年</span>
-                <input id={`${pre}-month`} className="ef-input" aria-label="月" disabled={ro} value={month} onChange={(e) => setMonth(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))} onKeyDown={onEnter(() => focusId(`${pre}-day`))} inputMode="numeric" style={{ ...input, width: 40, padding: '8px 2px', textAlign: 'center' }} />
-                <span>月</span>
-                <input id={`${pre}-day`} className="ef-input" aria-label="日" disabled={ro} value={day} onChange={(e) => setDay(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))} onKeyDown={onEnter(() => focusId(fid(0, 'ka')))} inputMode="numeric" style={{ ...input, width: 40, padding: '8px 2px', textAlign: 'center' }} />
-                <span>日</span>
-              </div>
-            </div>
-            <div>
-              <FieldLabel>伝票No</FieldLabel>
-              <div style={{ height: 36, display: 'flex', alignItems: 'center', padding: '0 12px', background: '#f5f7f9', border: '1px solid #e2e8ee', borderRadius: 8, fontSize: 13, color: '#9aa5b1' }}>自動採番</div>
-            </div>
-            {sess.input.cheque && (
-              <div className="ef-field" style={{ width: 120 }}>
-                <FieldLabel>小切手No</FieldLabel>
-                <input className="ef-input" disabled={ro} value={cheque} onChange={(e) => setCheque(e.target.value)} onKeyDown={onEnter(() => focusId(fid(0, 'ka')))} placeholder="任意" autoComplete="off" style={input} />
-              </div>
-            )}
-            {partner && (
-              <div className="ef-field" style={{ width: 240 }}>
-                <FieldLabel color="#6b3fb5">内部取引相手区分</FieldLabel>
-                <ComboField id={`${pre}-aite`} kind="service" value={aite} onChange={setAite} onCommit={() => focusId(fid(rows.findIndex(isUsed) >= 0 ? rows.findIndex(isUsed) : 0, 't'))} placeholder="相手先の区分を指定" disabled={ro} padY={8} invalid={fieldState(rowIssues.flat(), 'aite')} />
-              </div>
-            )}
-            <div style={{ marginLeft: 'auto', alignSelf: 'flex-end', fontSize: 11.5, color: fundMode === '自動資金' ? '#7a8794' : '#6b3fb5', fontWeight: fundMode === '自動資金' ? 500 : 700, paddingBottom: 9 }}>資金モード：{fundMode}</div>
-          </div>
-
-          {/* 行見出し */}
-          <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 12, padding: '9px 22px', background: '#f6f8fa', fontSize: 10.5, fontWeight: 700, color: '#8290a0', borderBottom: '1px solid #eef2f5' }}>
-            <div>行</div>
-            <div style={{ textAlign: 'right', color: BLUE }}>借方 金額</div>
-            <div style={{ color: BLUE }}>借方科目 <span style={{ color: '#b3bcc5', fontWeight: 500 }}>／ 資金科目（自動）／ 摘要</span></div>
-            <div style={{ color: PINK }}>貸方科目 <span style={{ color: '#b3bcc5', fontWeight: 500 }}>／ 資金科目（自動）</span></div>
-            <div style={{ textAlign: 'right', color: PINK }}>貸方 金額</div>
-            <div>証憑・印</div>
-            <div>行操作</div>
-          </div>
-
-          {rows.map((r, i) => (
-            <div key={i} className="ef-row" onFocus={() => setActive(i)} style={{ padding: '10px 22px', borderBottom: '1px solid #f1f4f6', background: !single && i === cur ? '#fcfdfe' : 'transparent' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 12, alignItems: 'start' }}>
-                <div style={{ paddingTop: 9, fontSize: 12, color: '#9aa5b1' }}>
-                  <span className="ef-rowno" style={{ fontWeight: !single && i === cur ? 800 : 500, color: !single && i === cur ? accent : '#9aa5b1' }}>{i + 1}</span>
-                  <span className="ef-rownow" style={{ padding: '1px 5px', borderRadius: 7, background: accent, color: '#fff', fontSize: 9.5, fontWeight: 800, whiteSpace: 'nowrap' }}>{i + 1} 入力中</span>
+                <div className="ef-field" style={{ display: 'flex', alignItems: 'center' }}>
+                  <PaperDate
+                    month={<input id={`${pre}-month`} className="ef-input pp-input" aria-label="月" disabled={ro} value={month} onChange={(e) => setMonth(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))} onKeyDown={onEnter(() => focusId(`${pre}-day`))} inputMode="numeric" style={{ ...input, width: 44, padding: '8px 2px', textAlign: 'center', fontSize: 14 }} />}
+                    day={<input id={`${pre}-day`} className="ef-input pp-input" aria-label="日" disabled={ro} value={day} onChange={(e) => setDay(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))} onKeyDown={onEnter(() => focusId(fid(0, 'ka')))} inputMode="numeric" style={{ ...input, width: 44, padding: '8px 2px', textAlign: 'center', fontSize: 14 }} />}
+                  />
                 </div>
-                <input id={fid(i, 'ka')} className="ef-input" aria-label={`${i + 1}行目 借方金額`} disabled={ro} value={fmtNum(r.kariAmt)} onChange={(e) => setRow(i, { kariAmt: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => afterKariAmt(i))} inputMode="numeric" placeholder="0" autoComplete="off" style={amt} />
-                <div style={{ minWidth: 0 }}>
-                  <ComboField id={fid(i, 'k')} kind="account" value={r.kari} onChange={(x) => setRow(i, { kari: x })} onCommit={() => focusId(fid(i, 's'))} placeholder="借方科目（コード・名称・フリガナ）" listWidth={400} padY={8} disabled={ro} invalid={fieldState(rowIssues[i], 'kari', 'pair')} />
-                  <FundAccountLine name={r.kari} other={r.kashi} mode={fundMode} />
-                  <div style={{ marginTop: 4 }} onKeyDownCapture={(e) => { if (e.key === 'Enter' && e.shiftKey && !isIme(e)) { e.preventDefault(); e.stopPropagation(); rowAddAfter(i); } }}>
-                    <ComboField id={fid(i, 't')} kind="summary" freeText value={r.tekiyo} onChange={(x) => setRow(i, { tekiyo: x })} onCommit={() => afterTekiyo()} placeholder="摘要（任意）" listWidth={320} fontSize={12} padY={4} disabled={ro} />
+                <PaperBox label={<span>伝票<span className="pp-sub">No</span></span>}>
+                  <span style={{ fontSize: 13, color: '#7a8794', whiteSpace: 'nowrap' }}>自動採番</span>
+                </PaperBox>
+                {sess.input.cheque && (
+                  <div className="ef-field" style={{ display: 'flex', width: 190 }}>
+                    <PaperBox label="小切手No" grow>
+                      <input className="ef-input pp-input" disabled={ro} value={cheque} onChange={(e) => setCheque(e.target.value)} onKeyDown={onEnter(() => focusId(fid(0, 'ka')))} placeholder="任意" autoComplete="off" style={{ ...input, padding: '6px 6px' }} />
+                    </PaperBox>
+                  </div>
+                )}
+                {partner && (
+                  <div className="ef-field" style={{ display: 'flex', width: 300 }}>
+                    <PaperBox label={<span style={{ color: '#6b3fb5' }}>内部取引相手区分</span>} grow>
+                      <ComboField id={`${pre}-aite`} kind="service" value={aite} onChange={setAite} onCommit={() => focusId(fid(rows.findIndex(isUsed) >= 0 ? rows.findIndex(isUsed) : 0, 't'))} placeholder="相手先の区分を指定" disabled={ro} padY={6} invalid={fieldState(rowIssues.flat(), 'aite')} />
+                    </PaperBox>
+                  </div>
+                )}
+                <div style={{ marginLeft: 'auto', alignSelf: 'center', fontSize: 11.5, color: fundMode === '自動資金' ? '#7a8794' : '#6b3fb5', fontWeight: fundMode === '自動資金' ? 500 : 700, whiteSpace: 'nowrap' }}>資金モード：{fundMode}</div>
+              </div>
+
+              {/* 2段目：明細（金額／率／予算残 ｜ 借方科目 ｜ 貸方科目 ｜ 金額／率／予算残） */}
+              <div className="pp-table" style={{ gridTemplateColumns: '1fr' }}>
+                <div className="pp-row" style={{ gridTemplateColumns: GRID }}>
+                  <div className="pp-lab" style={{ color: BLUE }}><span>借方 金額<span className="pp-sub">率／予算残</span></span></div>
+                  <div className="pp-lab pp-left" style={{ color: BLUE, fontSize: 12 }}><span>借方科目<span className="pp-sub">資金科目（自動）／摘要</span></span></div>
+                  <div className="pp-lab pp-left" style={{ color: PINK, fontSize: 12 }}><span>貸方科目<span className="pp-sub">資金科目（自動）</span></span></div>
+                  <div className="pp-lab" style={{ color: PINK }}><span>貸方 金額<span className="pp-sub">率／予算残</span></span></div>
+                  <div className="pp-lab"><span>証憑・印<span className="pp-sub">{single ? '証憑・チェック・付箋' : '挿入／削除'}</span></span></div>
+                </div>
+
+                {rows.map((r, i) => {
+                  const on = !single && i === cur;
+                  const bg = on ? '#f7fbf9' : undefined;
+                  return (
+                    <div key={i} className="pp-row" onFocus={() => setActive(i)} style={{ gridTemplateColumns: GRID }}>
+                      {/* 1行目：金額・科目 */}
+                      <div className="pp-cell" style={{ ...cell, background: bg }}>
+                        <input id={fid(i, 'ka')} className="ef-input pp-input" aria-label={`${i + 1}行目 借方金額`} disabled={ro} value={fmtNum(r.kariAmt)} onChange={(e) => setRow(i, { kariAmt: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => afterKariAmt(i))} inputMode="numeric" placeholder="0" autoComplete="off" style={amt} />
+                      </div>
+                      <div className="pp-cell" style={{ ...cell, background: bg }}>
+                        <ComboField id={fid(i, 'k')} kind="account" value={r.kari} onChange={(x) => setRow(i, { kari: x })} onCommit={() => focusId(fid(i, 's'))} placeholder="借方科目（コード・名称・フリガナ）" listWidth={400} padY={8} disabled={ro} invalid={fieldState(rowIssues[i], 'kari', 'pair')} />
+                      </div>
+                      <div className="pp-cell" style={{ ...cell, background: bg }}>
+                        <ComboField id={fid(i, 's')} kind="account" value={r.kashi} onChange={(x) => setRow(i, { kashi: x })} onCommit={(x) => afterKashi(i, x)} placeholder="貸方科目（コード・名称・フリガナ）" listWidth={400} padY={8} disabled={ro} invalid={fieldState(rowIssues[i], 'kashi', 'pair')} />
+                      </div>
+                      <div className="pp-cell" style={{ ...cell, background: bg }}>
+                        <input id={fid(i, 'sa')} className="ef-input pp-input" aria-label={`${i + 1}行目 貸方金額`} disabled={ro} value={fmtNum(r.kashiAmt)} onChange={(e) => setRow(i, { kashiAmt: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => afterKashiAmt(i))} inputMode="numeric" placeholder="0" autoComplete="off" style={amt} />
+                      </div>
+                      <div className="pp-cell pp-center" style={{ ...cell, padding: '6px 4px', gap: 6, background: bg }}>
+                        {!single && (
+                          <span style={{ fontSize: 12, color: '#9aa5b1', flex: 'none' }}>
+                            <span className="ef-rowno pp-num" style={{ fontWeight: on ? 800 : 500, color: on ? accent : '#9aa5b1' }}>{i + 1}</span>
+                            <span className="ef-rownow" style={{ padding: '1px 5px', borderRadius: 7, background: accent, color: '#fff', fontSize: 9.5, fontWeight: 800, whiteSpace: 'nowrap' }}>入力中</span>
+                          </span>
+                        )}
+                        <FlagButtons shohyo={r.shohyo} check={r.check} fusen={r.fusen} disabled={ro} onChange={(p) => setRow(i, p)} />
+                      </div>
+                      {/* 2行目：資金（薄い帯）…率／予算残・資金科目 */}
+                      <div className="pp-cell pp-band pp-col" style={bandCell}>
+                        <div style={{ marginTop: -8 }}><BudgetHintLive account={r.kari} threshold={budgetTh} onOpen={() => setGraphAcct(r.kari)} /></div>
+                      </div>
+                      <div className="pp-cell pp-band" style={{ ...bandCell, gap: 8 }}>
+                        <span style={{ flex: 'none', fontSize: 11, fontWeight: 700, color: PAPER.ink, marginTop: 5 }}>資金</span>
+                        <div style={{ flex: 1, minWidth: 0 }}><FundAccountLine name={r.kari} other={r.kashi} mode={fundMode} /></div>
+                      </div>
+                      <div className="pp-cell pp-band" style={{ ...bandCell, gap: 8 }}>
+                        <span style={{ flex: 'none', fontSize: 11, fontWeight: 700, color: PAPER.ink, marginTop: 5 }}>資金</span>
+                        <div style={{ flex: 1, minWidth: 0 }}><FundAccountLine name={r.kashi} other={r.kari} mode={fundMode} /></div>
+                      </div>
+                      <div className="pp-cell pp-band pp-col" style={bandCell}>
+                        <div style={{ marginTop: -8 }}><BudgetHintLive account={r.kashi} threshold={budgetTh} onOpen={() => setGraphAcct(r.kashi)} /></div>
+                      </div>
+                      <div className="pp-cell pp-band pp-center" style={{ ...bandCell, gap: 4, paddingTop: 4 }}>
+                        {!single ? (
+                          <>
+                            <button type="button" className="ef-act" tabIndex={-1} disabled={ro} onClick={() => insertAt(i)} title={ro ? tools.reason : `${i + 1}行目の上に1行挿入`} style={rowBtn}>挿入</button>
+                            <button type="button" className="ef-act" tabIndex={-1} disabled={ro} onClick={() => deleteAt(i)} title={ro ? tools.reason : `${i + 1}行目を削除`} style={{ ...rowBtn, color: '#c0392b', borderColor: '#f2c9c2' }}>削除</button>
+                          </>
+                        ) : null}
+                      </div>
+                      {/* 3行目：摘要 */}
+                      <div className="pp-cell pp-right" style={{ ...cell, padding: '4px 8px', background: bg }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: PAPER.ink }}>摘要</span>
+                      </div>
+                      <div className="pp-cell" style={{ ...cell, padding: '4px 8px', gridColumn: 'span 2', background: bg }} onKeyDownCapture={(e) => { if (e.key === 'Enter' && e.shiftKey && !isIme(e)) { e.preventDefault(); e.stopPropagation(); rowAddAfter(i); } }}>
+                        <ComboField id={fid(i, 't')} kind="summary" freeText value={r.tekiyo} onChange={(x) => setRow(i, { tekiyo: x })} onCommit={() => afterTekiyo()} placeholder="摘要（任意）" listWidth={320} fontSize={12.5} padY={5} disabled={ro} />
+                      </div>
+                      <div className="pp-cell" style={{ ...cell, padding: '4px 8px', background: bg }} />
+                      <div className="pp-cell" style={{ ...cell, background: bg }} />
+                      {rowIssues[i].length > 0 && (
+                        <div className="pp-cell" style={{ ...cell, gridColumn: '1 / -1', padding: '4px 8px 8px', background: bg }}>
+                          <div style={{ width: '100%' }}><IssueList issues={rowIssues[i]} compact /></div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {Array.from({ length: fillerRows }, (_, k) => (
+                  <div key={'blank-' + k} className="pp-row" aria-hidden style={{ gridTemplateColumns: GRID }}>
+                    <div className="pp-cell pp-empty" style={{ minHeight: 42 }} />
+                    <div className="pp-cell pp-empty" style={{ minHeight: 42 }} />
+                    <div className="pp-cell pp-empty" style={{ minHeight: 42 }} />
+                    <div className="pp-cell pp-empty" style={{ minHeight: 42 }} />
+                    <div className="pp-cell pp-empty pp-center pp-num" style={{ minHeight: 42, color: '#c9d4ce', fontSize: 12 }}>{rows.length + k + 1}</div>
+                    <div className="pp-cell pp-band" style={{ minHeight: 28, color: '#b7c9bd', fontSize: 11 }}>資金</div>
+                    <div className="pp-cell pp-band" style={{ minHeight: 28, color: '#b7c9bd', fontSize: 11 }}>資金</div>
+                    <div className="pp-cell pp-band" style={{ minHeight: 28, color: '#b7c9bd', fontSize: 11 }}>資金</div>
+                    <div className="pp-cell pp-band" style={{ minHeight: 28 }} />
+                    <div className="pp-cell pp-band" style={{ minHeight: 28 }} />
+                  </div>
+                ))}
+
+                {/* 下段：合計 ｜ Seq No・チェック・証憑・小切手No ｜ 合計 */}
+                <div className="pp-row" style={{ gridTemplateColumns: GRID }}>
+                  <div className="pp-cell" style={{ padding: 0 }}>
+                    <div className="pp-foot" style={{ width: '100%' }}>
+                      <span className="pp-lab" style={{ fontSize: 12, letterSpacing: '.3em', color: BLUE }}>合計</span>
+                      <span className="pp-val pp-grow pp-num" style={{ justifyContent: 'flex-end', fontSize: 17, fontWeight: 800, color: BLUE }}>{kariTotal.toLocaleString('ja-JP')}</span>
+                    </div>
+                  </div>
+                  <div className="pp-cell" style={{ padding: 0, gridColumn: 'span 2', background: PAPER.fill }}>
+                    <PaperFootItems
+                      seq={<span style={{ color: '#7a8794', fontSize: 12 }}>自動</span>}
+                      check={<PaperToggle on={curRow.check} onLabel="☑" offLabel="☐" disabled={ro} title={single ? 'チェック' : `チェック（${cur + 1}行目）`} onChange={(x) => setRow(cur, { check: x })} />}
+                      shohyo={<PaperToggle on={curRow.shohyo} onLabel="有" offLabel="無" disabled={ro} title={single ? '証憑 有／無' : `証憑 有／無（${cur + 1}行目）`} onChange={(x) => setRow(cur, { shohyo: x })} />}
+                      cheque={sess.input.cheque ? <span className="pp-num" style={{ fontSize: 12.5 }}>{cheque || <span style={{ color: '#b3bcc5' }}>—</span>}</span> : undefined}
+                    />
+                  </div>
+                  <div className="pp-cell" style={{ padding: 0 }}>
+                    <div className="pp-foot" style={{ width: '100%' }}>
+                      <span className="pp-lab" style={{ fontSize: 12, letterSpacing: '.3em', color: PINK }}>合計</span>
+                      <span className="pp-val pp-grow pp-num" style={{ justifyContent: 'flex-end', fontSize: 17, fontWeight: 800, color: PINK }}>{kashiTotal.toLocaleString('ja-JP')}</span>
+                    </div>
+                  </div>
+                  <div className="pp-cell pp-center" style={{ padding: '4px 6px' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 10, background: balanced ? '#eaf5ef' : '#fdeee9', color: balanced ? '#1f7a52' : '#c0392b', whiteSpace: 'nowrap' }}>{balanced ? '貸借一致' : `差額 ${Math.abs(kariTotal - kashiTotal).toLocaleString('ja-JP')}`}</span>
                   </div>
                 </div>
-                <div style={{ minWidth: 0 }}>
-                  <ComboField id={fid(i, 's')} kind="account" value={r.kashi} onChange={(x) => setRow(i, { kashi: x })} onCommit={(x) => afterKashi(i, x)} placeholder="貸方科目（コード・名称・フリガナ）" listWidth={400} padY={8} disabled={ro} invalid={fieldState(rowIssues[i], 'kashi', 'pair')} />
-                  <FundAccountLine name={r.kashi} other={r.kari} mode={fundMode} />
-                </div>
-                <input id={fid(i, 'sa')} className="ef-input" aria-label={`${i + 1}行目 貸方金額`} disabled={ro} value={fmtNum(r.kashiAmt)} onChange={(e) => setRow(i, { kashiAmt: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => afterKashiAmt(i))} inputMode="numeric" placeholder="0" autoComplete="off" style={amt} />
-                <div style={{ paddingTop: 6 }}>
-                  <FlagButtons shohyo={r.shohyo} check={r.check} fusen={r.fusen} disabled={ro} onChange={(p) => setRow(i, p)} />
-                </div>
-                {!single ? (
-                  <div style={{ display: 'flex', gap: 4, paddingTop: 8 }}>
-                    <button type="button" className="ef-act" tabIndex={-1} disabled={ro} onClick={() => insertAt(i)} title={ro ? tools.reason : `${i + 1}行目の上に1行挿入`} style={rowBtn}>挿入</button>
-                    <button type="button" className="ef-act" tabIndex={-1} disabled={ro} onClick={() => deleteAt(i)} title={ro ? tools.reason : `${i + 1}行目を削除`} style={{ ...rowBtn, color: '#c0392b', borderColor: '#f2c9c2' }}>削除</button>
-                  </div>
-                ) : <div />}
               </div>
-              {rowIssues[i].length > 0 && <div style={{ marginTop: 8, marginLeft: 56 }}><IssueList issues={rowIssues[i]} compact /></div>}
-            </div>
-          ))}
 
-          {/* 合計 */}
-          <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 12, padding: '12px 22px', background: '#fbfcfd', alignItems: 'center' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#8290a0' }}>合計</div>
-            <div style={{ textAlign: 'right', fontWeight: 700, fontSize: 16, color: BLUE, fontVariantNumeric: 'tabular-nums' }}>{kariTotal.toLocaleString('ja-JP')}</div>
-            <div style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 10, background: balanced ? '#eaf5ef' : '#fdeee9', color: balanced ? '#1f7a52' : '#c0392b' }}>
-                {balanced ? '貸借一致' : `差額 ${Math.abs(kariTotal - kashiTotal).toLocaleString('ja-JP')}`}
-              </span>
-              <span style={{ fontSize: 12, color: '#9aa5b1' }}>Seq No：自動</span>
-              {err && <span role="alert" style={{ color: '#c0392b', fontSize: 12.5, fontWeight: 600 }}>{err}</span>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
+                {!single && <button type="button" className="ef-act" tabIndex={-1} disabled={ro} onClick={() => { const n = rows.length; setRows((rs) => [...rs, emptyRow()]); setActive(n); focusId(fid(n, 'ka')); }} title={ro ? tools.reason : '最後に1行追加します'} style={{ ...rowBtn, padding: '4px 11px', borderStyle: 'dashed', borderColor: '#b9c4cf', fontSize: 12 }}>＋ 行追加</button>}
+                <span style={{ fontSize: 11.5, color: '#8290a0' }}>{rows.length} 行　{single ? '摘要で Enter → 登録' : '摘要で Enter → 登録／Shift+Enter → 行追加'}</span>
+                {err && <span role="alert" style={{ color: '#c0392b', fontSize: 12.5, fontWeight: 600 }}>{err}</span>}
+                <span style={{ marginLeft: 'auto' }}>{tools.submitButton}</span>
+              </div>
             </div>
-            <div style={{ textAlign: 'right', fontWeight: 700, fontSize: 16, color: PINK, fontVariantNumeric: 'tabular-nums' }}>{kashiTotal.toLocaleString('ja-JP')}</div>
-            <div />
-            <div />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 22px 12px', background: '#fbfcfd' }}>
-            {!single && <button type="button" className="ef-act" tabIndex={-1} disabled={ro} onClick={() => { const n = rows.length; setRows((rs) => [...rs, emptyRow()]); setActive(n); focusId(fid(n, 'ka')); }} title={ro ? tools.reason : '最後に1行追加します'} style={rowBtn}>＋ 行追加</button>}
-            <span style={{ fontSize: 11.5, color: '#8290a0' }}>{rows.length} 行</span>
-            <span style={{ marginLeft: 'auto' }}>{tools.submitButton}</span>
-          </div>
 
-          {/* 伝票全体の判定（エラー＝登録不可／確認＝確認して登録） */}
-          {allIssues.length > 0 && (
-            <div style={{ padding: '0 22px 10px', background: '#fbfcfd' }}>
-              <IssueList issues={allIssues} confirmId={`${pre}-confirm`} onConfirm={() => submit(true)} confirmDisabled={ro ? tools.reason : !balanced ? '借方合計と貸方合計が一致すると登録できます' : undefined} />
-            </div>
-          )}
+            {/* 伝票全体の判定（エラー＝登録不可／確認＝確認して登録） */}
+            {allIssues.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <IssueList issues={allIssues} confirmId={`${pre}-confirm`} onConfirm={() => submit(true)} confirmDisabled={ro ? tools.reason : !balanced ? '借方合計と貸方合計が一致すると登録できます' : undefined} />
+              </div>
+            )}
+          </div>
 
           {/* 機能ボタン（入力補助／参照） */}
-          <div style={{ padding: '4px 22px 16px', background: '#fbfcfd', borderRadius: `0 0 ${radius}px ${radius}px` }}>{tools.actionBar}</div>
+          <div style={{ padding: '10px 22px 16px', borderRadius: `0 0 ${radius}px ${radius}px` }}>{tools.actionBar}</div>
         </div>
 
         {/* 当年仕訳一覧 */}
@@ -471,7 +544,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
             <FiscalMonthTabs current={monthFilter} accent={accent} onSelect={setMonthFilter} withAll />
             <span style={{ marginLeft: 'auto', fontSize: 12, color: '#8895a3' }}><b style={{ color: '#22303c' }}>{list.length}</b> 件</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '60px minmax(0,1.1fr) minmax(0,1.1fr) minmax(0,1.4fr) 120px', gap: 14, padding: '9px 22px', background: '#f6f8fa', fontSize: 10.5, fontWeight: 700, color: '#8290a0', borderBottom: '1px solid #eef2f5' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '60px minmax(0,1.1fr) minmax(0,1.1fr) minmax(0,1.4fr) 120px', gap: 14, padding: '8px 22px', background: PAPER.fill, fontSize: 10.5, fontWeight: 700, color: PAPER.ink, borderBottom: `1px solid ${PAPER.lineSoft}`, letterSpacing: '.06em' }}>
             <div>月日</div>
             <div>借方科目</div>
             <div>貸方科目</div>
@@ -483,7 +556,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
             {list.map((e) => {
               const isNew = lastIds.includes(e.id);
               return (
-                <div key={e.id} style={{ display: 'grid', gridTemplateColumns: '60px minmax(0,1.1fr) minmax(0,1.1fr) minmax(0,1.4fr) 120px', gap: 14, padding: '9px 22px', borderBottom: '1px solid #f1f4f6', fontSize: 12.5, alignItems: 'center', background: isNew ? '#fff2c9' : 'transparent', animation: isNew ? 'rowin 1.8s ease' : 'none' }}>
+                <div key={e.id} style={{ display: 'grid', gridTemplateColumns: '60px minmax(0,1.1fr) minmax(0,1.1fr) minmax(0,1.4fr) 120px', gap: 14, padding: '9px 22px', borderBottom: `1px solid ${PAPER.lineSoft}`, fontSize: 12.5, alignItems: 'center', background: isNew ? '#fff2c9' : 'transparent', animation: isNew ? 'rowin 1.8s ease' : 'none' }}>
                   <div style={{ color: '#8895a3', fontSize: 12 }}>{e.date}</div>
                   <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.kari}</div>
                   <div style={{ color: '#48565f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.kashi}</div>

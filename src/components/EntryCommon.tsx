@@ -680,3 +680,140 @@ export function FlagButtons({ shohyo, check, fusen, onChange, disabled, showShoh
 const PARTNERS = new Map<number, string>();
 export const setPartner = (id: number, aite: string) => { if (aite) PARTNERS.set(id, aite); else PARTNERS.delete(id); };
 export const partnerOf = (id: number) => PARTNERS.get(id) ?? '';
+
+/* ------------------------------------------------------------------ */
+/* 紙の伝票風の見た目（4形式共通）                                       */
+/*   既存システムの伝票用紙（白地・緑の罫線・薄緑のラベル欄）に寄せるための「皮」。 */
+/*   入力欄・ボタン・フォーカスの強調・エラー表示などの動きは変えない。     */
+/* ------------------------------------------------------------------ */
+export const PAPER = {
+  /** 外枠 */
+  frame: '#3b4a43',
+  /** 太い罫線 */
+  line: '#6f9a7e',
+  /** 細い罫線 */
+  lineSoft: '#9dbfa8',
+  /** ラベル欄の塗り */
+  fill: '#e9f3ec',
+  /** 資金行などの薄い帯 */
+  band: '#f3f8f4',
+  /** ラベル・見出しの文字色 */
+  ink: '#2a5d44',
+  /** 用紙の表題 */
+  title: '#1f4d38',
+} as const;
+
+const PAPER_CSS = `
+.pp-sheet { position: relative; background: #fff; border: 1.5px solid ${PAPER.frame}; box-shadow: 0 1px 0 #cfd8d2, 0 10px 26px rgba(30,50,70,.12); }
+.pp-title { font-family: 'Zen Kaku Gothic New', 'Noto Sans JP', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: .4em; color: ${PAPER.title}; line-height: 1.2; white-space: nowrap; }
+.pp-division { font-family: 'Zen Kaku Gothic New', 'Noto Sans JP', sans-serif; font-weight: 700; font-size: 17px; letter-spacing: .08em; color: ${PAPER.ink}; white-space: nowrap; }
+/* 罫線は「隙間を線色で塗る」方式。表＝pp-table（行の並び）、行＝pp-row（セルの並び） */
+.pp-table { display: grid; gap: 1px; background: ${PAPER.lineSoft}; border: 1px solid ${PAPER.line}; min-width: 0; }
+.pp-row { display: grid; gap: 1px; background: ${PAPER.lineSoft}; min-width: 0; }
+.pp-cell { background: #fff; min-width: 0; padding: 6px 8px; display: flex; align-items: center; gap: 6px; box-sizing: border-box; }
+.pp-cell.pp-col { flex-direction: column; align-items: stretch; justify-content: center; gap: 0; }
+.pp-cell.pp-right { justify-content: flex-end; }
+.pp-cell.pp-center { justify-content: center; }
+.pp-lab { background: ${PAPER.fill}; color: ${PAPER.ink}; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; padding: 3px 8px; display: flex; align-items: center; justify-content: center; text-align: center; white-space: nowrap; line-height: 1.3; min-width: 0; box-sizing: border-box; }
+.pp-lab.pp-left { justify-content: flex-start; }
+.pp-lab small { font-size: 9.5px; font-weight: 600; letter-spacing: .04em; opacity: .75; }
+.pp-lab .pp-sub { display: block; font-size: 9.5px; font-weight: 600; letter-spacing: .02em; opacity: .75; }
+.pp-band { background: ${PAPER.band}; }
+.pp-cell.pp-empty { min-height: 40px; }
+.pp-num { font-variant-numeric: tabular-nums; }
+/* 入力中の行：セルを薄い黄色に、先頭セルに緑の帯（EntryStyles の .ef-row と同じ合図） */
+.pp-row:focus-within > .pp-cell { background: #fffdf0; }
+.pp-row:focus-within > .pp-cell:first-child { box-shadow: inset 4px 0 0 var(--ef-accent, #1f7a52); }
+.pp-row:focus-within .ef-rownow { display: inline-block; }
+.pp-row:focus-within .ef-rowno { display: none; }
+/* 用紙の中の素の入力欄（枠は罫線に任せ、フォーカス時だけ EntryStyles の太枠が付く） */
+.pp-input { border: 1px solid transparent; border-radius: 4px; background: transparent; font-family: inherit; color: #22303c; box-sizing: border-box; min-width: 0; }
+.pp-input:disabled { color: #7a8794; }
+.pp-input::placeholder { color: #b3bcc5; }
+/* 下段の Seq No／チェック／証憑／小切手No の並び */
+.pp-foot { display: flex; align-items: stretch; min-width: 0; min-height: 40px; }
+.pp-foot > .pp-lab { border-right: 1px solid ${PAPER.lineSoft}; flex: none; padding: 3px 9px; }
+.pp-foot > .pp-val { display: flex; align-items: center; gap: 6px; padding: 3px 10px; border-right: 1px solid ${PAPER.lineSoft}; min-width: 0; font-size: 12.5px; color: #22303c; }
+.pp-foot > .pp-val:last-child { border-right: none; }
+.pp-foot > .pp-val.pp-grow { flex: 1 1 auto; }
+.pp-toggle { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 26px; padding: 0 8px; border: 1px solid ${PAPER.lineSoft}; border-radius: 4px; background: #fff; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; color: #22303c; }
+.pp-toggle:disabled { cursor: not-allowed; opacity: .55; }
+.pp-toggle.pp-on { background: ${PAPER.fill}; color: ${PAPER.ink}; border-color: ${PAPER.line}; }
+.pp-toggle:focus-visible { outline: 3px solid var(--ef-accent, #1f7a52); outline-offset: 1px; }
+`;
+/** 紙の伝票風スタイル（EntryStyles と一緒に置く） */
+export function PaperStyles() {
+  return <style>{PAPER_CSS}</style>;
+}
+
+/** 用紙の表題（「仕 訳 伝 票」など）。右端に定型仕訳ボタンなどを置ける */
+export function PaperTitle({ title, division, badge, right, children }: { title: string; division: string; badge?: ReactNode; right?: ReactNode; children?: ReactNode }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 18, flexWrap: 'wrap', marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, flexWrap: 'wrap', minWidth: 0 }}>
+        <span className="pp-title">{title.split('').join(' ')}</span>
+        <span className="pp-division">{division}</span>
+        {badge}
+      </div>
+      {children}
+      {right && <div style={{ marginLeft: 'auto', flex: 'none' }}>{right}</div>}
+    </div>
+  );
+}
+
+/** 「令和 ［8］年 ［月］月 ［日］日」の枠付きセル。month／day には既存の入力欄をそのまま渡す */
+export function PaperDate({ month, day, year = '8', label = '年月日' }: { month: ReactNode; day: ReactNode; year?: string; label?: string }) {
+  const cell: CSSProperties = { padding: '2px 4px', justifyContent: 'center' };
+  return (
+    <div className="pp-row" style={{ gridTemplateColumns: 'auto auto auto auto auto auto auto auto', border: `1px solid ${PAPER.line}`, display: 'inline-grid', verticalAlign: 'middle' }}>
+      <div className="pp-lab"><span>{label}</span></div>
+      <div className="pp-cell" style={{ ...cell, padding: '2px 10px', fontSize: 14, color: '#5b6773' }}>令和</div>
+      <div className="pp-cell pp-num" style={{ ...cell, padding: '2px 10px', fontSize: 14, fontWeight: 700 }}>{year}</div>
+      <div className="pp-lab">年</div>
+      <div className="pp-cell" style={cell}>{month}</div>
+      <div className="pp-lab">月</div>
+      <div className="pp-cell" style={cell}>{day}</div>
+      <div className="pp-lab">日</div>
+    </div>
+  );
+}
+
+/** 用紙の中のラベル付き小さな枠（拠点区分・伝票No など） */
+export function PaperBox({ label, children, width, grow }: { label: ReactNode; children: ReactNode; width?: number | string; grow?: boolean }) {
+  return (
+    <div className="pp-row" style={{ gridTemplateColumns: 'auto minmax(0,1fr)', border: `1px solid ${PAPER.line}`, display: 'inline-grid', width, flex: grow ? '1 1 auto' : 'none', minWidth: 0 }}>
+      <div className="pp-lab">{label}</div>
+      <div className="pp-cell" style={{ padding: '2px 8px', minHeight: 38, fontSize: 13.5 }}>{children}</div>
+    </div>
+  );
+}
+
+/** 有／無・☐／☑ などの小さな切替（下段の チェック／証憑 用。tabIndex=-1 でEnter送りの順序には入らない） */
+export function PaperToggle({ on, onLabel, offLabel, onChange, disabled, title }: { on: boolean; onLabel: string; offLabel: string; onChange: (v: boolean) => void; disabled?: boolean; title?: string }) {
+  return (
+    <button type="button" tabIndex={-1} className={'pp-toggle' + (on ? ' pp-on' : '')} disabled={disabled} aria-pressed={on} title={title} onClick={() => onChange(!on)}>
+      {on ? onLabel : offLabel}
+    </button>
+  );
+}
+
+/** 下段「Seq No ｜ チェック ｜ 証憑 ｜ 小切手No」。各値は画面ごとの状態をそのまま渡す */
+export function PaperFootItems({ seq, check, shohyo, cheque, note }: { seq: ReactNode; check: ReactNode; shohyo: ReactNode; /** 小切手No（表示項目で有効なときだけ渡す） */ cheque?: ReactNode; note?: ReactNode }) {
+  return (
+    <div className="pp-foot" style={{ width: '100%' }}>
+      <span className="pp-lab">Seq No</span>
+      <span className="pp-val pp-num" style={{ minWidth: 52 }}>{seq}</span>
+      <span className="pp-lab">チェック</span>
+      <span className="pp-val">{check}</span>
+      <span className="pp-lab">証憑</span>
+      <span className={'pp-val' + (cheque === undefined && !note ? ' pp-grow' : '')}>{shohyo}</span>
+      {cheque !== undefined && (
+        <>
+          <span className="pp-lab">小切手No</span>
+          <span className={'pp-val' + (note ? '' : ' pp-grow')}>{cheque}</span>
+        </>
+      )}
+      {note && <span className="pp-val pp-grow" style={{ fontSize: 12, color: '#5b6773', whiteSpace: 'nowrap', overflow: 'hidden' }}>{note}</span>}
+    </div>
+  );
+}

@@ -10,7 +10,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { DivisionPicker } from './DivisionPicker';
 import { FiscalYearBanner } from './FiscalYearPage';
 import { AttachedStatementModal, BudgetGraphModal, BudgetHintLive, EntryConfirmModal, SpecialAmountModal, TorihikiBadge, useEntryTools } from './EntryExtras';
-import { ComboField, EntryStyles, isIme, FieldLabel, FlagButtons, FundAccountLine, IssueList, fieldState, fmtNum, focusId, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, watchedStatement, type FundMode, type FusenColor } from './EntryCommon';
+import { ComboField, EntryStyles, isIme, FieldLabel, FlagButtons, FundAccountLine, IssueList, PAPER, PaperBox, PaperDate, PaperFootItems, PaperStyles, PaperTitle, PaperToggle, fieldState, fmtNum, focusId, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, watchedStatement, type FundMode, type FusenColor } from './EntryCommon';
 import { WIDE_WIDTH, WidePanel, useWidePanel } from './WidePanel';
 import { ToastView, useToast } from './Toast';
 import { judgeTorihiki } from '../lib/accounts';
@@ -359,10 +359,13 @@ function VoucherEntry({ onNavigate, year, topOffset }: { onNavigate: (label: str
   });
 
   const panelOpen = !wide.collapsed && !wide.narrow;
-  const cellInput: CSSProperties = { width: '100%', boxSizing: 'border-box', border: '1px solid #cfd8e0', borderRadius: 8, fontFamily: 'inherit', color: '#22303c', background: editable ? '#fff' : '#f5f7f9' };
   const smallInput: CSSProperties = { padding: '4px 8px', border: '1px solid #cfd8e0', borderRadius: 7, fontSize: 12, fontFamily: 'inherit' };
-  const GRID = '34px minmax(0,1.5fr) minmax(0,1fr) 132px 88px 70px';
+  /** 明細の列：コード（行番号）｜摘要・業者｜金額｜行の操作（証憑・チェック・付箋／挿入・削除） */
+  const GRID = '52px minmax(0,1fr) 170px 158px';
   const rowBtn: CSSProperties = { padding: '3px 7px', borderRadius: 6, border: '1px solid #cfd8e0', background: '#fff', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', color: '#5b6773' };
+  const paperDate: CSSProperties = { ...dateInput, border: '1px solid transparent', borderRadius: 4, background: 'transparent' };
+  const divisionName = sess.division.replace(/^\d+\s*/, '');
+  const fillerRows = Math.max(0, 6 - rows.length);
 
   return (
     <>
@@ -394,177 +397,204 @@ function VoucherEntry({ onNavigate, year, topOffset }: { onNavigate: (label: str
           }}
         >
           <EntryStyles />
+          <PaperStyles />
           <style>{FE_CSS}</style>
           {/* 形式の切替（現在の形式を明示）＋ 入力の変更・キーボード操作一覧 */}
           <div style={{ borderRadius: '15px 15px 0 0', overflow: 'hidden' }}>{tools.topBar}</div>
           {tools.banner}
 
-          <div style={{ padding: '20px 26px 8px' }}>
-            {/* 見出し行 */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, borderBottom: '2px solid #28323c', paddingBottom: 13, marginBottom: 16 }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                  <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 24, letterSpacing: '.03em' }}>
-                    仕訳伝票
-                    <span style={{ marginLeft: 12, fontSize: 12, fontWeight: 700, color: GREEN, letterSpacing: 0, verticalAlign: 3 }}>仕訳伝票形式（複数行）</span>
+          <div style={{ padding: '18px 22px 8px', background: '#eef1ef', borderBottom: '1px solid #e2e8ee' }}>
+            {/* 伝票用紙 */}
+            <div className="pp-sheet" style={{ padding: '16px 20px 18px' }}>
+              {/* 表題行：仕訳伝票／拠点区分／取引区分（自動判定）／定型仕訳 */}
+              <PaperTitle
+                title="仕訳伝票"
+                division={`${divisionName} 拠点区分`}
+                badge={<span style={{ fontSize: 11.5, fontWeight: 700, color: GREEN, whiteSpace: 'nowrap' }}>仕訳伝票形式（複数行）　<span style={{ color: '#7a8794', fontWeight: 500 }}>{sess.fiscalYear}</span></span>}
+                right={tools.templateButton}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 14, borderLeft: `1px solid ${PAPER.lineSoft}` }}>
+                  <span style={{ fontSize: 11, color: '#8895a3' }}>取引区分（科目から自動判定）</span>
+                  <TorihikiBadge kari={kari} kashi={kashi} force={fundMode === '強制資金'} blocked={blocked} fundMode={fundMode} />
+                </div>
+              </PaperTitle>
+
+              {/* 1段目：拠点区分（入力区分）／年月日／伝票No */}
+              <div style={{ display: 'flex', alignItems: 'stretch', gap: 14, flexWrap: 'wrap', marginBottom: 14 }}>
+                <PaperBox label={<span>入力区分<span className="pp-sub">サービス区分</span></span>} grow>
+                  <span title="入力区分は、画面上部の区分の選択で切り替えます" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#22303c', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <span className="pp-num" style={{ fontSize: 12, color: '#7a8794' }}>{sess.division.split(' ')[0]}</span>
+                    <span>{divisionName}</span>
+                  </span>
+                </PaperBox>
+                <div className="ef-field" style={{ display: 'flex', alignItems: 'center' }}>
+                  <PaperDate
+                    label="伝票日付"
+                    month={<input id="fe-month" className="ef-input pp-input" aria-label="月" disabled={!editable} value={month} onChange={(e) => setNum2(setMonthV)(e.target.value)} onFocus={(e) => e.currentTarget.select()} onKeyDown={onEnter(() => focusId('fe-day'))} inputMode="numeric" autoComplete="off" style={paperDate} />}
+                    day={<input id="fe-day" className="ef-input pp-input" aria-label="日" disabled={!editable} value={day} onChange={(e) => setNum2(setDayV)(e.target.value)} onFocus={(e) => e.currentTarget.select()} onKeyDown={onEnter(() => focusId(manual ? 'fe-no' : 'fe-kari'))} inputMode="numeric" autoComplete="off" style={paperDate} />}
+                  />
+                </div>
+                <div className="ef-field" style={{ display: 'flex' }}>
+                  <PaperBox label={<span>伝票<span className="pp-sub">No</span></span>} width={manual ? 190 : undefined}>
+                    {manual ? (
+                      <input id="fe-no" className="ef-input pp-input" disabled={!editable} value={manualNo} onChange={(e) => setManualNo(e.target.value)} onKeyDown={onEnter(() => focusId('fe-kari'))} placeholder="例 8-101" autoComplete="off" style={{ height: 34, width: '100%', padding: '0 8px', fontSize: 13.5 }} />
+                    ) : (
+                      <span style={{ fontSize: 13, color: '#7a8794', whiteSpace: 'nowrap' }}>自動採番（<span className="pp-num" style={{ color: '#22303c', fontWeight: 700 }}>{parseInt(month, 10) || 8}-{nextSeq}</span>）</span>
+                    )}
+                  </PaperBox>
+                </div>
+              </div>
+
+              {/* 2段目：借方（BS&PL）／貸方（BS&PL）と、その下の資金（CF） */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 14, marginBottom: 12 }}>
+                {([
+                  { side: '借方', id: 'fe-kari', color: BLUE, value: kari, other: kashi, set: setKari, commit: () => focusId('fe-kashi'), state: fieldState(issues, 'kari', 'pair') },
+                  { side: '貸方', id: 'fe-kashi', color: PINK, value: kashi, other: kari, set: setKashi, commit: (v: string) => focusId(needsPartner({ kari, kashi: v, internal }) ? 'fe-aite' : 'fe-tek-0'), state: fieldState(issues, 'kashi', 'pair') },
+                ] as const).map((s) => (
+                  <div key={s.id} className="pp-table ef-field" style={{ gridTemplateColumns: '1fr' }}>
+                    <div className="pp-row" style={{ gridTemplateColumns: '64px minmax(0,1fr)' }}>
+                      <div className="pp-lab" style={{ color: s.color }}>
+                        <span><FieldLabel color={s.color} style={{ fontSize: 12, marginBottom: 0, display: 'inline' }}>{s.side}科目</FieldLabel><span className="pp-sub">BS&amp;PL</span></span>
+                      </div>
+                      <div className="pp-cell" style={{ padding: '7px 8px' }}>
+                        <ComboField id={s.id} kind="account" value={s.value} onChange={s.set} onCommit={s.commit} disabled={!editable} invalid={s.state} placeholder={`${s.side}科目：コード・科目名・フリガナ`} fontSize={14.5} padY={10} listWidth={400} />
+                      </div>
+                    </div>
+                    <div className="pp-row" style={{ gridTemplateColumns: '64px minmax(0,1fr)' }}>
+                      <div className="pp-lab pp-band"><span>資金科目<span className="pp-sub">CF</span></span></div>
+                      <div className="pp-cell pp-col pp-band" style={{ padding: '2px 8px 7px' }}>
+                        <FundAccountLine name={s.value} other={s.other} mode={fundMode} />
+                        <BudgetHintLive account={s.value} threshold={budgetTh} onOpen={() => setGraphAcct(s.value)} />
+                      </div>
+                    </div>
                   </div>
-                  {/* 取引区分（科目から自動判定）：タイトルの右隣 */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 12, borderLeft: '1px solid #e2e8ee' }}>
-                    <span style={{ fontSize: 11, color: '#8895a3' }}>取引区分（科目から自動判定）</span>
-                    <TorihikiBadge kari={kari} kashi={kashi} force={fundMode === '強制資金'} blocked={blocked} fundMode={fundMode} />
+                ))}
+              </div>
+
+              {/* 内部取引相手区分（内部取引科目を使うとき・「内部取引」を指定したときだけ表示） */}
+              {partner && (
+                <div className="ef-field" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,320px) minmax(0,1fr)', gap: 14, alignItems: 'end', marginBottom: 12, padding: '10px 14px', border: '1px solid #e0d6f3', background: '#faf7ff', borderRadius: 12 }}>
+                  <div>
+                    <FieldLabel color="#6b3fb5">内部取引相手区分（必須）</FieldLabel>
+                    <ComboField id="fe-aite" kind="service" value={aite} onChange={setAite} onCommit={() => focusId('fe-tek-0')} disabled={!editable} invalid={fieldState(issues, 'aite')} placeholder="コード・区分名・フリガナ" />
+                  </div>
+                  <div style={{ fontSize: 11.5, color: '#6b5a8a', lineHeight: 1.7, paddingBottom: 4 }}>内部取引の相手先となる区分を指定します。入力中の区分（{sess.division}）とは別の区分を選んでください。</div>
+                </div>
+              )}
+
+              {/* 登録できない仕訳（赤）／確認して登録できる警告（黄） */}
+              {issues.length > 0 && (
+                <div style={{ marginBottom: 12 }}>
+                  <IssueList issues={issues} onConfirm={editable ? confirmNow : undefined} confirmDisabled={basicError() || undefined} confirmId="fe-confirm" />
+                </div>
+              )}
+
+              {/* 3段目：明細（コード｜摘要／業者｜金額｜行の操作）。空の罫線行を足して用紙らしく見せる */}
+              <div className="pp-table" style={{ gridTemplateColumns: '1fr' }}>
+                <div className="pp-row" style={{ gridTemplateColumns: GRID }}>
+                  <div className="pp-lab">コード<span className="pp-sub">行</span></div>
+                  <div className="pp-lab" style={{ fontSize: 12, letterSpacing: '.3em' }}>摘　要　／　業　者</div>
+                  <div className="pp-lab" style={{ fontSize: 12, letterSpacing: '.3em' }}>金　額</div>
+                  <div className="pp-lab"><span>{inp.shohyo ? '証憑・' : ''}チェック・付箋<span className="pp-sub">挿入／削除</span></span></div>
+                </div>
+                {rows.map((r, i) => {
+                  const on = i === curIdx;
+                  const plus = r.amount.startsWith('+');
+                  return (
+                    <div key={r.id} className="pp-row" style={{ gridTemplateColumns: GRID }}>
+                      <div className="pp-cell pp-center" style={{ padding: '4px 4px', background: on ? '#f7fbf9' : undefined }}>
+                        <button type="button" tabIndex={-1} onClick={() => { setCur(i); focusId(`fe-tek-${i}`); }} title={`${i + 1}行目を行の操作の対象にする`} style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', fontSize: 13, fontWeight: 700, color: on ? GREEN : '#9aa5b1' }}>
+                          <span className="ef-rowno pp-num">{String(i + 1).padStart(2, '0')}</span>
+                          <span className="ef-rownow" style={{ padding: '1px 5px', borderRadius: 7, background: GREEN, color: '#fff', fontSize: 9.5, fontWeight: 800, whiteSpace: 'nowrap' }}>入力中</span>
+                        </button>
+                      </div>
+                      <div className="pp-cell" style={{ padding: '6px 8px', gap: 8, background: on ? '#f7fbf9' : undefined }}>
+                        <div style={{ flex: '1.4 1 0', minWidth: 0 }}>
+                          <ComboField id={`fe-tek-${i}`} kind="summary" freeText value={r.tekiyo} onChange={(v) => patchRow(i, { tekiyo: v })} onCommit={(v) => afterTekiyo(i, v)} onFocusField={() => setCur(i)} disabled={!editable} placeholder={inp.tekiyoCode ? '摘要（コード・フリガナでも検索）' : '摘要を入力'} padY={8} listWidth={360} />
+                        </div>
+                        <span aria-hidden style={{ flex: 'none', color: PAPER.lineSoft, fontSize: 16 }}>／</span>
+                        <div style={{ flex: '1 1 0', minWidth: 0 }}>
+                          <ComboField id={`fe-gyo-${i}`} kind="vendor" value={r.gyosha} onChange={(v) => patchRow(i, { gyosha: v })} onCommit={() => focusId(`fe-amt-${i}`)} onFocusField={() => setCur(i)} disabled={!editable} placeholder="業者（任意）" padY={8} listWidth={300} />
+                        </div>
+                      </div>
+                      <div className="pp-cell" style={{ padding: '6px 8px', background: on ? '#f7fbf9' : undefined }}>
+                        <input
+                          id={`fe-amt-${i}`}
+                          className="ef-input pp-input"
+                          aria-label={`${i + 1}行目の金額`}
+                          disabled={!editable}
+                          value={plus ? '＋' + fmtNum(r.amount) : fmtNum(r.amount)}
+                          onChange={(e) => { const raw = e.target.value.normalize('NFKC'); const digits = raw.replace(/[^0-9]/g, '').slice(0, 12); patchRow(i, { amount: (/^\s*\+/.test(raw) ? '+' : '') + digits }); }}
+                          onFocus={(e) => { setCur(i); e.currentTarget.select(); }}
+                          onKeyDown={(e) => { if (e.key !== 'Enter' || isIme(e)) return; e.preventDefault(); if (e.shiftKey) rowAddAfter(i); else afterAmount(i); }}
+                          title="Enter で登録、Shift+Enter でこの行の下に1行追加。先頭に「＋」を付けて金額を入力し Enter を押すと、特殊金額入力（区分別の按分）が開きます"
+                          inputMode="numeric"
+                          autoComplete="off"
+                          placeholder="0"
+                          style={{ width: '100%', padding: '8px 10px', textAlign: 'right', fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderColor: plus ? '#6b3fb5' : 'transparent' }}
+                        />
+                      </div>
+                      <div className="pp-cell pp-col" style={{ padding: '4px 6px', gap: 4, alignItems: 'center', background: on ? '#f7fbf9' : undefined }}>
+                        <FlagButtons shohyo={r.shohyo} check={r.check} fusen={r.fusen} onChange={(p) => { setCur(i); patchRow(i, p); }} disabled={!editable} showShohyo={inp.shohyo} />
+                        <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                          <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={() => insertAt(i)} title={editable ? `${i + 1}行目の上に1行挿入` : tools.reason} style={rowBtn}>挿入</button>
+                          <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={() => deleteAt(i)} title={editable ? `${i + 1}行目を削除` : tools.reason} style={{ ...rowBtn, color: '#c0392b', borderColor: '#f2c9c2' }}>削除</button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {Array.from({ length: fillerRows }, (_, k) => (
+                  <div key={'blank-' + k} className="pp-row" aria-hidden style={{ gridTemplateColumns: GRID }}>
+                    <div className="pp-cell pp-empty pp-center pp-num" style={{ color: '#c9d4ce', fontSize: 12 }}>{String(rows.length + k + 1).padStart(2, '0')}</div>
+                    <div className="pp-cell pp-empty" />
+                    <div className="pp-cell pp-empty" />
+                    <div className="pp-cell pp-empty" />
+                  </div>
+                ))}
+                {/* 行追加・行数 */}
+                <div className="pp-row" style={{ gridTemplateColumns: '1fr' }}>
+                  <div className="pp-cell" style={{ padding: '6px 10px', fontSize: 11.5, color: '#8290a0' }}>
+                    <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={rowAdd} title={editable ? '最後に1行追加します（金額欄で Shift+Enter でも行を追加できます）' : tools.reason} style={{ padding: '4px 11px', borderRadius: 7, border: '1px dashed #b9c4cf', background: '#fff', color: '#48565f', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', marginRight: 10 }}>＋ 行追加</button>
+                    {rows.length} 行
+                    <span style={{ marginLeft: 12, color: '#9aa5b1' }}>Enter で登録／Shift+Enter で行追加</span>
                   </div>
                 </div>
-                <div style={{ color: '#5b6773', fontSize: 13, marginTop: 4 }}>{sess.division}　{sess.fiscalYear}</div>
-              </div>
-              <div style={{ paddingTop: 2 }}>{tools.templateButton}</div>
-            </div>
-
-            {/* メタ行：入力区分・伝票日付・伝票No */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.3fr) minmax(0,1.5fr) minmax(0,1.1fr)', gap: 16, marginBottom: 16 }}>
-              <div>
-                <FieldLabel>入力区分（サービス区分）</FieldLabel>
-                <div title="入力区分は、画面上部の区分の選択で切り替えます" style={{ display: 'flex', alignItems: 'center', height: 38, padding: '0 12px', background: '#f5f7f9', border: '1px solid #e2e8ee', borderRadius: 9, fontSize: 14, color: '#3d4a56', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{sess.division}</div>
-              </div>
-              <div className="ef-field">
-                <FieldLabel>伝票日付</FieldLabel>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, height: 38, fontSize: 14, color: '#5b6773' }}>
-                  <span>令和8年</span>
-                  <input id="fe-month" className="ef-input" aria-label="月" disabled={!editable} value={month} onChange={(e) => setNum2(setMonthV)(e.target.value)} onFocus={(e) => e.currentTarget.select()} onKeyDown={onEnter(() => focusId('fe-day'))} inputMode="numeric" autoComplete="off" style={dateInput} />
-                  <span>月</span>
-                  <input id="fe-day" className="ef-input" aria-label="日" disabled={!editable} value={day} onChange={(e) => setNum2(setDayV)(e.target.value)} onFocus={(e) => e.currentTarget.select()} onKeyDown={onEnter(() => focusId(manual ? 'fe-no' : 'fe-kari'))} inputMode="numeric" autoComplete="off" style={dateInput} />
-                  <span>日</span>
-                </div>
-              </div>
-              <div className="ef-field">
-                <FieldLabel>伝票No</FieldLabel>
-                {manual ? (
-                  <input id="fe-no" className="ef-input" disabled={!editable} value={manualNo} onChange={(e) => setManualNo(e.target.value)} onKeyDown={onEnter(() => focusId('fe-kari'))} placeholder="例 8-101" autoComplete="off" style={{ height: 38, boxSizing: 'border-box', width: '100%', padding: '0 12px', border: '1px solid #cfd8e0', borderRadius: 9, fontSize: 13.5, fontFamily: 'inherit' }} />
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', height: 38, padding: '0 12px', background: '#f5f7f9', border: '1px solid #e2e8ee', borderRadius: 9, fontSize: 13.5, color: '#9aa5b1', whiteSpace: 'nowrap', overflow: 'hidden' }}>
-                    自動採番（{parseInt(month, 10) || 8}-{nextSeq}）
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* 借方 / 貸方（伝票につき1組） */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 16, marginBottom: 10 }}>
-              <div className="ef-field" style={{ border: '1px solid #cfe0f2', borderRadius: 12, minWidth: 0 }}>
-                <div style={boxHeader('#eaf2fb', BLUE)}>
-                  <FieldLabel color={BLUE} style={{ fontSize: 13, marginBottom: 0 }}>借方科目</FieldLabel>
-                  <span style={{ fontSize: 10, fontWeight: 600, color: '#87a6cc' }}>伝票につき1組</span>
-                </div>
-                <div style={{ padding: '12px 14px 10px' }}>
-                  <ComboField id="fe-kari" kind="account" value={kari} onChange={setKari} onCommit={() => focusId('fe-kashi')} disabled={!editable} invalid={fieldState(issues, 'kari', 'pair')} placeholder="コード・科目名・フリガナ" fontSize={14.5} padY={10} listWidth={400} />
-                  <FundAccountLine name={kari} other={kashi} mode={fundMode} />
-                  <BudgetHintLive account={kari} threshold={budgetTh} onOpen={() => setGraphAcct(kari)} />
-                </div>
-              </div>
-              <div className="ef-field" style={{ border: '1px solid #f2d0dc', borderRadius: 12, minWidth: 0 }}>
-                <div style={boxHeader('#fdeef3', PINK)}>
-                  <FieldLabel color={PINK} style={{ fontSize: 13, marginBottom: 0 }}>貸方科目</FieldLabel>
-                  <span style={{ fontSize: 10, fontWeight: 600, color: '#d18aa5' }}>伝票につき1組</span>
-                </div>
-                <div style={{ padding: '12px 14px 10px' }}>
-                  <ComboField id="fe-kashi" kind="account" value={kashi} onChange={setKashi} onCommit={(v) => focusId(needsPartner({ kari, kashi: v, internal }) ? 'fe-aite' : 'fe-tek-0')} disabled={!editable} invalid={fieldState(issues, 'kashi', 'pair')} placeholder="コード・科目名・フリガナ" fontSize={14.5} padY={10} listWidth={400} />
-                  <FundAccountLine name={kashi} other={kari} mode={fundMode} />
-                  <BudgetHintLive account={kashi} threshold={budgetTh} onOpen={() => setGraphAcct(kashi)} />
-                </div>
-              </div>
-            </div>
-
-            {/* 内部取引相手区分（内部取引科目を使うとき・「内部取引」を指定したときだけ表示） */}
-            {partner && (
-              <div className="ef-field" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,320px) minmax(0,1fr)', gap: 14, alignItems: 'end', marginBottom: 10, padding: '10px 14px', border: '1px solid #e0d6f3', background: '#faf7ff', borderRadius: 12 }}>
-                <div>
-                  <FieldLabel color="#6b3fb5">内部取引相手区分（必須）</FieldLabel>
-                  <ComboField id="fe-aite" kind="service" value={aite} onChange={setAite} onCommit={() => focusId('fe-tek-0')} disabled={!editable} invalid={fieldState(issues, 'aite')} placeholder="コード・区分名・フリガナ" />
-                </div>
-                <div style={{ fontSize: 11.5, color: '#6b5a8a', lineHeight: 1.7, paddingBottom: 4 }}>内部取引の相手先となる区分を指定します。入力中の区分（{sess.division}）とは別の区分を選んでください。</div>
-              </div>
-            )}
-
-            {/* 登録できない仕訳（赤）／確認して登録できる警告（黄） */}
-            {issues.length > 0 && (
-              <div style={{ marginBottom: 12 }}>
-                <IssueList issues={issues} onConfirm={editable ? confirmNow : undefined} confirmDisabled={basicError() || undefined} confirmId="fe-confirm" />
-              </div>
-            )}
-
-            {/* 明細行：摘要・業者・金額（複数行） */}
-            <div style={{ border: '1px solid #e2e8ee', borderRadius: 12, marginTop: 6, marginBottom: 14 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 8, alignItems: 'center', padding: '8px 12px', background: '#f6f8fa', borderBottom: '1px solid #e2e8ee', borderRadius: '11px 11px 0 0', fontSize: 11, fontWeight: 700, color: '#8290a0' }}>
-                <div style={{ textAlign: 'center' }}>行</div>
-                <div>摘要</div>
-                <div>業者</div>
-                <div style={{ textAlign: 'right' }}>金額</div>
-                <div style={{ textAlign: 'center' }}>{inp.shohyo ? '証憑・' : ''}チェック・付箋</div>
-                <div style={{ textAlign: 'center' }}>行操作</div>
-              </div>
-              {rows.map((r, i) => {
-                const on = i === curIdx;
-                const plus = r.amount.startsWith('+');
-                return (
-                  <div key={r.id} className="ef-row" style={{ display: 'grid', gridTemplateColumns: GRID, gap: 8, alignItems: 'center', padding: '7px 12px', borderBottom: '1px solid #f1f4f6', background: on ? '#f7fbf9' : 'transparent', boxShadow: on ? `inset 4px 0 0 ${GREEN}66` : 'none' }}>
-                    <button type="button" tabIndex={-1} onClick={() => { setCur(i); focusId(`fe-tek-${i}`); }} title={`${i + 1}行目を行の操作の対象にする`} style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', fontSize: 12, fontWeight: 700, color: on ? GREEN : '#9aa5b1' }}>
-                      <span className="ef-rowno">{i + 1}</span>
-                      <span className="ef-rownow" style={{ padding: '1px 5px', borderRadius: 7, background: GREEN, color: '#fff', fontSize: 9.5, fontWeight: 800, whiteSpace: 'nowrap' }}>入力中</span>
-                    </button>
-                    <ComboField id={`fe-tek-${i}`} kind="summary" freeText value={r.tekiyo} onChange={(v) => patchRow(i, { tekiyo: v })} onCommit={(v) => afterTekiyo(i, v)} onFocusField={() => setCur(i)} disabled={!editable} placeholder={inp.tekiyoCode ? '摘要（コード・フリガナでも検索）' : '摘要を入力'} padY={8} listWidth={360} />
-                    <ComboField id={`fe-gyo-${i}`} kind="vendor" value={r.gyosha} onChange={(v) => patchRow(i, { gyosha: v })} onCommit={() => focusId(`fe-amt-${i}`)} onFocusField={() => setCur(i)} disabled={!editable} placeholder="業者（任意）" padY={8} listWidth={300} />
-                    <input
-                      id={`fe-amt-${i}`}
-                      className="ef-input"
-                      aria-label={`${i + 1}行目の金額`}
-                      disabled={!editable}
-                      value={plus ? '＋' + fmtNum(r.amount) : fmtNum(r.amount)}
-                      onChange={(e) => { const raw = e.target.value.normalize('NFKC'); const digits = raw.replace(/[^0-9]/g, '').slice(0, 12); patchRow(i, { amount: (/^\s*\+/.test(raw) ? '+' : '') + digits }); }}
-                      onFocus={(e) => { setCur(i); e.currentTarget.select(); }}
-                      onKeyDown={(e) => { if (e.key !== 'Enter' || isIme(e)) return; e.preventDefault(); if (e.shiftKey) rowAddAfter(i); else afterAmount(i); }}
-                      title="Enter で登録、Shift+Enter でこの行の下に1行追加。先頭に「＋」を付けて金額を入力し Enter を押すと、特殊金額入力（区分別の按分）が開きます"
-                      inputMode="numeric"
-                      autoComplete="off"
-                      placeholder="0"
-                      style={{ ...cellInput, padding: '8px 10px', textAlign: 'right', fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderColor: plus ? '#6b3fb5' : '#cfd8e0' }}
+                {/* 下段：Seq No｜チェック｜証憑｜小切手No｜合計 */}
+                <div className="pp-row" style={{ gridTemplateColumns: 'minmax(0,1fr) 170px' }}>
+                  <div className="pp-cell" style={{ padding: 0, background: PAPER.fill }}>
+                    <PaperFootItems
+                      seq={<span style={{ fontWeight: 700 }}>{nextSeq}</span>}
+                      check={<PaperToggle on={curRow.check} onLabel="☑" offLabel="☐" disabled={!editable} title={`チェック（${curIdx + 1}行目）`} onChange={(v) => patchRow(curIdx, { check: v })} />}
+                      shohyo={inp.shohyo ? <PaperToggle on={curRow.shohyo} onLabel="有" offLabel="無" disabled={!editable} title={`証憑 有／無（${curIdx + 1}行目）`} onChange={(v) => patchRow(curIdx, { shohyo: v })} /> : <span style={{ color: '#9aa5b1', fontSize: 12 }}>有</span>}
+                      cheque={inp.cheque ? <label className="ef-field" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><input className="ef-input pp-input" disabled={!editable} value={cheque} onChange={(e) => setCheque(e.target.value)} placeholder="任意" style={{ ...smallInput, border: '1px solid transparent', background: 'transparent', width: 120 }} /></label> : undefined}
+                      note={<span>チェック・証憑は <b style={{ color: GREEN }}>{curIdx + 1}行目</b> が対象</span>}
                     />
-                    <div style={{ textAlign: 'center' }}>
-                      <FlagButtons shohyo={r.shohyo} check={r.check} fusen={r.fusen} onChange={(p) => { setCur(i); patchRow(i, p); }} disabled={!editable} showShohyo={inp.shohyo} />
-                    </div>
-                    <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
-                      <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={() => insertAt(i)} title={editable ? `${i + 1}行目の上に1行挿入` : tools.reason} style={rowBtn}>挿入</button>
-                      <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={() => deleteAt(i)} title={editable ? `${i + 1}行目を削除` : tools.reason} style={{ ...rowBtn, color: '#c0392b', borderColor: '#f2c9c2' }}>削除</button>
+                  </div>
+                  <div className="pp-cell" style={{ padding: 0 }}>
+                    <div className="pp-foot" style={{ width: '100%' }}>
+                      <span className="pp-lab" style={{ fontSize: 12, letterSpacing: '.3em' }}>合計</span>
+                      <span className="pp-val pp-grow pp-num" style={{ justifyContent: 'flex-end', fontSize: 18, fontWeight: 800 }}><span style={{ fontSize: 12, color: '#8290a0', marginRight: 4 }}>¥</span>{total.toLocaleString('ja-JP')}</span>
                     </div>
                   </div>
-                );
-              })}
-              <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 8, alignItems: 'center', padding: '9px 12px', background: '#fbfcfd', borderRadius: '0 0 11px 11px' }}>
-                <div />
-                <div style={{ fontSize: 11.5, color: '#8290a0' }}>
-                  <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={rowAdd} title={editable ? '最後に1行追加します（金額欄で Shift+Enter でも行を追加できます）' : tools.reason} style={{ padding: '4px 11px', borderRadius: 7, border: '1px dashed #b9c4cf', background: '#fff', color: '#48565f', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', marginRight: 10 }}>＋ 行追加</button>
-                  {rows.length} 行
                 </div>
-                <div style={{ textAlign: 'right', fontSize: 12, fontWeight: 700, color: '#5b6773' }}>合計</div>
-                <div style={{ textAlign: 'right', fontSize: 18, fontWeight: 800, fontVariantNumeric: 'tabular-nums', paddingRight: 10 }}><span style={{ fontSize: 12, color: '#8290a0', marginRight: 4 }}>¥</span>{total.toLocaleString('ja-JP')}</div>
-                <div />
-                <div />
               </div>
-            </div>
 
-            {(inp.cheque || inp.spare1 || inp.spare2) && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12, fontSize: 12, color: '#5b6773', flexWrap: 'wrap' }}>
-                {inp.cheque && <label className="ef-field" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>小切手No <input className="ef-input" disabled={!editable} value={cheque} onChange={(e) => setCheque(e.target.value)} placeholder="任意" style={{ ...smallInput, width: 110 }} /></label>}
-                {inp.spare1 && <label className="ef-field" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>予備1 <input className="ef-input" disabled={!editable} value={spare[0]} onChange={(e) => setSpare([e.target.value, spare[1]])} style={{ ...smallInput, width: 120 }} /></label>}
-                {inp.spare2 && <label className="ef-field" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>予備2 <input className="ef-input" disabled={!editable} value={spare[1]} onChange={(e) => setSpare([spare[0], e.target.value])} style={{ ...smallInput, width: 120 }} /></label>}
-              </div>
-            )}
+              {(inp.spare1 || inp.spare2) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 10, fontSize: 12, color: '#5b6773', flexWrap: 'wrap' }}>
+                  {inp.spare1 && <label className="ef-field" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>予備1 <input className="ef-input" disabled={!editable} value={spare[0]} onChange={(e) => setSpare([e.target.value, spare[1]])} style={{ ...smallInput, width: 120 }} /></label>}
+                  {inp.spare2 && <label className="ef-field" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>予備2 <input className="ef-input" disabled={!editable} value={spare[1]} onChange={(e) => setSpare([spare[0], e.target.value])} style={{ ...smallInput, width: 120 }} /></label>}
+                </div>
+              )}
+            </div>
 
             {queue.length > 0 && (
-              <div role="status" style={{ marginBottom: 10, padding: '7px 12px', borderRadius: 9, background: '#eef6f1', border: '1px solid #cfe5d8', color: '#1f6a48', fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div role="status" style={{ marginTop: 12, padding: '7px 12px', borderRadius: 9, background: '#eef6f1', border: '1px solid #cfe5d8', color: '#1f6a48', fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span>定型仕訳の続き：この伝票を登録すると、次の伝票（残り {queue.length} 枚）を呼び出します。</span>
                 <button type="button" className="ef-act" onClick={() => { setQueue([]); toast.show('定型仕訳の続きを取り消しました'); }} style={{ marginLeft: 'auto', padding: '3px 10px', borderRadius: 7, border: '1px solid #b7d6c5', background: '#fff', color: '#1f6a48', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>続きを取り消す</button>
               </div>
             )}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
               <div role="alert" style={{ flex: 1, minHeight: 20, color: '#c0392b', fontSize: 12.5, fontWeight: 600 }}>{err}</div>
               {tools.submitButton}
             </div>
@@ -639,20 +669,6 @@ function logoStyle(bg: string, size: number, font: number): CSSProperties {
   };
 }
 
-
-function boxHeader(bg: string, color: string): CSSProperties {
-  return {
-    background: bg,
-    padding: '9px 14px',
-    fontWeight: 700,
-    fontSize: 13,
-    color,
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    borderRadius: '11px 11px 0 0',
-  };
-}
 
 
 /** 単一形式／振替伝票形式／振替単一形式：仕訳伝票形式と同じ右側の参照パネル（日記帳／前年度日記帳／元帳１・２／残高照合）を付ける。
