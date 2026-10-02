@@ -403,19 +403,20 @@ function VoucherEntry({ onNavigate, year, topOffset }: { onNavigate: (label: str
             {/* 見出し行 */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, borderBottom: '2px solid #28323c', paddingBottom: 13, marginBottom: 16 }}>
               <div>
-                <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 24, letterSpacing: '.03em' }}>
-                  仕訳伝票
-                  <span style={{ marginLeft: 12, fontSize: 12, fontWeight: 700, color: GREEN, letterSpacing: 0, verticalAlign: 3 }}>仕訳伝票形式（複数行）</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 24, letterSpacing: '.03em' }}>
+                    仕訳伝票
+                    <span style={{ marginLeft: 12, fontSize: 12, fontWeight: 700, color: GREEN, letterSpacing: 0, verticalAlign: 3 }}>仕訳伝票形式（複数行）</span>
+                  </div>
+                  {/* 取引区分（科目から自動判定）：タイトルの右隣 */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 12, borderLeft: '1px solid #e2e8ee' }}>
+                    <span style={{ fontSize: 11, color: '#8895a3' }}>取引区分（科目から自動判定）</span>
+                    <TorihikiBadge kari={kari} kashi={kashi} force={fundMode === '強制資金'} blocked={blocked} fundMode={fundMode} />
+                  </div>
                 </div>
                 <div style={{ color: '#5b6773', fontSize: 13, marginTop: 4 }}>{sess.division}　{sess.fiscalYear}</div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 11, color: '#8895a3', marginBottom: 7 }}>取引区分（科目から自動判定）</div>
-                  <TorihikiBadge kari={kari} kashi={kashi} force={fundMode === '強制資金'} blocked={blocked} fundMode={fundMode} />
-                </div>
-                <div style={{ paddingTop: 2 }}>{tools.templateButton}</div>
-              </div>
+              <div style={{ paddingTop: 2 }}>{tools.templateButton}</div>
             </div>
 
             {/* メタ行：入力区分・伝票日付・伝票No */}
