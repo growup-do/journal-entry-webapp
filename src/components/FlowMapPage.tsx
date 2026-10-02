@@ -21,10 +21,9 @@ const GROUPS: Group[] = [
   { key: 'home', title: 'ホーム・機能から探す', color: '#1f7a52' },
   { key: 'entry', title: '伝票入力（4形式）', note: '右側に参照パネル。機能ボタンからダイアログ', color: '#1f7a52' },
   { key: 'ledger', title: '日記帳・元帳', note: '行の訂正・削除、検索条件、参照画面', color: '#2c5f9e' },
-  { key: 'trend', title: '推移', color: '#2c5f9e' },
+  { key: 'trend', title: '推移・分析', note: '推移表とグラフ・充実残額', color: '#2c5f9e' },
   { key: 'compare', title: '試算表・決算書', note: '科目 → 元帳 → 伝票のドリルダウン', color: '#2c5f9e' },
   { key: 'audit', title: '調査・チェック', color: '#b7791f' },
-  { key: 'graph', title: 'グラフ・分析', color: '#b7791f' },
   { key: 'print', title: '帳票・印刷', note: '帳票画面内で 基本条件→詳細設定→出力先→印刷', color: '#6b3fb5' },
   { key: 'option', title: 'オプション（別売）', note: '未導入は導入案内', color: '#b45309' },
   { key: 'settings', title: '各種設定', note: 'マスター設定／登録機能／保守・運用／年度', color: '#48565f' },
@@ -88,9 +87,9 @@ const NODES: Node[] = [
   N('auditexp', '説明／結果詳細／トレース', 'dialog', 'audit', { open: '決算調査' }),
   N('auditset', '決算チェック設定', 'page', 'audit', { open: '決算チェック設定' }),
   // グラフ
-  N('ygraph', '経年グラフ', 'page', 'graph', { open: '経年グラフ' }),
-  N('agraph', '分析グラフ', 'page', 'graph', { open: '分析グラフ' }),
-  N('suff', '社会福祉充実残額', 'page', 'graph', { open: '充実残額', note: '算定方式の選択 → シミュレーター' }),
+  N('ygraph', '経年グラフ', 'page', 'trend', { open: '経年グラフ' }),
+  N('agraph', '分析グラフ', 'page', 'trend', { open: '分析グラフ' }),
+  N('suff', '社会福祉充実残額', 'page', 'trend', { open: '充実残額', note: '算定方式の選択 → シミュレーター' }),
   // 帳票・印刷
   N('printc', '帳票の印刷', 'page', 'print', { open: '印刷センター' }),
   N('batch', '一括印刷', 'page', 'print', { open: '一括印刷' }),
@@ -145,7 +144,6 @@ const EDGES: Edge[] = [
   E('e-voucher', 'widepanel', '右側に常設'), E('widepanel', 'vedit', '行の訂正', true),
   E('e-voucher', 'template', '定型仕訳／連続定型', true), E('e-voucher', 'alloc', '自動按分', true), E('e-voucher', 'confirm', '伝票登録', true), E('e-voucher', 'inputset', '入力の変更', true), E('e-voucher', 'keys', 'キーボード操作一覧', true),
   E('e-single', 'calendar', 'カレンダー', true), E('e-single', 'balance', '科目別残高／現預金残高', true),
-  E('e-voucher', 'journal', '画面問合', true),
   E('journal', 'search', '検索条件', true), E('journal', 'vedit', '訂正'), E('journal', 'vdelete', '削除', true), E('journal', 'saveas', 'CSV出力', true),
   E('ledger', 'vedit', '訂正'), E('ledger', 'printflow', '印刷', true),
   E('trial', 'ledger', '科目 → 元帳'), E('closing', 'ledger', '科目 → 元帳'), E('trend', 'ledger', '月 → 元帳', true), E('ledger', 'trial', '← 戻る', true),
@@ -167,7 +165,7 @@ const COLS = 4;               // フレーム内の列数
 const FRAME_COLS: string[][] = [ // キャンバス上のフレーム配置（列ごと）
   ['start', 'home', 'user'],
   ['entry', 'ledger', 'trend'],
-  ['compare', 'audit', 'graph', 'print'],
+  ['compare', 'audit', 'print'],
   ['settings', 'option'],
 ];
 interface Placed { node: Node; x: number; y: number; w: number; h: number }

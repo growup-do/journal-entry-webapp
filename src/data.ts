@@ -58,10 +58,9 @@ export interface MenuGroup {
 export const MENU_GROUPS: MenuGroup[] = [
   { key: 'input', label: '伝票入力', icon: 'input', items: ['伝票入力', '単一入力', '振替入力', '振替単一'] },
   { key: 'ledger', label: '日記帳・元帳', icon: 'ledger', items: ['仕訳一覧', '勘定元帳', '資金元帳', '業者元帳'] },
-  { key: 'trend', label: '推移', icon: 'trend', items: ['科目推移', '資金推移', '業者推移'] },
+  { key: 'trend', label: '推移・分析', icon: 'trend', items: ['科目推移', '資金推移', '業者推移', '経年グラフ', '分析グラフ', '充実残額'] },
   { key: 'compare', label: '試算表・決算書', icon: 'compare', items: ['月次試算', '予算対比', '月次決算'] },
   { key: 'audit', label: '調査・チェック', icon: 'audit', items: ['仕訳数', '日次調査', '決算調査'] },
-  { key: 'graph', label: 'グラフ・分析', icon: 'graph', items: ['経年グラフ', '分析グラフ', '充実残額'] },
   { key: 'print', label: '帳票・印刷', icon: 'print', items: ['印刷センター', '一括印刷', '別紙（注記・明細書・財産目録）', '共通の印刷設定'] },
   { key: 'option', label: 'オプション', icon: 'option', items: ['小口現金', '減価償却', '預金出納', '収入支出', '電子印'], option: true },
 ];

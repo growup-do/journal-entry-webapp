@@ -326,12 +326,11 @@ export function ComboField({ id, kind, value, onChange, onCommit, placeholder, f
 /* ------------------------------------------------------------------ */
 /* 登録できない仕訳／確認して続行できる警告（依頼書 5.3.2）              */
 /* ------------------------------------------------------------------ */
-export type FundMode = '自動資金' | '強制資金' | '非資金';
-export const FUND_MODES: FundMode[] = ['自動資金', '強制資金', '非資金'];
+export type FundMode = '自動資金' | '強制資金';
+export const FUND_MODES: FundMode[] = ['自動資金', '強制資金'];
 export const FUND_MODE_NOTE: Record<FundMode, string> = {
   自動資金: '科目から資金科目を自動で決めます（通常）',
   強制資金: '資金取引として扱い、資金収支計算書に反映します',
-  非資金: '資金収支計算書に反映しません',
 };
 export const isInternalAccount = (name: string) => /区分間/.test(name);
 
@@ -383,9 +382,6 @@ export function judgeEntry(x: JudgeInput, env: EnvSettings): Issue[] {
 
   // 資金モードと科目の整合
   const ca = metaOf(kari)?.cls, cb = metaOf(kashi)?.cls;
-  if (x.fundMode === '非資金' && (ca === '現預金' || cb === '現預金')) {
-    out.push({ level: 'error', code: 'nonfund', title: '非資金モードでは現金・預金の科目を使えません', detail: '資金科目と非資金科目が混在しています。資金モードを「自動資金」に戻すか、科目を変更してください。', field: ca === '現預金' ? 'kari' : 'kashi' });
-  }
   if (x.fundMode === '強制資金' && ca === '現預金' && cb === '現預金') {
     out.push({ level: 'error', code: 'force', title: '強制資金モードでは登録できない組み合わせです', detail: '現金・預金どうしの振替は資金の増減がないため、強制資金にはできません。', field: 'pair' });
   }
@@ -643,7 +639,6 @@ export function ConfirmModal({ open, title, children, okLabel, cancelLabel = '�
 /* ------------------------------------------------------------------ */
 export function fundLabelOf(name: string, other: string, mode: FundMode): { text: string; tone: 'on' | 'off' } {
   if (!name) return { text: '科目を選ぶと表示します', tone: 'off' };
-  if (mode === '非資金') return { text: '（非資金：資金収支に反映しません）', tone: 'off' };
   const m = metaOf(name), o = metaOf(other);
   if (!m) return { text: mode === '強制資金' ? '（強制資金）' : '—', tone: mode === '強制資金' ? 'on' : 'off' };
   if (m.cls === '現預金') return { text: '支払資金（現金・預金）', tone: 'on' };

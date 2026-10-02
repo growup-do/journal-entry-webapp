@@ -361,7 +361,6 @@ export interface EntryToolsOptions {
 }
 
 const TEMPLATE_FORM: Record<EntryFormat, JournalTemplate['form']> = { 伝票入力: '伝票式', 単一入力: '単一式', 振替入力: '振替伝票式', 振替単一: '振替単一式' };
-const INQUIRY_TARGETS = ['仕訳一覧', '勘定元帳', '資金元帳', '業者元帳', '月次試算', '元帳１', '元帳２', '残高照合'];
 
 export function useEntryTools(o: EntryToolsOptions) {
   const sess = useSession();
@@ -369,7 +368,7 @@ export function useEntryTools(o: EntryToolsOptions) {
   const editable = canEdit(sess);
   const reason = editBlockReason(sess);
   const ro = !editable;
-  const [dlg, setDlg] = useState<null | '定型' | '連続' | '按分' | '科目別残' | '現預金残' | 'カレンダー' | '入力の変更' | '訂正' | '削除' | 'ヘルプ' | '問合' | '中止'>(null);
+  const [dlg, setDlg] = useState<null | '定型' | '連続' | '按分' | '科目別残' | '現預金残' | 'カレンダー' | '入力の変更' | '訂正' | '削除' | 'ヘルプ' | '中止'>(null);
   const [wiz, setWiz] = useState<TemplateWiz>(null);
   const [awiz, setAwiz] = useState<AllocationWiz>(null);
   const [edit, setEdit] = useState<Voucher | null>(null);
@@ -410,10 +409,9 @@ export function useEntryTools(o: EntryToolsOptions) {
     { key: 'A', label: '自動按分', group: G3, run: () => setDlg('按分'), disabled: ro },
     { key: 'G', label: '仕訳登録（入力中の伝票を定型として登録）', group: G3, run: saveAsTemplate, disabled: ro },
     { key: 'U', label: '内部取引（相手区分の入力欄を開く）', group: G3, run: o.onInternal, disabled: ro },
-    { key: 'M', label: '資金モードの切替（自動資金→強制資金→非資金）', group: G3, run: cycleFund, disabled: ro },
+    { key: 'M', label: '資金モードの切替（自動資金⇄強制資金）', group: G3, run: cycleFund, disabled: ro },
     { key: 'B', label: '科目別残高', group: G4, run: () => setDlg('科目別残') },
     { key: 'Z', label: '現預金残高', group: G4, run: () => setDlg('現預金残') },
-    { key: 'W', label: '画面問合（問合せ画面・参照パネル）', group: G4, run: () => setDlg('問合') },
     { key: 'H', label: 'キーボード操作一覧', group: 'ヘルプ', run: () => setDlg('ヘルプ') },
   ];
   useShortcuts(shortcuts, 'page');
@@ -457,7 +455,6 @@ export function useEntryTools(o: EntryToolsOptions) {
       <ActionGroup caption="参照">
         <ActButton label="科目別残高" k="B" accent={o.accent} onClick={() => setDlg('科目別残')} />
         <ActButton label="現預金残高" k="Z" accent={o.accent} onClick={() => setDlg('現預金残')} />
-        <ActButton label="画面問合" k="W" accent={o.accent} title="参照パネルや問合せ画面（日記帳・元帳・試算表など）を開きます" onClick={() => setDlg('問合')} />
       </ActionGroup>
     </div>
   );
@@ -501,25 +498,6 @@ export function useEntryTools(o: EntryToolsOptions) {
       <ConfirmModal open={leave != null} title="入力中の伝票があります" okLabel={`破棄して${leave && (ENTRY_FORMATS as readonly string[]).includes(leave) ? '形式を切り替える' : '移動する'}`} danger accent={o.accent} onClose={() => setLeave(null)} onOk={() => { const to = leave; setLeave(null); if (to) o.onNavigate?.(to); }}>
         「{leave ? displayName(leave) : ''}」へ移動すると、<b>入力中（未登録）の伝票は破棄されます。</b><br />登録してから移動する場合は「入力に戻る」を押し、伝票登録を行ってください。
       </ConfirmModal>
-      <Modal open={dlg === '問合'} onClose={() => setDlg(null)} width={520} title="画面問合">
-        <div
-          style={{ padding: '12px 22px 18px', display: 'grid', gap: 6 }}
-          onKeyDown={(e) => {
-            if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
-            const list = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>('button[data-inq]'));
-            const i = list.indexOf(document.activeElement as HTMLButtonElement);
-            e.preventDefault();
-            list[Math.max(0, Math.min(list.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))]?.focus();
-          }}
-        >
-          <div style={{ fontSize: 12, color: '#7a8794', marginBottom: 4 }}>↑↓ で選び Enter で開きます。</div>
-          {o.onOpenPanel && <button type="button" data-inq className="ef-act ef-input" autoFocus onClick={() => { setDlg(null); o.onOpenPanel?.(); }} style={{ ...btn(o.accent), textAlign: 'left', padding: '10px 14px' }}>参照パネルを開く<span style={{ fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>伝票入力のまま、日記帳・元帳・残高照合を横に表示</span></button>}
-          {o.onNavigate ? INQUIRY_TARGETS.map((t, i) => (
-            <button key={t} type="button" data-inq className="ef-act ef-input" autoFocus={!o.onOpenPanel && i === 0} onClick={() => { setDlg(null); go(t); }} style={{ ...btn(), textAlign: 'left', padding: '10px 14px' }}>{displayName(t)}<span style={{ fontWeight: 500, color: '#9aa5b1', marginLeft: 8 }}>画面を移動</span></button>
-          )) : <Notice>問合せ画面への移動は、上部のメニューから行えます。</Notice>}
-          {o.dirty && o.onNavigate && <Notice tone="warn">入力中（未登録）の伝票があります。画面を移動する前に確認を表示します。</Notice>}
-        </div>
-      </Modal>
     </>
   );
 
