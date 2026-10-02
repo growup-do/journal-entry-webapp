@@ -70,7 +70,6 @@ export function JournalListPage({ variant, accent }: Props) {
         { label: '検索条件', onClick: () => setSearchOpen(true), primary: true },
         { label: 'CSV出力', onClick: () => setExp({ kind: 'csv', title, fileName: `日記帳_令和8年${month ?? '全'}月`, meta: `${periodLabel}　${rows.length} 件${filtered ? '（絞り込み中）' : ''}`, ...table }) },
         { label: '印刷', onClick: () => setPrint(true) },
-        { label: '再計算', onClick: () => toast.show('再計算しました') },
       ]}
       period={
         <>
