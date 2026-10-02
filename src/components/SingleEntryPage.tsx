@@ -352,8 +352,8 @@ export function SingleEntryPage({ variant, accent, prevYear, onNavigate }: Props
               {lab('証憑・印')}
               {lab(<span style={{ color: BLUE }}>借方 勘定科目</span>, undefined, '資金科目')}
               {lab(<span style={{ color: PINK }}>貸方 勘定科目</span>, undefined, '資金科目')}
-              {lab('摘　要', undefined, '業者')}
-              {lab('金　額')}
+              {lab('摘要', undefined, '業者')}
+              {lab('金額')}
               {lab('操作')}
             </div>
           </div>
@@ -499,9 +499,9 @@ export function SingleEntryPage({ variant, accent, prevYear, onNavigate }: Props
               </div>
               {/* 4段目 */}
               <div className="pp-row" style={{ gridTemplateColumns: PCOLS }}>
-                {lab(<span style={{ letterSpacing: '.3em' }}>摘　要</span>, { gridColumn: 'span 4' })}
-                {lab(<span style={{ letterSpacing: '.3em' }}>業　者</span>)}
-                {lab(<span style={{ letterSpacing: '.3em' }}>金　額</span>)}
+                {lab(<span>摘要</span>, { gridColumn: 'span 4' })}
+                {lab(<span>業者</span>)}
+                {lab(<span>金額</span>)}
               </div>
               <div className="pp-row" style={{ gridTemplateColumns: PCOLS }}>
                 <div className="pp-cell ef-field" style={{ ...valCell, gridColumn: 'span 4' }}>

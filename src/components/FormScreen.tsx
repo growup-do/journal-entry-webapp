@@ -493,8 +493,8 @@ function VoucherEntry({ onNavigate, year, topOffset }: { onNavigate: (label: str
               <div className="pp-table" style={{ gridTemplateColumns: '1fr' }}>
                 <div className="pp-row" style={{ gridTemplateColumns: GRID }}>
                   <div className="pp-lab">コード<span className="pp-sub">行</span></div>
-                  <div className="pp-lab" style={{ fontSize: 12, letterSpacing: '.3em' }}>摘　要　／　業　者</div>
-                  <div className="pp-lab" style={{ fontSize: 12, letterSpacing: '.3em' }}>金　額</div>
+                  <div className="pp-lab" style={{ fontSize: 12 }}>摘要／業者</div>
+                  <div className="pp-lab" style={{ fontSize: 12 }}>金額</div>
                   <div className="pp-lab"><span>{inp.shohyo ? '証憑・' : ''}チェック・付箋<span className="pp-sub">挿入／削除</span></span></div>
                 </div>
                 {rows.map((r, i) => {
@@ -573,7 +573,7 @@ function VoucherEntry({ onNavigate, year, topOffset }: { onNavigate: (label: str
                   </div>
                   <div className="pp-cell" style={{ padding: 0 }}>
                     <div className="pp-foot" style={{ width: '100%' }}>
-                      <span className="pp-lab" style={{ fontSize: 12, letterSpacing: '.3em' }}>合計</span>
+                      <span className="pp-lab" style={{ fontSize: 12 }}>合計</span>
                       <span className="pp-val pp-grow pp-num" style={{ justifyContent: 'flex-end', fontSize: 18, fontWeight: 800 }}><span style={{ fontSize: 12, color: '#8290a0', marginRight: 4 }}>¥</span>{total.toLocaleString('ja-JP')}</span>
                     </div>
                   </div>

@@ -493,7 +493,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                 <div className="pp-row" style={{ gridTemplateColumns: GRID }}>
                   <div className="pp-cell" style={{ padding: 0 }}>
                     <div className="pp-foot" style={{ width: '100%' }}>
-                      <span className="pp-lab" style={{ fontSize: 12, letterSpacing: '.3em', color: BLUE }}>合計</span>
+                      <span className="pp-lab" style={{ fontSize: 12, color: BLUE }}>合計</span>
                       <span className="pp-val pp-grow pp-num" style={{ justifyContent: 'flex-end', fontSize: 17, fontWeight: 800, color: BLUE }}>{kariTotal.toLocaleString('ja-JP')}</span>
                     </div>
                   </div>
@@ -507,7 +507,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                   </div>
                   <div className="pp-cell" style={{ padding: 0 }}>
                     <div className="pp-foot" style={{ width: '100%' }}>
-                      <span className="pp-lab" style={{ fontSize: 12, letterSpacing: '.3em', color: PINK }}>合計</span>
+                      <span className="pp-lab" style={{ fontSize: 12, color: PINK }}>合計</span>
                       <span className="pp-val pp-grow pp-num" style={{ justifyContent: 'flex-end', fontSize: 17, fontWeight: 800, color: PINK }}>{kashiTotal.toLocaleString('ja-JP')}</span>
                     </div>
                   </div>

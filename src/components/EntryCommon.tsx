@@ -705,7 +705,7 @@ export const PAPER = {
 
 const PAPER_CSS = `
 .pp-sheet { position: relative; background: #fff; border: 1.5px solid ${PAPER.frame}; box-shadow: 0 1px 0 #cfd8d2, 0 10px 26px rgba(30,50,70,.12); }
-.pp-title { font-family: 'Zen Kaku Gothic New', 'Noto Sans JP', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: .4em; color: ${PAPER.title}; line-height: 1.2; white-space: nowrap; }
+.pp-title { font-family: 'Zen Kaku Gothic New', sans-serif; font-weight: 700; font-size: 21px; letter-spacing: 0; color: #22303c; line-height: 1.3; }; line-height: 1.2; white-space: nowrap; }
 .pp-division { font-family: 'Zen Kaku Gothic New', 'Noto Sans JP', sans-serif; font-weight: 700; font-size: 17px; letter-spacing: .08em; color: ${PAPER.ink}; white-space: nowrap; }
 /* 罫線は「隙間を線色で塗る」方式。表＝pp-table（行の並び）、行＝pp-row（セルの並び） */
 .pp-table { display: grid; gap: 1px; background: ${PAPER.lineSoft}; border: 1px solid ${PAPER.line}; min-width: 0; }
@@ -756,7 +756,7 @@ export function PaperTitle({ title, division, badge, right, children }: { title:
   return (
     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 18, flexWrap: 'wrap', marginBottom: 12 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, flexWrap: 'wrap', minWidth: 0 }}>
-        <span className="pp-title">{title.split('').join(' ')}</span>
+        <span className="pp-title">{title}</span>
         <span className="pp-division">{division}</span>
         {badge}
       </div>
