@@ -377,7 +377,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                   />
                 </div>
                 <PaperBox label={<span>伝票<span className="pp-sub">No</span></span>}>
-                  <span style={{ fontSize: 13, color: '#7a8794', whiteSpace: 'nowrap' }}>自動採番</span>
+                  <span className="pp-ro" style={{ whiteSpace: 'nowrap' }}>自動採番<small>自動</small></span>
                 </PaperBox>
                 {sess.input.cheque && (
                   <div className="ef-field" style={{ display: 'flex', width: 190 }}>

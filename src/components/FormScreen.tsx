@@ -439,7 +439,7 @@ function VoucherEntry({ onNavigate, year, topOffset }: { onNavigate: (label: str
                     {manual ? (
                       <input id="fe-no" className="ef-input pp-input" disabled={!editable} value={manualNo} onChange={(e) => setManualNo(e.target.value)} onKeyDown={onEnter(() => focusId('fe-kari'))} placeholder="例 8-101" autoComplete="off" style={{ height: 34, width: '100%', padding: '0 8px', fontSize: 13.5 }} />
                     ) : (
-                      <span style={{ fontSize: 13, color: '#7a8794', whiteSpace: 'nowrap' }}>自動採番（<span className="pp-num" style={{ color: '#22303c', fontWeight: 700 }}>{parseInt(month, 10) || 8}-{nextSeq}</span>）</span>
+                      <span className="pp-ro" style={{ whiteSpace: 'nowrap' }}>自動採番（<span className="pp-num" style={{ color: '#22303c', fontWeight: 700 }}>{parseInt(month, 10) || 8}-{nextSeq}</span>）</span>
                     )}
                   </PaperBox>
                 </div>

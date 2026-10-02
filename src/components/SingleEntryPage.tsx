@@ -442,7 +442,7 @@ export function SingleEntryPage({ variant, accent, prevYear, onNavigate }: Props
                 {lab('取引区分', undefined, '科目から自動判定')}
               </div>
               <div className="pp-row" style={{ gridTemplateColumns: PCOLS }}>
-                <div className="pp-cell" style={{ ...valCell, fontSize: 12, color: '#9aa5b1' }}>自動採番</div>
+                <div className="pp-cell" style={valCell}><span className="pp-ro" style={{ fontSize: 12 }}>自動採番<small>自動</small></span></div>
                 <div className="pp-cell ef-field" style={{ ...valCell, gridColumn: 'span 2', gap: 3 }}>
                   <input id="se-month" className="ef-input pp-input" aria-label="月" disabled={ro} value={f.month} onChange={(e) => v.setField('month', e.target.value)} onKeyDown={onEnter(() => focusId('se-day'))} inputMode="numeric" style={dateInput} />
                   <span style={{ color: '#9aa5b1' }}>/</span>

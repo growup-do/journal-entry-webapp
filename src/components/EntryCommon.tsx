@@ -727,8 +727,13 @@ const PAPER_CSS = `
 .pp-row:focus-within .ef-rownow { display: inline-block; }
 .pp-row:focus-within .ef-rowno { display: none; }
 /* 用紙の中の素の入力欄（枠は罫線に任せ、フォーカス時だけ EntryStyles の太枠が付く） */
-.pp-input { border: 1px solid transparent; border-radius: 4px; background: transparent; font-family: inherit; color: #22303c; box-sizing: border-box; min-width: 0; }
-.pp-input:disabled { color: #7a8794; }
+/* 入力欄は用紙の罫線とは別に、必ず枠付きの白い箱にする（入力する欄と、自動表示の欄を見分けられるように） */
+.pp-input { border: 1px solid #b7c6bd; border-radius: 5px; background: #fff; font-family: inherit; color: #22303c; box-sizing: border-box; min-width: 0; min-height: 32px; padding: 4px 8px; box-shadow: inset 0 1px 0 rgba(0,0,0,.02); }
+.pp-input:hover:not(:disabled) { border-color: #7fa38e; }
+.pp-input:disabled { color: #7a8794; background: #f1f4f6; border-style: dashed; }
+/* 自動表示・読み取り専用の値（枠なし・灰色の下地）：入力欄と区別する */
+.pp-ro { display: inline-flex; align-items: center; min-height: 32px; padding: 4px 8px; border-radius: 5px; background: #f3f5f7; color: #5b6773; font-size: 13px; }
+.pp-ro small { font-size: 10px; color: #9aa5b1; margin-left: 6px; }
 .pp-input::placeholder { color: #b3bcc5; }
 /* 下段の Seq No／チェック／証憑／小切手No の並び */
 .pp-foot { display: flex; align-items: stretch; min-width: 0; min-height: 40px; }
