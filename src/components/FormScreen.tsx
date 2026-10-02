@@ -10,7 +10,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { DivisionPicker } from './DivisionPicker';
 import { FiscalYearBanner } from './FiscalYearPage';
 import { AttachedStatementModal, BudgetGraphModal, BudgetHintLive, EntryConfirmModal, SpecialAmountModal, TorihikiBadge, useEntryTools } from './EntryExtras';
-import { ComboField, EntryStyles, FieldLabel, FlagButtons, FundAccountLine, IssueList, fieldState, fmtNum, focusId, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, watchedStatement, type FundMode, type FusenColor } from './EntryCommon';
+import { ComboField, EntryStyles, isIme, FieldLabel, FlagButtons, FundAccountLine, IssueList, fieldState, fmtNum, focusId, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, watchedStatement, type FundMode, type FusenColor } from './EntryCommon';
 import { WIDE_WIDTH, WidePanel, useWidePanel } from './WidePanel';
 import { ToastView, useToast } from './Toast';
 import { judgeTorihiki } from '../lib/accounts';
@@ -246,12 +246,13 @@ function VoucherEntry({ onNavigate, year, topOffset }: { onNavigate: (label: str
     if (i > 0 && i === rows.length - 1 && !v.trim() && !r.gyosha && !r.amount) { focusId(SUBMIT_ID); return; }
     focusId(`fe-gyo-${i}`);
   };
+  /** 金額欄で Enter：特殊金額入力（＋金額）なら按分、それ以外は登録。Shift+Enter：この行の下に1行追加 */
   const afterAmount = (i: number) => {
     const r = rows[i];
     if (r.amount.startsWith('+')) { const n = toNum(r.amount); if (n > 0) setSpecial({ row: i, total: n }); return; }
-    if (i === rows.length - 1) setRows((list) => [...list, blankRow()]);
-    focusId(`fe-tek-${i + 1}`);
+    submit();
   };
+  const rowAddAfter = (i: number) => { if (!editable) return; setRows((list) => [...list.slice(0, i + 1), blankRow(), ...list.slice(i + 1)]); setCur(i + 1); focusId(`fe-tek-${i + 1}`); };
 
   /* ---- 登録 ---- */
   const basicError = (): string => {
@@ -385,7 +386,7 @@ function VoucherEntry({ onNavigate, year, topOffset }: { onNavigate: (label: str
             ...scopeStyle(GREEN),
             flex: '1 1 auto',
             minWidth: 0,
-            maxWidth: 940,
+            maxWidth: 1280,
             background: '#fff',
             border: '1px solid #dde4ea',
             borderRadius: 16,
@@ -408,9 +409,12 @@ function VoucherEntry({ onNavigate, year, topOffset }: { onNavigate: (label: str
                 </div>
                 <div style={{ color: '#5b6773', fontSize: 13, marginTop: 4 }}>{sess.division}　{sess.fiscalYear}</div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 11, color: '#8895a3', marginBottom: 7 }}>取引区分（科目から自動判定）</div>
-                <TorihikiBadge kari={kari} kashi={kashi} force={fundMode === '強制資金'} blocked={blocked} fundMode={fundMode} />
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 11, color: '#8895a3', marginBottom: 7 }}>取引区分（科目から自動判定）</div>
+                  <TorihikiBadge kari={kari} kashi={kashi} force={fundMode === '強制資金'} blocked={blocked} fundMode={fundMode} />
+                </div>
+                <div style={{ paddingTop: 2 }}>{tools.templateButton}</div>
               </div>
             </div>
 
@@ -515,8 +519,8 @@ function VoucherEntry({ onNavigate, year, topOffset }: { onNavigate: (label: str
                       value={plus ? '＋' + fmtNum(r.amount) : fmtNum(r.amount)}
                       onChange={(e) => { const raw = e.target.value.normalize('NFKC'); const digits = raw.replace(/[^0-9]/g, '').slice(0, 12); patchRow(i, { amount: (/^\s*\+/.test(raw) ? '+' : '') + digits }); }}
                       onFocus={(e) => { setCur(i); e.currentTarget.select(); }}
-                      onKeyDown={onEnter(() => afterAmount(i))}
-                      title="先頭に「＋」を付けて金額を入力し Enter を押すと、特殊金額入力（区分別の按分）が開きます"
+                      onKeyDown={(e) => { if (e.key !== 'Enter' || isIme(e)) return; e.preventDefault(); if (e.shiftKey) rowAddAfter(i); else afterAmount(i); }}
+                      title="Enter で登録、Shift+Enter でこの行の下に1行追加。先頭に「＋」を付けて金額を入力し Enter を押すと、特殊金額入力（区分別の按分）が開きます"
                       inputMode="numeric"
                       autoComplete="off"
                       placeholder="0"
@@ -535,7 +539,7 @@ function VoucherEntry({ onNavigate, year, topOffset }: { onNavigate: (label: str
               <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 8, alignItems: 'center', padding: '9px 12px', background: '#fbfcfd', borderRadius: '0 0 11px 11px' }}>
                 <div />
                 <div style={{ fontSize: 11.5, color: '#8290a0' }}>
-                  <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={rowAdd} title={editable ? '最後に1行追加します（金額欄で Enter を押しても次の行ができます）' : tools.reason} style={{ padding: '4px 11px', borderRadius: 7, border: '1px dashed #b9c4cf', background: '#fff', color: '#48565f', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', marginRight: 10 }}>＋ 行追加</button>
+                  <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={rowAdd} title={editable ? '最後に1行追加します（金額欄で Shift+Enter でも行を追加できます）' : tools.reason} style={{ padding: '4px 11px', borderRadius: 7, border: '1px dashed #b9c4cf', background: '#fff', color: '#48565f', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', marginRight: 10 }}>＋ 行追加</button>
                   {rows.length} 行
                 </div>
                 <div style={{ textAlign: 'right', fontSize: 12, fontWeight: 700, color: '#5b6773' }}>合計</div>

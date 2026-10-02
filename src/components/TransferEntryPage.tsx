@@ -11,7 +11,7 @@ import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
 import { DivisionDialog } from './DivisionPicker';
 import { useEntryTools } from './EntryExtras';
-import { ComboField, EntryStyles, FieldLabel, FlagButtons, FundAccountLine, IssueList, fieldState, fmtNum, focusId, hasError, hasWarn, isInternalAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor, type Issue } from './EntryCommon';
+import { ComboField, EntryStyles, isIme, FieldLabel, FlagButtons, FundAccountLine, IssueList, fieldState, fmtNum, focusId, hasError, hasWarn, isInternalAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor, type Issue } from './EntryCommon';
 import { useWidePanel } from './WidePanel';
 import { makeSheetSeed } from '../data';
 import { applyMonth } from '../lib/format';
@@ -250,14 +250,12 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
   const ro = !tools.editable;
 
   /** 摘要の次：次の行へ。貸借が一致していて次が空行（または最終行）のときは登録ボタンへ */
-  const afterTekiyo = (i: number) => {
-    const next = rows[i + 1];
-    if (!next || (balanced && !isUsed(next))) {
-      focusId(hasWarn(allIssues) && !blocked ? `${pre}-confirm` : `${pre}-submit`);
-      return;
-    }
-    focusId(fid(i + 1, 'ka'));
+  /** 摘要（行の最後）で Enter：登録（警告があれば「確認して登録」へ）。Shift+Enter：この行の下に1行追加 */
+  const afterTekiyo = () => {
+    if (hasWarn(allIssues) && !blocked) { focusId(`${pre}-confirm`); return; }
+    submit();
   };
+  const rowAddAfter = (i: number) => { if (ro) return; setRows((rs) => [...rs.slice(0, i + 1), emptyRow(), ...rs.slice(i + 1)]); setActive(i + 1); focusId(fid(i + 1, 'ka')); };
   /** 空の借方金額で Enter：貸借が一致していれば登録ボタンへ（空行で入力を終える） */
   const afterKariAmt = (i: number) => {
     if (i > 0 && balanced && !isUsed(rows[i])) { focusId(hasWarn(allIssues) && !blocked ? `${pre}-confirm` : `${pre}-submit`); return; }
@@ -345,6 +343,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                 </div>
                 <div style={{ color: '#7a8794', fontSize: 12, marginTop: 4 }}>{single ? '1行の振替伝票です（内部取引にも使えます）。' : '行ごとに借方・貸方の科目と金額を入力します（行の追加・挿入・削除ができます）。'}借方合計と貸方合計が一致すると登録できます。</div>
               </div>
+              <div style={{ alignSelf: 'flex-end', paddingBottom: 2 }}>{tools.templateButton}</div>
             </div>
           </div>
 
@@ -410,8 +409,8 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                 <div style={{ minWidth: 0 }}>
                   <ComboField id={fid(i, 'k')} kind="account" value={r.kari} onChange={(x) => setRow(i, { kari: x })} onCommit={() => focusId(fid(i, 's'))} placeholder="借方科目（コード・名称・フリガナ）" listWidth={400} padY={8} disabled={ro} invalid={fieldState(rowIssues[i], 'kari', 'pair')} />
                   <FundAccountLine name={r.kari} other={r.kashi} mode={fundMode} />
-                  <div style={{ marginTop: 4 }}>
-                    <ComboField id={fid(i, 't')} kind="summary" freeText value={r.tekiyo} onChange={(x) => setRow(i, { tekiyo: x })} onCommit={() => afterTekiyo(i)} placeholder="摘要（任意）" listWidth={320} fontSize={12} padY={4} disabled={ro} />
+                  <div style={{ marginTop: 4 }} onKeyDownCapture={(e) => { if (e.key === 'Enter' && e.shiftKey && !isIme(e)) { e.preventDefault(); e.stopPropagation(); rowAddAfter(i); } }}>
+                    <ComboField id={fid(i, 't')} kind="summary" freeText value={r.tekiyo} onChange={(x) => setRow(i, { tekiyo: x })} onCommit={() => afterTekiyo()} placeholder="摘要（任意）" listWidth={320} fontSize={12} padY={4} disabled={ro} />
                   </div>
                 </div>
                 <div style={{ minWidth: 0 }}>

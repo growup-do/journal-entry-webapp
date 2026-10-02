@@ -436,10 +436,11 @@ export function useEntryTools(o: EntryToolsOptions) {
   const why = (t: string) => (ro ? reason : t);
   /** 伝票登録ボタン（各形式の入力欄の中に置く。伝票の操作グループは廃止） */
   const submitButton: ReactNode = <ActButton id={o.submitId} label={`${name}を登録`} k="S" tone="primary" accent={o.accent} disabled={ro} title={why('入力中の伝票を登録します')} onClick={o.onSubmit} />;
+  /** 定型仕訳ボタン（各形式の見出し行の右端に置く） */
+  const templateButton: ReactNode = <ActButton label="定型仕訳" k="T" accent={o.accent} disabled={ro} title={why('登録済みの定型仕訳を、入力中の伝票に呼び出します')} onClick={() => setDlg('定型')} />;
   const actionBar: ReactNode = (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 8 }}>
       <ActionGroup caption="入力補助">
-        <ActButton label="定型仕訳" k="T" accent={o.accent} disabled={ro} title={why('登録済みの定型仕訳を、入力中の伝票に呼び出します')} onClick={() => setDlg('定型')} />
         <ActButton label="連続定型" k="R" accent={o.accent} disabled={ro} title={why('テンプレートから複数の伝票を続けて登録します')} onClick={() => setDlg('連続')} />
         <ActButton label="自動按分" k="A" accent={o.accent} disabled={ro} title={why('按分テンプレートで、複数の区分・科目に金額を配分します')} onClick={() => setDlg('按分')} />
         <ActButton label="仕訳登録" k="G" accent={o.accent} disabled={ro} title={why('入力中の伝票を、定型仕訳として登録します')} onClick={saveAsTemplate} />
@@ -522,5 +523,5 @@ export function useEntryTools(o: EntryToolsOptions) {
     </>
   );
 
-  return { topBar, banner, actionBar, submitButton, dialogs, editable, reason, openEdit: (v: Voucher) => setEdit(v), openDelete: (rows: Voucher[]) => setDel(rows) };
+  return { topBar, banner, actionBar, submitButton, templateButton, dialogs, editable, reason, openEdit: (v: Voucher) => setEdit(v), openDelete: (rows: Voucher[]) => setDel(rows) };
 }

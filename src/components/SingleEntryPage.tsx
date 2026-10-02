@@ -310,8 +310,9 @@ export function SingleEntryPage({ variant, accent, prevYear, onNavigate }: Props
               1行＝1伝票を連続入力。<b style={{ color: '#5b6773', fontWeight: 600 }}>Enter</b>で次の項目へ、金額で<b style={{ color: '#5b6773', fontWeight: 600 }}>Enter</b>すると登録して次の伝票へ進みます。
             </div>
           </div>
-          <div style={{ flex: 'none', fontSize: 12.5, color: '#68757f', whiteSpace: 'nowrap', paddingTop: 4 }}>
-            会計期間　<b style={{ color: '#22303c', fontWeight: 600 }}>令和8年度</b>
+          <div style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 14, fontSize: 12.5, color: '#68757f', whiteSpace: 'nowrap', paddingTop: 4 }}>
+            <span>会計期間　<b style={{ color: '#22303c', fontWeight: 600 }}>令和8年度</b></span>
+            {tools.templateButton}
           </div>
         </div>
 
