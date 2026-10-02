@@ -131,6 +131,7 @@ const NODES: Node[] = [
   N('version', 'バージョン情報／ライセンス', 'dialog', 'user', { open: 'ホーム' }),
   N('terms', '利用規約', 'page', 'user', { url: '?page=terms' }),
   N('features', '機能一覧（サイトマップ）', 'page', 'user', { url: '?page=features' }),
+  N('issues', '確認事項・やりとり', 'page', 'user', { url: '?page=issues', note: 'クライアントとのやりとりをスレッドで記録' }),
   N('privacy', '個人情報保護方針（外部）', 'external', 'user', { url: 'https://www.child.co.jp/privacy.html' }),
 ];
 

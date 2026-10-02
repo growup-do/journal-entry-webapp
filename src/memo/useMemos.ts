@@ -42,7 +42,8 @@ export function useMemos() {
     const unsub = onSnapshot(
       collection(db, 'protoMemos'),
       (snap) => {
-        const list = snap.docs.map((d) => {
+        // 同じコレクションに保存している「確認事項・やりとり」（type: 'issue'）は確認メモとしては扱わない
+        const list = snap.docs.filter((d) => !(d.data() as { type?: string }).type).map((d) => {
           const r = d.data() as Partial<Memo>;
           return {
             id: d.id,
