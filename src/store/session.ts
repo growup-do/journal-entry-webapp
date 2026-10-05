@@ -145,16 +145,30 @@ export interface Session {
   options: Record<string, boolean>;
   /** 起動直後（区分選択後）に表示する画面（依頼書 5.2.2） */
   startScreen: 'ホーム' | '伝票入力';
+  /** ホーム（ダッシュボード）に表示するメニュー。利用者が「表示させるメニューの編集」で切り替える */
+  homeSections: Record<HomeSectionKey, boolean>;
 }
 
 const KEY = 'proto-session-v2'; // v2：区分ツリーの見直し（入力区分／親区分）に伴い保存形式を更新
+/** ホーム（ダッシュボード）の表示メニュー */
+export const HOME_SECTIONS = [
+  { key: 'bank', label: '銀行の預金残高', note: '口座ごとの残高と前日比' },
+  { key: 'checks', label: '調査・チェック', note: '仕訳数の問合せ／同額・不一致検索／決算チェック' },
+  { key: 'favorites', label: 'よく使う操作（お気に入り）', note: '登録した画面をすぐに開くボタン' },
+  { key: 'faq', label: 'よくある質問（FAQ）', note: '操作で迷ったときの質問と回答' },
+  { key: 'notices', label: 'お知らせ', note: 'システム・法改正・保守の案内' },
+  { key: 'banners', label: 'バナー', note: 'ご案内の画像' },
+] as const;
+export type HomeSectionKey = (typeof HOME_SECTIONS)[number]['key'];
+const DEFAULT_HOME_SECTIONS: Record<HomeSectionKey, boolean> = { bank: true, checks: true, favorites: true, faq: true, notices: true, banners: true };
+
 const DEFAULT: Session = {
   division: '002 保育事業', divisionPath: ['社会福祉法人 チャイルド保育園', '社会福祉事業', 'チャイルド保育園', '保育事業'],
   fiscalYear: '令和8年度', currentYear: '令和8年度', tree: DEFAULT_TREE, merges: [{ name: '合算_001（保育園＋子育て支援）', members: ['002 保育事業', '003 子育て支援'] }],
   favorites: ['単一入力', '伝票入力', '仕訳一覧', '勘定元帳', '月次試算', '日次調査'],
   env: DEFAULT_ENV, input: DEFAULT_INPUT, print: DEFAULT_PRINT, templates: DEFAULT_TEMPLATES, allocations: DEFAULT_ALLOCATIONS, specialRates: DEFAULT_SPECIAL_RATES,
   ledgerTarget: null, journalTarget: null, auditEnabled: {}, corpStartDate: '20240401', corpTax: '非課税',
-  role: '入力可', options: { 小口現金: true, 減価償却: true, 預金出納: true, 収入支出: true, 電子印: false }, startScreen: 'ホーム',
+  role: '入力可', options: { 小口現金: true, 減価償却: true, 預金出納: true, 収入支出: true, 電子印: false }, startScreen: 'ホーム', homeSections: DEFAULT_HOME_SECTIONS,
 };
 
 let state: Session = (() => {
@@ -162,7 +176,7 @@ let state: Session = (() => {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULT;
     const saved = JSON.parse(raw) as Partial<Session>;
-    return { ...DEFAULT, ...saved, env: { ...DEFAULT_ENV, ...(saved.env ?? {}) }, input: { ...DEFAULT_INPUT, ...(saved.input ?? {}) }, print: { ...DEFAULT_PRINT, ...(saved.print ?? {}) }, options: { ...DEFAULT.options, ...(saved.options ?? {}) }, ledgerTarget: null, journalTarget: null };
+    return { ...DEFAULT, ...saved, env: { ...DEFAULT_ENV, ...(saved.env ?? {}) }, input: { ...DEFAULT_INPUT, ...(saved.input ?? {}) }, print: { ...DEFAULT_PRINT, ...(saved.print ?? {}) }, options: { ...DEFAULT.options, ...(saved.options ?? {}) }, homeSections: { ...DEFAULT_HOME_SECTIONS, ...(saved.homeSections ?? {}) }, ledgerTarget: null, journalTarget: null };
   } catch {
     return DEFAULT;
   }

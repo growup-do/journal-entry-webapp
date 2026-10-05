@@ -39,12 +39,13 @@ const NODES: Node[] = [
   N('merge', '合算部門の選択', 'dialog', 'start', { open: 'ホーム' }),
   N('divinfo', '法人名の変更、及び区分の追加、変更', 'dialog', 'start', { open: 'ホーム', note: '集計区分／法人情報／伝票入力区分' }),
   N('yearconfirm', '年度切替確認', 'dialog', 'start', { open: '年度の切替', note: '翌年度以降＝黄／前年度以前＝緑' }),
-  N('exit', '終了（バックアップ選択）', 'page', 'start', { open: 'ログアウト' }),
+  N('exit', '終了（確認のみ）', 'page', 'start', { open: 'ログアウト', note: 'バックアップは尋ねない' }),
   // ホーム
   N('home', 'ホーム（ダッシュボード）', 'page', 'home', { open: 'ホーム' }),
   N('finder', '機能から探す', 'page', 'home', { open: '機能から探す' }),
   N('notices', 'お知らせ一覧', 'dialog', 'home', { open: 'ホーム' }),
   N('favedit', 'お気に入りの設定', 'dialog', 'home', { open: 'ホーム' }),
+  N('homeedit', 'ダッシュボードに表示させるメニューの編集', 'dialog', 'home', { open: 'ホーム', note: '表示メニュー／最初に表示する画面' }),
   N('support', 'サポートサイト', 'external', 'home', { url: 'https://www.child.co.jp/' }),
   // 伝票入力
   N('e-voucher', '仕訳伝票形式', 'page', 'entry', { open: '伝票入力' }),
@@ -82,7 +83,7 @@ const NODES: Node[] = [
   N('analysis', '収支分析', 'dialog', 'compare', { open: '月次決算' }),
   // 調査
   N('count', '仕訳数の問合せ', 'modal', 'audit', { open: '仕訳数' }),
-  N('daily', '同額・不一致検索', 'page', 'audit', { open: '日次調査' }),
+  N('daily', '同額・不一致検索', 'modal', 'audit', { open: '日次調査', note: '不一致日で停止 → 伝票表示／検査継続' }),
   N('auditm', '決算チェック（決算調査）', 'modal', 'audit', { open: '決算調査', note: '28項目・5状態' }),
   N('auditexp', '説明／結果詳細／トレース', 'dialog', 'audit', { open: '決算調査' }),
   N('auditset', '決算チェック設定', 'page', 'audit', { open: '決算チェック設定' }),
@@ -130,7 +131,7 @@ const NODES: Node[] = [
   N('members', 'メンバーの追加、管理', 'page', 'user', { open: 'メンバーの追加、管理' }),
   N('version', 'バージョン情報／ライセンス', 'dialog', 'user', { open: 'ホーム' }),
   N('terms', '利用規約', 'page', 'user', { url: '?page=terms' }),
-  N('features', '機能一覧（サイトマップ）', 'page', 'user', { url: '?page=features' }),
+  N('features', '機能一覧（プロトタイプ確認用）', 'page', 'user', { url: '?page=features', note: '製品のメニュー・フッターには置かない' }),
   N('issues', '確認事項・やりとり', 'page', 'user', { url: '?page=issues', note: 'クライアントとのやりとりをスレッドで記録' }),
   N('privacy', '個人情報保護方針（外部）', 'external', 'user', { url: 'https://www.child.co.jp/privacy.html' }),
 ];
@@ -139,7 +140,7 @@ const E = (from: string, to: string, label?: string, weak = false): Edge => ({ f
 const EDGES: Edge[] = [
   E('login', 'pwreset', 'お忘れですか', true), E('login', 'division', 'ログイン'), E('division', 'merge', '合算追加', true), E('division', 'divinfo', '部門情報の変更', true),
   E('division', 'home', 'OK（初期画面：ホーム）'), E('login', 'home', 'ログイン（区分選択を1か月表示しない設定のとき）', true), E('division', 'e-voucher', 'OK（初期画面：伝票入力）', true),
-  E('home', 'finder', '機能から探す'), E('home', 'notices', '一覧', true), E('home', 'favedit', '編集', true), E('home', 'support', 'FAQ すべて見る', true), E('home', 'e-voucher', '伝票入力をはじめる'), E('usersettings', 'pwmail', 'パスワードを変更', true),
+  E('home', 'finder', '機能から探す'), E('home', 'notices', '一覧', true), E('home', 'favedit', '編集', true), E('home', 'homeedit', '右上の編集ボタン', true), E('homeedit', 'favedit', '登録する画面を編集', true), E('home', 's-update', '年度更新の案内'), E('home', 'support', 'FAQ すべて見る', true), E('home', 'e-voucher', '伝票入力をはじめる'), E('usersettings', 'pwmail', 'パスワードを変更', true),
   E('home', 'count', '調査・チェック'), E('home', 'daily', '調査・チェック'), E('home', 'auditm', '調査・チェック'), E('home', 'balcheck', '残高照合へ', true), E('widepanel', 'balcheck', '残高照合の画面を開く', true),
   E('finder', 'trial', '機能を選ぶ', true),
   E('e-voucher', 'e-single', '形式切替'), E('e-single', 'e-transfer', '形式切替'), E('e-transfer', 'e-tsingle', '形式切替'),

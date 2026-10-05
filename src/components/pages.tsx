@@ -5,7 +5,6 @@ import { BudgetComparePage } from './BudgetComparePage';
 import { CashbookPage } from './CashbookPage';
 import { DepreciationPage } from './DepreciationPage';
 import { ReceiptsPaymentsPage } from './ReceiptsPaymentsPage';
-import { DailyAuditPage } from './DailyAuditPage';
 import { GraphPage } from './GraphPage';
 import { HomePage } from './HomePage';
 import { LogoutPage } from './LogoutPage';
@@ -70,8 +69,6 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
       return <TransferEntryPage key="transfer" variant={variant} accent={accent} accentRgb={accentRgb} onNavigate={onNavigate} />;
     case '振替単一':
       return <TransferEntryPage key="transfer-single" variant={variant} accent={accent} accentRgb={accentRgb} single onNavigate={onNavigate} />;
-    case '日次調査':
-      return <DailyAuditPage variant={variant} accent={accent} onNavigate={onNavigate} />;
     case '仕訳一覧':
       return <JournalListPage variant={variant} accent={accent} onNavigate={onNavigate} />;
     case '勘定元帳':

@@ -64,11 +64,13 @@ interface Props {
   badge?: ReactNode;
   /** 見出し右の年度・区分表記を差し替え（通常は指定しない） */
   org?: string;
+  /** モーダルの中に置く（外側の余白・枠・影を付けない） */
+  embedded?: boolean;
 }
 
 const PART_COLORS = ['#e8791e', '#d9a400', '#d9a400', '#d9a400'];
 
-export function ReportShell({ variant, accent, title, subtitle, tools = [], returnTo, period, periodAside, parts, target, switches, controls, notice, children, badge, org }: Props) {
+export function ReportShell({ variant, accent, title, subtitle, tools = [], returnTo, period, periodAside, parts, target, switches, controls, notice, children, badge, org, embedded }: Props) {
   const toast = useToast();
   const s = useSession();
   const isSheet = variant === 'sheet';
@@ -101,9 +103,9 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], retu
   const row: CSSProperties = { display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' };
 
   return (
-    <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
+    <main style={embedded ? { minWidth: 0 } : { flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
       <ToastView msg={toast.msg} />
-      <div style={{ width: '100%', maxWidth: isSheet ? 'none' : 1280, background: '#fff', border: '1px solid #dde4ea', borderRadius: isSheet ? 14 : 16, boxShadow: '0 6px 26px rgba(30,50,70,.07)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <div style={embedded ? { width: '100%', background: '#fff', display: 'flex', flexDirection: 'column' } : { width: '100%', maxWidth: isSheet ? 'none' : 1280, background: '#fff', border: '1px solid #dde4ea', borderRadius: isSheet ? 14 : 16, boxShadow: '0 6px 26px rgba(30,50,70,.07)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {returnTo && (
           <div data-return-bar style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 22px', background: '#f3f6f9', borderBottom: '1px solid #e2e8ee', flexWrap: 'wrap' }}>
             <button type="button" className="btn-outline" onClick={returnTo.onBack} style={{ padding: '6px 14px', border: '1px solid ' + accent, borderRadius: 8, background: '#fff', color: accent, fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>

@@ -672,26 +672,25 @@ export function JournalRefreshPage({ variant, accent, onNavigate }: MaintenanceP
  * データのバックアップ／復元（ピックアップ）（マニュアル 4.4、図19）
  * ==================================================================== */
 export type BackupDest = 'folder' | 'dropbox';
-export type BackupOnExit = 'ask' | 'always' | 'never';
-export interface BackupPrefs { dest: BackupDest; path: string; onExit: BackupOnExit }
+export interface BackupPrefs { dest: BackupDest; path: string }
 const PREF_KEY = 'proto-backup-prefs-v1';
-const DEFAULT_PREFS: BackupPrefs = { dest: 'folder', path: 'バックアップ用フォルダ（共有サーバー）／Chappy／バックアップ', onExit: 'ask' };
-/** 終了時バックアップの既定・保存先（終了処理から参照する） */
+const DEFAULT_PREFS: BackupPrefs = { dest: 'folder', path: 'バックアップ用フォルダ（共有サーバー）／Chappy／バックアップ' };
+/** バックアップの保存先（終了時にバックアップを尋ねる動作は廃止。手動はこの画面からすぐ実行、自動は年度ごと） */
 export function getBackupPrefs(): BackupPrefs {
   try { const raw = localStorage.getItem(PREF_KEY); return raw ? { ...DEFAULT_PREFS, ...(JSON.parse(raw) as Partial<BackupPrefs>) } : DEFAULT_PREFS; } catch { return DEFAULT_PREFS; }
 }
 const saveBackupPrefs = (p: BackupPrefs) => { try { localStorage.setItem(PREF_KEY, JSON.stringify(p)); } catch { /* ignore */ } };
 const destLabel = (p: BackupPrefs) => (p.dest === 'dropbox' ? 'Dropbox ／アプリ／Chappy／バックアップ' : p.path);
-const ON_EXIT_LABEL: Record<BackupOnExit, string> = { ask: '毎回確認する', always: '常にバックアップする', never: 'バックアップしない' };
 type BackupMethod = '区分・年度' | '法人全体';
 const METHOD_LABEL: Record<BackupMethod, string> = { '区分・年度': '選択中の区分・年度のバックアップ', 法人全体: '法人全体（全年度・全区分）のバックアップ' };
-interface BackupGen { id: string; at: string; target: string; method: BackupMethod; size: string; dest: string; by: string; kind: '手動' | '終了時' | '自動' }
+interface BackupGen { id: string; at: string; target: string; method: BackupMethod; size: string; dest: string; by: string; kind: '手動' | '自動' }
 const GEN_SEED: BackupGen[] = [
-  { id: 'g5', at: '令和8年9月28日 18:02', target: '002 保育事業／令和8年度', method: '区分・年度', size: '4.2 MB', dest: 'フォルダ', by: '鈴木', kind: '終了時' },
-  { id: 'g4', at: '令和8年9月27日 23:00', target: '法人全体／全年度', method: '法人全体', size: '38.6 MB', dest: 'フォルダ', by: '（自動）', kind: '自動' },
-  { id: 'g3', at: '令和8年9月25日 17:48', target: '002 保育事業／令和8年度', method: '区分・年度', size: '4.1 MB', dest: 'フォルダ', by: '鈴木', kind: '終了時' },
+  { id: 'g5', at: '令和8年9月28日 18:02', target: '002 保育事業／令和8年度', method: '区分・年度', size: '4.2 MB', dest: 'フォルダ', by: '鈴木', kind: '手動' },
+  { id: 'g4', at: '令和8年9月27日 23:00', target: '002 保育事業／令和8年度', method: '区分・年度', size: '4.2 MB', dest: 'フォルダ', by: '（自動）', kind: '自動' },
+  { id: 'g3', at: '令和8年9月25日 17:48', target: '002 保育事業／令和8年度', method: '区分・年度', size: '4.1 MB', dest: 'フォルダ', by: '鈴木', kind: '手動' },
   { id: 'g2', at: '令和8年9月10日 10:05', target: '002 保育事業／令和8年度', method: '区分・年度', size: '3.9 MB', dest: 'フォルダ', by: '田中', kind: '手動' },
   { id: 'g1', at: '令和8年8月31日 18:30', target: '法人全体／全年度', method: '法人全体', size: '37.9 MB', dest: 'フォルダ', by: '田中', kind: '手動' },
+  { id: 'g0', at: '令和8年4月1日 02:00', target: '002 保育事業／令和7年度', method: '区分・年度', size: '5.6 MB', dest: 'フォルダ', by: '（自動）', kind: '自動' },
 ];
 const RESTORE_ITEMS: { key: string; label: string; note: string }[] = [
   { key: 'voucher', label: '伝票データ', note: '登録済みの伝票（仕訳）' },
@@ -717,6 +716,9 @@ export function BackupPage({ variant, accent }: MaintenancePageProps) {
   const here = `${s.division}／${s.fiscalYear}`;
   const newGen = (m: BackupMethod, kind: BackupGen['kind']): BackupGen => ({ id: 'g' + Date.now(), at: warekiNow(), target: m === '区分・年度' ? here : '法人全体／全年度', method: m, size: m === '区分・年度' ? '4.2 MB' : '38.7 MB', dest: prefs.dest === 'dropbox' ? 'Dropbox' : 'フォルダ', by: '鈴木', kind });
   const runBackup = () => prog.start(method === '区分・年度' ? 2200 : 4200, () => { setGens((g) => [newGen(method, '手動'), ...g]); toast.show('バックアップが完了しました'); });
+  // 今すぐバックアップ：範囲や保存先を選び直さず、選択中の区分・年度をいまの保存先へすぐに保存する
+  const runQuick = () => prog.start(2200, () => { setGens((g) => [newGen('区分・年度', '手動'), ...g]); toast.show('バックアップが完了しました'); });
+  const lastAuto = gens.find((g) => g.kind === '自動');
   const openRestore = (genId?: string) => setRestore({ step: genId ? 1 : 0, genId: genId ?? gens[0]?.id ?? '', items: Object.fromEntries(RESTORE_ITEMS.map((i) => [i.key, true])), autoBackup: true, agree: false, done: false });
   const rGen = restore ? gens.find((g) => g.id === restore.genId) : undefined;
   const rItems = restore ? RESTORE_ITEMS.filter((i) => restore.items[i.key]) : [];
@@ -732,16 +734,27 @@ export function BackupPage({ variant, accent }: MaintenancePageProps) {
   };
   const th: CSSProperties = { padding: '9px 12px', background: '#f6f8fa', fontSize: 11, fontWeight: 700, color: '#8290a0', borderBottom: '1px solid #eef2f5', textAlign: 'left', whiteSpace: 'nowrap' };
   const td: CSSProperties = { padding: '10px 12px', fontSize: 13, borderBottom: '1px solid #f1f4f6', verticalAlign: 'middle' };
-  const kindChip = (k: BackupGen['kind']): CSSProperties => ({ fontSize: 10.5, fontWeight: 800, padding: '2px 8px', borderRadius: 8, background: k === '手動' ? '#e8f0fb' : k === '終了時' ? '#eaf5ef' : '#f1f4f6', color: k === '手動' ? '#2c5f9e' : k === '終了時' ? '#1f7a52' : '#5b6773', whiteSpace: 'nowrap' });
+  const kindChip = (k: BackupGen['kind']): CSSProperties => ({ fontSize: 10.5, fontWeight: 800, padding: '2px 8px', borderRadius: 8, background: k === '手動' ? '#e8f0fb' : '#f1f4f6', color: k === '手動' ? '#2c5f9e' : '#5b6773', whiteSpace: 'nowrap' });
 
   return (
-    <SettingsShell variant={variant} title="データのバックアップ" badge="保守・運用" desc="データのバックアップの実行、保存したバックアップの一覧、終了時のバックアップの設定、バックアップからの復元（ピックアップ）を行います。">
+    <SettingsShell variant={variant} title="データのバックアップ" badge="保守・運用" desc="データのバックアップをすぐに実行できます。年度ごとの自動バックアップ、保存したバックアップの一覧、バックアップからの復元（ピックアップ）もここで確認・実行します。">
       <ToastView msg={toast.msg} />
       <div style={{ padding: 22, display: 'grid', gap: 18 }}>
+        {/* 今すぐバックアップ：1回押すだけで実行 */}
+        <div data-backup-now style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '16px 20px', border: '1.5px solid ' + accent, borderRadius: 12, background: accent + '0d', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 260 }}>
+            <div style={{ fontSize: 15.5, fontWeight: 700 }}>今すぐバックアップ</div>
+            {prog.running
+              ? <div style={{ display: 'grid', gap: 6, marginTop: 8 }} aria-live="polite"><div style={{ fontSize: 13, fontWeight: 600 }}>バックアップを作成しています…　{prog.p}%</div><ProgressBar value={prog.p ?? 0} accent={accent} /></div>
+              : <div style={{ fontSize: 12.5, color: '#5b6773', marginTop: 4, lineHeight: 1.7 }}>{here} のデータを、いまの保存先（{destLabel(prefs)}）へ保存します。<br />最新のバックアップ：<b style={{ color: '#22303c' }}>{gens[0]?.at ?? 'なし'}</b>{gens[0] ? `（${gens[0].kind}）` : ''}</div>}
+          </div>
+          <button type="button" className="submit-btn" onClick={runQuick} disabled={prog.running} style={{ ...btn(accent, true), padding: '13px 28px', fontSize: 15, opacity: prog.running ? 0.5 : 1, cursor: prog.running ? 'not-allowed' : 'pointer' }}>今すぐバックアップ</button>
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 18, alignItems: 'start' }}>
-          {/* バックアップの実行 */}
+          {/* 範囲・保存先を指定して実行 */}
           <div style={card}>
-            <div style={cardHead}>バックアップの実行</div>
+            <div style={cardHead}>範囲・保存先を指定してバックアップ</div>
             <div style={{ padding: 16, display: 'grid', gap: 14 }}>
               <div>
                 <span style={lbl}>バックアップする範囲</span>
@@ -762,24 +775,21 @@ export function BackupPage({ variant, accent }: MaintenancePageProps) {
                   </label>
                 </div>
               </div>
-              {prog.running
-                ? <div style={{ display: 'grid', gap: 8 }} aria-live="polite"><div style={{ fontSize: 13, fontWeight: 600 }}>バックアップを作成しています…　{prog.p}%</div><ProgressBar value={prog.p ?? 0} accent={accent} /></div>
-                : <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" className="submit-btn" onClick={runBackup} style={btn(accent, true)}>バックアップを実行</button></div>}
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" className="submit-btn" onClick={runBackup} disabled={prog.running} style={{ ...btn(accent, true), opacity: prog.running ? 0.5 : 1 }}>この内容でバックアップを実行</button></div>
             </div>
           </div>
 
-          {/* 終了時バックアップの既定 */}
-          <div style={card}>
-            <div style={cardHead}>終了時のバックアップ <ScopeBadge scope="全区分共通" /></div>
-            <div style={{ padding: 16, display: 'grid', gap: 8 }}>
-              <div style={{ fontSize: 12.5, color: '#5b6773', marginBottom: 4 }}>システムを終了するときの動作を選びます。</div>
-              {(['ask', 'always', 'never'] as const).map((k) => (
-                <label key={k} style={radioRow(prefs.onExit === k, accent)}>
-                  <input type="radio" name="bk-exit" checked={prefs.onExit === k} onChange={() => { setPrefs({ onExit: k }); toast.show(`終了時のバックアップ：${ON_EXIT_LABEL[k]}`); }} />
-                  <span><b>{ON_EXIT_LABEL[k]}</b><br /><span style={sub}>{k === 'ask' ? '終了のたびに「バックアップして終了／せずに終了」を選びます（現行と同じ）' : k === 'always' ? '確認せずにバックアップしてから終了します' : '確認せずにそのまま終了します（定期の自動バックアップは続きます）'}</span></span>
-                </label>
-              ))}
-              <Notice>データの自動バックアップは定期的に行われ、下の一覧に「自動」として保存されます。</Notice>
+          {/* 自動バックアップ（年度ごと） */}
+          <div style={card} data-backup-auto>
+            <div style={cardHead}>自動バックアップ（年度ごと） <ScopeBadge scope="全区分共通" /><span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 800, padding: '2px 9px', borderRadius: 10, background: '#eaf5ef', color: '#1f7a52' }}>有効</span></div>
+            <div style={{ padding: 16, display: 'grid', gap: 10 }}>
+              <div style={{ fontSize: 12.5, color: '#5b6773', lineHeight: 1.8 }}>会計年度（単年度）ごとに、データを自動でバックアップします。操作は不要で、下の一覧に「自動」として保存されます。</div>
+              <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, fontSize: 13 }}>
+                <div style={{ display: 'flex', gap: 12, padding: '9px 12px', borderBottom: '1px solid #f1f4f6' }}><span style={{ width: 150, color: '#7a8794' }}>バックアップの単位</span><b>区分ごと・会計年度ごと</b></div>
+                <div style={{ display: 'flex', gap: 12, padding: '9px 12px', borderBottom: '1px solid #f1f4f6' }}><span style={{ width: 150, color: '#7a8794' }}>前回の自動バックアップ</span><span style={{ fontVariantNumeric: 'tabular-nums' }}>{lastAuto ? `${lastAuto.at}（${lastAuto.target}）` : 'まだありません'}</span></div>
+                <div style={{ display: 'flex', gap: 12, padding: '9px 12px' }}><span style={{ width: 150, color: '#7a8794', flex: 'none' }}>保存先</span><span style={{ wordBreak: 'break-all' }}>{destLabel(prefs)}</span></div>
+              </div>
+              <Notice>システムを終了するときに、バックアップの確認は表示しません。手動で保存したいときは、上の「今すぐバックアップ」を押してください。</Notice>
             </div>
           </div>
         </div>
@@ -911,66 +921,5 @@ export function BackupPage({ variant, accent }: MaintenancePageProps) {
       </Modal>
       <ExplainModal open={itemHelp} onClose={() => setItemHelp(false)} accent={accent} title="復元する項目の説明" source="マニュアル 4.4.2 ピックアップ機能" sections={RESTORE_ITEMS.map((i) => ({ h: i.label, body: <>{i.note}を、バックアップを作成した時点の内容に戻します。チェックを外すと、現在の内容のまま残ります。</> }))} />
     </SettingsShell>
-  );
-}
-
-/* ======================================================================
- * 終了時の【データのバックアップ】ダイアログ（図19）
- * ==================================================================== */
-export function BackupOnExitDialog({ open, onClose, onProceed, accent }: { open: boolean; onClose: () => void; onProceed: (didBackup: boolean) => void; accent: string }) {
-  const s = useSession();
-  const prog = useProgress();
-  const [prefs, setPrefs] = useState<BackupPrefs>(getBackupPrefs);
-  const [method, setMethod] = useState<BackupMethod>('区分・年度');
-  const [pathEdit, setPathEdit] = useState<string | null>(null);
-  useEffect(() => { if (open) { setPrefs(getBackupPrefs()); setMethod('区分・年度'); setPathEdit(null); } }, [open]);
-  const applyPath = () => { if (pathEdit == null || !pathEdit.trim()) return; const n: BackupPrefs = { ...prefs, dest: 'folder', path: pathEdit.trim() }; saveBackupPrefs(n); setPrefs(n); setPathEdit(null); };
-  const backup = () => prog.start(method === '区分・年度' ? 2000 : 3800, () => onProceed(true));
-  return (
-    <Modal open={open} onClose={onClose} width={560} strict closable={!prog.running} title="データのバックアップ">
-      <div style={{ padding: '16px 22px 20px', display: 'grid', gap: 14 }}>
-        {prog.running ? (
-          <div style={{ display: 'grid', gap: 10 }} aria-live="polite">
-            <div style={{ fontSize: 14, fontWeight: 700 }}>バックアップを作成しています…　{prog.p}%</div>
-            <ProgressBar value={prog.p ?? 0} accent={accent} height={14} />
-            <div style={sub}>完了すると、そのままシステムを終了します。</div>
-          </div>
-        ) : (
-          <>
-            <div style={{ fontSize: 15, fontWeight: 700 }}>終了する前に、データのバックアップを行いますか？</div>
-            <div>
-              <span style={lbl}>バックアップする範囲</span>
-              <div style={{ display: 'grid', gap: 8 }}>
-                <label style={radioRow(method === '区分・年度', accent)}><input type="radio" name="bx-method" checked={method === '区分・年度'} onChange={() => setMethod('区分・年度')} /><span><b>{METHOD_LABEL['区分・年度']}</b>（通常はこちら）<br /><span style={sub}>{s.division}／{s.fiscalYear}</span></span></label>
-                <label style={radioRow(method === '法人全体', accent)}><input type="radio" name="bx-method" checked={method === '法人全体'} onChange={() => setMethod('法人全体')} /><span><b>{METHOD_LABEL['法人全体']}</b></span></label>
-              </div>
-            </div>
-            <div>
-              <span style={lbl}>保存先</span>
-              {pathEdit == null ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ ...input, background: '#f5f7f9', flex: 1, wordBreak: 'break-all' }}>{destLabel(prefs)}</div>
-                  <button type="button" onClick={() => setPathEdit(prefs.path)} style={btn('#5b6773', false, true)}>保存先を変更</button>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input className="field-input ring" value={pathEdit} onChange={(e) => setPathEdit(e.target.value)} onKeyDown={onEnter(applyPath)} autoFocus aria-label="保存先フォルダ" style={{ ...input, flex: 1 }} />
-                  <button type="button" onClick={applyPath} style={btn(accent, true, true)}>決定</button>
-                  <button type="button" onClick={() => setPathEdit(null)} style={btn('#5b6773', false, true)}>取消</button>
-                </div>
-              )}
-            </div>
-            <Notice>データの自動バックアップも定期的に行っています。終了時の動作（{ON_EXIT_LABEL[prefs.onExit]}）は、設定の「データのバックアップ」で変更できます。</Notice>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <button type="button" onClick={onClose} style={btn()}>キャンセル</button>
-              <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-                <button type="button" onClick={() => onProceed(false)} style={btn()}>バックアップせずに終了</button>
-                <button type="button" className="submit-btn" onClick={backup} style={btn(accent, true)}>バックアップして終了</button>
-              </span>
-            </div>
-          </>
-        )}
-      </div>
-    </Modal>
   );
 }

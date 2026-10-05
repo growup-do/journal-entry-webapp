@@ -1,4 +1,5 @@
 // 同額・不一致検索（ツールバー名：日次調査）
+//   仕訳数の問合せ・決算チェックと同じく、モーダルで開く（ホームの「調査・チェック」などから）。
 //   見出し・年度／区分の表示・機能ボタンは ReportShell 共通。
 //   開くと「一致・不一致検索を開始しますか？」の確認 → はい で調査が走り、
 //   月ごとの調査結果（未調査 → OK同額）、当月カレンダー、資金収支／貸借／事業活動の照合結果を表示する。
@@ -29,9 +30,20 @@ interface Props {
   variant: 'form' | 'sheet';
   accent: string;
   onNavigate: (label: string) => void;
+  /** モーダルで開いているとき：閉じる */
+  onClose?: () => void;
 }
 
-export function DailyAuditPage({ variant, accent, onNavigate }: Props) {
+/** 同額・不一致検索をモーダルで開く。開くたびに開始確認から始める（不一致で止まっている間は、その状態を復元） */
+export function DailyAuditModal({ open, onClose, onNavigate, accent }: { open: boolean; onClose: () => void; onNavigate: (label: string) => void; accent: string }) {
+  return (
+    <Modal open={open} onClose={onClose} width={1180} strict>
+      {open && <DailyAuditPage variant="form" accent={accent} onNavigate={onNavigate} onClose={onClose} />}
+    </Modal>
+  );
+}
+
+export function DailyAuditPage({ variant, accent, onNavigate, onClose }: Props) {
   // 日記帳から戻ってきたときは、不一致で止まった状態をそのまま復元する（開始確認は出さない）
   const [phase, setPhaseV] = useState<Phase>(memory.phase === 'stopped' ? 'stopped' : 'confirm');
   const [doneCount, setDoneCount] = useState(memory.phase === 'stopped' ? STOP.slot : 0);
@@ -127,7 +139,9 @@ export function DailyAuditPage({ variant, accent, onNavigate }: Props) {
         { label: '再計算', onClick: () => run(0), primary: true, title: '最初から検査し直します' },
         { label: '伝票表示', onClick: showVouchers, disabled: !stopped, title: stopped ? `${stopDay}の伝票を日記帳で開きます` : onlyStopped },
         { label: '検査継続', onClick: () => setContinueOpen(true), disabled: !stopped, title: stopped ? `${stopDay}から再検査します` : onlyStopped },
+        ...(onClose ? [{ label: '閉じる', onClick: onClose }] : []),
       ]}
+      embedded={!!onClose}
       notice={stopped ? (
         <>
           <b style={{ color: RED }}>{stopDay}の仕訳で不一致が見つかり、検査を止めています。</b>
@@ -148,14 +162,14 @@ export function DailyAuditPage({ variant, accent, onNavigate }: Props) {
     >
       <ToastView msg={toast.msg} />
 
-      <Modal open={phase === 'confirm'} onClose={() => setPhase('idle')} width={440} strict>
+      <Modal open={phase === 'confirm'} onClose={() => { setPhase('idle'); onClose?.(); }} width={440} strict>
         <div style={{ padding: '26px 28px 22px' }}>
           <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
             <span style={{ flex: 'none', width: 40, height: 40, borderRadius: '50%', background: '#e8f0fb', color: '#2c5f9e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700 }}>?</span>
             <div style={{ fontSize: 15, fontWeight: 700 }}>一致・不一致検索を開始しますか？</div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 22 }}>
-            <button type="button" onClick={() => setPhase('idle')} style={{ padding: '9px 22px', border: '1px solid #cfd8e0', borderRadius: 8, background: '#fff', color: '#5b6773', fontWeight: 700, fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer' }}>いいえ</button>
+            <button type="button" onClick={() => { setPhase('idle'); onClose?.(); }} style={{ padding: '9px 22px', border: '1px solid #cfd8e0', borderRadius: 8, background: '#fff', color: '#5b6773', fontWeight: 700, fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer' }}>いいえ</button>
             <button type="button" onClick={() => run(0)} style={{ padding: '9px 26px', background: accent, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer' }}>はい</button>
           </div>
         </div>

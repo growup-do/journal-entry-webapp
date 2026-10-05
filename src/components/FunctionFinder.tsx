@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { HOME_CHECKS, MENU_GROUPS, SETTINGS_GROUPS, displayName, isOptionMenu } from '../data';
-import { setSession, startKindOf, useSession } from '../store/session';
+import { startKindOf, useSession } from '../store/session';
 
 interface Group { key: string; label: string; note: string; danger: boolean; items: string[] }
 /** 検索対象：メインメニュー＋各種設定（Web版の追加案は除く）＋ホーム・機能一覧 */
@@ -33,7 +33,7 @@ export const matchesFunction = (key: string, q: string) => {
 };
 
 /* ---------------- 画面 ---------------- */
-export function FunctionFinderPage({ accent, onNavigate, initialQuery = '' }: { accent: string; onNavigate: (label: string) => void; initialQuery?: string }) {
+export function FunctionFinderPage({ onNavigate, initialQuery = '' }: { accent: string; onNavigate: (label: string) => void; initialQuery?: string }) {
   const s = useSession();
   const [q, setQ] = useState(initialQuery);
   const kind = startKindOf(s);
@@ -71,12 +71,6 @@ export function FunctionFinderPage({ accent, onNavigate, initialQuery = '' }: { 
                 </div>
               </div>
             ))}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 18px 14px', fontSize: 11.5, color: '#7a8794', flexWrap: 'wrap' }}>
-            <span>起動直後に表示する画面</span>
-            {(['ホーム', '伝票入力'] as const).map((o) => <button key={o} type="button" onClick={() => setSession({ startScreen: o })} style={{ padding: '3px 10px', borderRadius: 8, border: '1px solid ' + (s.startScreen === o ? accent : '#d3dbe3'), background: s.startScreen === o ? accent : '#fff', color: s.startScreen === o ? '#fff' : '#3d4a56', fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{o === 'ホーム' ? 'ホーム（ダッシュボード）' : '伝票入力（仕訳伝票形式）'}</button>)}
-            <span style={{ color: '#9aa5b1' }}>次回の起動から反映</span>
-            <button type="button" className="btn-outline" onClick={() => window.open('?page=features', '_self')} style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: 8, border: '1px solid #cfd8e0', background: '#fff', color: '#5b6773', fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>機能一覧（サイトマップ）を見る ›</button>
           </div>
         </section>
       </div>

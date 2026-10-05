@@ -1,4 +1,5 @@
-// フッター：コピーライト／利用規約／個人情報保護方針／機能一覧。
+// フッター：コピーライト／利用規約／個人情報保護方針／画面遷移図／確認事項・やりとり。
+//   機能一覧（サイトマップ）は「機能から探す」に置き換えたため、製品としてのリンクは置かない（ページはプロトタイプ確認用に残す）。
 // 全画面（ログイン画面を含む）の最下部に置く。リンク先は同じタブで開く静的ページ（?page=…）。
 
 export type StaticPage = 'features' | 'terms' | 'flow' | 'issues';
@@ -18,7 +19,6 @@ export const PRIVACY_URL = 'https://www.child.co.jp/privacy.html';
 const LINKS: { label: string; key?: StaticPage; href?: string }[] = [
   { label: '利用規約', key: 'terms' },
   { label: '個人情報保護方針', href: PRIVACY_URL },
-  { label: '機能一覧', key: 'features' },
   { label: '画面遷移図', key: 'flow' },
   { label: '確認事項・やりとり', key: 'issues' },
 ];

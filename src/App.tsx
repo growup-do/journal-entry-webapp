@@ -10,6 +10,7 @@ import { MemoLayer } from './memo/MemoLayer';
 import { getSession, setSession, useSession } from './store/session';
 import { SettlementAuditModal } from './components/SettlementAuditModal';
 import { JournalCountModal } from './components/JournalCountModal';
+import { DailyAuditModal } from './components/DailyAuditPage';
 import { CorporatePrintModal } from './components/CorporatePrintModal';
 import { DEFAULT_MENU } from './data';
 import { LoginPage } from './components/LoginPage';
@@ -20,7 +21,7 @@ import { IssueBoardPage } from './components/IssueBoardPage';
 
 type Mode = 'form' | 'sheet';
 /** ページ遷移ではなくモーダルで開くメニュー */
-const MODAL_MENU = ['決算調査', '法人調査', '仕訳数', '法人印刷'];
+const MODAL_MENU = ['決算調査', '法人調査', '仕訳数', '日次調査', '法人印刷'];
 
 /** 機能一覧（サイトマップ）からの「画面を開く」：?open=画面名（mode・year は互換のため無視）
  *  読み込み時に1回だけ解釈し、URLは元に戻す（再描画で消えないようモジュール初期化時に処理） */
@@ -92,19 +93,21 @@ export default function App() {
   // 表示中のUI案・画面は sessionStorage に保持（静的ページから戻ったときに元の画面へ復帰）
   // 画面構成はフォーム型のみ（スプレッドシート型の案は廃止。メモの画面キーは互換のため 'form:' を維持）
   const mode: Mode = 'form';
-  const [page, setPageRaw] = useState<string>(() => bootPage ?? (readSaved('proto-page') || DEFAULT_MENU));
+  const [page, setPageRaw] = useState<string>(() => { const saved = readSaved('proto-page'); return bootPage ?? (saved && !MODAL_MENU.includes(saved) ? saved : DEFAULT_MENU); });
   const setPage = (p: string) => { setPageRaw(p); save('proto-page', p); };
   const [auditOpen, setAuditOpen] = useState(boot?.open === '決算調査' || boot?.open === '法人調査');
   const [countOpen, setCountOpen] = useState(boot?.open === '仕訳数');
+  const [dailyOpen, setDailyOpen] = useState(boot?.open === '日次調査');
   const [corpPrintOpen, setCorpPrintOpen] = useState(boot?.open === '法人印刷');
-  // モーダル（決算調査／仕訳数／法人印刷）を開いている間は、確認メモをそのモーダルの画面として扱う
-  const screenKey = auditOpen ? `${mode}:決算調査` : countOpen ? `${mode}:仕訳数` : corpPrintOpen ? `${mode}:法人印刷` : `${mode}:${page}`;
+  // モーダル（決算調査／仕訳数／日次調査／法人印刷）を開いている間は、確認メモをそのモーダルの画面として扱う
+  const screenKey = auditOpen ? `${mode}:決算調査` : countOpen ? `${mode}:仕訳数` : dailyOpen ? `${mode}:日次調査` : corpPrintOpen ? `${mode}:法人印刷` : `${mode}:${page}`;
 
   // メニュー選択：決算調査はページ遷移ではなくモーダルで開く（既存システムと同じ）
   const selectMenu = (label: string) => {
     // 法人調査は決算調査と同じ内容（右上ボタンの要否は確認メモで確認中）
     if (label === '決算調査' || label === '法人調査') setAuditOpen(true);
     else if (label === '仕訳数') setCountOpen(true);
+    else if (label === '日次調査') setDailyOpen(true);
     else if (label === '法人印刷') setCorpPrintOpen(true);
     else setPage(label);
   };
@@ -116,6 +119,7 @@ export default function App() {
     if (!p) return;
     if (p === '決算調査') setAuditOpen(true);
     else if (p === '仕訳数') setCountOpen(true);
+    else if (p === '日次調査') setDailyOpen(true);
     else if (p === '法人印刷') setCorpPrintOpen(true);
     else setPage(p);
   };
@@ -137,13 +141,15 @@ export default function App() {
 
       <SettlementAuditModal open={auditOpen} onClose={() => setAuditOpen(false)} onNavigate={(p) => { setAuditOpen(false); setPage(p); }} />
       <JournalCountModal open={countOpen} onClose={() => setCountOpen(false)} />
+      <DailyAuditModal open={dailyOpen} onClose={() => setDailyOpen(false)} onNavigate={(p) => { setDailyOpen(false); selectMenu(p); }} accent="#1f7a52" />
 
       <MemoLayer screenKey={screenKey} screenLabel={screenLabel} onNavigate={navigateTo} />
     </>
   );
 }
 
-/** プロトタイプ用：権限の切替バー（画面下中央）。参照のみ権限のときの見え方（訂正・削除・入換の無効表示）を確認するための仕掛けで、本番の画面要素ではない */
+/** プロトタイプ用：権限の切替バー（画面下中央）。右端に、プロトタイプ確認用の「機能一覧（サイトマップ）」への入口を置く（製品のメニューやフッターには置かない）。
+ *  参照のみ権限のときの見え方（訂正・削除・入換の無効表示）を確認するための仕掛けで、本番の画面要素ではない */
 function RoleSwitchBar() {
   const s = useSession();
   const ROLES: { key: typeof s.role; label: string; hint: string; accent: string }[] = [
@@ -162,6 +168,11 @@ function RoleSwitchBar() {
           </button>
         );
       })}
+      <span style={{ width: 1, alignSelf: 'stretch', background: '#e2e8ee', margin: '4px 4px' }} />
+      <button type="button" data-proto-features onClick={() => { window.location.href = '?page=features'; }} title="プロトタイプ確認用：作成した画面と機能の一覧（製品の機能ではありません）" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1, padding: '7px 12px', border: 'none', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit', background: 'transparent', color: '#5b6773' }}>
+        <span style={{ fontSize: 12, fontWeight: 700, lineHeight: 1.2 }}>機能一覧</span>
+        <span style={{ fontSize: 10.5, opacity: 0.7 }}>プロトタイプ確認用</span>
+      </button>
     </div>
   );
 }
