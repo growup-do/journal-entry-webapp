@@ -132,6 +132,8 @@ export interface Session {
   specialRates: { division: string; rate: number }[];
   /** 推移・試算表からの元帳ドリルダウン */
   ledgerTarget: { account: string; month: string; /** 呼び出し元の画面（戻り導線に使う。例 '月次試算'） */ from?: string } | null;
+  /** 同額・不一致検索の「伝票表示」から日記帳へ（不一致が見つかった日・呼び出し元を引き継ぐ） */
+  journalTarget: { month: string; day: number; from: string } | null;
   /** 決算チェック設定（項目番号→有効） */
   auditEnabled: Record<number, boolean>;
   /** 法人情報（部門情報の変更）：データ開始年月日（西暦8桁）・法人税納税の有無 */
@@ -151,7 +153,7 @@ const DEFAULT: Session = {
   fiscalYear: '令和8年度', currentYear: '令和8年度', tree: DEFAULT_TREE, merges: [{ name: '合算_001（保育園＋子育て支援）', members: ['002 保育事業', '003 子育て支援'] }],
   favorites: ['単一入力', '伝票入力', '仕訳一覧', '勘定元帳', '月次試算', '日次調査'],
   env: DEFAULT_ENV, input: DEFAULT_INPUT, print: DEFAULT_PRINT, templates: DEFAULT_TEMPLATES, allocations: DEFAULT_ALLOCATIONS, specialRates: DEFAULT_SPECIAL_RATES,
-  ledgerTarget: null, auditEnabled: {}, corpStartDate: '20240401', corpTax: '非課税',
+  ledgerTarget: null, journalTarget: null, auditEnabled: {}, corpStartDate: '20240401', corpTax: '非課税',
   role: '入力可', options: { 小口現金: true, 減価償却: true, 預金出納: true, 収入支出: true, 電子印: false }, startScreen: 'ホーム',
 };
 
@@ -160,7 +162,7 @@ let state: Session = (() => {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULT;
     const saved = JSON.parse(raw) as Partial<Session>;
-    return { ...DEFAULT, ...saved, env: { ...DEFAULT_ENV, ...(saved.env ?? {}) }, input: { ...DEFAULT_INPUT, ...(saved.input ?? {}) }, print: { ...DEFAULT_PRINT, ...(saved.print ?? {}) }, options: { ...DEFAULT.options, ...(saved.options ?? {}) }, ledgerTarget: null };
+    return { ...DEFAULT, ...saved, env: { ...DEFAULT_ENV, ...(saved.env ?? {}) }, input: { ...DEFAULT_INPUT, ...(saved.input ?? {}) }, print: { ...DEFAULT_PRINT, ...(saved.print ?? {}) }, options: { ...DEFAULT.options, ...(saved.options ?? {}) }, ledgerTarget: null, journalTarget: null };
   } catch {
     return DEFAULT;
   }
@@ -172,7 +174,7 @@ export function getSession() { return state; }
 export function setSession(patch: Partial<Session> | ((s: Session) => Partial<Session>)) {
   const p = typeof patch === 'function' ? patch(state) : patch;
   state = { ...state, ...p };
-  try { localStorage.setItem(KEY, JSON.stringify({ ...state, ledgerTarget: null })); } catch { /* ignore */ }
+  try { localStorage.setItem(KEY, JSON.stringify({ ...state, ledgerTarget: null, journalTarget: null })); } catch { /* ignore */ }
   emit();
 }
 export function resetSession() { state = DEFAULT; try { localStorage.removeItem(KEY); } catch { /* ignore */ } emit(); }

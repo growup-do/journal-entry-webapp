@@ -4,7 +4,7 @@
 //   表示切替＝摘要／業者・区分色・区分名（区分色・区分名は合算区分・親区分で起動したときに有効）。
 //   CSV出力・検索条件・検索合計は画面上のボタン／表示（依頼書 5.4.3）。
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BizSwitch, useDivisionTools } from './DivisionTools';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { ExportDialog, type ExportSpec } from './ExportDialog';
@@ -15,7 +15,7 @@ import { AdvancedSearchModal, EMPTY_COND, applyCond, condActive, type SearchCond
 import { PrintDialog, PreviewModal, REPORTS } from './PrintCenter';
 import { displayName } from '../data';
 import { useVouchers } from '../store/journalStore';
-import { useSession } from '../store/session';
+import { getSession, setSession, useSession } from '../store/session';
 import type { MonthFilter } from '../types';
 
 interface Props {
@@ -26,11 +26,16 @@ interface Props {
 
 const KEY = '仕訳一覧';
 
-export function JournalListPage({ variant, accent }: Props) {
+export function JournalListPage({ variant, accent, onNavigate }: Props) {
+  // 同額・不一致検索の「伝票表示」から開いたとき：不一致が見つかった日の伝票だけを表示し、戻り導線を出す
+  const [boot] = useState(() => getSession().journalTarget);
+  useEffect(() => { if (boot) setSession({ journalTarget: null }); }, [boot]);
   const all = useVouchers();
   const s = useSession();
   const money = useMoney();
-  const [month, setMonth] = useState<MonthFilter>('8');
+  const [month, setMonthV] = useState<MonthFilter>(boot?.month ?? '8');
+  const [day, setDay] = useState<number | null>(boot?.day ?? null);
+  const setMonth = (v: MonthFilter) => { setMonthV(v); setDay(null); };
   const [kw, setKw] = useState('');
   const [cond, setCond] = useState<SearchCond>(EMPTY_COND);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -43,7 +48,7 @@ export function JournalListPage({ variant, accent }: Props) {
   const title = displayName(KEY);
 
   const rows = applyCond(
-    all.filter((r) => (month == null || r.date.split('/')[0] === month) && (!kw || [r.kari, r.kashi, r.tekiyo, r.gyosha ?? ''].some((x) => x.includes(kw)))),
+    all.filter((r) => (month == null || r.date.split('/')[0] === month) && (day == null || Number(r.date.split('/')[1]) === day) && (!kw || [r.kari, r.kashi, r.tekiyo, r.gyosha ?? ''].some((x) => x.includes(kw)))),
     cond,
   );
   const ra = useRowActions({ rows, accent, returnTo: title });
@@ -57,7 +62,7 @@ export function JournalListPage({ variant, accent }: Props) {
     header: ['Seq', '日付', '伝票No', '種別', '借方科目', '貸方科目', '摘要', '業者', '金額', '区分'],
     rows: rows.map((r) => [r.seq, `令和8年${r.date.replace('/', '月')}日`, r.no, r.kind, r.kari, r.kashi, r.tekiyo, r.gyosha ?? '', r.amount, r.service]) as (string | number)[][],
   };
-  const periodLabel = month == null ? '令和8年 全期間' : `令和8年 ${m}月1日〜${m}月末日`;
+  const periodLabel = month == null ? '令和8年 全期間' : day != null ? `令和8年 ${m}月${day}日` : `令和8年 ${m}月1日〜${m}月末日`;
   const colCount = 5 + (dt.nameOn ? 1 : 0) + 1;
 
   return (
@@ -66,6 +71,7 @@ export function JournalListPage({ variant, accent }: Props) {
       accent={accent}
       title={title}
       subtitle="指定月の仕訳を伝票順に一覧します。行の右端の「訂正」「削除」、または行のダブルクリックで伝票を訂正できます。証憑・チェック・付箋は行の右端で切り替えます。"
+      returnTo={boot ? { from: boot.from, onBack: () => onNavigate(boot.from), here: `${boot.month}月${boot.day}日の伝票`, hint: '伝票を訂正したら戻り、「検査継続」で再検査します' } : null}
       tools={[
         { label: '検索条件', onClick: () => setSearchOpen(true), primary: true },
         { label: 'CSV出力', onClick: () => setExp({ kind: 'csv', title, fileName: `日記帳_令和8年${month ?? '全'}月`, meta: `${periodLabel}　${rows.length} 件${filtered ? '（絞り込み中）' : ''}`, ...table }) },
@@ -75,7 +81,8 @@ export function JournalListPage({ variant, accent }: Props) {
         <>
           <span style={LABEL}>集計期間</span>
           <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} withAll />
-          <span style={{ fontSize: 12.5, color: '#48565f' }}>{month == null ? '令和8年 全期間' : `令和8年 ${m}月1日 〜 令和8年 ${m}月末日`}</span>
+          <span style={{ fontSize: 12.5, color: '#48565f' }}>{month == null ? '令和8年 全期間' : day != null ? `令和8年 ${m}月${day}日（1日分）` : `令和8年 ${m}月1日 〜 令和8年 ${m}月末日`}</span>
+          {day != null && <button type="button" onClick={() => setDay(null)} style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid ' + accent, background: '#fff', color: accent, fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{m}月{day}日のみ表示中 ×月全体を表示</button>}
         </>
       }
       periodAside={

@@ -2,19 +2,27 @@
 //   見出し・年度／区分の表示・機能ボタンは ReportShell 共通。
 //   開くと「一致・不一致検索を開始しますか？」の確認 → はい で調査が走り、
 //   月ごとの調査結果（未調査 → OK同額）、当月カレンダー、資金収支／貸借／事業活動の照合結果を表示する。
-//   数値はサンプル（構造確認用）。
+//   不一致が見つかると、その「日」で検査を止める（チャイルド社回答 2026/10）：
+//     伝票表示＝不一致が見つかった日の伝票すべてを日記帳で開く（そこから伝票の訂正へ進める）。
+//     検査継続＝日記帳で訂正して戻ったあと、不一致が見つかった日から再検査する。
+//   数値はサンプル（構造確認用）。プロトタイプでは最初の検査で 8月5日 に不一致が出て、検査継続で同額になる。
 
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Modal } from './Modal';
 import { ReportShell } from './ReportShell';
 import { ToastView, useToast } from './Toast';
-import { FlagCell } from './VoucherEdit';
 import { useVouchers } from '../store/journalStore';
 import { DAILY_AUDIT_SAMPLE as S, displayName } from '../data';
+import { setSession } from '../store/session';
 
 const SLOTS = ['繰越残高', '期中残高', '4月仕訳', '5月仕訳', '6月仕訳', '7月仕訳', '8月仕訳', '9月仕訳', '10月仕訳', '11月仕訳', '12月仕訳', '1月仕訳', '2月仕訳', '3月仕訳', '決算月仕訳'];
-type Phase = 'confirm' | 'idle' | 'running' | 'done';
+type Phase = 'confirm' | 'idle' | 'running' | 'stopped' | 'done';
+/** サンプルの不一致：8月仕訳の 5日で、資金収支と貸借の支払資金に差額が出る */
+const STOP = { slot: SLOTS.indexOf('8月仕訳'), month: 8, day: 5, diff: 18_000 };
+const RED = '#c0392b';
+/** 日記帳へ移動して戻ってきたときに検査の状態を引き継ぐ（画面を離れても保持。再読み込みで初期化） */
+const memory: { phase: 'stopped' | 'done' | null; fixed: boolean } = { phase: null, fixed: false };
 const yen = (n: number) => n.toLocaleString('ja-JP');
 
 interface Props {
@@ -24,33 +32,33 @@ interface Props {
 }
 
 export function DailyAuditPage({ variant, accent, onNavigate }: Props) {
-  const [phase, setPhase] = useState<Phase>('confirm');
-  const [doneCount, setDoneCount] = useState(0);
-  // 検査対象の会計月（4〜12, 1〜3）。「検査継続」で翌月へ進む
-  const [month, setMonth] = useState(8);
-  const [voucherOpen, setVoucherOpen] = useState(false);
+  // 日記帳から戻ってきたときは、不一致で止まった状態をそのまま復元する（開始確認は出さない）
+  const [phase, setPhaseV] = useState<Phase>(memory.phase === 'stopped' ? 'stopped' : 'confirm');
+  const [doneCount, setDoneCount] = useState(memory.phase === 'stopped' ? STOP.slot : 0);
+  // カレンダーに表示する会計月（不一致が見つかった月）
+  const month = STOP.month;
   const [continueOpen, setContinueOpen] = useState(false);
   const timer = useRef<number | undefined>(undefined);
   const toast = useToast();
   const vouchers = useVouchers();
   const monthVouchers = vouchers.filter((v) => Number(v.date.split('/')[0]) === month);
-  const continueNext = () => {
-    setContinueOpen(false);
-    if (month === 3) { toast.show('年度末（3月）です。決算月の検査は「決算調査」で行ってください'); return; }
-    const next = month === 12 ? 1 : month + 1;
-    setMonth(next);
-    run();
-    toast.show(`${next}月の検査を開始しました`);
-  };
+  const setPhase = (p: Phase) => { setPhaseV(p); memory.phase = p === 'stopped' || p === 'done' ? p : null; };
 
-  const run = () => {
+  /** from 番目の区分から検査する。未訂正のうちは不一致の日で止まる */
+  const run = (from = 0) => {
     setPhase('running');
-    setDoneCount(0);
+    setDoneCount(from);
     window.clearInterval(timer.current);
     const start = Date.now();
     // 経過時間から進捗を算出（バックグラウンドタブでタイマーが間引かれても完走する）
     timer.current = window.setInterval(() => {
-      const n = Math.min(SLOTS.length, Math.floor((Date.now() - start) / 110));
+      const n = Math.min(SLOTS.length, from + Math.floor((Date.now() - start) / 110));
+      if (!memory.fixed && n >= STOP.slot) {
+        window.clearInterval(timer.current);
+        setDoneCount(STOP.slot);
+        setPhase('stopped');
+        return;
+      }
       setDoneCount(n);
       if (n >= SLOTS.length) {
         window.clearInterval(timer.current);
@@ -60,7 +68,23 @@ export function DailyAuditPage({ variant, accent, onNavigate }: Props) {
   };
   useEffect(() => () => window.clearInterval(timer.current), []);
 
+  // 伝票表示：不一致が見つかった日の伝票すべてを日記帳で開く（日記帳から訂正へ進み、戻って検査継続）
+  const showVouchers = () => {
+    setSession({ journalTarget: { month: String(STOP.month), day: STOP.day, from: '日次調査' } });
+    onNavigate('仕訳一覧');
+  };
+  // 検査継続：不一致が見つかった日から再検査する
+  const resume = () => {
+    setContinueOpen(false);
+    memory.fixed = true;
+    run(STOP.slot);
+    toast.show(`${STOP.month}月${STOP.day}日から検査を再開しました`);
+  };
+
   const done = phase === 'done';
+  const stopped = phase === 'stopped';
+  const shown = done || stopped;
+  const stopDay = `${STOP.month}月${STOP.day}日`;
   // 当月の仕訳件数を日ごとに集計（カレンダー用。仕訳ストアと共有）
   const counts = new Map<number, number>();
   monthVouchers.forEach((v) => { const d = Number(v.date.split('/')[1]); counts.set(d, (counts.get(d) ?? 0) + 1); });
@@ -80,12 +104,18 @@ export function DailyAuditPage({ variant, accent, onNavigate }: Props) {
       {sub && <div style={{ textAlign: 'right', fontSize: 11, color: BLUE_TXT, fontVariantNumeric: 'tabular-nums' }}>{sub}</div>}
     </div>
   );
-  const Same = () => (
+  const Same = ({ ng }: { ng?: boolean }) => (
     <div style={{ textAlign: 'center', margin: '4px 0' }}>
-      <span style={{ display: 'inline-block', padding: '2px 12px', borderRadius: 10, background: done ? '#fff1b8' : '#f1f4f6', color: done ? '#8a6d00' : '#b3bcc5', fontSize: 11.5, fontWeight: 700, letterSpacing: '.2em' }}>同額</span>
+      {ng ? (
+        <span style={{ display: 'inline-block', padding: '2px 12px', borderRadius: 10, background: '#fdecea', border: '1px solid #f1b9b2', color: RED, fontSize: 11.5, fontWeight: 700 }}>不一致　差額 {yen(STOP.diff)}</span>
+      ) : (
+        <span style={{ display: 'inline-block', padding: '2px 12px', borderRadius: 10, background: shown ? '#fff1b8' : '#f1f4f6', color: shown ? '#8a6d00' : '#b3bcc5', fontSize: 11.5, fontWeight: 700, letterSpacing: '.2em' }}>同額</span>
+      )}
     </div>
   );
-  const v = (n: number) => (done ? n : 0);
+  const v = (n: number) => (shown ? n : 0);
+  const miniBtn: CSSProperties = { padding: '4px 12px', borderRadius: 8, border: '1px solid ' + RED, background: '#fff', color: RED, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' };
+  const onlyStopped = `不一致が見つかったときに使います`;
 
   return (
     <ReportShell
@@ -94,17 +124,27 @@ export function DailyAuditPage({ variant, accent, onNavigate }: Props) {
       title={displayName('日次調査')}
       subtitle="仕訳と残高の同額・不一致を月ごとに検索し、資金収支・貸借・事業活動の整合を確認します。合算区分の内訳確認にも使います。"
       tools={[
-        { label: '再計算', onClick: run, primary: true },
-        { label: '伝票表示', onClick: () => setVoucherOpen(true) },
-        { label: '検査継続', onClick: () => setContinueOpen(true) },
+        { label: '再計算', onClick: () => run(0), primary: true, title: '最初から検査し直します' },
+        { label: '伝票表示', onClick: showVouchers, disabled: !stopped, title: stopped ? `${stopDay}の伝票を日記帳で開きます` : onlyStopped },
+        { label: '検査継続', onClick: () => setContinueOpen(true), disabled: !stopped, title: stopped ? `${stopDay}から再検査します` : onlyStopped },
       ]}
+      notice={stopped ? (
+        <>
+          <b style={{ color: RED }}>{stopDay}の仕訳で不一致が見つかり、検査を止めています。</b>
+          <span>「伝票表示」でこの日の伝票を日記帳で開いて訂正し、戻ってから「検査継続」で{stopDay}以降を再検査します。</span>
+          <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+            <button type="button" onClick={showVouchers} style={{ ...miniBtn, background: RED, color: '#fff' }}>伝票表示（{stopDay}の伝票）</button>
+            <button type="button" onClick={() => setContinueOpen(true)} style={miniBtn}>検査継続</button>
+          </span>
+        </>
+      ) : undefined}
       period={
         <>
           <span style={{ fontSize: 11, fontWeight: 700, color: '#8290a0' }}>集計期間</span>
-          <span style={{ fontSize: 12.5, color: '#48565f' }}>検査対象月：令和{era}年 {month}月（「検査継続」で翌月へ進みます）</span>
+          <span style={{ fontSize: 12.5, color: '#48565f' }}>令和8年度　繰越残高 〜 決算月仕訳{stopped ? `（${stopDay}で停止中）` : ''}</span>
         </>
       }
-      periodAside={<span style={{ fontSize: 12.5, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: done ? '#fff1b8' : '#f1f4f6', color: done ? '#8a6d00' : '#8290a0' }}>{phase === 'running' ? '調査中…' : done ? 'すべて同額（OK）' : '未調査'}</span>}
+      periodAside={<span style={{ fontSize: 12.5, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: stopped ? '#fdecea' : done ? '#fff1b8' : '#f1f4f6', color: stopped ? RED : done ? '#8a6d00' : '#8290a0' }}>{phase === 'running' ? '調査中…' : stopped ? `${stopDay}で不一致` : done ? 'すべて同額（OK）' : '未調査'}</span>}
     >
       <ToastView msg={toast.msg} />
 
@@ -116,7 +156,7 @@ export function DailyAuditPage({ variant, accent, onNavigate }: Props) {
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 22 }}>
             <button type="button" onClick={() => setPhase('idle')} style={{ padding: '9px 22px', border: '1px solid #cfd8e0', borderRadius: 8, background: '#fff', color: '#5b6773', fontWeight: 700, fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer' }}>いいえ</button>
-            <button type="button" onClick={run} style={{ padding: '9px 26px', background: accent, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer' }}>はい</button>
+            <button type="button" onClick={() => run(0)} style={{ padding: '9px 26px', background: accent, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer' }}>はい</button>
           </div>
         </div>
       </Modal>
@@ -128,13 +168,13 @@ export function DailyAuditPage({ variant, accent, onNavigate }: Props) {
               <div style={{ fontSize: 11, fontWeight: 700, color: '#8290a0', marginBottom: 8 }}>調査結果（月別）</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, minmax(0,1fr))', gap: 6 }}>
                 {SLOTS.map((s, i) => {
-                  const st = phase === 'running' ? (i < doneCount ? 'ok' : i === doneCount ? 'busy' : 'wait') : done ? 'ok' : 'wait';
+                  const st = phase === 'running' ? (i < doneCount ? 'ok' : i === doneCount ? 'busy' : 'wait') : stopped ? (i < STOP.slot ? 'ok' : i === STOP.slot ? 'ng' : 'wait') : done ? 'ok' : 'wait';
                   const isCur = s === `${month}月仕訳`;
                   return (
                     <div key={s} style={{ border: '1px solid ' + (isCur ? accent : '#dde4ea'), borderRadius: 8, overflow: 'hidden', background: isCur ? '#fff' : '#f6f8fa', boxShadow: isCur ? `0 0 0 2px ${accent}33` : 'none' }}>
                       <div style={{ fontSize: 10.5, fontWeight: 700, color: '#5b6773', textAlign: 'center', padding: '5px 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s}</div>
-                      <div style={{ margin: 4, height: 30, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11.5, fontWeight: 800, letterSpacing: '.02em', background: st === 'ok' ? '#f5a623' : st === 'busy' ? '#22303c' : '#2c5f9e', color: '#fff', transition: 'background .2s' }}>
-                        {st === 'ok' ? 'OK 同額' : st === 'busy' ? '調査中…' : '？ 未調査'}
+                      <div style={{ margin: 4, height: 30, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11.5, fontWeight: 800, letterSpacing: '.02em', background: st === 'ok' ? '#f5a623' : st === 'ng' ? RED : st === 'busy' ? '#22303c' : '#2c5f9e', color: '#fff', transition: 'background .2s' }}>
+                        {st === 'ok' ? 'OK 同額' : st === 'ng' ? `× 不一致` : st === 'busy' ? '調査中…' : '？ 未調査'}
                       </div>
                     </div>
                   );
@@ -143,13 +183,20 @@ export function DailyAuditPage({ variant, accent, onNavigate }: Props) {
             </div>
             {/* カレンダー */}
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#8290a0', marginBottom: 8 }}>令和{era}年 {month}月　<span style={{ fontWeight: 500 }}>日付ごとの仕訳件数</span><span style={{ fontWeight: 500, marginLeft: 8 }}>（検査対象月：{month}月　仕訳 {monthVouchers.length} 件）</span></div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#8290a0', marginBottom: 8 }}>令和{era}年 {month}月　<span style={{ fontWeight: 500 }}>日付ごとの仕訳件数</span><span style={{ fontWeight: 500, marginLeft: 8 }}>（仕訳 {monthVouchers.length} 件）</span></div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0,1fr))', gap: 4 }}>
                 {['日', '月', '火', '水', '木', '金', '土'].map((w, i) => (
                   <div key={w} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: i === 0 ? '#c0392b' : i === 6 ? '#2c5f9e' : '#8290a0', padding: '4px 0' }}>{w}</div>
                 ))}
                 {cells.map((d, i) => {
                   const n = d ? counts.get(d) ?? 0 : 0;
+                  const ng = stopped && d === STOP.day;
+                  if (ng) return (
+                    <button key={i} type="button" onClick={showVouchers} title={`${stopDay}の伝票を日記帳で開く`} style={{ height: 52, border: '2px solid ' + RED, borderRadius: 6, background: '#fdecea', padding: '3px 5px', fontSize: 11, color: RED, fontWeight: 700, position: 'relative', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', display: 'block', width: '100%' }}>
+                      {d}<span style={{ marginLeft: 6, padding: '0 6px', borderRadius: 6, background: RED, color: '#fff', fontSize: 10 }}>不一致</span>
+                      <span style={{ position: 'absolute', right: 5, bottom: 3, fontSize: 10.5 }}>{n}件</span>
+                    </button>
+                  );
                   return (
                     <div key={i} style={{ height: 52, border: '1px solid #e6ecf1', borderRadius: 6, background: d ? (n ? '#eaf5ef' : '#fff') : '#f6f8fa', padding: '4px 6px', fontSize: 11, color: '#5b6773', position: 'relative' }}>
                       {d}
@@ -168,16 +215,16 @@ export function DailyAuditPage({ variant, accent, onNavigate }: Props) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, padding: '8px 12px 0' }}>
                 <Box {...cell('資金支出', v(S.shishutsu))} />
                 <Box {...cell('前期末支払資金', v(S.zenkiShiharai))} />
-                <Box {...cell('当期末支払資金', v(S.tokiShiharai), { hi: 'green' })} />
-                <Box {...cell('資金収入', v(S.shunyu))} />
+                <Box {...cell('当期末支払資金', v(S.tokiShiharai - (stopped ? STOP.diff : 0)), { hi: 'green' })} />
+                <Box {...cell('資金収入', v(S.shunyu - (stopped ? STOP.diff : 0)))} />
               </div>
             </div>
-            <Same />
+            <Same ng={stopped} />
             <div style={{ border: '1px solid #dde4ea', borderRadius: 10, paddingBottom: 10 }}>
               <div style={panelTitle}>貸借　<span style={{ color: BLUE_TXT, fontWeight: 500 }}>青字は流動負債中の引当金の額</span></div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, padding: '8px 12px 0' }}>
                 <Box {...cell('流動資産', v(S.ryudoShisan))} />
-                <Box {...cell('流動負債', v(S.ryudoFusai), { sub: done ? yen(S.hikiate) : undefined })} />
+                <Box {...cell('流動負債', v(S.ryudoFusai), { sub: shown ? yen(S.hikiate) : undefined })} />
                 <Box {...cell('固定資産', v(S.koteiShisan))} />
                 <Box {...cell('固定負債', v(S.koteiFusai))} />
                 <Box {...cell('支払資金（流動資産－流動負債＋引当金）', v(S.tokiShiharai), { hi: 'green' })} />
@@ -199,52 +246,19 @@ export function DailyAuditPage({ variant, accent, onNavigate }: Props) {
           </div>
         </div>
 
-      {/* 伝票表示：検査対象月の仕訳一覧 */}
-      <Modal open={voucherOpen} onClose={() => setVoucherOpen(false)} width={980} title={`伝票表示 ― 令和${era}年 ${month}月の仕訳（${monthVouchers.length} 件）`}>
-        <div style={{ padding: '10px 18px 16px' }}>
-          <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: '62vh', overflow: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
-              <thead>
-                <tr>{['Seq', '日付', '伝票', '借方科目', '貸方科目', '摘要', '金額', '証憑／✓／付箋'].map((h, i) => <th key={h} style={{ position: 'sticky', top: 0, padding: '7px 10px', background: '#f6f8fa', textAlign: i === 6 ? 'right' : 'left', fontSize: 11.5, color: '#5b6773', borderBottom: '1px solid #e2e8ee', whiteSpace: 'nowrap' }}>{h}</th>)}</tr>
-              </thead>
-              <tbody>
-                {monthVouchers.length === 0 && <tr><td colSpan={8} style={{ padding: 30, textAlign: 'center', color: '#9aa5b1' }}>{month}月の仕訳はありません。</td></tr>}
-                {monthVouchers.map((v) => (
-                  <tr key={v.id} style={{ background: v.fusen ? '#fffdf5' : 'transparent' }}>
-                    <td style={{ padding: '5px 10px', borderBottom: '1px solid #f1f4f6', fontVariantNumeric: 'tabular-nums' }}>{v.seq}</td>
-                    <td style={{ padding: '5px 10px', borderBottom: '1px solid #f1f4f6', whiteSpace: 'nowrap' }}>{v.date}</td>
-                    <td style={{ padding: '5px 10px', borderBottom: '1px solid #f1f4f6', whiteSpace: 'nowrap' }}><span style={{ fontSize: 10.5, color: '#9aa5b1', marginRight: 4 }}>{v.kind}</span>{v.no}</td>
-                    <td style={{ padding: '5px 10px', borderBottom: '1px solid #f1f4f6' }}>{v.kari}</td>
-                    <td style={{ padding: '5px 10px', borderBottom: '1px solid #f1f4f6' }}>{v.kashi}</td>
-                    <td style={{ padding: '5px 10px', borderBottom: '1px solid #f1f4f6', color: '#48565f' }}>{v.tekiyo}{v.gyosha && <span style={{ fontSize: 10.5, color: '#9aa5b1', marginLeft: 6 }}>{v.gyosha}</span>}</td>
-                    <td style={{ padding: '5px 10px', borderBottom: '1px solid #f1f4f6', textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{yen(v.amount)}</td>
-                    <td style={{ padding: '3px 10px', borderBottom: '1px solid #f1f4f6' }}><FlagCell v={v} compact /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12, fontSize: 12, color: '#7a8794' }}>
-            <span>合計 <b style={{ color: '#22303c', fontVariantNumeric: 'tabular-nums' }}>{yen(monthVouchers.reduce((a, v) => a + v.amount, 0))}</b> 円　証憑・チェック・付箋はクリックで切り替えられます（日記帳と共通）。</span>
-            <button type="button" onClick={() => { setVoucherOpen(false); onNavigate('仕訳一覧'); }} style={{ marginLeft: 'auto', padding: '8px 14px', border: '1px solid #cfd8e0', borderRadius: 8, background: '#fff', color: '#5b6773', fontWeight: 700, fontSize: 12.5, fontFamily: 'inherit', cursor: 'pointer' }}>{displayName('仕訳一覧')}で開く</button>
-            <button type="button" onClick={() => setVoucherOpen(false)} style={{ padding: '8px 16px', border: 'none', borderRadius: 8, background: accent, color: '#fff', fontWeight: 700, fontSize: 12.5, fontFamily: 'inherit', cursor: 'pointer' }}>閉じる</button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* 検査継続：翌月へ */}
-      <Modal open={continueOpen} onClose={() => setContinueOpen(false)} width={440} strict>
+      {/* 検査継続：不一致が見つかった日から再検査 */}
+      <Modal open={continueOpen} onClose={() => setContinueOpen(false)} width={460} strict>
         <div style={{ padding: '26px 28px 22px' }}>
           <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
             <span style={{ flex: 'none', width: 40, height: 40, borderRadius: '50%', background: '#e8f0fb', color: '#2c5f9e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700 }}>?</span>
             <div>
-              <div style={{ fontSize: 15, fontWeight: 700 }}>翌月の検査を続けますか？</div>
-              <div style={{ fontSize: 12.5, color: '#7a8794', marginTop: 4 }}>{month === 3 ? '3月は年度末のため、続きは「決算調査」で行います。' : `${month}月の検査結果を保持したまま、${month === 12 ? 1 : month + 1}月の一致・不一致検索を開始します。`}</div>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>{stopDay}から検査を続けますか？</div>
+              <div style={{ fontSize: 12.5, color: '#7a8794', marginTop: 4 }}>{stopDay}以降の仕訳をもう一度検査します。伝票の訂正がまだのときは、先に「伝票表示」から訂正してください。</div>
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 22 }}>
             <button type="button" onClick={() => setContinueOpen(false)} style={{ padding: '9px 22px', border: '1px solid #cfd8e0', borderRadius: 8, background: '#fff', color: '#5b6773', fontWeight: 700, fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer' }}>いいえ</button>
-            <button type="button" onClick={continueNext} style={{ padding: '9px 26px', background: accent, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer' }}>はい</button>
+            <button type="button" onClick={resume} style={{ padding: '9px 26px', background: accent, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer' }}>はい</button>
           </div>
         </div>
       </Modal>

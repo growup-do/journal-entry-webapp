@@ -33,6 +33,8 @@ export interface ReturnSpec {
   onBack: () => void;
   /** 現在地の補足（例 科目名） */
   here?: string;
+  /** 右端の補足文（省略時は表示条件を引き継ぐ旨の案内） */
+  hint?: string;
 }
 
 interface Props {
@@ -110,7 +112,7 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], retu
             <span style={{ fontSize: 12, color: '#7a8794' }}>
               {displayName(returnTo.from)} <span style={{ margin: '0 4px' }}>›</span> <b style={{ color: '#22303c' }}>{title}</b>{returnTo.here ? `（${returnTo.here}）` : ''}
             </span>
-            <span style={{ marginLeft: 'auto', fontSize: 11.5, color: '#9aa5b1' }}>戻ると、開く前と同じ表示条件（月・部・表示階層など）で表示します</span>
+            <span style={{ marginLeft: 'auto', fontSize: 11.5, color: '#9aa5b1' }}>{returnTo.hint ?? '戻ると、開く前と同じ表示条件（月・部・表示階層など）で表示します'}</span>
           </div>
         )}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '18px 22px 14px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>

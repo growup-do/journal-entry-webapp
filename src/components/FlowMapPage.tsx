@@ -146,6 +146,7 @@ const EDGES: Edge[] = [
   E('e-single', 'calendar', 'カレンダー', true), E('e-single', 'balance', '科目別残高／現預金残高', true),
   E('journal', 'search', '検索条件', true), E('journal', 'vedit', '訂正'), E('journal', 'vdelete', '削除', true), E('journal', 'saveas', 'CSV出力', true),
   E('ledger', 'vedit', '訂正'), E('ledger', 'printflow', '印刷', true),
+  E('daily', 'journal', '伝票表示（不一致の日）'), E('journal', 'daily', '← 戻る', true),
   E('trial', 'ledger', '科目 → 元帳'), E('closing', 'ledger', '科目 → 元帳'), E('trend', 'ledger', '月 → 元帳', true), E('ledger', 'trial', '← 戻る', true),
   E('trend', 'trendgraph', 'グラフ作成', true), E('closing', 'balgraph', '残高グラフ', true), E('closing', 'analysis', '収支分析', true), E('closing', 'suff', '充実残額', true),
   E('auditm', 'auditexp', '説明／結果詳細', true), E('auditm', 'auditset', '決算チェック設定'), E('auditm', 'printflow', '結果印刷', true),
