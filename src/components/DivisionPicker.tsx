@@ -4,12 +4,12 @@
 //   既存の【伝票入力区分の選択】（マニュアル 1.2.3）と合算追加（1.7）に相当。
 
 import { useEffect, useState } from 'react';
-import type { CSSProperties } from 'react';
 import { Modal } from './Modal';
 import { DivisionInfoDialog } from './DivisionInfoDialog';
+import { DivisionOrgChart, OrgChartLegend } from './DivisionOrgChart';
 import { ToastView, useToast } from './Toast';
 import { btn, input, lbl } from './ui';
-import { divisionLabel, flattenDivisions, setSession, startKindOf, useSession, type DivisionNode } from '../store/session';
+import { divisionLabel, flattenDivisions, setSession, startKindOf, useSession } from '../store/session';
 
 const YEARS = ['令和6年度', '令和7年度', '令和8年度', '令和9年度'];
 
@@ -69,10 +69,6 @@ function writeSkipUntil(on: boolean): number {
   return until;
 }
 
-const LINE = '#b3bfc9';
-const CARD_H = 44;
-const GAP = 8;
-const kindOf = (n: DivisionNode) => (!!n.entry && !(n.children ?? []).some((c) => c.entry && c.use !== false) ? '入力区分' : '親区分');
 
 export function DivisionDialog({ open, onClose, accent }: { open: boolean; onClose: () => void; accent: string }) {
   const s = useSession();
@@ -104,51 +100,6 @@ export function DivisionDialog({ open, onClose, accent }: { open: boolean; onClo
     toast.show(`合算区分「${name}」を追加しました`);
   };
 
-  /** 組織図の1枚（法人・事業区分・拠点区分・サービス区分…）。クリックで選択、ダブルクリックで確定 */
-  const card = (n: DivisionNode, tier: 'root' | 'head' | 'leaf', extra?: CSSProperties) => {
-    const label = divisionLabel(n);
-    const selectable = n.use !== false;
-    const k = kindOf(n);
-    const on = sel === label;
-    // 枠線は border のショートハンド1本で指定する（選択・非使用の状態もここで切り替える）
-    const off = n.use === false;
-    const bw = tier === 'root' ? '2px' : tier === 'head' ? '1.5px' : '1px';
-    const bc = on ? accent : off ? '#cfd8e0' : tier === 'root' ? '#22303c' : tier === 'head' ? '#7a8794' : '#cfd8e0';
-    const base: CSSProperties = { border: `${bw} ${off ? 'dashed' : 'solid'} ${bc}`, background: on ? accent : off ? '#f6f8fa' : tier === 'head' ? '#f3f6f8' : '#fff', color: on ? '#fff' : off ? '#9aa5b1' : '#22303c', boxShadow: on ? `0 0 0 3px ${accent}33` : 'none' };
-    return (
-      <button
-        type="button"
-        data-division={label}
-        disabled={!selectable}
-        aria-pressed={on}
-        onClick={() => setSel(label)}
-        onDoubleClick={() => apply(label)}
-        title={selectable ? 'クリックで選択、ダブルクリックで確定' : 'この区分は使用しない設定です'}
-        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', height: CARD_H, padding: '0 12px', borderRadius: 10, textAlign: 'left', fontFamily: 'inherit', cursor: selectable ? 'pointer' : 'not-allowed', position: 'relative', zIndex: 1, ...base, ...extra }}
-      >
-        {n.color && n.use !== false && <span style={{ flex: 'none', width: 12, height: 12, borderRadius: 3, background: n.color, border: '1px solid ' + (on ? 'rgba(255,255,255,.7)' : '#c3ccd4') }} />}
-        <span style={{ minWidth: 0, flex: 1 }}>
-          <span style={{ display: 'block', fontSize: 10.5, fontWeight: 700, color: on ? 'rgba(255,255,255,.85)' : '#8290a0', lineHeight: 1.3 }}>{n.kind}{n.code ? `　${n.code}` : ''}</span>
-          <span style={{ display: 'block', fontSize: tier === 'root' ? 14.5 : 13.5, fontWeight: 700, lineHeight: 1.35, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.name}</span>
-        </span>
-        <span style={{ flex: 'none', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: on ? 'rgba(255,255,255,.25)' : n.use === false ? '#eef2f6' : k === '入力区分' ? '#eaf5ef' : '#eef2f6', color: on ? '#fff' : n.use === false ? '#9aa5b1' : k === '入力区分' ? '#1f7a52' : '#5b6773' }}>{n.use === false ? '非使用' : k}</span>
-      </button>
-    );
-  };
-  /** 事業区分の下にぶら下がる区分（拠点区分 › サービス区分 › 小サービス区分）を、罫線でつないで縦に並べる */
-  const branch = (nodes: DivisionNode[]) => (
-    <div style={{ marginLeft: 24 }}>
-      {nodes.map((c, i) => (
-        <div key={c.id} style={{ position: 'relative', paddingLeft: 22, paddingTop: GAP }}>
-          <span style={{ position: 'absolute', left: 0, top: 0, width: 0, borderLeft: `1.5px solid ${LINE}`, height: i === nodes.length - 1 ? GAP + CARD_H / 2 : '100%' }} />
-          <span style={{ position: 'absolute', left: 0, top: GAP + CARD_H / 2, width: 22, borderTop: `1.5px solid ${LINE}` }} />
-          {card(c, 'leaf')}
-          {(c.children ?? []).length > 0 && branch(c.children ?? [])}
-        </div>
-      ))}
-    </div>
-  );
-  const heads = s.tree.children ?? [];
   const skipDate = skipUntil ? new Date(skipUntil) : null;
 
   return (
@@ -158,32 +109,11 @@ export function DivisionDialog({ open, onClose, accent }: { open: boolean; onClo
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
           <span style={lbl}>現在選択されている年度</span>
           <select value={year} onChange={(e) => setYear(e.target.value)} style={{ ...input, width: 160 }}>{YEARS.map((y) => <option key={y} value={y}>{y}{y === s.currentYear ? '（当年度）' : ''}</option>)}</select>
-          <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12, fontSize: 11.5, color: '#5b6773' }}>
-            <span><b style={{ padding: '1px 7px', borderRadius: 8, background: '#eaf5ef', color: '#1f7a52', fontSize: 10.5 }}>入力区分</b>　伝票を入力できる</span>
-            <span><b style={{ padding: '1px 7px', borderRadius: 8, background: '#eef2f6', color: '#5b6773', fontSize: 10.5 }}>親区分</b>　集計・参照用</span>
-          </span>
+          <span style={{ marginLeft: 'auto' }}><OrgChartLegend /></span>
         </div>
 
         {/* 組織図：法人 → 事業区分（横に並ぶ）→ 拠点区分・サービス区分（各事業区分の下に縦につながる） */}
-        <div data-org-chart style={{ border: '1px solid #e2e8ee', borderRadius: 12, padding: '18px 18px 20px', maxHeight: '54vh', overflow: 'auto', background: '#fbfcfd' }}>
-          <div style={{ minWidth: heads.length * 320 }}>
-            <div style={{ width: 380, maxWidth: '100%', margin: '0 auto' }}>{card(s.tree, 'root')}</div>
-            {heads.length > 0 && <div style={{ width: 0, height: 18, margin: '0 auto', borderLeft: `1.5px solid ${LINE}` }} />}
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(heads.length, 1)}, minmax(0, 1fr))` }}>
-              {heads.map((h, i) => (
-                <div key={h.id} style={{ padding: '0 12px 0', minWidth: 0 }}>
-                  {/* 上の横罫線（左右の事業区分とつなぐ）と、事業区分へ降りる縦罫線 */}
-                  <div style={{ display: 'flex', height: 18, margin: '0 -12px' }}>
-                    <span style={{ flex: 1, borderTop: i > 0 ? `1.5px solid ${LINE}` : 'none', borderRight: `1.5px solid ${LINE}`, marginRight: -0.75 }} />
-                    <span style={{ flex: 1, borderTop: i < heads.length - 1 ? `1.5px solid ${LINE}` : 'none' }} />
-                  </div>
-                  {card(h, 'head')}
-                  {(h.children ?? []).length > 0 ? branch(h.children ?? []) : <div style={{ margin: '10px 0 0 24px', fontSize: 11.5, color: '#9aa5b1' }}>この事業区分には、まだ区分がありません。</div>}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <DivisionOrgChart tree={s.tree} accent={accent} isSelected={(n) => sel === divisionLabel(n)} onSelect={(n) => setSel(divisionLabel(n))} onConfirm={(n) => apply(divisionLabel(n))} hint="クリックで選択、ダブルクリックで確定" />
 
         {s.merges.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>

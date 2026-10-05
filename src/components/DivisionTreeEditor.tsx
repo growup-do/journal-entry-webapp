@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { ToastView, useToast } from './Toast';
 import { Field, Notice, btn, card, cardHead, input, lbl } from './ui';
+import { DivisionOrgChart, OrgChartLegend } from './DivisionOrgChart';
 import { divisionLabel, flattenDivisions, setSession, useSession, type DivisionNode } from '../store/session';
 
 const CHILD_KIND: Partial<Record<DivisionNode['kind'], DivisionNode['kind']>> = { 法人: '事業区分', 事業区分: '拠点区分', 拠点区分: 'サービス区分', サービス区分: '小サービス区分' };
@@ -43,31 +44,36 @@ export function DivisionTreeEditor({ accent, compact }: { accent: string; compac
   };
   const parents = all.filter((x) => x.node.kind === '拠点区分' || x.node.kind === '事業区分' || x.node.kind === 'サービス区分').map((x) => x.node.name);
 
-  const Row = ({ n, depth }: { n: DivisionNode; depth: number }) => (
-    <>
-      <div onClick={() => setSelId(n.id)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', paddingLeft: 10 + depth * 20, borderRadius: 8, cursor: 'pointer', background: selId === n.id ? '#eef2f6' : 'transparent', borderLeft: '3px solid ' + (selId === n.id ? accent : 'transparent'), fontSize: 13, opacity: n.use === false ? 0.55 : 1 }}>
-        <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: n.entry ? (n.color ?? '#eef2f6') : '#eef2f6', color: '#5b6773', flex: 'none' }}>{n.kind}</span>
-        {n.code && <span style={{ color: '#8290a0', fontVariantNumeric: 'tabular-nums' }}>{n.code}</span>}
-        <span style={{ fontWeight: n.entry ? 600 : 500 }}>{n.name}</span>
-        {n.use === false && <span style={{ fontSize: 10.5, color: '#9aa5b1' }}>非使用</span>}
-        {CHILD_KIND[n.kind] && <button type="button" className="btn-outline" onClick={(e) => { e.stopPropagation(); addChild(n); }} title={`${CHILD_KIND[n.kind]}を追加`} style={{ ...btn(accent, false, true), marginLeft: 'auto', padding: '2px 8px' }}>＋ {CHILD_KIND[n.kind]}</button>}
-      </div>
-      {(n.children ?? []).map((c) => <Row key={c.id} n={c} depth={depth + 1} />)}
-    </>
-  );
+  /** カードの右に置く「＋」（配下に次の階層の区分を追加） */
+  const addButton = (n: DivisionNode) => {
+    const kind = CHILD_KIND[n.kind];
+    if (!kind) return null;
+    return <button type="button" className="btn-outline" data-add-child={n.id} onClick={() => addChild(n)} title={`${n.name} の下に${kind}を追加`} aria-label={`${n.name} の下に${kind}を追加`} style={{ flex: 'none', width: 28, height: 28, borderRadius: 8, border: '1px dashed ' + accent, background: '#fff', color: accent, fontSize: 16, fontWeight: 700, lineHeight: 1, fontFamily: 'inherit', cursor: 'pointer', padding: 0 }}>＋</button>;
+  };
+  const childKind = sel ? CHILD_KIND[sel.kind] : undefined;
 
   return (
-    <div style={{ padding: compact ? 16 : 22, display: 'grid', gridTemplateColumns: 'minmax(360px, 1.1fr) minmax(320px, 1fr)', gap: 18, alignItems: 'start' }}>
+    <div style={{ padding: compact ? 16 : 22, display: 'grid', gap: 18 }}>
       <ToastView msg={toast.msg} />
+      {/* 区分階層：ログイン後の「伝票入力区分の選択」と同じ組織図。カードを押して選び、下で設定を変える */}
       <div style={card}>
-        <div style={cardHead}>区分階層 <span style={{ fontSize: 11, fontWeight: 500, color: '#8290a0' }}>クリックで選択・各行の「＋」で配下に追加</span></div>
-        <div style={{ padding: 8 }}><Row n={s.tree} depth={0} /></div>
-        <div style={{ padding: '8px 14px 12px', fontSize: 11.5, color: '#9aa5b1', lineHeight: 1.6 }}>区分は階層構造に沿って順番に作成します（左上の社会福祉事業を起点に右→下）。運用開始後の階層変更は影響が大きいため、本番では確認ダイアログとバックアップを挟みます。</div>
+        <div style={{ ...cardHead, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          区分階層
+          <span style={{ fontSize: 11, fontWeight: 500, color: '#8290a0' }}>カードを押して選択・右の「＋」で配下に追加</span>
+          <span style={{ marginLeft: 'auto' }}><OrgChartLegend /></span>
+        </div>
+        <div style={{ padding: 12 }}>
+          <DivisionOrgChart tree={s.tree} accent={accent} isSelected={(n) => n.id === selId} onSelect={(n) => setSelId(n.id)} canSelect={() => true} action={addButton} hint="押すと、下の設定欄にこの区分の内容を表示します" maxHeight={compact ? '38vh' : 'none'} />
+        </div>
+        <div style={{ padding: '0 14px 12px', fontSize: 11.5, color: '#9aa5b1', lineHeight: 1.6 }}>区分は階層構造に沿って順番に作成します（法人 → 事業区分 → 拠点区分 → サービス区分 → 小サービス区分）。運用開始後の階層変更は影響が大きいため、本番では確認ダイアログとバックアップを挟みます。</div>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: compact ? 'minmax(0,1fr)' : 'repeat(auto-fit, minmax(360px, 1fr))', gap: 18, alignItems: 'start' }}>
         <div style={card}>
-          <div style={cardHead}>{sel ? `${sel.kind}の設定` : '区分の設定'}</div>
-          {!sel ? <div style={{ padding: 20, color: '#9aa5b1', fontSize: 13 }}>左の階層から区分を選んでください。</div> : (
+          <div style={{ ...cardHead, display: 'flex', alignItems: 'center', gap: 8 }}>
+            {sel ? <>{sel.kind}の設定<span style={{ fontSize: 12, fontWeight: 500, color: '#5b6773' }}>{sel.code ? `${sel.code} ` : ''}{sel.name}</span></> : '区分の設定'}
+            {sel && childKind && <button type="button" className="btn-outline" onClick={() => addChild(sel)} style={{ ...btn(accent, false, true), marginLeft: 'auto' }}>＋ 配下に{childKind}を追加</button>}
+          </div>
+          {!sel ? <div style={{ padding: 20, color: '#9aa5b1', fontSize: 13 }}>上の組織図から区分を選んでください。</div> : (
             <div style={{ padding: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <Field label="名称" span={2}><input className="field-input ring" value={sel.name} onChange={(e) => update(sel.id, { name: e.target.value })} style={input} /></Field>
               {sel.kind === '法人' && <><Field label="データ開始年月日"><input className="field-input" defaultValue="20240401" style={input} /></Field><Field label="法人税納税の有無"><select style={input} defaultValue="非課税"><option>非課税</option><option>税効果会計を適用しない</option><option>税効果会計を適用する</option></select></Field></>}
