@@ -417,7 +417,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
               {/* 1段目：拠点区分（入力区分）／年月日／伝票No */}
               <div style={{ display: 'flex', alignItems: 'stretch', gap: 14, flexWrap: 'wrap', marginBottom: 14 }}>
                 <PaperBox label={<span>入力区分<span className="pp-sub">サービス区分</span></span>} grow>
-                  <span title="入力区分は、画面上部の区分の選択で切り替えます" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#22303c', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <span className="pp-ro pp-ro-fill" title="入力区分は、画面上部の区分の選択で切り替えます" style={{ gap: 8, fontSize: 14, color: '#22303c', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     <span className="pp-num" style={{ fontSize: 12, color: '#7a8794' }}>{sess.division.split(' ')[0]}</span>
                     <span>{divisionName}</span>
                   </span>
@@ -560,7 +560,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                     <PaperFootItems
                       seq={<span style={{ fontWeight: 700 }}>{nextSeq}</span>}
                       check={<PaperToggle on={curRow.check} onLabel="☑" offLabel="☐" disabled={!editable} title={`チェック（${curIdx + 1}行目）`} onChange={(v) => patchRow(curIdx, { check: v })} />}
-                      shohyo={inp.shohyo ? <PaperToggle on={curRow.shohyo} onLabel="有" offLabel="無" disabled={!editable} title={`証憑 有／無（${curIdx + 1}行目）`} onChange={(v) => patchRow(curIdx, { shohyo: v })} /> : <span style={{ color: '#9aa5b1', fontSize: 12 }}>有</span>}
+                      shohyo={inp.shohyo ? <PaperToggle on={curRow.shohyo} onLabel="有" offLabel="無" disabled={!editable} title={`証憑 有／無（${curIdx + 1}行目）`} onChange={(v) => patchRow(curIdx, { shohyo: v })} /> : <span className="pp-ro pp-ro-s">有</span>}
                       cheque={inp.cheque ? <label className="ef-field" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><input className="ef-input pp-input" disabled={!editable} value={cheque} onChange={(e) => setCheque(e.target.value)} placeholder="任意" style={{ ...smallInput, border: '1px solid transparent', background: 'transparent', width: 120 }} /></label> : undefined}
                       note={<span>チェック・証憑は <b style={{ color: GREEN }}>{curIdx + 1}行目</b> が対象</span>}
                     />
@@ -568,7 +568,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                   <div className="pp-cell" style={{ padding: 0 }}>
                     <div className="pp-foot" style={{ width: '100%' }}>
                       <span className="pp-lab" style={{ fontSize: 12 }}>合計</span>
-                      <span className="pp-val pp-grow pp-num" style={{ justifyContent: 'flex-end', fontSize: 18, fontWeight: 800 }}><span style={{ fontSize: 12, color: '#8290a0', marginRight: 4 }}>¥</span>{total.toLocaleString('ja-JP')}</span>
+                      <span className="pp-val pp-grow pp-num"><span className="pp-ro pp-ro-fill" style={{ justifyContent: 'flex-end', fontSize: 18, fontWeight: 800, color: '#22303c' }}><span style={{ fontSize: 12, color: '#8290a0', marginRight: 4 }}>¥</span>{total.toLocaleString('ja-JP')}</span></span>
                     </div>
                   </div>
                 </div>

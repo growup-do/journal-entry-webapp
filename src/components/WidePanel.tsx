@@ -140,13 +140,10 @@ export function WidePanel({ accent, layout, state, top = 0, highlightIds, return
   const body = (
     <>
       {/* 表示の切替 */}
-      <div style={{ padding: '10px 14px 9px', borderBottom: '1px solid #eef2f5', flex: 'none', display: 'grid', gap: 8 }}>
+      <div style={{ padding: layout === 'side' ? '10px 46px 9px 14px' : '10px 14px 9px', minHeight: layout === 'side' ? 100 : undefined, boxSizing: 'border-box', borderBottom: '1px solid #eef2f5', flex: 'none', display: 'grid', gap: 8, alignContent: 'start' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 15 }}>参照パネル</span>
           <span style={{ fontSize: 11, color: '#8290a0' }}>入力しながら帳簿を確認</span>
-          {layout === 'side' && (
-            <button type="button" className="ef-act" data-menu="参照パネル:閉じる" onClick={() => state.setCollapsed(true)} title="参照パネルを折りたたむ" style={{ marginLeft: 'auto', padding: '3px 9px', borderRadius: 6, border: '1px solid #cfd8e0', background: '#fff', color: '#5b6773', fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>たたむ ▶</button>
-          )}
         </div>
         <div role="tablist" aria-label="参照パネルの表示" style={{ display: 'flex', gap: 3, flexWrap: 'wrap', padding: 3, background: '#e9eef2', borderRadius: 9 }}>
           {WIDE_TABS.map((v) => {
@@ -276,12 +273,11 @@ export function WidePanel({ accent, layout, state, top = 0, highlightIds, return
   return (
     <div className="ef-scope" style={scopeStyle(accent)}>
       <EntryStyles />
-      {collapsed && (
-        <button type="button" className="ef-act" data-menu="参照パネル:開く" onClick={() => state.setCollapsed(false)} title="参照パネル（日記帳・元帳・残高照合）を開く" style={{ position: 'fixed', top: top + 12, right: 0, zIndex: 95, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 7px', background: '#fff', border: '1px solid #dde4ea', borderRight: 'none', borderRadius: '10px 0 0 10px', boxShadow: '-3px 3px 12px rgba(30,50,70,.14)', cursor: 'pointer', color: '#48565f', fontFamily: 'inherit', fontSize: 12, fontWeight: 700 }}>
-          <span aria-hidden>◀</span>
-          <span style={{ writingMode: 'vertical-rl', letterSpacing: '.1em' }}>参照パネル（{view}）</span>
-        </button>
-      )}
+      {/* 開閉タブ：開いていても閉じていても同じ位置（画面右端の上）。同じ場所を押すだけで開閉できる */}
+      <button type="button" className="ef-act" data-menu={collapsed ? '参照パネル:開く' : '参照パネル:閉じる'} data-wide-toggle aria-expanded={!collapsed} onClick={() => state.setCollapsed(!collapsed)} title={collapsed ? '参照パネル（日記帳・元帳・残高照合）を開く' : '参照パネルを折りたたむ'} style={{ position: 'fixed', top: top + 12, right: 0, zIndex: 95, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, width: 32, boxSizing: 'border-box', padding: '12px 0', background: collapsed ? '#fff' : '#f3f6f9', border: '1px solid #dde4ea', borderRight: 'none', borderRadius: '10px 0 0 10px', boxShadow: collapsed ? '-3px 3px 12px rgba(30,50,70,.14)' : 'none', cursor: 'pointer', color: '#48565f', fontFamily: 'inherit', fontSize: 12, fontWeight: 700 }}>
+        <span aria-hidden>{collapsed ? '◀' : '▶'}</span>
+        <span style={{ writingMode: 'vertical-rl', letterSpacing: '.1em' }}>{collapsed ? `参照パネル（${view}）` : 'たたむ'}</span>
+      </button>
       <aside aria-label="参照パネル" aria-hidden={collapsed} style={{ position: 'fixed', top, right: 0, bottom: 0, width: WIDE_WIDTH, maxWidth: '94vw', background: '#fff', borderLeft: '1px solid #dde4ea', boxShadow: narrow ? '-14px 0 40px rgba(30,50,70,.22)' : '-8px 0 28px rgba(30,50,70,.07)', display: 'flex', flexDirection: 'column', zIndex: 90, transition: 'transform .28s ease', transform: collapsed ? `translateX(${WIDE_WIDTH + 20}px)` : 'translateX(0)', visibility: collapsed ? 'hidden' : 'visible' }}>
         {body}
       </aside>

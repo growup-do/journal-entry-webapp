@@ -653,7 +653,7 @@ export function FundAccountLine({ name, other, mode }: { name: string; other: st
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5, fontSize: 11.5, minHeight: 20, minWidth: 0 }}>
       <span style={{ flex: 'none', fontSize: 10.5, fontWeight: 700, color: '#8290a0' }}>資金科目</span>
-      <span style={{ padding: '1px 8px', borderRadius: 7, background: f.tone === 'on' ? '#e0f4f7' : 'transparent', color: f.tone === 'on' ? '#0e6b7a' : '#a3adb8', fontWeight: f.tone === 'on' ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.text}</span>
+      <span style={{ padding: '2px 8px', borderRadius: 5, background: f.tone === 'on' ? '#e0f4f7' : '#f3f5f7', color: f.tone === 'on' ? '#0e6b7a' : '#8290a0', fontWeight: f.tone === 'on' ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.text}</span>
       {mode !== '自動資金' && <span style={{ flex: 'none', padding: '1px 6px', borderRadius: 6, background: '#efe6fb', color: '#6b3fb5', fontSize: 10, fontWeight: 800 }}>{mode}</span>}
     </div>
   );
@@ -734,6 +734,8 @@ const PAPER_CSS = `
 /* 自動表示・読み取り専用の値（枠なし・灰色の下地）：入力欄と区別する */
 .pp-ro { display: inline-flex; align-items: center; min-height: 32px; padding: 4px 8px; border-radius: 5px; background: #f3f5f7; color: #5b6773; font-size: 13px; }
 .pp-ro small { font-size: 10px; color: #9aa5b1; margin-left: 6px; }
+.pp-ro.pp-ro-s { min-height: 24px; padding: 2px 8px; font-size: 12px; }
+.pp-ro.pp-ro-fill { display: flex; width: 100%; box-sizing: border-box; min-width: 0; }
 .pp-input::placeholder { color: #b3bcc5; }
 /* 下段の Seq No／チェック／証憑／小切手No の並び */
 .pp-foot { display: flex; align-items: stretch; min-width: 0; min-height: 40px; }
@@ -773,7 +775,7 @@ export function PaperDate({ month, day, year = '8', label = '年月日' }: { mon
     <div className="pp-row" style={{ gridTemplateColumns: 'auto auto auto auto auto auto auto auto', border: `1px solid ${PAPER.line}`, display: 'inline-grid', verticalAlign: 'middle' }}>
       <div className="pp-lab"><span>{label}</span></div>
       <div className="pp-cell" style={{ ...cell, padding: '2px 10px', fontSize: 14, color: '#5b6773' }}>令和</div>
-      <div className="pp-cell pp-num" style={{ ...cell, padding: '2px 10px', fontSize: 14, fontWeight: 700 }}>{year}</div>
+      <div className="pp-cell" style={{ ...cell, padding: '2px 6px' }}><span className="pp-ro pp-num" title="会計年度は、画面上部の「会計期間」で切り替えます" style={{ fontSize: 14, fontWeight: 700, color: '#22303c', padding: '4px 10px' }}>{year}</span></div>
       <div className="pp-lab">年</div>
       <div className="pp-cell" style={cell}>{month}</div>
       <div className="pp-lab">月</div>
@@ -807,7 +809,7 @@ export function PaperFootItems({ seq, check, shohyo, cheque, note }: { seq: Reac
   return (
     <div className="pp-foot" style={{ width: '100%' }}>
       <span className="pp-lab">Seq No</span>
-      <span className="pp-val pp-num" style={{ minWidth: 52 }}>{seq}</span>
+      <span className="pp-val pp-num" style={{ minWidth: 52 }}><span className="pp-ro pp-ro-s">{seq}</span></span>
       <span className="pp-lab">チェック</span>
       <span className="pp-val">{check}</span>
       <span className="pp-lab">証憑</span>

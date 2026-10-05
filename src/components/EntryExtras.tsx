@@ -123,7 +123,7 @@ export function EntryConfirmModal({ open, kind, reason, onClose, onProceed, acce
 /* ---------------- 予算残・達成率（クリックで予算状況グラフ） ---------------- */
 export function BudgetHintLive({ account, threshold, onOpen }: { account: string; threshold: number; onOpen: () => void }) {
   const b = budgetSample(account);
-  if (!b) return <div style={{ display: 'flex', gap: 16, marginTop: 11, fontSize: 11, color: '#9aa5b1' }}><span>予算残 <b style={{ color: '#7a8794', fontWeight: 600 }}>—</b></span><span>達成率 <b style={{ color: '#7a8794', fontWeight: 600 }}>—</b></span></div>;
+  if (!b) return <div style={{ display: 'flex', gap: 16, marginTop: 11, fontSize: 11, color: '#8290a0', background: '#f3f5f7', borderRadius: 5, padding: '5px 9px' }}><span>予算残 <b style={{ color: '#7a8794', fontWeight: 600 }}>—</b></span><span>達成率 <b style={{ color: '#7a8794', fontWeight: 600 }}>—</b></span></div>;
   const over = b.rate * 100 >= threshold;
   return (
     <button type="button" onClick={onOpen} title="クリックで予算状況グラフ" style={{ display: 'flex', gap: 16, marginTop: 11, fontSize: 11, color: '#7a8794', background: over ? '#fdeee9' : '#f8fafc', border: '1px dashed ' + (over ? '#f2c9c2' : '#dde4ea'), borderRadius: 8, padding: '5px 9px', cursor: 'pointer', fontFamily: 'inherit', width: '100%', textAlign: 'left' }}>

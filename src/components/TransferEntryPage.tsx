@@ -506,21 +506,21 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                   <div className="pp-cell" style={{ padding: 0 }}>
                     <div className="pp-foot" style={{ width: '100%' }}>
                       <span className="pp-lab" style={{ fontSize: 12, color: BLUE }}>合計</span>
-                      <span className="pp-val pp-grow pp-num" style={{ justifyContent: 'flex-end', fontSize: 17, fontWeight: 800, color: BLUE }}>{kariTotal.toLocaleString('ja-JP')}</span>
+                      <span className="pp-val pp-grow pp-num"><span className="pp-ro pp-ro-fill" style={{ justifyContent: 'flex-end', fontSize: 17, fontWeight: 800, color: BLUE }}>{kariTotal.toLocaleString('ja-JP')}</span></span>
                     </div>
                   </div>
                   <div className="pp-cell" style={{ padding: 0, gridColumn: 'span 2', background: PAPER.fill }}>
                     <PaperFootItems
-                      seq={<span style={{ color: '#7a8794', fontSize: 12 }}>自動</span>}
+                      seq="自動"
                       check={<PaperToggle on={curRow.check} onLabel="☑" offLabel="☐" disabled={ro} title={single ? 'チェック' : `チェック（${cur + 1}行目）`} onChange={(x) => setRow(cur, { check: x })} />}
                       shohyo={<PaperToggle on={curRow.shohyo} onLabel="有" offLabel="無" disabled={ro} title={single ? '証憑 有／無' : `証憑 有／無（${cur + 1}行目）`} onChange={(x) => setRow(cur, { shohyo: x })} />}
-                      cheque={sess.input.cheque ? <span className="pp-num" style={{ fontSize: 12.5 }}>{cheque || <span style={{ color: '#b3bcc5' }}>—</span>}</span> : undefined}
+                      cheque={sess.input.cheque ? <span className="pp-ro pp-ro-s pp-num">{cheque || '—'}</span> : undefined}
                     />
                   </div>
                   <div className="pp-cell" style={{ padding: 0 }}>
                     <div className="pp-foot" style={{ width: '100%' }}>
                       <span className="pp-lab" style={{ fontSize: 12, color: PINK }}>合計</span>
-                      <span className="pp-val pp-grow pp-num" style={{ justifyContent: 'flex-end', fontSize: 17, fontWeight: 800, color: PINK }}>{kashiTotal.toLocaleString('ja-JP')}</span>
+                      <span className="pp-val pp-grow pp-num"><span className="pp-ro pp-ro-fill" style={{ justifyContent: 'flex-end', fontSize: 17, fontWeight: 800, color: PINK }}>{kashiTotal.toLocaleString('ja-JP')}</span></span>
                     </div>
                   </div>
                   <div className="pp-cell pp-center" style={{ padding: '4px 6px' }}>
