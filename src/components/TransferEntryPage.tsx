@@ -4,7 +4,7 @@
 //   借方合計＝貸方合計で登録可。登録した行は下の当年仕訳一覧に入る。
 //   機能ボタン（伝票の操作／行の操作／入力補助／参照）は常に表示し、Alt＋英字のショートカットでも動く。
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { Modal } from './Modal';
@@ -65,8 +65,9 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
   const [dontShow, setDontShow] = useState(false);
   const [service, setService] = useState('001 本部');
   const [divOpen, setDivOpen] = useState(false);
-  const [month, setMonth] = useState('8');
-  const [day, setDay] = useState('5');
+  // 日付：月・日は未入力で始める（入力は月から）
+  const [month, setMonth] = useState('');
+  const [day, setDay] = useState('');
   const [rows, setRows] = useState<Row[]>(() => Array.from({ length: rowCount }, emptyRow));
   const [active, setActive] = useState(0);
   const [cheque, setCheque] = useState('');
@@ -92,8 +93,10 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
       }
     }
     setAlertOpen(false);
-    focusId(fid(0, 'ka'));
+    focusId(`${pre}-month`); // 案内を閉じたら日付の「月」から入力を始める
   };
+  // 画面を開いたら「月」にカーソルを置く（案内ダイアログ表示中は閉じた後に置く）
+  useEffect(() => { if (alertOpen) return; const t = window.setTimeout(() => document.getElementById(`${pre}-month`)?.focus(), 80); return () => window.clearTimeout(t); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setRow = (i: number, patch: Partial<Row>) => {
     setRows((rs) => rs.map((r, k) => (k === i ? { ...r, ...patch } : r)));
@@ -135,6 +138,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
 
   const submit = (confirmed = false) => {
     if (!tools.editable) { toast.show(tools.reason); return; }
+    if (!month || !day) { setErr('日付（月・日）を入力してください。'); focusId(!month ? `${pre}-month` : `${pre}-day`); return; }
     if (used.length === 0) { setErr('借方・貸方の科目と金額を入力してください。'); focusId(fid(0, 'ka')); return; }
     const noAcc = rows.findIndex((r) => isUsed(r) && !r.kari && !r.kashi);
     if (noAcc >= 0) { setErr(`${noAcc + 1}行目の科目が未入力です。`); focusId(fid(noAcc, 'k')); return; }

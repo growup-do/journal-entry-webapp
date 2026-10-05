@@ -28,8 +28,8 @@ const COLS = '52px 92px 84px minmax(0,1.15fr) minmax(0,1.15fr) minmax(0,1.35fr) 
 
 const initialForm: FormState = {
   service: '001 本部',
-  month: '8',
-  day: '5',
+  month: '',
+  day: '',
   torihiki: '資金',
   kariKamoku: '',
   kashiKamoku: '',
@@ -117,9 +117,13 @@ export function SingleEntryPage({ variant, accent, prevYear, onNavigate }: Props
     setFlags((s) => ({ ...s, check: false, fusen: '' }));
   };
 
+  // 画面を開いたら「月」にカーソルを置く（前年仕訳の閲覧時は除く）
+  useEffect(() => { if (prevYear) return; const t = window.setTimeout(() => document.getElementById('se-month')?.focus(), 80); return () => window.clearTimeout(t); }, [prevYear]);
+
   const doSubmit = (confirmed = false) => {
     if (prevYear) { toast.show('前年仕訳は閲覧のみです。当年の表示に切り替えてから入力してください'); return; }
     if (!tools.editable) { toast.show(tools.reason); return; }
+    if (!f.month || !f.day) { toast.show('日付（月・日）を入力してください'); focusId(!f.month ? 'se-month' : 'se-day'); return; }
     if (!f.kariKamoku || !f.kashiKamoku || !toNum(f.amount)) {
       v.submit(); // 未入力のメッセージを表示
       focusId(!f.kariKamoku ? 'se-kari' : !f.kashiKamoku ? 'se-kashi' : 'se-amount');

@@ -172,8 +172,11 @@ function VoucherEntry({ onNavigate, year, topOffset }: { onNavigate: (label: str
   const wide = useWidePanel('form-entry');
   const editable = canEdit(sess);
 
-  const [month, setMonthV] = useState('8');
-  const [day, setDayV] = useState('1');
+  // 日付：年は会計年度から自動、月・日は未入力で始める（入力は月から）
+  const [month, setMonthV] = useState('');
+  const [day, setDayV] = useState('');
+  // 画面を開いたら「月」にカーソルを置く（ここから入力を始めることが分かるように）
+  useEffect(() => { const t = window.setTimeout(() => document.getElementById('fe-month')?.focus(), 80); return () => window.clearTimeout(t); }, []);
   const [manualNo, setManualNo] = useState('');
   const [kari, setKari] = useState('');
   const [kashi, setKashi] = useState('');
