@@ -35,7 +35,7 @@ const NODES: Node[] = [
   // 起動・終了
   N('login', 'ログイン', 'page', 'start', { open: 'ログイン' }),
   N('pwreset', 'パスワード再設定', 'dialog', 'start', { open: 'ログイン', note: 'メール → コード → 新パスワード' }),
-  N('division', '伝票入力区分の選択', 'dialog', 'start', { open: 'ホーム', note: '会計年度・区分（階層／一覧）' }),
+  N('division', '伝票入力区分の選択', 'dialog', 'start', { open: 'ホーム', note: '会計年度・区分（組織図）／1か月間表示しない' }),
   N('merge', '合算部門の選択', 'dialog', 'start', { open: 'ホーム' }),
   N('divinfo', '法人名の変更、及び区分の追加、変更', 'dialog', 'start', { open: 'ホーム', note: '集計区分／法人情報／伝票入力区分' }),
   N('yearconfirm', '年度切替確認', 'dialog', 'start', { open: '年度の切替', note: '翌年度以降＝黄／前年度以前＝緑' }),
@@ -137,7 +137,7 @@ const NODES: Node[] = [
 const E = (from: string, to: string, label?: string, weak = false): Edge => ({ from, to, label, weak });
 const EDGES: Edge[] = [
   E('login', 'pwreset', 'お忘れですか', true), E('login', 'division', 'ログイン'), E('division', 'merge', '合算追加', true), E('division', 'divinfo', '部門情報の変更', true),
-  E('division', 'home', 'OK（初期画面：ホーム）'), E('division', 'e-voucher', 'OK（初期画面：伝票入力）', true),
+  E('division', 'home', 'OK（初期画面：ホーム）'), E('login', 'home', 'ログイン（区分選択を1か月表示しない設定のとき）', true), E('division', 'e-voucher', 'OK（初期画面：伝票入力）', true),
   E('home', 'finder', '機能から探す'), E('home', 'notices', '一覧', true), E('home', 'favedit', '編集', true), E('home', 'support', 'FAQ すべて見る', true), E('home', 'e-voucher', '伝票入力をはじめる'),
   E('finder', 'trial', '機能を選ぶ', true),
   E('e-voucher', 'e-single', '形式切替'), E('e-single', 'e-transfer', '形式切替'), E('e-transfer', 'e-tsingle', '形式切替'),
