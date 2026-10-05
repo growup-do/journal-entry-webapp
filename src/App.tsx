@@ -1,7 +1,7 @@
 // 仕訳伝票入力 画面 — Webアプリ プロトタイプ
 // 2つのUI案（フォーム型 / スプレッドシート型）をフルスクリーンで切り替えて確認できる。
 // メニューから画面（単一入力 / 伝票入力）を切り替え。各画面は独立した状態を持つ。
-// ヘッダーの「照会」（元帳１／元帳２／残高照合）は通常の画面として開く。
+// 元帳１／元帳２／残高照合は通常の画面として開く（入口は伝票入力の参照パネル・ホーム）。
 // 右下の「確認メモ」でクライアントとの確認事項を画面上に貼れる（Firestore で共有）。
 
 import { useState } from 'react';
@@ -11,7 +11,6 @@ import { getSession, setSession, useSession } from './store/session';
 import { SettlementAuditModal } from './components/SettlementAuditModal';
 import { JournalCountModal } from './components/JournalCountModal';
 import { CorporatePrintModal } from './components/CorporatePrintModal';
-import type { JournalYear } from './components/HeaderTools';
 import { DEFAULT_MENU } from './data';
 import { LoginPage } from './components/LoginPage';
 import { FeatureListPage } from './components/FeatureListPage';
@@ -23,14 +22,14 @@ type Mode = 'form' | 'sheet';
 /** ページ遷移ではなくモーダルで開くメニュー */
 const MODAL_MENU = ['決算調査', '法人調査', '仕訳数', '法人印刷'];
 
-/** 機能一覧（サイトマップ）からの「画面を開く」：?open=画面名&year=prev（mode は互換のため無視）
+/** 機能一覧（サイトマップ）からの「画面を開く」：?open=画面名（mode・year は互換のため無視）
  *  読み込み時に1回だけ解釈し、URLは元に戻す（再描画で消えないようモジュール初期化時に処理） */
 const BOOT = (() => {
   const p = new URLSearchParams(window.location.search);
   const open = p.get('open');
   if (!open) return null;
   try { window.history.replaceState(null, '', window.location.pathname); } catch { /* ignore */ }
-  return { open, year: p.get('year') === 'prev' };
+  return { open };
 })();
 
 const readSaved = (k: string) => { try { return sessionStorage.getItem(k) ?? ''; } catch { return ''; } };
@@ -98,8 +97,6 @@ export default function App() {
   const [auditOpen, setAuditOpen] = useState(boot?.open === '決算調査' || boot?.open === '法人調査');
   const [countOpen, setCountOpen] = useState(boot?.open === '仕訳数');
   const [corpPrintOpen, setCorpPrintOpen] = useState(boot?.open === '法人印刷');
-  // 仕訳の年（当年／前年）はアプリ全体で共有
-  const [year, setYear] = useState<JournalYear>(boot?.year ? 'prev' : 'current');
   // モーダル（決算調査／仕訳数／法人印刷）を開いている間は、確認メモをそのモーダルの画面として扱う
   const screenKey = auditOpen ? `${mode}:決算調査` : countOpen ? `${mode}:仕訳数` : corpPrintOpen ? `${mode}:法人印刷` : `${mode}:${page}`;
 
@@ -134,7 +131,7 @@ export default function App() {
 
   return (
     <>
-      <FormScreen page={page} onNavigate={selectMenu} year={year} onYear={setYear} onLogout={logout} />
+      <FormScreen page={page} onNavigate={selectMenu} onLogout={logout} />
       <RoleSwitchBar />
       <CorporatePrintModal open={corpPrintOpen} onClose={() => setCorpPrintOpen(false)} />
 

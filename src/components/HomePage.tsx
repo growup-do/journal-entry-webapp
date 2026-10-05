@@ -3,13 +3,19 @@
 import { useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { ToastView, useToast } from './Toast';
-import { HOME_BANKS, HOME_FAQ, HOME_NOTICES, IMPLEMENTED_MENU, MENU_GROUPS, SETTINGS_MENU, displayName } from '../data';
+import { HOME_BANKS, HOME_CHECKS, HOME_FAQ, HOME_NOTICES, IMPLEMENTED_MENU, MENU_GROUPS, SETTINGS_MENU, displayName } from '../data';
 import { FinderSearch } from './FunctionFinder';
 import { Modal } from './Modal';
 import { setSession, startKindOf, useSession } from '../store/session';
 import { SUPPORT_URL } from './SettingsMenu';
 
 const yen = (n: number) => n.toLocaleString('ja-JP');
+/** 調査・チェック（メニューバーには置かず、ホームから開く）の説明 */
+const CHECK_NOTE: Record<string, string> = {
+  仕訳数: '月ごとの仕訳件数と、入力済みの月を確認します。',
+  日次調査: '仕訳と残高の同額・不一致を検索し、不一致の日の伝票を確認します。',
+  決算調査: '決算前に、残高や設定の28項目をまとめて点検します。',
+};
 const TAG_COLOR: Record<string, { bg: string; fg: string }> = {
   システム: { bg: '#e8f0fb', fg: '#2c5f9e' },
   法改正: { bg: '#fdeee9', fg: '#c0392b' },
@@ -33,7 +39,7 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
   const NOTICE_TAGS = ['すべて', ...Array.from(new Set(HOME_NOTICES.map((n) => n.tag)))];
   const noticeList = HOME_NOTICES.map((n, i) => ({ ...n, i })).filter((n) => noticeTag === 'すべて' || n.tag === noticeTag).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   const s = useSession();
-  const CANDIDATES = [...MENU_GROUPS.flatMap((g) => g.items), '元帳１', '元帳２', '残高照合', '法人印刷', ...SETTINGS_MENU].filter((l) => IMPLEMENTED_MENU.includes(l) || l === '印刷センター' || l === '一括印刷' || l === '予算' || SETTINGS_MENU.includes(l));
+  const CANDIDATES = [...MENU_GROUPS.flatMap((g) => g.items), ...HOME_CHECKS, '元帳１', '元帳２', '残高照合', '法人印刷', ...SETTINGS_MENU].filter((l) => IMPLEMENTED_MENU.includes(l) || l === '印刷センター' || l === '一括印刷' || l === '予算' || SETTINGS_MENU.includes(l));
   // ドラッグ＆ドロップで並べ替え
   const [drag, setDrag] = useState<number | null>(null);
   const [over, setOver] = useState<number | null>(null);
@@ -81,6 +87,20 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
               ))}
             </div>
             <div style={{ padding: '0 16px 14px', fontSize: 11, color: '#9aa5b1' }}>※ 残高はサンプル値です。本番では預金出納（オプション）の銀行連携または通帳残高の入力を反映します。</div>
+          </section>
+
+          {/* 調査・チェック：仕訳数の問合せ／同額・不一致検索／決算チェック（メニューバーには置かず、ここから開く） */}
+          <section style={card} data-home-checks>
+            <div style={h2}>調査・チェック<span style={{ fontSize: 11.5, fontWeight: 500, color: '#7a8794' }}>入力した仕訳の点検は、ここから開きます</span></div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12, padding: 16 }}>
+              {HOME_CHECKS.map((l) => (
+                <button key={l} type="button" className="btn-outline" data-menu={l} onClick={() => onNavigate(l)} style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'stretch', textAlign: 'left', padding: '12px 14px', border: '1px solid #cfd8e0', borderRadius: 12, background: '#fff', color: '#22303c', fontFamily: 'inherit', cursor: 'pointer', minWidth: 0 }}>
+                  <span style={{ fontSize: 13.5, fontWeight: 700, lineHeight: 1.4 }}>{displayName(l)}</span>
+                  <span style={{ fontSize: 11.5, color: '#7a8794', lineHeight: 1.6, flex: 1 }}>{CHECK_NOTE[l]}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: accent, textAlign: 'right' }}>開く ›</span>
+                </button>
+              ))}
+            </div>
           </section>
 
           {/* よく使う操作 */}

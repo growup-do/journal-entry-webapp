@@ -8,7 +8,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { ToastView, useToast } from './Toast';
-import { PrevYearJournal } from './PrevYearJournal';
 import { BudgetGraphModal, BudgetHintLive, TorihikiBadge, useEntryTools, type EntryFlags } from './EntryExtras';
 import { ComboField, ConfirmModal, EntryStyles, FlagButtons, FundAccountLine, IssueList, PAPER, PaperBox, PaperStyles, PaperTitle, PaperToggle, fieldState, focusId, hasError, hasWarn, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor } from './EntryCommon';
 import { useWidePanel } from './WidePanel';
@@ -62,13 +61,11 @@ interface Props {
   variant: 'form' | 'sheet';
   accent: string;
   accentRgb: string;
-  /** ヘッダーで「前年仕訳」を選んだとき：一覧を前年仕訳（閲覧のみ）に差し替え、入力行は隠す */
-  prevYear?: boolean;
   /** 形式の切替・問合せ画面への移動。未指定のときは切替を出さず、現在の形式だけを表示 */
   onNavigate?: (label: string) => void;
 }
 
-export function SingleEntryPage({ variant, accent, prevYear, onNavigate }: Props) {
+export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
   const sess = useSession();
   const toast = useToast();
   const wide = useWidePanel('form-entry'); // 右側の参照パネル（4形式で共有。表示は FormScreen 側）
@@ -117,11 +114,10 @@ export function SingleEntryPage({ variant, accent, prevYear, onNavigate }: Props
     setFlags((s) => ({ ...s, check: false, fusen: '' }));
   };
 
-  // 画面を開いたら「月」にカーソルを置く（前年仕訳の閲覧時は除く）
-  useEffect(() => { if (prevYear) return; const t = window.setTimeout(() => document.getElementById('se-month')?.focus(), 80); return () => window.clearTimeout(t); }, [prevYear]);
+  // 画面を開いたら「月」にカーソルを置く
+  useEffect(() => { const t = window.setTimeout(() => document.getElementById('se-month')?.focus(), 80); return () => window.clearTimeout(t); }, []);
 
   const doSubmit = (confirmed = false) => {
-    if (prevYear) { toast.show('前年仕訳は閲覧のみです。当年の表示に切り替えてから入力してください'); return; }
     if (!tools.editable) { toast.show(tools.reason); return; }
     if (!f.month || !f.day) { toast.show('日付（月・日）を入力してください'); focusId(!f.month ? 'se-month' : 'se-day'); return; }
     if (!f.kariKamoku || !f.kashiKamoku || !toNum(f.amount)) {
@@ -171,7 +167,7 @@ export function SingleEntryPage({ variant, accent, prevYear, onNavigate }: Props
     accent,
     onNavigate,
     toast: toast.show,
-    dirty: dirty && !prevYear,
+    dirty,
     service: f.service,
     month: f.month,
     day: f.day,
@@ -207,7 +203,7 @@ export function SingleEntryPage({ variant, accent, prevYear, onNavigate }: Props
       setHi(ids);
     },
     onPickDate: (m, d) => { v.setFields({ month: m, day: d }); v.setMonth(m); focusId('se-kari'); },
-    onOpenPanel: prevYear ? undefined : () => { wide.setCollapsed(false); toast.show('画面の下に参照パネルを開きました'); },
+    onOpenPanel: () => { wide.setCollapsed(false); toast.show('画面の下に参照パネルを開きました'); },
     submitId: 'se-submit',
     enterOrder: ENTER_ORDER,
   });
@@ -313,22 +309,6 @@ export function SingleEntryPage({ variant, accent, prevYear, onNavigate }: Props
         {tools.topBar}
         {tools.banner}
 
-        {prevYear ? (
-          <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 20, padding: '14px 22px 12px', borderBottom: '1px solid #eef2f5' }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21, letterSpacing: '.02em' }}>
-                  単一入力 <span style={{ fontSize: 12.5, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>{divisionName}　拠点区分</span>
-                </div>
-              </div>
-              <div style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 14, fontSize: 12.5, color: '#68757f', whiteSpace: 'nowrap', paddingTop: 4 }}>
-                <span>会計期間　<b style={{ color: '#22303c', fontWeight: 600 }}>令和8年度</b></span>
-                {tools.templateButton}
-              </div>
-            </div>
-            <PrevYearJournal accent={accent} />
-          </>
-        ) : (
         <div style={{ padding: '18px 22px 12px', background: '#eef1ef' }}>
         {/* 伝票用紙 */}
         <div className="pp-sheet" style={{ padding: '16px 20px 16px' }}>
@@ -548,7 +528,6 @@ export function SingleEntryPage({ variant, accent, prevYear, onNavigate }: Props
         {/* 機能ボタン（入力補助／参照） */}
         <div style={{ marginTop: 12 }}>{tools.actionBar}</div>
         </div>
-        )}
       </div>
 
       </div>

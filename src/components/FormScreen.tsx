@@ -16,7 +16,7 @@ import { ToastView, useToast } from './Toast';
 import { judgeTorihiki } from '../lib/accounts';
 import { addVoucher, getVouchers, updateVoucher, useVouchers } from '../store/journalStore';
 import { canEdit, setSession, useSession, type JournalTemplate, type TemplateLine } from '../store/session';
-import { HeaderTools, type JournalYear } from './HeaderTools';
+import { HeaderTools } from './HeaderTools';
 import { UserMenu } from './UserMenu';
 import { SettingsMenu } from './SettingsMenu';
 import { VersionBadge } from './VersionBadge';
@@ -44,12 +44,10 @@ interface Props {
   /** 表示中のメニュー項目（例 '伝票入力'） */
   page: string;
   onNavigate: (label: string) => void;
-  year: JournalYear;
-  onYear: (y: JournalYear) => void;
   onLogout: () => void;
 }
 
-export function FormScreen({ page, onNavigate, year, onYear, onLogout }: Props) {
+export function FormScreen({ page, onNavigate, onLogout }: Props) {
   const [topOffset, setTopOffset] = useState(102);
   const headerRef = useRef<HTMLDivElement>(null);
 
@@ -99,7 +97,7 @@ export function FormScreen({ page, onNavigate, year, onYear, onLogout }: Props) 
           <DivisionPicker accent={GREEN} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12.5, color: '#68757f', flex: 'none', marginLeft: 12 }}>
-          <HeaderTools accent={GREEN} page={page} onNavigate={onNavigate} year={year} onYear={onYear} />
+          <HeaderTools accent={GREEN} page={page} onNavigate={onNavigate} />
           <SettingsMenu accent={GREEN} active={page} onNavigate={onNavigate} />
           <UserMenu accent={GREEN} soft="#eef4f0" onNavigate={onNavigate} />
         </div>
@@ -125,11 +123,11 @@ export function FormScreen({ page, onNavigate, year, onYear, onLogout }: Props) 
       </div>
 
       {page === '伝票入力' ? (
-        <VoucherEntry onNavigate={onNavigate} year={year} topOffset={topOffset} />
+        <VoucherEntry onNavigate={onNavigate} topOffset={topOffset} />
       ) : page === '単一入力' || page === '振替入力' || page === '振替単一' ? (
-        <EntryWithPanel page={page} topOffset={topOffset}>{renderPage(page, 'form', GREEN, GREEN_RGB, onNavigate, year, onLogout)}</EntryWithPanel>
+        <EntryWithPanel page={page} topOffset={topOffset} onNavigate={onNavigate}>{renderPage(page, 'form', GREEN, GREEN_RGB, onNavigate, onLogout)}</EntryWithPanel>
       ) : (
-        renderPage(page, 'form', GREEN, GREEN_RGB, onNavigate, year, onLogout)
+        renderPage(page, 'form', GREEN, GREEN_RGB, onNavigate, onLogout)
       )}
       <Footer />
     </div>
@@ -164,7 +162,7 @@ const FE_CSS = `
 @media (min-height: 1000px) { .fe-actions { position: sticky; bottom: 0; z-index: 5; padding-bottom: 58px; box-shadow: 0 -8px 18px rgba(30,50,70,.07); } }
 `;
 
-function VoucherEntry({ onNavigate, year, topOffset }: { onNavigate: (label: string) => void; year: JournalYear; topOffset: number }) {
+function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) => void; topOffset: number }) {
   const sess = useSession();
   const inp = sess.input;
   const toast = useToast();
@@ -197,13 +195,6 @@ function VoucherEntry({ onNavigate, year, topOffset }: { onNavigate: (label: str
 
   // 入力内容が変わったら、登録時のメッセージを消す
   useEffect(() => { setErr(''); }, [month, day, manualNo, kari, kashi, aite, internal, fundMode, rows]);
-  // ヘッダーで「前年度」を選んだときは、参照パネルを前年度日記帳にする（戻したら日記帳へ）
-  const prevYear = useRef(year);
-  useEffect(() => {
-    if (year === 'prev' && wide.view !== '前年度日記帳') wide.setView('前年度日記帳');
-    else if (year !== 'prev' && prevYear.current === 'prev' && wide.view === '前年度日記帳') wide.setView('日記帳');
-    prevYear.current = year;
-  }, [year]);
 
   const curIdx = Math.min(cur, rows.length - 1);
   const curRow = rows[curIdx];
@@ -650,8 +641,8 @@ function VoucherEntry({ onNavigate, year, topOffset }: { onNavigate: (label: str
       />
       <AttachedStatementModal open={!!stmt} statement={stmt?.label ?? ''} entry={stmt?.entry ?? null} onClose={() => setStmt(null)} onDone={(reg) => { toast.show(reg ? `${stmt?.label}に登録しました` : '明細書には登録しませんでした'); setStmt(null); }} accent={GREEN} />
 
-      {/* 参照パネル（右端固定・折りたたみ。日記帳／前年度日記帳／元帳１／元帳２／残高照合） */}
-      <WidePanel accent={GREEN} layout="side" state={wide} top={topOffset} highlightIds={hi} returnTo="伝票入力" />
+      {/* 参照パネル（右端固定・折りたたみ。日記帳〔当年／前年〕／元帳１／元帳２／残高照合） */}
+      <WidePanel accent={GREEN} layout="side" state={wide} top={topOffset} highlightIds={hi} returnTo="伝票入力" onNavigate={onNavigate} />
     </>
   );
 }
@@ -674,15 +665,15 @@ function logoStyle(bg: string, size: number, font: number): CSSProperties {
 
 
 
-/** 単一形式／振替伝票形式／振替単一形式：仕訳伝票形式と同じ右側の参照パネル（日記帳／前年度日記帳／元帳１・２／残高照合）を付ける。
+/** 単一形式／振替伝票形式／振替単一形式：仕訳伝票形式と同じ右側の参照パネル（日記帳〔当年／前年〕／元帳１・２／残高照合）を付ける。
  *  パネルの状態（表示内容・開閉）は4形式で共有（storageKey 'form-entry'）。 */
-function EntryWithPanel({ page, topOffset, children }: { page: string; topOffset: number; children: ReactNode }) {
+function EntryWithPanel({ page, topOffset, onNavigate, children }: { page: string; topOffset: number; onNavigate: (label: string) => void; children: ReactNode }) {
   const wide = useWidePanel('form-entry');
   const panelOpen = !wide.collapsed && !wide.narrow;
   return (
     <>
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', paddingRight: panelOpen ? WIDE_WIDTH : 0, transition: 'padding-right .28s ease' }}>{children}</div>
-      <WidePanel accent={GREEN} layout="side" state={wide} top={topOffset} returnTo={page} />
+      <WidePanel accent={GREEN} layout="side" state={wide} top={topOffset} returnTo={page} onNavigate={onNavigate} />
     </>
   );
 }

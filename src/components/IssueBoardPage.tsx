@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Modal } from './Modal';
 import { COPYRIGHT, backToApp, goStatic } from './Footer';
-import { MENU_GROUPS, SETTINGS_GROUPS, displayName } from '../data';
+import { HOME_CHECKS, MENU_GROUPS, SETTINGS_GROUPS, displayName } from '../data';
 import { ISSUE_STATUSES, REPLY_KINDS, useIssues, type Issue, type IssueStatus, type Priority, type ReplyKind } from '../issues/useIssues';
 
 const AUTHORS = ['GROW UP', 'チャイルド社'];
@@ -18,7 +18,7 @@ const STATUS_COLOR: Record<IssueStatus, { bg: string; fg: string }> = {
 const KIND_COLOR: Record<ReplyKind, { bg: string; fg: string }> = {
   対応: { bg: '#e8f0fb', fg: '#2c5f9e' }, 解決: { bg: '#eaf5ef', fg: '#1f7a52' }, 提案: { bg: '#efe6fb', fg: '#6b3fb5' }, 質問: { bg: '#fff7e6', fg: '#b7791f' }, 回答: { bg: '#e0f4f7', fg: '#0b7285' }, メモ: { bg: '#f1f4f6', fg: '#5b6773' },
 };
-const SCREEN_OPTIONS = ['', 'ホーム', ...MENU_GROUPS.flatMap((g) => g.items), ...SETTINGS_GROUPS.flatMap((g) => g.items), 'ログイン', '機能一覧', '画面遷移図', '全体（画面を限定しない）'];
+const SCREEN_OPTIONS = ['', 'ホーム', ...MENU_GROUPS.flatMap((g) => g.items), ...HOME_CHECKS, ...SETTINGS_GROUPS.flatMap((g) => g.items), 'ログイン', '機能一覧', '画面遷移図', '全体（画面を限定しない）'];
 const fmt = (t: number) => { if (!t) return ''; const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 const fmtDate = (t: number) => { if (!t) return ''; const d = new Date(t); return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`; };
 const isIme = (e: React.KeyboardEvent) => e.nativeEvent.isComposing || (e.nativeEvent as unknown as { keyCode: number }).keyCode === 229;

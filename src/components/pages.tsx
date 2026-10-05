@@ -29,7 +29,7 @@ import { SETTINGS_MENU } from '../data';
 import { SingleEntryPage } from './SingleEntryPage';
 import { TransferEntryPage } from './TransferEntryPage';
 
-export function renderPage(page: string, variant: 'form' | 'sheet', accent: string, accentRgb: string, onNavigate: (label: string) => void, year: 'current' | 'prev' = 'current', onLogout: () => void = () => {}) {
+export function renderPage(page: string, variant: 'form' | 'sheet', accent: string, accentRgb: string, onNavigate: (label: string) => void, onLogout: () => void = () => {}) {
   // 各種設定のうち、依頼書対応で追加・分離した画面（年度の切替／年度更新、保守・運用、別紙）
   switch (page) {
     case '年度の切替':
@@ -65,7 +65,7 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
     case 'ログアウト':
       return <LogoutPage accent={accent} onNavigate={onNavigate} onLogout={onLogout} />;
     case '単一入力':
-      return <SingleEntryPage variant={variant} accent={accent} accentRgb={accentRgb} prevYear={year === 'prev'} onNavigate={onNavigate} />;
+      return <SingleEntryPage variant={variant} accent={accent} accentRgb={accentRgb} onNavigate={onNavigate} />;
     case '振替入力':
       return <TransferEntryPage key="transfer" variant={variant} accent={accent} accentRgb={accentRgb} onNavigate={onNavigate} />;
     case '振替単一':

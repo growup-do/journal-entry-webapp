@@ -60,10 +60,11 @@ export const MENU_GROUPS: MenuGroup[] = [
   { key: 'ledger', label: '日記帳・元帳', icon: 'ledger', items: ['仕訳一覧', '勘定元帳', '資金元帳', '業者元帳'] },
   { key: 'trend', label: '推移・分析', icon: 'trend', items: ['科目推移', '資金推移', '業者推移', '経年グラフ', '分析グラフ', '充実残額'] },
   { key: 'compare', label: '試算表・決算書', icon: 'compare', items: ['月次試算', '予算対比', '月次決算'] },
-  { key: 'audit', label: '調査・チェック', icon: 'audit', items: ['仕訳数', '日次調査', '決算調査'] },
   { key: 'print', label: '帳票・印刷', icon: 'print', items: ['印刷センター', '一括印刷', '別紙（注記・明細書・財産目録）', '共通の印刷設定'] },
   { key: 'option', label: 'オプション', icon: 'option', items: ['小口現金', '減価償却', '預金出納', '収入支出', '電子印'], option: true },
 ];
+/** 調査・チェック（メニューバーには置かず、ホームのダッシュボードから開く） */
+export const HOME_CHECKS = ['仕訳数', '日次調査', '決算調査'];
 /** 互換用：フラットなグループ配列 */
 export const MENU: string[][] = MENU_GROUPS.map((g) => g.items);
 /** 項目 → 所属カテゴリ */
@@ -419,7 +420,6 @@ export const CLOSING_REPORT_ROWS: { name: string; avail: string[]; required: str
 
 /** 設定メニュー（ヘッダーの歯車） */
 /** ヘッダー「照会」の項目（1画面で開く） */
-export const INQUIRY_MENU = ['元帳１', '元帳２', '残高照合'];
 /** 各種設定（旧 保守メニュー）：性質ごとに分類（依頼書 5.1.2）。年度の切替と年度更新は別グループに分離（5.5.2） */
 export interface SettingsGroup { key: string; label: string; note?: string; danger?: boolean; items: string[] }
 export const SETTINGS_GROUPS: SettingsGroup[] = [
@@ -466,7 +466,7 @@ export const HOME_NOTICES: { date: string; tag: 'システム' | '法改正' | '
 export const HOME_FAQ: { q: string; a: string }[] = [
   { q: '単一入力と伝票入力の使い分けは？', a: '1伝票＝借方1・貸方1で連続入力するときは単一入力、複数行の伝票や摘要・業者を詳しく入れるときは伝票入力をお使いください。' },
   { q: '登録した伝票を訂正・削除したい', a: '単一入力の一覧、または仕訳一覧から該当行の「訂正」「削除」を選びます。前年仕訳は閲覧のみです。' },
-  { q: '通帳の残高とシステムの残高が合わない', a: 'ヘッダーの「残高照合」で通帳残高を入力すると、科目ごとの差額が確認できます。差額のある科目は勘定元帳で明細をご確認ください。' },
+  { q: '通帳の残高とシステムの残高が合わない', a: 'ホームの「残高照合へ」から通帳残高を入力すると、科目ごとの差額が確認できます。差額のある科目は勘定元帳で明細をご確認ください。' },
   { q: '月次の締めはどこで行いますか？', a: '「調査」→「日次調査」で一致・不一致検索を行い、「試算・対比」→「月次試算」で残高を確認してください。' },
   { q: 'メンバーを追加したい', a: '右上のユーザーアイコン →「メンバーの追加、管理」から、メールアドレスと権限を指定して招待できます。' },
 ];

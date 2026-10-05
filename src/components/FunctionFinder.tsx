@@ -4,7 +4,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { MENU_GROUPS, SETTINGS_GROUPS, displayName, isOptionMenu } from '../data';
+import { HOME_CHECKS, MENU_GROUPS, SETTINGS_GROUPS, displayName, isOptionMenu } from '../data';
 import { setSession, startKindOf, useSession } from '../store/session';
 
 interface Group { key: string; label: string; note: string; danger: boolean; items: string[] }
@@ -12,6 +12,7 @@ interface Group { key: string; label: string; note: string; danger: boolean; ite
 function allGroups(): Group[] {
   return [
     ...MENU_GROUPS.map((g) => ({ key: g.key, label: g.label, note: '', danger: false, items: g.items })),
+    { key: 'audit', label: '調査・チェック', note: 'ホーム（ダッシュボード）から開きます', danger: false, items: HOME_CHECKS },
     ...SETTINGS_GROUPS.filter((g) => g.key !== 'web').map((g) => ({ key: 's-' + g.key, label: '各種設定 › ' + g.label, note: g.note ?? '', danger: !!g.danger, items: g.items })),
   ];
 }
