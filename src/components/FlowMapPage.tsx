@@ -126,6 +126,7 @@ const NODES: Node[] = [
   N('s-web', '部門／タグ／他社ソフトデータの移行', 'page', 'settings', { open: '部門', note: 'Web版の追加案（要否確認中）' }),
   // ユーザー・共通
   N('usersettings', 'ユーザー設定', 'page', 'user', { open: 'ユーザー設定' }),
+  N('pwmail', 'メールアドレスでの確認', 'dialog', 'user', { open: 'ユーザー設定', note: 'パスワード変更時の確認コード' }),
   N('members', 'メンバーの追加、管理', 'page', 'user', { open: 'メンバーの追加、管理' }),
   N('version', 'バージョン情報／ライセンス', 'dialog', 'user', { open: 'ホーム' }),
   N('terms', '利用規約', 'page', 'user', { url: '?page=terms' }),
@@ -138,7 +139,7 @@ const E = (from: string, to: string, label?: string, weak = false): Edge => ({ f
 const EDGES: Edge[] = [
   E('login', 'pwreset', 'お忘れですか', true), E('login', 'division', 'ログイン'), E('division', 'merge', '合算追加', true), E('division', 'divinfo', '部門情報の変更', true),
   E('division', 'home', 'OK（初期画面：ホーム）'), E('login', 'home', 'ログイン（区分選択を1か月表示しない設定のとき）', true), E('division', 'e-voucher', 'OK（初期画面：伝票入力）', true),
-  E('home', 'finder', '機能から探す'), E('home', 'notices', '一覧', true), E('home', 'favedit', '編集', true), E('home', 'support', 'FAQ すべて見る', true), E('home', 'e-voucher', '伝票入力をはじめる'),
+  E('home', 'finder', '機能から探す'), E('home', 'notices', '一覧', true), E('home', 'favedit', '編集', true), E('home', 'support', 'FAQ すべて見る', true), E('home', 'e-voucher', '伝票入力をはじめる'), E('usersettings', 'pwmail', 'パスワードを変更', true),
   E('home', 'count', '調査・チェック'), E('home', 'daily', '調査・チェック'), E('home', 'auditm', '調査・チェック'), E('home', 'balcheck', '残高照合へ', true), E('widepanel', 'balcheck', '残高照合の画面を開く', true),
   E('finder', 'trial', '機能を選ぶ', true),
   E('e-voucher', 'e-single', '形式切替'), E('e-single', 'e-transfer', '形式切替'), E('e-transfer', 'e-tsingle', '形式切替'),

@@ -1,13 +1,12 @@
 // ユーザー設定：プロフィール／パスワード変更／通知／表示設定（一般的な構成）
+//   パスワードの変更は、登録済みメールアドレスに届く確認コードでの確認のみ（二段階認証は行わない）。
 
-import { useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent } from 'react';
 import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
-import { Notice, Steps } from './ui';
+import { Notice } from './ui';
 
-const AUTH_APPS = ['Google Authenticator', 'Microsoft Authenticator', 'Authy', 'その他（TOTP対応アプリ）'];
-const MANUAL_KEY = 'JBSW Y3DP EHPK 3PXP K7ZQ 4MUT';
 /** IME 変換確定の Enter を無視する */
 const onEnter = (fn: () => void) => (e: KeyboardEvent) => {
   if (e.key !== 'Enter') return;
@@ -15,28 +14,6 @@ const onEnter = (fn: () => void) => (e: KeyboardEvent) => {
   e.preventDefault();
   fn();
 };
-/** QRコード風のダミー（決定的な擬似乱数で 25×25 のマス目を描く。本番では TOTP の otpauth:// URI を符号化） */
-function FakeQr({ seed, size = 168 }: { seed: string; size?: number }) {
-  const cells = useMemo(() => {
-    const n = 25;
-    let h = 2166136261;
-    for (const ch of seed) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
-    const rnd = () => { h = (Math.imul(h, 1664525) + 1013904223) >>> 0; return h / 4294967296; };
-    const out: boolean[][] = [];
-    for (let y = 0; y < n; y++) { const row: boolean[] = []; for (let x = 0; x < n; x++) row.push(rnd() < 0.45); out.push(row); }
-    // 位置検出パターン（左上・右上・左下）
-    const finder = (ox: number, oy: number) => { for (let y = 0; y < 7; y++) for (let x = 0; x < 7; x++) { const edge = x === 0 || y === 0 || x === 6 || y === 6; const core = x >= 2 && x <= 4 && y >= 2 && y <= 4; out[oy + y][ox + x] = edge || core; } for (let i = -1; i <= 7; i++) { const set = (x: number, y: number) => { if (x >= 0 && y >= 0 && x < n && y < n && (x < ox || x > ox + 6 || y < oy || y > oy + 6)) out[y][x] = false; }; set(ox + i, oy - 1); set(ox + i, oy + 7); set(ox - 1, oy + i); set(ox + 7, oy + i); } };
-    finder(0, 0); finder(n - 7, 0); finder(0, n - 7);
-    return out;
-  }, [seed]);
-  const n = cells.length;
-  const c = size / (n + 2);
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label="認証アプリ用QRコード（サンプル）" style={{ background: '#fff', borderRadius: 8, border: '1px solid #e2e8ee' }}>
-      {cells.map((row, y) => row.map((on, x) => (on ? <rect key={`${x}-${y}`} x={(x + 1) * c} y={(y + 1) * c} width={c + 0.2} height={c + 0.2} fill="#22303c" /> : null)))}
-    </svg>
-  );
-}
 
 interface Props {
   variant: 'form' | 'sheet';
@@ -60,19 +37,9 @@ export function UserSettingsPage({ variant, accent }: Props) {
     rd.onload = () => { setAvatar(String(rd.result)); toast.show('プロフィール画像を変更しました'); };
     rd.readAsDataURL(f);
   };
-  // 二段階認証（認証アプリ）設定ウィザード
-  const [twoFa, setTwoFa] = useState(false);
-  const [tfaOpen, setTfaOpen] = useState(false);
-  const [tfaStep, setTfaStep] = useState(0);
-  const [tfaApp, setTfaApp] = useState(AUTH_APPS[0]);
-  const [tfaCode, setTfaCode] = useState('');
-  const [tfaOff, setTfaOff] = useState(false);
-  const openTfa = () => { setTfaStep(0); setTfaCode(''); setTfaOpen(true); };
-  const enableTfa = () => {
-    if (tfaCode.length !== 6) return toast.show('認証アプリに表示された6桁のコードを入力してください');
-    setTwoFa(true); setTfaOpen(false);
-    toast.show('二段階認証を有効にしました。次回ログインからコード入力が必要になります');
-  };
+  // パスワード変更の確認：登録済みのメールアドレスに届く確認コードを入力する（二段階認証は行わない）
+  const [mailOpen, setMailOpen] = useState(false);
+  const [mailCode, setMailCode] = useState('');
   const isSheet = variant === 'sheet';
   const card: CSSProperties = { background: '#fff', border: '1px solid #dde4ea', borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'hidden' };
   const h2: CSSProperties = { padding: '14px 18px', borderBottom: '1px solid #eef2f5', fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 15 };
@@ -91,8 +58,13 @@ export function UserSettingsPage({ variant, accent }: Props) {
     if (!pw.cur || !pw.next) return toast.show('現在のパスワードと新しいパスワードを入力してください');
     if (pw.next.length < 8) return toast.show('新しいパスワードは8文字以上にしてください');
     if (pw.next !== pw.confirm) return toast.show('新しいパスワード（確認）が一致しません');
+    setMailCode(''); setMailOpen(true);
+  };
+  const confirmPw = () => {
+    if (mailCode.length !== 6) return toast.show('メールに記載された6桁の確認コードを入力してください');
+    setMailOpen(false); setMailCode('');
     setPw({ cur: '', next: '', confirm: '' });
-    toast.show('パスワードを変更しました（プロトタイプ）');
+    toast.show('パスワードを変更しました');
   };
 
   return (
@@ -141,15 +113,7 @@ export function UserSettingsPage({ variant, accent }: Props) {
               <div><span style={label}>新しいパスワード（8文字以上・英数字混在）</span><input type="password" className="field-input ring" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} autoComplete="new-password" style={input} /></div>
               <div><span style={label}>新しいパスワード（確認）</span><input type="password" className="field-input ring" value={pw.confirm} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} autoComplete="new-password" style={input} /></div>
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" className="submit-btn" onClick={savePw} style={btn(true)}>パスワードを変更</button></div>
-              <div style={{ borderTop: '1px solid #eef2f5', paddingTop: 12, fontSize: 12.5, color: '#5b6773', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ flex: 1 }}>二段階認証（認証アプリ）{twoFa && <span style={{ display: 'block', fontSize: 11, color: '#9aa5b1' }}>{tfaApp}</span>}</span>
-                {twoFa
-                  ? <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: '#eaf5ef', color: '#1f7a52' }}>有効</span>
-                  : <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: '#f1f4f6', color: '#7a8794' }}>未設定</span>}
-                {twoFa
-                  ? <button type="button" className="btn-outline" onClick={() => setTfaOff(true)} style={{ ...btn(), color: '#c0392b' }}>解除</button>
-                  : <button type="button" className="btn-outline" onClick={openTfa} style={btn()}>設定する</button>}
-              </div>
+              <div style={{ borderTop: '1px solid #eef2f5', paddingTop: 12, fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>変更するときは、登録済みのメールアドレス（{profile.email}）に確認コードをお送りします。メールでの確認が済むと、新しいパスワードに切り替わります。</div>
             </div>
           </section>
 
@@ -178,54 +142,18 @@ export function UserSettingsPage({ variant, accent }: Props) {
         </div>
       </div>
 
-      {/* 二段階認証 設定ウィザード */}
-      <Modal open={tfaOpen} onClose={() => setTfaOpen(false)} width={560} title="二段階認証の設定" strict>
-        <Steps steps={['認証アプリ', 'QRコード', 'コード確認']} current={tfaStep} accent={accent} />
+      {/* パスワード変更：メールアドレスでの確認 */}
+      <Modal open={mailOpen} onClose={() => setMailOpen(false)} width={480} title="メールアドレスでの確認" strict>
         <div style={{ padding: '18px 22px 20px' }}>
-          {tfaStep === 0 && (
-            <>
-              <div style={{ fontSize: 13.5, marginBottom: 10 }}>スマートフォンにインストールした認証アプリを選択してください。</div>
-              {AUTH_APPS.map((a) => (
-                <label key={a} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '7px 4px', fontSize: 13.5, cursor: 'pointer' }}><input type="radio" name="tfa-app" checked={tfaApp === a} onChange={() => setTfaApp(a)} />{a}</label>
-              ))}
-              <div style={{ marginTop: 10 }}><Notice>認証アプリはログイン時に30秒ごとに変わる6桁のコードを表示します。パスワードに加えてこのコードの入力が必要になり、第三者による不正ログインを防ぎます。</Notice></div>
-            </>
-          )}
-          {tfaStep === 1 && (
-            <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-              <FakeQr seed={profile.email + tfaApp} />
-              <div style={{ flex: 1, minWidth: 220, fontSize: 13, lineHeight: 1.8 }}>
-                <div><b>{tfaApp}</b> でこのQRコードを読み取ってください。</div>
-                <div style={{ fontSize: 12, color: '#7a8794', marginTop: 8 }}>読み取れない場合は次のキーを手動で入力してください。</div>
-                <div style={{ marginTop: 4, padding: '8px 10px', background: '#f6f8fa', borderRadius: 8, fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 14, letterSpacing: '.06em', fontWeight: 700 }}>{MANUAL_KEY}</div>
-                <div style={{ fontSize: 11, color: '#9aa5b1', marginTop: 6 }}>アカウント名：{profile.email}　種類：時間ベース（TOTP）</div>
-              </div>
-            </div>
-          )}
-          {tfaStep === 2 && (
-            <>
-              <div style={{ fontSize: 13.5, marginBottom: 10 }}>認証アプリに表示されている6桁のコードを入力してください。</div>
-              <input className="field-input ring" value={tfaCode} onChange={(e) => setTfaCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))} onKeyDown={onEnter(enableTfa)} inputMode="numeric" autoFocus placeholder="000000" style={{ ...input, width: 200, textAlign: 'center', fontSize: 24, letterSpacing: '.3em', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }} />
-              <div style={{ fontSize: 11, color: '#9aa5b1', marginTop: 8 }}>プロトタイプでは6桁の数字であれば有効化できます。本番ではサーバー側でコードを検証します。</div>
-            </>
-          )}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
-            {tfaStep > 0 && <button type="button" onClick={() => setTfaStep(tfaStep - 1)} style={{ ...btn(), marginRight: 'auto' }}>戻る</button>}
-            <button type="button" onClick={() => setTfaOpen(false)} style={btn()}>キャンセル</button>
-            {tfaStep < 2
-              ? <button type="button" className="submit-btn" onClick={() => setTfaStep(tfaStep + 1)} style={btn(true)}>次へ</button>
-              : <button type="button" className="submit-btn" onClick={enableTfa} disabled={tfaCode.length !== 6} style={{ ...btn(true), opacity: tfaCode.length === 6 ? 1 : 0.5 }}>有効化</button>}
+          <Notice tone="ok">確認メールを送信しました。<b>{profile.email}</b> に届いた6桁の確認コードを入力してください。</Notice>
+          <div style={{ marginTop: 14 }}>
+            <span style={label}>確認コード（6桁）</span>
+            <input data-pw-mail-code className="field-input ring" value={mailCode} onChange={(e) => setMailCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))} onKeyDown={onEnter(confirmPw)} inputMode="numeric" autoFocus placeholder="000000" style={{ ...input, width: 200, textAlign: 'center', fontSize: 24, letterSpacing: '.3em', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }} />
           </div>
-        </div>
-      </Modal>
-
-      {/* 二段階認証 解除の確認 */}
-      <Modal open={tfaOff} onClose={() => setTfaOff(false)} width={420} title="二段階認証の解除" strict>
-        <div style={{ padding: '18px 22px 20px', fontSize: 13.5, lineHeight: 1.7 }}>
-          二段階認証を解除すると、ログイン時のコード入力が不要になり安全性が下がります。解除してもよろしいですか？
+          <button type="button" onClick={() => toast.show('確認コードを再送しました')} style={{ marginTop: 10, border: 'none', background: 'transparent', color: accent, fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', padding: 0 }}>メールが届かないときは、確認コードを再送する</button>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
-            <button type="button" onClick={() => setTfaOff(false)} style={btn()}>キャンセル</button>
-            <button type="button" onClick={() => { setTwoFa(false); setTfaOff(false); toast.show('二段階認証を解除しました'); }} style={{ ...btn(true), background: '#c0392b' }}>解除する</button>
+            <button type="button" onClick={() => setMailOpen(false)} style={btn()}>キャンセル</button>
+            <button type="button" className="submit-btn" onClick={confirmPw} disabled={mailCode.length !== 6} style={{ ...btn(true), opacity: mailCode.length === 6 ? 1 : 0.5 }}>パスワードを変更</button>
           </div>
         </div>
       </Modal>
