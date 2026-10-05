@@ -115,6 +115,8 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
   const multiInternal = !single && used.length > 1 && (hasInternalAcc || internal);
   const first = used[0] ?? rows[cur];
   const partner = !multiInternal && (internal || hasInternalAcc) && needsPartner({ kari: first?.kari ?? '', kashi: first?.kashi ?? '', internal });
+  /** 内部取引スイッチの表示（オンのとき相手区分を入力できる） */
+  const internalOn = partner || internal || hasInternalAcc;
 
   /** 行ごとの判定（借方・貸方の両方が入っている行だけ） */
   const rowIssues: Issue[][] = rows.map((r) => {
@@ -224,7 +226,8 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
       focusId(fid(n, 'ka'));
       toast.show(`${cur + 1}行目を削除しました`);
     },
-    internal: partner || internal,
+    internal: internalOn,
+    internalLocked: hasInternalAcc,
     onInternal: () => {
       if (internal) { setInternal(false); return; }
       setInternal(true);
@@ -390,14 +393,19 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                     </PaperBox>
                   </div>
                 )}
-                {partner && (
-                  <div className="ef-field" style={{ display: 'flex', width: 300 }}>
-                    <PaperBox label={<span style={{ color: '#6b3fb5' }}>内部取引相手区分</span>} grow>
-                      <ComboField id={`${pre}-aite`} kind="service" value={aite} onChange={setAite} onCommit={() => focusId(fid(rows.findIndex(isUsed) >= 0 ? rows.findIndex(isUsed) : 0, 't'))} placeholder="相手先の区分を指定" disabled={ro} padY={6} invalid={fieldState(rowIssues.flat(), 'aite')} />
-                    </PaperBox>
-                  </div>
-                )}
-                <div style={{ marginLeft: 'auto', alignSelf: 'center', fontSize: 11.5, color: fundMode === '自動資金' ? '#7a8794' : '#6b3fb5', fontWeight: fundMode === '自動資金' ? 500 : 700, whiteSpace: 'nowrap' }}>資金モード：{fundMode}</div>
+                {/* 内部取引相手区分（最初から表示。スイッチがオンのときだけ入力できる） */}
+                <div className="ef-field" data-internal-area data-on={internalOn ? '1' : '0'} style={{ display: 'flex', width: 430 }}>
+                  <PaperBox label={<span style={{ color: internalOn ? '#6b3fb5' : '#8895a3' }}>内部取引相手区分</span>} grow muted={!internalOn}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', minWidth: 0 }}>
+                      {tools.internalSwitch}
+                      <div style={{ flex: 1, minWidth: 0, opacity: internalOn ? 1 : 0.5 }}>
+                        <ComboField id={`${pre}-aite`} kind="service" value={aite} onChange={setAite} onCommit={() => focusId(fid(rows.findIndex(isUsed) >= 0 ? rows.findIndex(isUsed) : 0, 't'))} placeholder="相手先の区分を指定" disabled={ro || !internalOn} padY={6} invalid={internalOn ? fieldState(rowIssues.flat(), 'aite') : undefined} />
+                      </div>
+                    </div>
+                  </PaperBox>
+                </div>
+                {/* 資金モードの切替（自動資金⇄強制資金） */}
+                <div style={{ marginLeft: 'auto', alignSelf: 'center' }}>{tools.fundSwitch}</div>
               </div>
 
               {/* 2段目：明細（金額／率／予算残 ｜ 借方科目 ｜ 貸方科目 ｜ 金額／率／予算残） */}

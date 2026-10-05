@@ -48,18 +48,31 @@ export function InputSettingsModal({ open, onClose, accent }: { open: boolean; o
 }
 
 /* ---------------- 取引区分バッジ ---------------- */
-export function TorihikiBadge({ kari, kashi, force, onForce, blocked, fundMode }: { kari: string; kashi: string; force: boolean; /** 指定したときだけ「強制資金」の切替を表示（資金モードを別の場所で切り替える画面では省略） */ onForce?: (v: boolean) => void; /** 登録できない仕訳（赤で表示） */ blocked?: boolean; fundMode?: string }) {
+export function TorihikiBadge({ kari, kashi, force, blocked, right }: { kari: string; kashi: string; force: boolean; /** 登録できない仕訳（赤で表示） */ blocked?: boolean; /** バッジの右側に置くもの（資金モードの切替） */ right?: ReactNode }) {
   const j = judgeTorihiki(kari, kashi, force);
   const c = blocked ? { bg: '#fdeee9', fg: '#c0392b', note: '登録できない仕訳です。科目の下の表示を確認してください' } : j.kind === '要確認' ? { bg: '#fff6dd', fg: '#7a5600', note: '確認のうえ登録できます' } : TORIHIKI_COLOR[j.kind];
   const text = blocked ? '登録できません' : j.kind === '要確認' ? `確認が必要${j.reason ? `（${j.reason}）` : ''}` : j.kind;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
       <span title={c.note} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, background: c.bg, color: c.fg, fontSize: 12.5, fontWeight: 800, border: '1px solid ' + c.fg + '33', whiteSpace: 'nowrap' }}>
         <span style={{ width: 8, height: 8, borderRadius: '50%', background: c.fg }} />{text}
       </span>
-      {fundMode && <span style={{ fontSize: 11, color: fundMode === '自動資金' ? '#7a8794' : '#6b3fb5', fontWeight: fundMode === '自動資金' ? 500 : 700 }}>資金モード：{fundMode}</span>}
-      {onForce && <label style={{ fontSize: 11, color: '#7a8794', display: 'flex', gap: 5, alignItems: 'center', cursor: 'pointer' }}><input type="checkbox" checked={force} onChange={(e) => onForce(e.target.checked)} />強制資金</label>}
+      {right}
     </div>
+  );
+}
+
+/* ---------------- 内部取引スイッチ（相手区分の入力欄の中に置く） ---------------- */
+export function InternalSwitch({ on, onToggle, disabled, locked, title }: { on: boolean; onToggle: () => void; disabled?: boolean; /** 内部取引科目を使っているため自動でオン（切り替え不可） */ locked?: boolean; title?: string }) {
+  const off = disabled || locked;
+  return (
+    <button type="button" role="switch" aria-checked={on} data-menu="内部取引" tabIndex={-1} disabled={off} onClick={onToggle} title={title ?? (locked ? '内部取引科目を使っているため、自動でオンになっています' : on ? '内部取引をオフにします（相手区分の入力欄を閉じます）' : '内部取引としてあつかい、相手区分を入力できるようにします')} style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 7, padding: '3px 4px', border: 'none', background: 'transparent', fontFamily: 'inherit', cursor: off ? 'not-allowed' : 'pointer', opacity: disabled ? 0.55 : 1 }}>
+      <span style={{ fontSize: 12, fontWeight: 700, color: on ? '#6b3fb5' : '#5b6773', whiteSpace: 'nowrap' }}>内部取引</span>
+      <span aria-hidden style={{ position: 'relative', width: 38, height: 22, borderRadius: 11, background: on ? '#6b3fb5' : '#c3ccd4', transition: 'background .15s', flex: 'none' }}>
+        <span style={{ position: 'absolute', top: 2, left: 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,.25)', transform: on ? 'translateX(16px)' : 'translateX(0)', transition: 'transform .15s' }} />
+      </span>
+      <span style={{ fontSize: 11, fontWeight: 700, color: on ? '#6b3fb5' : '#8895a3', minWidth: 22, textAlign: 'left' }}>{on ? 'オン' : 'オフ'}</span>
+    </button>
   );
 }
 
@@ -348,6 +361,8 @@ export interface EntryToolsOptions {
   onRowDelete?: () => void;
   internal: boolean;
   onInternal: () => void;
+  /** 内部取引科目を使っているため、内部取引スイッチを自動でオンに固定する */
+  internalLocked?: boolean;
   onLoadTemplate: (t: JournalTemplate, mode: '定型' | '連続') => void;
   /** 自動按分などで登録した仕訳の id（一覧の強調表示用） */
   onRegistered?: (ids: number[]) => void;
@@ -408,7 +423,7 @@ export function useEntryTools(o: EntryToolsOptions) {
     { key: 'R', label: '連続定型', group: G3, run: () => setDlg('連続'), disabled: ro },
     { key: 'A', label: '自動按分', group: G3, run: () => setDlg('按分'), disabled: ro },
     { key: 'G', label: '仕訳登録（入力中の伝票を定型として登録）', group: G3, run: saveAsTemplate, disabled: ro },
-    { key: 'U', label: '内部取引（相手区分の入力欄を開く）', group: G3, run: o.onInternal, disabled: ro },
+    { key: 'U', label: '内部取引のオン／オフ（相手区分の入力欄を有効にする）', group: G3, run: o.onInternal, disabled: ro },
     { key: 'M', label: '資金モードの切替（自動資金⇄強制資金）', group: G3, run: cycleFund, disabled: ro },
     { key: 'B', label: '科目別残高', group: G4, run: () => setDlg('科目別残') },
     { key: 'Z', label: '現預金残高', group: G4, run: () => setDlg('現預金残') },
@@ -436,6 +451,17 @@ export function useEntryTools(o: EntryToolsOptions) {
   const submitButton: ReactNode = <ActButton id={o.submitId} label={`${name}を登録`} k="S" tone="primary" accent={o.accent} disabled={ro} title={why('入力中の伝票を登録します')} onClick={o.onSubmit} />;
   /** 定型仕訳ボタン（各形式の見出し行の右端に置く） */
   const templateButton: ReactNode = <ActButton label="定型仕訳" k="T" accent={o.accent} disabled={ro} title={why('登録済みの定型仕訳を、入力中の伝票に呼び出します')} onClick={() => setDlg('定型')} />;
+  /** 資金モードの切替（自動資金⇄強制資金）。取引区分の右、または伝票の1段目の右端に置く */
+  const fundSwitch: ReactNode = (
+    <span role="radiogroup" aria-label="資金モード" data-fund-switch title={ro ? reason : FUND_MODE_NOTE[o.fundMode]} style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 2, padding: 2, border: '1px solid #cfd8e0', borderRadius: 8, background: '#eef2f5' }}>
+      {FUND_MODES.map((m) => {
+        const on = m === o.fundMode;
+        return <button key={m} type="button" role="radio" aria-checked={on} tabIndex={-1} className="ef-act" data-menu={'資金モード:' + m} disabled={ro} onClick={() => o.onFundMode(m)} title={ro ? reason : FUND_MODE_NOTE[m]} style={{ padding: '4px 9px', borderRadius: 6, border: 'none', background: on ? (m === '自動資金' ? o.accent : '#6b3fb5') : 'transparent', color: on ? '#fff' : '#48565f', fontSize: 12, fontWeight: on ? 800 : 600, fontFamily: 'inherit', cursor: ro ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>{m}</button>;
+      })}
+    </span>
+  );
+  /** 内部取引スイッチ（相手区分の入力欄の中に置く） */
+  const internalSwitch: ReactNode = <InternalSwitch on={o.internal} onToggle={o.onInternal} disabled={ro} locked={o.internalLocked} title={ro ? reason : undefined} />;
   const actionBar: ReactNode = (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 8 }}>
       <ActionGroup caption="入力補助">
@@ -443,14 +469,6 @@ export function useEntryTools(o: EntryToolsOptions) {
         <ActButton label="自動按分" k="A" accent={o.accent} disabled={ro} title={why('按分テンプレートで、複数の区分・科目に金額を配分します')} onClick={() => setDlg('按分')} />
         <ActButton label="仕訳登録" k="G" accent={o.accent} disabled={ro} title={why('入力中の伝票を、定型仕訳として登録します')} onClick={saveAsTemplate} />
         <ActButton label="カレンダー" k="K" accent={o.accent} disabled={ro} title={why('カレンダーから日付を選びます')} onClick={() => setDlg('カレンダー')} />
-        <ActButton label="候補一覧" k="J" accent={o.accent} disabled={ro} title={why('入力中の欄（科目・摘要・業者・区分）の候補一覧を開きます。入力欄で文字を打っても候補が出ます')} onClick={candidates} />
-        <ActButton label="内部取引" k="U" accent={o.accent} disabled={ro} active={o.internal} title={why('内部取引として指定し、相手区分の入力欄を開きます')} onClick={o.onInternal} />
-        <span role="radiogroup" aria-label="資金モード" title={ro ? reason : FUND_MODE_NOTE[o.fundMode]} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, padding: 2, border: '1px solid #cfd8e0', borderRadius: 8, background: '#eef2f5' }}>
-          {FUND_MODES.map((m) => {
-            const on = m === o.fundMode;
-            return <button key={m} type="button" role="radio" aria-checked={on} className="ef-act" data-menu={'資金モード:' + m} disabled={ro} onClick={() => o.onFundMode(m)} title={ro ? reason : FUND_MODE_NOTE[m]} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: on ? (m === '自動資金' ? o.accent : '#6b3fb5') : 'transparent', color: on ? '#fff' : '#48565f', fontSize: 12, fontWeight: on ? 800 : 600, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>{m}</button>;
-          })}
-        </span>
       </ActionGroup>
       <ActionGroup caption="参照">
         <ActButton label="科目別残高" k="B" accent={o.accent} onClick={() => setDlg('科目別残')} />
@@ -501,5 +519,5 @@ export function useEntryTools(o: EntryToolsOptions) {
     </>
   );
 
-  return { topBar, banner, actionBar, submitButton, templateButton, dialogs, editable, reason, openEdit: (v: Voucher) => setEdit(v), openDelete: (rows: Voucher[]) => setDel(rows) };
+  return { topBar, banner, actionBar, submitButton, templateButton, fundSwitch, internalSwitch, dialogs, editable, reason, openEdit: (v: Voucher) => setEdit(v), openDelete: (rows: Voucher[]) => setDel(rows) };
 }

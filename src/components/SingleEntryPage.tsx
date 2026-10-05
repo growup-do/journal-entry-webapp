@@ -12,6 +12,7 @@ import { BudgetGraphModal, BudgetHintLive, TorihikiBadge, useEntryTools, type En
 import { ComboField, ConfirmModal, EntryStyles, FlagButtons, FundAccountLine, IssueList, PAPER, PaperBox, PaperStyles, PaperTitle, PaperToggle, fieldState, focusId, hasError, hasWarn, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor } from './EntryCommon';
 import { useWidePanel } from './WidePanel';
 import { yearOfMonth } from './SingleEntryTools';
+import { judgeTorihiki } from '../lib/accounts';
 import { makeSingleSeed } from '../data';
 import { useEntryForm } from '../hooks/useEntryForm';
 import { applyMonth } from '../lib/format';
@@ -183,6 +184,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
     onSubmit: () => doSubmit(),
     onCancel: () => { clearEntry(); focusId('se-kari'); },
     internal: partner,
+    internalLocked: needsPartner({ kari: f.kariKamoku, kashi: f.kashiKamoku, internal: false }),
     onInternal: () => {
       if (internal) { setInternal(false); return; }
       setInternal(true);
@@ -397,13 +399,17 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
                 <ComboField id="se-service" kind="service" value={f.service} onChange={(x) => v.setField('service', x)} onCommit={() => focusId('se-month')} placeholder="コード・名称で指定" dropUp disabled={ro} padY={6} />
               </PaperBox>
             </div>
-            {partner && (
-              <div className="ef-field" style={{ display: 'flex', width: 280 }}>
-                <PaperBox label={<span style={{ color: '#6b3fb5' }}>内部取引相手区分</span>} grow>
-                  <ComboField id="se-aite" kind="service" value={aite} onChange={setAite} onCommit={() => focusId('se-tekiyo')} placeholder="相手先の区分を指定" dropUp disabled={ro} invalid={fieldState(issues, 'aite')} padY={6} />
-                </PaperBox>
-              </div>
-            )}
+            {/* 内部取引相手区分（最初から表示。スイッチがオンのときだけ入力できる） */}
+            <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} style={{ display: 'flex', width: 430 }}>
+              <PaperBox label={<span style={{ color: partner ? '#6b3fb5' : '#8895a3' }}>内部取引相手区分</span>} grow muted={!partner}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', minWidth: 0 }}>
+                  {tools.internalSwitch}
+                  <div style={{ flex: 1, minWidth: 0, opacity: partner ? 1 : 0.5 }}>
+                    <ComboField id="se-aite" kind="service" value={aite} onChange={setAite} onCommit={() => focusId('se-tekiyo')} placeholder="相手先の区分を指定" dropUp disabled={ro || !partner} invalid={partner ? fieldState(issues, 'aite') : undefined} padY={6} />
+                  </div>
+                </div>
+              </PaperBox>
+            </div>
             {queue && (
               <div style={{ alignSelf: 'center', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 8, background: '#eef4fb', border: '1px solid #c9dbf0', color: '#2c5f9e', fontSize: 12.5, fontWeight: 700 }}>
                 連続定型「{queue.name}」 {queue.i + 1}／{queue.lines.length} 枚目
@@ -411,7 +417,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
               </div>
             )}
             <div style={{ marginLeft: 'auto', alignSelf: 'center' }}>
-              <TorihikiBadge kari={f.kariKamoku} kashi={f.kashiKamoku} force={fundMode === '強制資金'} blocked={blocked} fundMode={fundMode} />
+              <TorihikiBadge kari={f.kariKamoku} kashi={f.kashiKamoku} force={fundMode === '強制資金'} blocked={blocked} right={tools.fundSwitch} />
             </div>
           </div>
           <div className="pp-table" style={{ gridTemplateColumns: '1fr', borderWidth: 2 }}>
@@ -439,7 +445,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
                 <div className="pp-cell ef-field" style={valCell}>
                   <ComboField id="se-kashi" kind="account" value={f.kashiKamoku} onChange={(x) => v.setField('kashiKamoku', x)} onCommit={afterKashi} placeholder="コード・名称・フリガナ" dropUp listWidth={400} disabled={ro} invalid={fieldState(issues, 'kashi', 'pair')} />
                 </div>
-                <div className="pp-cell" style={{ ...valCell, fontSize: 11.5, color: fundMode === '自動資金' ? '#7a8794' : '#6b3fb5', fontWeight: fundMode === '自動資金' ? 500 : 700 }}>資金モード：{fundMode}</div>
+                <div className="pp-cell" data-torihiki-cell style={{ ...valCell, fontSize: 12, fontWeight: 700, color: blocked ? '#c0392b' : f.kariKamoku && f.kashiKamoku ? '#3d4a56' : '#b3bcc5' }}>{blocked ? '登録できません' : f.kariKamoku && f.kashiKamoku ? judgeTorihiki(f.kariKamoku, f.kashiKamoku, fundMode === '強制資金').kind : '－'}</div>
               </div>
               {/* 2段目 */}
               <div className="pp-row" style={{ gridTemplateColumns: PCOLS }}>

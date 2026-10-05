@@ -336,7 +336,8 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
     onRowAdd: rowAdd,
     onRowInsert: rowInsert,
     onRowDelete: rowDelete,
-    internal,
+    internal: partner,
+    internalLocked: needsPartner({ kari, kashi, internal: false }),
     onInternal: () => { const on = !internal; setInternal(on); if (on) focusId('fe-aite'); else if (!needsPartner({ kari, kashi, internal: false })) setAite(''); },
     onLoadTemplate: (t: JournalTemplate, mode) => {
       const groups = groupLines(t.lines);
@@ -409,7 +410,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 14, borderLeft: `1px solid ${PAPER.lineSoft}` }}>
                   <span style={{ fontSize: 11, color: '#8895a3' }}>取引区分（科目から自動判定）</span>
-                  <TorihikiBadge kari={kari} kashi={kashi} force={fundMode === '強制資金'} blocked={blocked} fundMode={fundMode} />
+                  <TorihikiBadge kari={kari} kashi={kashi} force={fundMode === '強制資金'} blocked={blocked} right={tools.fundSwitch} />
                 </div>
               </PaperTitle>
 
@@ -465,16 +466,15 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                 ))}
               </div>
 
-              {/* 内部取引相手区分（内部取引科目を使うとき・「内部取引」を指定したときだけ表示） */}
-              {partner && (
-                <div className="ef-field" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,320px) minmax(0,1fr)', gap: 14, alignItems: 'end', marginBottom: 12, padding: '10px 14px', border: '1px solid #e0d6f3', background: '#faf7ff', borderRadius: 12 }}>
-                  <div>
-                    <FieldLabel color="#6b3fb5">内部取引相手区分（必須）</FieldLabel>
-                    <ComboField id="fe-aite" kind="service" value={aite} onChange={setAite} onCommit={() => focusId('fe-tek-0')} disabled={!editable} invalid={fieldState(issues, 'aite')} placeholder="コード・区分名・フリガナ" />
-                  </div>
-                  <div style={{ fontSize: 11.5, color: '#6b5a8a', lineHeight: 1.7, paddingBottom: 4 }}>内部取引の相手先となる区分を指定します。入力中の区分（{sess.division}）とは別の区分を選んでください。</div>
+              {/* 内部取引相手区分（最初から表示。中の「内部取引」スイッチがオンのときだけ入力できる。オフのときはグレー） */}
+              <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0,320px) minmax(0,1fr)', gap: 16, alignItems: 'end', marginBottom: 12, padding: '10px 14px', border: '1px solid ' + (partner ? '#e0d6f3' : '#e2e8ee'), background: partner ? '#faf7ff' : '#f1f3f5', borderRadius: 12, transition: 'background .15s, border-color .15s' }}>
+                <div style={{ alignSelf: 'center' }}>{tools.internalSwitch}</div>
+                <div style={{ opacity: partner ? 1 : 0.5, transition: 'opacity .15s' }}>
+                  <FieldLabel color={partner ? '#6b3fb5' : '#8895a3'}>内部取引相手区分{partner ? '（必須）' : ''}</FieldLabel>
+                  <ComboField id="fe-aite" kind="service" value={aite} onChange={setAite} onCommit={() => focusId('fe-tek-0')} disabled={!editable || !partner} invalid={partner ? fieldState(issues, 'aite') : undefined} placeholder="コード・区分名・フリガナ" />
                 </div>
-              )}
+                <div style={{ fontSize: 11.5, color: partner ? '#6b5a8a' : '#8895a3', lineHeight: 1.7, paddingBottom: 4 }}>{partner ? <>内部取引の相手先となる区分を指定します。入力中の区分（{sess.division}）とは別の区分を選んでください。</> : '内部取引のときは、スイッチをオンにして相手区分を指定します。内部取引科目を選ぶと自動でオンになります。'}</div>
+              </div>
 
               {/* 登録できない仕訳（赤）／確認して登録できる警告（黄） */}
               {issues.length > 0 && (

@@ -784,11 +784,11 @@ export function PaperDate({ month, day, year = '8', label = '年月日' }: { mon
 }
 
 /** 用紙の中のラベル付き小さな枠（拠点区分・伝票No など） */
-export function PaperBox({ label, children, width, grow }: { label: ReactNode; children: ReactNode; width?: number | string; grow?: boolean }) {
+export function PaperBox({ label, children, width, grow, muted }: { label: ReactNode; children: ReactNode; width?: number | string; grow?: boolean; /** 入力できない状態（グレーで表示） */ muted?: boolean }) {
   return (
     <div className="pp-row" style={{ gridTemplateColumns: 'auto minmax(0,1fr)', border: `1px solid ${PAPER.line}`, display: 'inline-grid', width, flex: grow ? '1 1 auto' : 'none', minWidth: 0 }}>
       <div className="pp-lab">{label}</div>
-      <div className="pp-cell" style={{ padding: '2px 8px', minHeight: 38, fontSize: 13.5 }}>{children}</div>
+      <div className="pp-cell" style={{ padding: '2px 8px', minHeight: 38, fontSize: 13.5, background: muted ? '#eceff2' : undefined }}>{children}</div>
     </div>
   );
 }
