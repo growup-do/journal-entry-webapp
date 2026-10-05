@@ -11,7 +11,7 @@ import { DivisionPicker } from './DivisionPicker';
 import { FiscalYearBanner } from './FiscalYearPage';
 import { AttachedStatementModal, BudgetGraphModal, BudgetHintLive, EntryConfirmModal, SpecialAmountModal, TorihikiBadge, useEntryTools } from './EntryExtras';
 import { ComboField, EntryStyles, isIme, FieldLabel, FlagButtons, FundAccountLine, IssueList, PAPER, PaperBox, PaperDate, PaperFootItems, PaperStyles, PaperTitle, PaperToggle, fieldState, fmtNum, focusId, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, watchedStatement, type FundMode, type FusenColor } from './EntryCommon';
-import { WIDE_WIDTH, WidePanel, useWidePanel } from './WidePanel';
+import { WIDE_TAB_SPACE, WIDE_WIDTH, WidePanel, useWidePanel } from './WidePanel';
 import { ToastView, useToast } from './Toast';
 import { judgeTorihiki } from '../lib/accounts';
 import { addVoucher, getVouchers, updateVoucher, useVouchers } from '../store/journalStore';
@@ -369,7 +369,8 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
         style={{
           flex: 1,
           padding: 28,
-          paddingRight: panelOpen ? WIDE_WIDTH + 28 : 28,
+          // 右側は参照パネルの開閉タブと重ならないよう、タブの幅の分も空ける
+          paddingRight: (panelOpen ? WIDE_WIDTH : 0) + WIDE_TAB_SPACE,
           display: 'flex',
           gap: 24,
           alignItems: 'flex-start',
@@ -672,7 +673,7 @@ function EntryWithPanel({ page, topOffset, onNavigate, children }: { page: strin
   const panelOpen = !wide.collapsed && !wide.narrow;
   return (
     <>
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', paddingRight: panelOpen ? WIDE_WIDTH : 0, transition: 'padding-right .28s ease' }}>{children}</div>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', paddingRight: (panelOpen ? WIDE_WIDTH : 0) + (WIDE_TAB_SPACE - 28), transition: 'padding-right .28s ease' }}>{children}</div>
       <WidePanel accent={GREEN} layout="side" state={wide} top={topOffset} returnTo={page} onNavigate={onNavigate} />
     </>
   );

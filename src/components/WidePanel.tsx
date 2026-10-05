@@ -24,6 +24,8 @@ const WIDE_TABS = ['日記帳', '元帳１', '元帳２', '残高照合'] as con
 /** この幅より狭いときは、横のパネルを折りたたんで重ねて表示する */
 export const WIDE_NARROW = 1240;
 export const WIDE_WIDTH = 440;
+/** 開閉タブ（幅32px）の分として、本文の右側に空ける余白。本文の右余白の合計がこの値になるようにする（タブ32px＋すき間16px） */
+export const WIDE_TAB_SPACE = 48;
 
 const read = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
 const write = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* ignore */ } };
