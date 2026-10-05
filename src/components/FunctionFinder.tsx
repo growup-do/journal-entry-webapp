@@ -21,9 +21,9 @@ const ALIASES: Record<string, string[]> = {
   伝票入力: ['仕訳伝票', '伝票', '仕訳'], 単一入力: ['単一式', '単一'], 振替入力: ['振替伝票', '振替'], 振替単一: ['振替単一式'],
   仕訳一覧: ['日記帳', '仕訳日記帳', '問合'], 勘定元帳: ['総勘定元帳', '元帳'], 資金元帳: ['元帳'], 業者元帳: ['業者別支払一覧', '元帳'],
   月次試算: ['試算表', '試算'], 月次決算: ['決算書', '決算'], 予算対比: ['予算対比表', '予算'], 日次調査: ['同額', '不一致', '検索'], 決算調査: ['決算チェック', 'チェック'],
-  充実残額: ['社会福祉充実残額', 'シミュレーター'], 印刷センター: ['印刷', '帳票'], 一括印刷: ['印刷'], 共通の印刷設定: ['印刷設定'],
+  充実残額: ['社会福祉充実残額', 'シミュレーター'], 印刷センター: ['印刷', '帳票', '一括印刷', 'まとめて印刷'], 共通の印刷設定: ['印刷設定'],
   事業者: ['法人', '区分', '部門情報'], 勘定科目: ['科目', '科目設定', '科目マスター', '資金科目'], 取引先: ['業者'], 摘要辞書: ['摘要'], 開始残高: ['残高', '繰越'], 予算: ['予算額'],
-  決算附属明細書: ['附属明細書', '明細書'], 環境設定: ['動作環境', '金額書式'], 年度の切替: ['年度', '切替'], 年度更新: ['年度', '更新', '繰越'], 整合性チェック: ['伝票チェック', '科目チェック'],
+  決算附属明細書: ['附属明細書', '明細書'], 環境設定: ['動作環境', '金額書式'], 年度更新: ['年度', '更新', '繰越'], 整合性チェック: ['伝票チェック', '科目チェック'],
   データのバックアップ: ['バックアップ', 'ピックアップ', '復元'], 小口現金: ['出納帳', '小口'], 預金出納: ['出納帳', '預金'], 収入支出: ['伺い書', '調書'],
 };
 export const matchesFunction = (key: string, q: string) => {
@@ -49,7 +49,7 @@ export function FunctionFinderPage({ onNavigate, initialQuery = '' }: { accent: 
               <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 21 }}>機能から探す</div>
               <div style={{ color: '#7a8794', fontSize: 12, marginTop: 4 }}>すべての機能を分類ごとに並べています。画面名・旧メニュー名・キーワードで絞り込めます。</div>
             </div>
-            <input autoFocus className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="例：試算表、年度の切替、科目、元帳" autoComplete="off" style={{ marginLeft: 'auto', width: 320, padding: '9px 12px', border: '1px solid #cfd8e0', borderRadius: 9, fontSize: 13.5, fontFamily: 'inherit', outline: 'none' }} />
+            <input autoFocus className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="例：試算表、年度更新、科目、元帳" autoComplete="off" style={{ marginLeft: 'auto', width: 320, padding: '9px 12px', border: '1px solid #cfd8e0', borderRadius: 9, fontSize: 13.5, fontFamily: 'inherit', outline: 'none' }} />
             <span style={{ fontSize: 12, color: '#7a8794' }}><b style={{ color: '#22303c' }}>{total}</b> 件</span>
           </div>
           <div style={{ padding: '14px 18px 6px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 12 }}>
@@ -80,7 +80,7 @@ export function FunctionFinderPage({ onNavigate, initialQuery = '' }: { accent: 
 
 /* ---------------- ホームの検索窓 ---------------- */
 /** ホームの検索窓に出す入力例（押すとその言葉で検索する） */
-const FINDER_EXAMPLES = ['試算表', '元帳', '科目', '年度の切替', 'バックアップ', '印刷'];
+const FINDER_EXAMPLES = ['試算表', '元帳', '科目', '年度更新', 'バックアップ', '印刷'];
 export function FinderSearch({ accent, onNavigate, full }: { accent: string; onNavigate: (label: string) => void; /** 置き場所の横幅いっぱいに広げる（ホーム） */ full?: boolean }) {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
@@ -175,7 +175,7 @@ export function FinderSearch({ accent, onNavigate, full }: { accent: string; onN
           onChange={(e) => { setQ(e.target.value); setOpen(true); setIdx(0); }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKey}
-          placeholder="機能から探す（例：試算表、年度の切替、科目）"
+          placeholder="機能から探す（例：試算表、年度更新、科目）"
           autoComplete="off"
           style={{ flex: 1, border: 'none', outline: 'none', fontSize: 13, fontFamily: 'inherit', background: 'transparent', color: '#22303c' }}
         />

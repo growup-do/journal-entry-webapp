@@ -45,7 +45,7 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
   const NOTICE_TAGS = ['すべて', ...Array.from(new Set(HOME_NOTICES.map((n) => n.tag)))];
   const noticeList = HOME_NOTICES.map((n, i) => ({ ...n, i })).filter((n) => noticeTag === 'すべて' || n.tag === noticeTag).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   const s = useSession();
-  const CANDIDATES = [...MENU_GROUPS.flatMap((g) => g.items), ...HOME_CHECKS, '元帳１', '元帳２', '残高照合', '法人印刷', ...SETTINGS_MENU].filter((l) => IMPLEMENTED_MENU.includes(l) || l === '印刷センター' || l === '一括印刷' || l === '予算' || SETTINGS_MENU.includes(l));
+  const CANDIDATES = [...MENU_GROUPS.flatMap((g) => g.items), ...HOME_CHECKS, '元帳１', '元帳２', '残高照合', '法人印刷', ...SETTINGS_MENU].filter((l) => IMPLEMENTED_MENU.includes(l) || l === '印刷センター' || l === '予算' || SETTINGS_MENU.includes(l));
   // ドラッグ＆ドロップで並べ替え
   const [drag, setDrag] = useState<number | null>(null);
   const [over, setOver] = useState<number | null>(null);

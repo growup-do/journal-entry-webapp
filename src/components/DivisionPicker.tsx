@@ -13,9 +13,17 @@ import { divisionLabel, flattenDivisions, setSession, startKindOf, useSession, t
 
 const YEARS = ['令和6年度', '令和7年度', '令和8年度', '令和9年度'];
 
+/** ほかの画面から「区分・年度の切替」を開く（年度更新の完了後など） */
+export const openDivisionPicker = () => window.dispatchEvent(new Event('proto-open-division'));
+
 export function DivisionPicker({ accent, compact }: { accent: string; compact?: boolean }) {
   const s = useSession();
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener('proto-open-division', onOpen);
+    return () => window.removeEventListener('proto-open-division', onOpen);
+  }, []);
   // 起動時（ログイン直後）は、まず区分・年度の選択を表示する（依頼書 2.1／5.2.1）
   useEffect(() => {
     //   「今後1か月間、ログイン時にこの画面を表示しない」が有効な間は開かない（前回の年度・区分のまま開始）

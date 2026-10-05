@@ -1,25 +1,20 @@
-// 年度の切替／年度更新（依頼書 5.5.2・6.4、マニュアル 4.6）
-//   2つの操作を別メニュー・別画面として分離する。画面には選んだ操作だけを主として表示し、もう一方へは最下部の小さなリンクで移動する。
-//   年度の切替：参照する会計年度を変える（元に戻せる）。年度選択 → 年度切替確認（翌年度以降＝黄／前年度以前＝緑）→ 金額の連続性チェック結果。
+// 年度更新（依頼書 5.5.2・6.4、マニュアル 4.6）
+//   参照する年度の切替は、ヘッダーの「会計期間」（区分・年度の切替）で行う。各種設定の「年度の切替」画面は廃止。
 //   年度更新　：次年度へ繰り越す（取り消しできない）。バックアップの確認 → 翌年度データの確認 →（親区分・合算区分）構成区分の確認 → 最終確認 → 実行 → 完了。
 //   年度更新（減価のみ）：同じ流れの簡易版。
 
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Modal } from './Modal';
-import { NUM, TD, TH } from './ReportShell';
+import { openDivisionPicker } from './DivisionPicker';
+import { TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
-import { Notice, SettingsShell, Steps, btn, card, cardHead, input, yen } from './ui';
+import { Notice, SettingsShell, Steps, btn, card, cardHead, input } from './ui';
 import { divisionLabel, flattenDivisions, setSession, startKindOf, useSession } from '../store/session';
 
-export type FiscalOp = 'switch' | 'update' | 'dep';
-const OP_LABEL: Record<FiscalOp, string> = { switch: '年度の切替', update: '年度更新', dep: '年度更新（減価のみ）' };
+export type FiscalOp = 'update' | 'dep';
+const OP_LABEL: Record<FiscalOp, string> = { update: '年度更新', dep: '年度更新（減価のみ）' };
 const DANGER = '#c0392b';
 const YEARS = ['令和6年度', '令和7年度', '令和8年度', '令和9年度'];
-const seireki = (y: string) => 2018 + (parseInt(y.replace(/[^0-9]/g, ''), 10) || 0);
-const CHECK_ROWS: [string, number, number][] = [['現金預金', 9_812_300, 9_812_300], ['事業未収金', 1_200_000, 1_200_000], ['土地', 22_000_000, 22_000_000], ['建物', 15_400_000, 15_400_000], ['器具及び備品', 1_800_000, 1_800_000], ['事業未払金', 400_000, 400_000], ['職員預り金', 250_000, 250_000], ['基本金', 25_800_000, 25_800_000], ['次期繰越活動増減差額', 12_677_100, 12_677_100]];
-/** 翌年度へ切り替えたときの例：年度更新の後に前年度の伝票を追加したため、繰越額と合わない科目がある */
-const CHECK_ROWS_NG: [string, number, number][] = CHECK_ROWS.map(([n, a, b]) => (n === '事業未払金' ? [n, a + 38_500, b] : n === '次期繰越活動増減差額' ? [n, a - 38_500, b] : [n, a, b]));
 
 function WarnIcon({ size = 20, color = DANGER }: { size?: number; color?: string }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flex: 'none' }}><path d="M12 3 2 20h20L12 3z" /><path d="M12 10v5" /><path d="M12 17.5v.5" /></svg>;
@@ -34,121 +29,11 @@ function OtherLinks({ items }: { items: { label: string; note: string; onClick: 
   );
 }
 
-export function FiscalYearPage({ variant, accent, initial = 'switch', onNavigate }: { variant: 'form' | 'sheet'; accent: string; /** 開く操作：年度の切替／年度更新／年度更新（減価のみ） */ initial?: FiscalOp; /** メニュー項目名で別画面へ移動（省略時はこの画面内で表示を切り替える） */ onNavigate?: (label: string) => void }) {
+export function FiscalYearPage({ variant, initial = 'update', onNavigate }: { variant: 'form' | 'sheet'; accent: string; /** 開く操作：年度更新／年度更新（減価のみ） */ initial?: FiscalOp; /** メニュー項目名で別画面へ移動（省略時はこの画面内で表示を切り替える） */ onNavigate?: (label: string) => void }) {
   const [op, setOp] = useState<FiscalOp>(initial);
   useEffect(() => { setOp(initial); }, [initial]);
   const go = (to: FiscalOp) => { if (onNavigate) onNavigate(OP_LABEL[to]); else setOp(to); };
-  if (op === 'switch') return <SwitchView variant={variant} accent={accent} go={go} />;
   return <UpdateView key={op} variant={variant} depOnly={op === 'dep'} go={go} onNavigate={onNavigate} />;
-}
-
-/* ================= 年度の切替（落ち着いた表現） ================= */
-function SwitchView({ variant, accent, go }: { variant: 'form' | 'sheet'; accent: string; go: (to: FiscalOp) => void }) {
-  const s = useSession();
-  const toast = useToast();
-  const [sel, setSel] = useState(s.fiscalYear);
-  const [confirmYear, setConfirmYear] = useState<string | null>(null);
-  const [result, setResult] = useState<{ year: string; open: boolean; detail: boolean } | null>(null);
-  const idx = YEARS.indexOf(s.fiscalYear), cur = YEARS.indexOf(s.currentYear);
-  const step = result ? 2 : confirmYear ? 1 : 0;
-  const switchTo = (y: string) => { setSession({ fiscalYear: y }); setConfirmYear(null); setResult({ year: y, open: true, detail: false }); toast.show(`${y} に切り替えました`); };
-  const resultRows = result && YEARS.indexOf(result.year) > cur ? CHECK_ROWS_NG : CHECK_ROWS;
-  const ng = resultRows.filter(([, a, b]) => a !== b);
-  const noPrev = !!result && YEARS.indexOf(result.year) === 0;
-  const prevOf = (y: string) => YEARS[Math.max(0, YEARS.indexOf(y) - 1)];
-
-  return (
-    <SettingsShell variant={variant} title="年度の切替" badge="参照する年度の変更" desc="参照する会計年度を変える操作です。データは書き換えず、いつでも元の年度に戻せます。" draft>
-      <ToastView msg={toast.msg} />
-      <Steps steps={['年度選択', '年度切替確認', '金額の連続性チェック結果']} current={step} accent={accent} />
-      <div style={{ padding: 22, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 18, alignItems: 'start' }}>
-        <div style={card}>
-          <div style={cardHead}>年度選択 <span style={{ fontWeight: 500, color: '#8290a0', fontSize: 11.5 }}>切り替える年度を選びます（行のダブルクリックでも進めます）</span></div>
-          <div style={{ padding: 14 }} role="radiogroup" aria-label="年度選択">
-            {[...YEARS].reverse().map((y) => {
-              const i = YEARS.indexOf(y);
-              const showing = y === s.fiscalYear, on = y === sel;
-              const past = i < cur, future = i > cur;
-              return (
-                <div key={y} role="radio" aria-checked={on} tabIndex={0} onClick={() => setSel(y)} onKeyDown={(e) => { if (e.key === ' ' || (e.key === 'Enter' && !e.nativeEvent.isComposing)) { e.preventDefault(); setSel(y); } }} onDoubleClick={() => !showing && setConfirmYear(y)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, marginBottom: 6, border: '1px solid ' + (on ? accent : '#e2e8ee'), background: on ? '#f6f9fc' : '#fff', cursor: 'pointer' }}>
-                  <input type="radio" checked={on} onChange={() => setSel(y)} tabIndex={-1} aria-hidden="true" />
-                  <b style={{ fontSize: 14 }}>{y}</b><span style={{ fontSize: 12, color: '#8290a0', fontVariantNumeric: 'tabular-nums' }}>（{seireki(y)}）</span>
-                  <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: past ? '#eaf5ef' : future ? '#fff7e6' : '#e8f0fb', color: past ? '#1f7a52' : future ? '#b7791f' : '#2c5f9e' }}>{past ? '前年度以前' : future ? '翌年度以降' : '当年度'}</span>
-                  {showing && <span style={{ marginLeft: 'auto', fontSize: 11.5, fontWeight: 700, color: accent }}>参照中</span>}
-                </div>
-              );
-            })}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
-              <button type="button" className="submit-btn" disabled={sel === s.fiscalYear} onClick={() => setConfirmYear(sel)} style={{ ...btn(accent, true), opacity: sel === s.fiscalYear ? 0.45 : 1 }}>{sel === s.fiscalYear ? '切り替える年度を選んでください' : `${sel} に切り替える`}</button>
-              {idx !== cur && <button type="button" onClick={() => { setSel(s.currentYear); setConfirmYear(s.currentYear); }} style={btn()}>当年度（{s.currentYear}）に戻す</button>}
-            </div>
-          </div>
-        </div>
-        <div style={{ display: 'grid', gap: 14 }}>
-          <div style={card}>
-            <div style={cardHead}>現在の状態</div>
-            <div style={{ padding: 14, display: 'grid', gap: 6, fontSize: 13 }}>
-              <div>参照中の年度：<b>{s.fiscalYear}</b>{idx !== cur && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: idx < cur ? '#1f7a52' : '#b7791f', color: '#fff' }}>{idx < cur ? '過去年度を参照中' : '翌年度を参照中'}</span>}</div>
-              <div>当年度：<b>{s.currentYear}</b>　区分：<b>{s.division}</b></div>
-              {result && <div style={{ marginTop: 6 }}><button type="button" onClick={() => setResult({ ...result, open: true })} style={btn('#5b6773', false, true)}>金額の連続性チェック結果をもう一度表示</button></div>}
-            </div>
-          </div>
-          <Notice>
-            <b>この操作で変わること</b><br />
-            ・画面や帳票に表示する会計年度が変わります（伝票や残高などのデータは変更しません）。<br />
-            ・過去の年度を参照している間は、画面上部に帯を表示して参照中であることを示し、伝票の入力・訂正はできません。<br />
-            ・切り替えた直後に、前年度の決算額と切り替え先の年度の繰越額を比べた結果（金額の連続性チェック）を表示します。
-          </Notice>
-        </div>
-      </div>
-      <OtherLinks items={[{ label: '年度更新', note: '次年度へ繰り越す操作。取り消しできません', onClick: () => go('update') }]} />
-
-      {/* 年度切替確認：翌年度以降＝黄色背景／前年度以前＝緑背景 */}
-      <Modal open={!!confirmYear} onClose={() => setConfirmYear(null)} width={520} title="年度切替確認" strict>
-        {confirmYear && (() => {
-          const newer = YEARS.indexOf(confirmYear) > idx;
-          return (
-            <div style={{ padding: '18px 22px 20px', background: newer ? '#fff3a3' : '#c9efd0', display: 'grid', gap: 12 }}>
-              <div><span style={{ fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 8, background: newer ? '#8a5a00' : '#1f7a52', color: '#fff' }}>{newer ? '翌年度以降への切替' : '前年度以前への切替'}</span></div>
-              <div style={{ fontSize: 15, fontWeight: 700 }}>{s.fiscalYear} から {confirmYear} に切り替えます。</div>
-              <div style={{ fontSize: 12.5, color: '#2f3b45', lineHeight: 1.9 }}>
-                各年度のデータのつながり（繰越）は、年度更新のときにだけ自動で処理されます。
-                {newer ? <>いま参照している年度で伝票を入力・訂正していた場合、それによって変わった残高は、切り替え先（翌年度以降）のデータには反映されていません。</> : <>切り替え先（過去の年度）で伝票を入力・訂正しても、それによって変わった残高は、現在の年度以降のデータには反映されません。</>}
-                翌年度以降の残高を変える必要がある場合は、残高（繰越）を手入力で設定し直してください。
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                <button type="button" onClick={() => setConfirmYear(null)} style={btn()}>元に戻る</button>
-                <button type="button" className="submit-btn" onClick={() => switchTo(confirmYear)} style={btn('#22303c', true)}>年度を切り替える</button>
-              </div>
-            </div>
-          );
-        })()}
-      </Modal>
-
-      {/* 金額の連続性チェック結果 */}
-      <Modal open={!!result?.open} onClose={() => result && setResult({ ...result, open: false })} width={640} title="金額の連続性チェックの結果">
-        {result && (
-          <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
-            {noPrev ? <Notice>{result.year} は運用を始めた最初の年度で、前年度のデータがないため、連続性チェックは行いません。</Notice>
-              : ng.length === 0 ? <Notice tone="ok">貸借科目の {prevOf(result.year)} の決算額と {result.year} の繰越額を比較した結果、不整合は見つかりませんでした。</Notice>
-                : <div style={{ display: 'flex', gap: 10, padding: '10px 12px', background: '#fff7e6', border: '1px solid #f3d9b0', borderRadius: 10, fontSize: 12.5, color: '#8a5a00', lineHeight: 1.7 }}><WarnIcon color="#b7791f" /><div>貸借科目の {prevOf(result.year)} の決算額と {result.year} の繰越額を比較した結果、<b>{ng.length} 科目で金額が一致しません</b>。年度更新のあとに前年度の伝票を追加・訂正した場合に起こります。残高（繰越）を設定し直すか、年度更新を再実行してください。</div></div>}
-            {!noPrev && (
-              <>
-                <div><button type="button" onClick={() => setResult({ ...result, detail: !result.detail })} style={btn('#5b6773', false, true)}>{ng.length ? (result.detail ? '一致しない科目だけ表示' : 'すべての科目を表示') : result.detail ? '科目ごとの内訳を閉じる' : '科目ごとの内訳を表示'}</button></div>
-                {(result.detail || ng.length > 0) && (
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead><tr><th style={TH}>科目</th><th style={{ ...TH, textAlign: 'right' }}>{prevOf(result.year)} 決算額</th><th style={{ ...TH, textAlign: 'right' }}>{result.year} 繰越額</th><th style={{ ...TH, textAlign: 'right' }}>差額</th><th style={{ ...TH, width: 70, textAlign: 'center' }}>判定</th></tr></thead>
-                    <tbody>{(result.detail ? resultRows : ng).map(([n, a, b]) => <tr key={n} style={{ background: a === b ? 'transparent' : '#fdf3f2' }}><td style={TD}>{n}</td><td style={NUM}>{yen(a)}</td><td style={NUM}>{yen(b)}</td><td style={{ ...NUM, color: a === b ? '#9aa5b1' : DANGER }}>{a === b ? '0' : yen(b - a)}</td><td style={{ ...TD, textAlign: 'center' }}><span style={{ fontSize: 10.5, fontWeight: 800, padding: '2px 7px', borderRadius: 6, background: a === b ? '#e8f0fb' : DANGER, color: a === b ? '#2c5f9e' : '#fff' }}>{a === b ? '一致' : '不一致'}</span></td></tr>)}</tbody>
-                  </table>
-                )}
-              </>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" className="submit-btn" onClick={() => setResult({ ...result, open: false })} style={btn(accent, true)}>OK</button></div>
-          </div>
-        )}
-      </Modal>
-    </SettingsShell>
-  );
 }
 
 /* ================= 年度更新（取り消しできない操作） ================= */
@@ -207,10 +92,10 @@ function UpdateView({ variant, depOnly, go, onNavigate }: { variant: 'form' | 's
   const running = at === 'run';
   /** 完了後に行うこと（年度の切替、繰越残高の確認 など） */
   const todo: [string, string, () => void, string][] = depOnly ? [
-    ['年度の切替', `${nextYear} に切り替えて、新年度のデータを開きます。`, () => go('switch'), '年度の切替を開く'],
+    ['年度の切替', `画面上部の「会計期間」から ${nextYear} に切り替えて、新年度のデータを開きます。`, openDivisionPicker, '会計期間を開く'],
     ['減価償却の確認', `${nextYear} の期首帳簿価額と償却予定額を確認します。`, () => nav('減価償却'), '減価償却を開く'],
   ] : [
-    ['年度の切替', `${nextYear} に切り替えて、新年度のデータを開きます。`, () => go('switch'), '年度の切替を開く'],
+    ['年度の切替', `画面上部の「会計期間」から ${nextYear} に切り替えて、新年度のデータを開きます。`, openDivisionPicker, '会計期間を開く'],
     ['繰越残高の確認', `${nextYear} の繰越残高が ${s.currentYear} の決算額と合っているか確認します。`, () => nav('開始残高'), '残高（繰越）を開く'],
     ['当初予算の確認', '次年度予算から移した当初予算を確認・修正します。', () => nav('予算'), '予算を開く'],
   ];
@@ -222,7 +107,7 @@ function UpdateView({ variant, depOnly, go, onNavigate }: { variant: 'form' | 's
         <WarnIcon size={24} />
         <div style={{ fontSize: 12.5, lineHeight: 1.8, color: '#5c2018' }}>
           <b style={{ fontSize: 13.5, color: DANGER }}>{title}は、実行すると取り消しできません。</b><br />
-          実行の前に必ずバックアップを取ります。参照する年度を変えるだけの場合は、この操作ではなく「年度の切替」を使います。
+          実行の前に必ずバックアップを取ります。参照する年度を変えるだけの場合は、この操作ではなく、画面上部の「会計期間」から切り替えます。
         </div>
       </div>
       <Steps steps={keys.map((k) => LABEL[k])} current={idx} accent={DANGER} />
@@ -361,7 +246,6 @@ function UpdateView({ variant, depOnly, go, onNavigate }: { variant: 'form' | 's
             {kind === '入力区分' && <label style={{ display: 'flex', gap: 4, alignItems: 'center', cursor: 'pointer' }}><input type="checkbox" checked={demoMulti} onChange={(e) => { setDemoMulti(e.target.checked); setAt('backup'); }} disabled={at === 'done'} />合算区分・親区分で起動した場合の表示</label>}
           </div>
           <OtherLinks items={[
-            { label: '年度の切替', note: '参照する年度を変えるだけの操作。元に戻せます', onClick: () => go('switch') },
             depOnly ? { label: '年度更新', note: '伝票・残高・予算を含めて次年度へ繰り越す', onClick: () => go('update') } : { label: '年度更新（減価のみ）', note: '減価償却のデータだけを繰り越す', onClick: () => go('dep') },
           ]} />
         </>

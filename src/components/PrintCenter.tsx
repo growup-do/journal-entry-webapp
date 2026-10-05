@@ -574,46 +574,70 @@ function DataPage({ zoom, data, shade, line, env, groupRows }: { zoom: number; d
   );
 }
 
-/* ---------------- 帳票の印刷（帳票一覧） ---------------- */
-export function PrintCenterPage({ variant, accent, batch }: { variant: 'form' | 'sheet'; accent: string; batch?: boolean }) {
-  const [cat, setCat] = useState(batch ? 'すべて' : '仕訳日記帳');
+/* ---------------- 帳票の印刷（帳票一覧。1帳票ずつ／まとめて印刷を画面内で切り替える） ---------------- */
+export function PrintCenterPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: string }) {
+  /** まとめて印刷（旧「一括印刷」メニュー）。帳票をチェックで選び、出力先を1回指定して順に出力する */
+  const [batch, setBatch] = useState(false);
+  const [cat, setCat] = useState('仕訳日記帳');
   const [target, setTarget] = useState<ReportDef | null>(null);
-  const [preview, setPreview] = useState<{ title: string; opts: { from: string; to: string; output: string; hideZero?: boolean } } | null>(null);
+  const [preview, setPreview] = useState<{ title: string; batch?: boolean; opts: { from: string; to: string; output: string; hideZero?: boolean } } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set(['j1', 'l1', 't1', 't2', 't3']));
   const [bOutput, setBOutput] = useState(OUTPUTS[1]);
   const [exp, setExp] = useState<ExportSpec | null>(null);
   const toast = useToast();
   const list = REPORTS.filter((r) => cat === 'すべて' || r.cat === cat);
-  // 一括印刷：選んだ帳票を1つの出力にまとめる（帳票名列を付けて連結。本番では帳票ごとに改ページ）
+  const picked = REPORTS.filter((r) => selected.has(r.id));
+  const batchData = () => ({ header: ['帳票名', '科目', '当月', '累計'], rows: picked.flatMap((r) => sampleReportData(r.name).rows.map((row) => [r.name, ...row])) });
+  const setMode = (b: boolean) => { setBatch(b); if (b) setCat('すべて'); };
+  const toggle = (id: string) => setSelected((x) => { const n = new Set(x); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const allOn = list.length > 0 && list.every((r) => selected.has(r.id));
+  const toggleAll = () => setSelected((x) => { const n = new Set(x); list.forEach((r) => { if (allOn) n.delete(r.id); else n.add(r.id); }); return n; });
+  // まとめて印刷：選んだ帳票を1つの出力にまとめる（帳票名列を付けて連結。本番では帳票ごとに改ページ）
   const runBatch = () => {
-    if (!selected.size) return toast.show('帳票を選んでください');
-    const picked = REPORTS.filter((r) => selected.has(r.id));
-    if (bOutput === OUTPUTS[1]) { setPreview({ title: `一括印刷（${picked.length}帳票）`, opts: { from: '令和8年8月1日', to: '令和8年8月31日', output: bOutput } }); return; }
-    const rows = picked.flatMap((r) => sampleReportData(r.name).rows.map((row) => [r.name, ...row]));
-    setExp({ kind: outputKind(bOutput) ?? 'print', title: `一括印刷（${picked.length}帳票）`, fileName: `一括印刷_令和8年8月`, meta: `令和8年8月1日〜8月31日　対象：${picked.map((r) => r.name).join('、')}`, header: ['帳票名', '科目', '当月', '累計'], rows });
+    if (!picked.length) return toast.show('まとめて印刷する帳票を選んでください');
+    const title = `まとめて印刷（${picked.length}帳票）`;
+    if (bOutput === OUTPUTS[1]) { setPreview({ title, batch: true, opts: { from: '令和8年8月1日', to: '令和8年8月31日', output: bOutput } }); return; }
+    setExp({ kind: outputKind(bOutput) ?? 'print', title, fileName: `まとめて印刷_令和8年8月`, meta: `令和8年8月1日〜8月31日　対象：${picked.map((r) => r.name).join('、')}`, ...batchData() });
   };
+  const seg = (on: boolean): CSSProperties => ({ position: 'relative', zIndex: 1, padding: '8px 18px', border: 'none', borderRadius: 8, background: on ? accent : 'transparent', color: on ? '#fff' : '#3d4a56', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
   return (
-    <SettingsShell variant={variant} title={batch ? '一括印刷' : displayName('印刷センター')} badge="印刷" desc={batch ? '複数の帳票をまとめて印刷します。期間と出力先を1回指定するだけで、選んだ帳票を順に出力します（既存のお気に入り「帳票一括印刷」に相当）。' : '帳票の一覧です。帳票を選ぶと「基本条件 → 詳細設定 → 出力先 → 印刷／プレビュー」を1つのダイアログで指定できます。各帳票の画面にある「印刷」からも同じ流れが開きます。'} draft actions={batch ? <>
-      <select value={bOutput} onChange={(e) => setBOutput(e.target.value)} style={{ ...input, width: 240 }}>{OUTPUTS.map((o) => <option key={o}>{o}</option>)}</select>
-      <button type="button" className="submit-btn" onClick={runBatch} style={btn(accent, true)}>選んだ {selected.size} 帳票を印刷</button>
-    </> : undefined}>
+    <SettingsShell variant={variant} title={displayName('印刷センター')} badge="印刷" draft={false} desc="帳票の一覧です。帳票を選ぶと「基本条件 → 詳細設定 → 出力先 → 印刷／プレビュー」を1つのダイアログで指定できます。複数の帳票は「まとめて印刷」に切り替えると、一度に出力できます。">
       <ToastView msg={toast.msg} />
+      {/* 印刷のしかたの切替：1帳票ずつ／まとめて印刷（旧「一括印刷」） */}
+      <div data-print-mode={batch ? 'batch' : 'single'} style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '12px 16px', borderBottom: '1px solid #eef2f5', background: batch ? '#f4f9f6' : '#fafbfc' }}>
+        <div role="radiogroup" aria-label="印刷のしかた" style={{ display: 'inline-flex', gap: 2, padding: 3, borderRadius: 11, background: '#e6ecf0' }}>
+          <button type="button" role="radio" aria-checked={!batch} data-print-mode-btn="single" onClick={() => setMode(false)} style={seg(!batch)}>1帳票ずつ印刷</button>
+          <button type="button" role="radio" aria-checked={batch} data-print-mode-btn="batch" onClick={() => setMode(true)} style={seg(batch)}>まとめて印刷</button>
+        </div>
+        {batch ? (
+          <>
+            <span style={{ fontSize: 12.5, color: '#3d4a56' }}>選択中 <b style={{ fontSize: 15, color: accent, fontVariantNumeric: 'tabular-nums' }}>{picked.length}</b> 帳票</span>
+            <button type="button" className="btn-outline" onClick={toggleAll} style={btn('#5b6773', false, true)}>{allOn ? '表示中の選択を解除' : '表示中をすべて選択'}</button>
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 12, color: '#5b6773' }}>出力先</span>
+              <select value={bOutput} onChange={(e) => setBOutput(e.target.value)} style={{ ...input, width: 220 }}>{OUTPUTS.map((o) => <option key={o}>{o}</option>)}</select>
+              <button type="button" className="submit-btn" data-print-batch-run disabled={!picked.length} onClick={runBatch} style={{ ...btn(accent, true), opacity: picked.length ? 1 : 0.5, cursor: picked.length ? 'pointer' : 'not-allowed' }}>選んだ {picked.length} 帳票を印刷</button>
+            </div>
+          </>
+        ) : <span style={{ fontSize: 12, color: '#7a8794' }}>帳票を押すと、その帳票の印刷条件を指定できます。</span>}
+      </div>
       <div style={{ display: 'grid', gridTemplateColumns: '200px minmax(0,1fr)', minHeight: 420 }}>
         <div style={{ borderRight: '1px solid #eef2f5', padding: 10 }}>
           {['すべて', ...CATS].map((c) => {
             const n = c === 'すべて' ? REPORTS.length : REPORTS.filter((r) => r.cat === c).length;
+            const sel = batch ? (c === 'すべて' ? picked.length : picked.filter((r) => r.cat === c).length) : 0;
             const on = cat === c;
-            return <button key={c} type="button" onClick={() => setCat(c)} style={{ display: 'flex', alignItems: 'center', width: '100%', textAlign: 'left', padding: '9px 12px', border: 'none', borderRadius: 8, background: on ? accent : 'transparent', color: on ? '#fff' : '#22303c', fontSize: 13, fontWeight: on ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer' }}>{c}<span style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.7 }}>{n}</span></button>;
+            return <button key={c} type="button" onClick={() => setCat(c)} style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', textAlign: 'left', padding: '9px 12px', border: 'none', borderRadius: 8, background: on ? accent : 'transparent', color: on ? '#fff' : '#22303c', fontSize: 13, fontWeight: on ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer' }}>{c}{sel > 0 && <span style={{ fontSize: 10.5, fontWeight: 800, padding: '0 6px', borderRadius: 8, background: on ? 'rgba(255,255,255,.25)' : '#e3f1ea', color: on ? '#fff' : accent }}>選択 {sel}</span>}<span style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.7 }}>{n}</span></button>;
           })}
         </div>
         <div style={{ padding: 16 }}>
-          {batch ? <div style={{ marginBottom: 10 }}><Notice>期間は「令和8年8月1日〜8月31日」（当月）で一括指定。帳票ごとの詳細設定は各帳票の設定値を使います。</Notice></div>
+          {batch ? <div style={{ marginBottom: 10 }}><Notice>期間は「令和8年8月1日〜8月31日」（当月）で一括指定します。帳票ごとの詳細設定は、各帳票の設定値を使います。</Notice></div>
             : <div style={{ marginBottom: 10, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: 12, color: '#5b6773' }}><span>設定の影響範囲：</span><ScopeBadge kind="帳票個別" /><span>その帳票だけ</span><ScopeBadge kind="全帳票共通" /><span>すべての帳票</span><ScopeBadge kind="全区分共通" /><ScopeBadge kind="区分ごと" /><span>動作環境から引き継ぎ</span></div>}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
             {list.map((r) => {
               const on = selected.has(r.id);
               return (
-                <div key={r.id} onClick={() => (batch ? setSelected((x) => { const n = new Set(x); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); return n; }) : setTarget(r))} style={{ ...card, padding: '12px 14px', cursor: 'pointer', borderColor: batch && on ? accent : '#e2e8ee', background: batch && on ? '#f4f9f6' : '#fff', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <div key={r.id} data-report={r.id} onClick={() => (batch ? toggle(r.id) : setTarget(r))} style={{ ...card, padding: '12px 14px', cursor: 'pointer', borderColor: batch && on ? accent : '#e2e8ee', background: batch && on ? '#f4f9f6' : '#fff', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                   {batch && <input type="checkbox" checked={on} readOnly style={{ marginTop: 3 }} />}
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontSize: 13.5, fontWeight: 700 }}>{r.name}</div>
@@ -627,7 +651,7 @@ export function PrintCenterPage({ variant, accent, batch }: { variant: 'form' | 
         </div>
       </div>
       <PrintDialog open={!!target} onClose={() => setTarget(null)} report={target} accent={accent} keepOpenOnPreview onPreview={(title, opts) => setPreview({ title, opts })} />
-      <PreviewModal open={!!preview} onClose={() => setPreview(null)} title={preview?.title ?? ''} opts={preview?.opts} accent={accent} data={preview ? (batch ? { header: ['帳票名', '科目', '当月', '累計'], rows: REPORTS.filter((r) => selected.has(r.id)).flatMap((r) => sampleReportData(r.name).rows.map((row) => [r.name, ...row])) } : sampleReportData(preview.title)) : undefined} />
+      <PreviewModal open={!!preview} onClose={() => setPreview(null)} title={preview?.title ?? ''} opts={preview?.opts} accent={accent} data={preview ? (preview.batch ? batchData() : sampleReportData(preview.title)) : undefined} />
       <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
     </SettingsShell>
   );

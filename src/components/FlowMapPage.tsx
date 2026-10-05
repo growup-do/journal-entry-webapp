@@ -38,7 +38,6 @@ const NODES: Node[] = [
   N('division', '伝票入力区分の選択', 'dialog', 'start', { open: 'ホーム', note: '会計年度・区分（組織図）／1か月間表示しない' }),
   N('merge', '合算部門の選択', 'dialog', 'start', { open: 'ホーム' }),
   N('divinfo', '法人名の変更、及び区分の追加、変更', 'dialog', 'start', { open: 'ホーム', note: '集計区分／法人情報／伝票入力区分' }),
-  N('yearconfirm', '年度切替確認', 'dialog', 'start', { open: '年度の切替', note: '翌年度以降＝黄／前年度以前＝緑' }),
   N('exit', '終了（確認のみ）', 'page', 'start', { open: 'ログアウト', note: 'バックアップは尋ねない' }),
   // ホーム
   N('home', 'ホーム（ダッシュボード）', 'page', 'home', { open: 'ホーム' }),
@@ -93,7 +92,6 @@ const NODES: Node[] = [
   N('suff', '社会福祉充実残額', 'page', 'trend', { open: '充実残額', note: '算定方式の選択 → シミュレーター' }),
   // 帳票・印刷
   N('printc', '帳票の印刷', 'page', 'print', { open: '印刷センター' }),
-  N('batch', '一括印刷', 'page', 'print', { open: '一括印刷' }),
   N('appendix', '別紙（注記・明細書・財産目録）', 'page', 'print', { open: '別紙（注記・明細書・財産目録）' }),
   N('commonprint', '共通の印刷設定', 'page', 'print', { open: '共通の印刷設定' }),
   N('printflow', '印刷（基本条件→詳細設定→出力先）', 'dialog', 'print', { open: '印刷センター' }),
@@ -122,7 +120,6 @@ const NODES: Node[] = [
   N('s-env', '動作環境', 'page', 'settings', { open: '環境設定' }),
   N('s-refresh', '仕訳更新', 'page', 'settings', { open: '仕訳更新' }),
   N('s-backup', 'データのバックアップ', 'page', 'settings', { open: 'データのバックアップ' }),
-  N('s-year', '年度の切替', 'page', 'settings', { open: '年度の切替' }),
   N('s-update', '年度更新／年度更新（減価のみ）', 'page', 'settings', { open: '年度更新', note: '取り消し不可・ステップ形式' }),
   N('s-web', '部門／タグ／他社ソフトデータの移行', 'page', 'settings', { open: '部門', note: 'Web版の追加案（要否確認中）' }),
   // ユーザー・共通
@@ -153,8 +150,8 @@ const EDGES: Edge[] = [
   E('trial', 'ledger', '科目 → 元帳'), E('closing', 'ledger', '科目 → 元帳'), E('trend', 'ledger', '月 → 元帳', true), E('ledger', 'trial', '← 戻る', true),
   E('trend', 'trendgraph', 'グラフ作成', true), E('closing', 'balgraph', '残高グラフ', true), E('closing', 'analysis', '収支分析', true), E('closing', 'suff', '充実残額', true),
   E('auditm', 'auditexp', '説明／結果詳細', true), E('auditm', 'auditset', '決算チェック設定'), E('auditm', 'printflow', '結果印刷', true),
-  E('printc', 'printflow', '帳票を選ぶ'), E('printflow', 'preview', 'プレビュー', true), E('printflow', 'saveas', 'CSV／Excel／PDF', true), E('batch', 'printflow', '選んだ帳票', true), E('appendix', 'printflow', '印刷', true),
-  E('s-year', 'yearconfirm', '年度を選ぶ'), E('s-update', 's-backup', 'バックアップの確認', true),
+  E('printc', 'printflow', '帳票を選ぶ'), E('printflow', 'preview', 'プレビュー', true), E('printflow', 'saveas', 'CSV／Excel／PDF', true), E('printc', 'preview', 'まとめて印刷', true), E('appendix', 'printflow', '印刷', true),
+  E('s-update', 'division', '完了後：会計期間を開く', true), E('s-update', 's-backup', 'バックアップの確認', true),
   E('s-acct', 's-attached', '関連する設定', true), E('auditset', 's-attached', '1年基準科目', true),
   E('s-template', 'template', '伝票入力で呼出', true),
   E('exit', 'login', 'ログイン画面へ'),

@@ -29,11 +29,8 @@ import { SingleEntryPage } from './SingleEntryPage';
 import { TransferEntryPage } from './TransferEntryPage';
 
 export function renderPage(page: string, variant: 'form' | 'sheet', accent: string, accentRgb: string, onNavigate: (label: string) => void, onLogout: () => void = () => {}) {
-  // 各種設定のうち、依頼書対応で追加・分離した画面（年度の切替／年度更新、保守・運用、別紙）
+  // 各種設定のうち、依頼書対応で追加・分離した画面（年度更新、保守・運用、別紙）
   switch (page) {
-    case '年度の切替':
-    case '年度更新・切替':
-      return <FiscalYearPage key="fy-switch" variant={variant} accent={accent} initial="switch" onNavigate={onNavigate} />;
     case '年度更新':
       return <FiscalYearPage key="fy-update" variant={variant} accent={accent} initial="update" onNavigate={onNavigate} />;
     case '年度更新（減価のみ）':
@@ -78,9 +75,7 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
     case '業者元帳':
       return <LedgerPage kind="vendor" variant={variant} accent={accent} accentRgb={accentRgb} onNavigate={onNavigate} />;
     case '印刷センター':
-      return <PrintCenterPage key="pc" variant={variant} accent={accent} />;
-    case '一括印刷':
-      return <PrintCenterPage key="batch" variant={variant} accent={accent} batch />;
+      return <PrintCenterPage variant={variant} accent={accent} />;
     case '共通の印刷設定':
       return <CommonPrintSettingsPage variant={variant} accent={accent} />;
     case '元帳１':

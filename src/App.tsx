@@ -22,6 +22,9 @@ import { IssueBoardPage } from './components/IssueBoardPage';
 type Mode = 'form' | 'sheet';
 /** ページ遷移ではなくモーダルで開くメニュー */
 const MODAL_MENU = ['決算調査', '法人調査', '仕訳数', '日次調査', '法人印刷'];
+/** 廃止・統合した画面キーの読み替え（保存済みの画面・お気に入り・確認メモから開いたとき用） */
+const RETIRED: Record<string, string> = { 一括印刷: '印刷センター', 年度の切替: 'ホーム', '年度更新・切替': '年度更新' };
+const alive = (p: string) => RETIRED[p] ?? p;
 
 /** 機能一覧（サイトマップ）からの「画面を開く」：?open=画面名（mode・year は互換のため無視）
  *  読み込み時に1回だけ解釈し、URLは元に戻す（再描画で消えないようモジュール初期化時に処理） */
@@ -93,8 +96,8 @@ export default function App() {
   // 表示中のUI案・画面は sessionStorage に保持（静的ページから戻ったときに元の画面へ復帰）
   // 画面構成はフォーム型のみ（スプレッドシート型の案は廃止。メモの画面キーは互換のため 'form:' を維持）
   const mode: Mode = 'form';
-  const [page, setPageRaw] = useState<string>(() => { const saved = readSaved('proto-page'); return bootPage ?? (saved && !MODAL_MENU.includes(saved) ? saved : DEFAULT_MENU); });
-  const setPage = (p: string) => { setPageRaw(p); save('proto-page', p); };
+  const [page, setPageRaw] = useState<string>(() => { const saved = readSaved('proto-page'); return alive(bootPage ?? (saved && !MODAL_MENU.includes(saved) ? saved : DEFAULT_MENU)); });
+  const setPage = (raw: string) => { const p = alive(raw); setPageRaw(p); save('proto-page', p); };
   const [auditOpen, setAuditOpen] = useState(boot?.open === '決算調査' || boot?.open === '法人調査');
   const [countOpen, setCountOpen] = useState(boot?.open === '仕訳数');
   const [dailyOpen, setDailyOpen] = useState(boot?.open === '日次調査');
