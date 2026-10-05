@@ -79,7 +79,7 @@ export function FunctionFinderPage({ onNavigate, initialQuery = '' }: { accent: 
 }
 
 /* ---------------- ホームの検索窓 ---------------- */
-export function FinderSearch({ accent, onNavigate }: { accent: string; onNavigate: (label: string) => void }) {
+export function FinderSearch({ accent, onNavigate, full }: { accent: string; onNavigate: (label: string) => void; /** 置き場所の横幅いっぱいに広げる（ホーム） */ full?: boolean }) {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   const [idx, setIdx] = useState(0);
@@ -98,8 +98,8 @@ export function FinderSearch({ accent, onNavigate }: { accent: string; onNavigat
   }, [open]);
   const go = (key: string) => { setOpen(false); setQ(''); onNavigate(key); };
   return (
-    <div ref={ref} style={{ position: 'relative', flex: 1, minWidth: 220, maxWidth: 420 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px 6px 12px', border: '1px solid #cfd8e0', borderRadius: 10, background: '#fff' }}>
+    <div ref={ref} data-finder-search style={{ position: 'relative', flex: 1, minWidth: 220, maxWidth: full ? 'none' : 420, width: full ? '100%' : undefined }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: full ? '10px 12px 10px 14px' : '6px 10px 6px 12px', border: '1px solid #cfd8e0', borderRadius: 10, background: '#fff' }}>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8290a0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
         <input
           className="search-input"

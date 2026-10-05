@@ -1,5 +1,5 @@
 // ホーム：銀行の預金残高／調査・チェック／よく使う操作／FAQ／お知らせ／バナースペース
-//   右上の「ダッシュボードに表示させるメニューの編集」で、表示するメニューと最初に表示する画面（ホーム／伝票入力）を選ぶ。
+//   右上の「ダッシュボード表示オプション」で、表示するメニューと最初に表示する画面（ホーム／伝票入力）を選ぶ。
 //   年度更新の時期には、上部に年度更新を促す案内を表示する。
 
 import { useRef, useState } from 'react';
@@ -34,7 +34,7 @@ interface Props {
 export function HomePage({ variant, accent, onNavigate }: Props) {
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
   const [favEdit, setFavEdit] = useState(false);
-  // ダッシュボードに表示させるメニューの編集（表示メニュー・最初に表示する画面）
+  // ダッシュボード表示オプション（表示メニュー・最初に表示する画面）
   const [homeEdit, setHomeEdit] = useState(false);
   // 年度更新を促す案内（「あとで」で、この画面を開いている間だけ閉じる）
   const [yearNotice, setYearNotice] = useState(true);
@@ -68,13 +68,13 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
     <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
       <ToastView msg={toast.msg} />
       <div style={{ width: '100%', maxWidth: isSheet ? 'none' : 1280, display: 'flex', flexDirection: 'column', gap: 18 }}>
-        {/* 見出し行：右上に「ダッシュボードに表示させるメニューの編集」 */}
+        {/* 見出し行：右上に「ダッシュボード表示オプション」 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 21 }}>ホーム</div>
           <span style={{ fontSize: 12.5, color: '#7a8794' }}>{s.fiscalYear}　{s.division}</span>
           <button type="button" className="btn-outline" data-home-edit onClick={() => setHomeEdit(true)} style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 14px', border: '1px solid #cfd8e0', borderRadius: 9, background: '#fff', color: '#3d4a56', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
-            ダッシュボードに表示させるメニューの編集
+            ダッシュボード表示オプション
           </button>
         </div>
 
@@ -95,12 +95,9 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: hasRight ? 'minmax(0,1.6fr) minmax(280px,1fr)' : 'minmax(0,1fr)', gap: 20, alignItems: 'start' }}>
-        {/* 左列 */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
-          {/* 伝票入力をはじめる（大きく目立たせる）＋ 機能から探す（検索窓。一覧はメニュー右端の「機能から探す」） */}
-          <div style={{ display: 'flex', alignItems: 'stretch', gap: 14, flexWrap: 'wrap' }}>
-            <button type="button" className="submit-btn" data-home-start disabled={!canEntry} title={!canEntry ? '入力区分で起動すると伝票を入力できます' : undefined} onClick={() => onNavigate('伝票入力')} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 30px 16px 22px', borderRadius: 14, border: 'none', background: accent, color: '#fff', fontFamily: 'inherit', cursor: !canEntry ? 'not-allowed' : 'pointer', opacity: !canEntry ? 0.45 : 1, boxShadow: '0 8px 22px rgba(31,122,82,.32)', textAlign: 'left', flex: 'none' }}>
+        {/* 伝票入力をはじめる（大きく目立たせ、横幅の中央に置く） */}
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <button type="button" className="submit-btn" data-home-start disabled={!canEntry} title={!canEntry ? '入力区分で起動すると伝票を入力できます' : undefined} onClick={() => onNavigate('伝票入力')} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 30px 16px 22px', borderRadius: 14, border: 'none', background: accent, color: '#fff', fontFamily: 'inherit', cursor: !canEntry ? 'not-allowed' : 'pointer', opacity: !canEntry ? 0.45 : 1, boxShadow: '0 8px 22px rgba(31,122,82,.32)', textAlign: 'left', flex: 'none', minWidth: 360, justifyContent: 'center' }}>
               <span aria-hidden style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
               </span>
@@ -109,8 +106,13 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
                 <span style={{ display: 'block', fontSize: 11.5, fontWeight: 500, opacity: 0.9, marginTop: 2, whiteSpace: 'nowrap' }}>{canEntry ? `${s.division} の伝票を入力します` : '入力区分で起動すると入力できます'}</span>
               </span>
             </button>
-            <div style={{ flex: 1, minWidth: 260, display: 'flex', alignItems: 'center' }}><FinderSearch accent={accent} onNavigate={onNavigate} /></div>
-          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: hasRight ? 'minmax(0,1.6fr) minmax(280px,1fr)' : 'minmax(0,1fr)', gap: 20, alignItems: 'start' }}>
+        {/* 左列 */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
+          {/* 機能から探す（検索窓。横幅は下の預金残高と同じ。一覧はメニュー右端の「機能から探す」） */}
+          <FinderSearch accent={accent} onNavigate={onNavigate} full />
 
           {/* 銀行の預金残高 */}
           {show.bank && <section style={card}>
@@ -280,23 +282,20 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
               </div>
             </Modal>
 
-      {/* ダッシュボードに表示させるメニューの編集 */}
-      <Modal open={homeEdit} onClose={() => setHomeEdit(false)} width={620} title="ダッシュボードに表示させるメニューの編集">
+      {/* ダッシュボード表示オプション */}
+      <Modal open={homeEdit} onClose={() => setHomeEdit(false)} width={620} title="ダッシュボード表示オプション">
         <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 18 }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>最初に表示する画面</div>
             <div style={{ fontSize: 11.5, color: '#7a8794', marginBottom: 8 }}>ログインして区分を選んだあと、最初に開く画面です。次回のログインから反映します。</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              {([['ホーム', 'ホーム画面', '残高やお知らせを確認してから作業を始める'], ['伝票入力', '伝票入力画面', 'すぐに伝票（仕訳伝票形式）の入力を始める']] as const).map(([key, label, note]) => {
+            <div role="radiogroup" aria-label="最初に表示する画面" data-start-slider style={{ position: 'relative', display: 'grid', gridTemplateColumns: '1fr 1fr', padding: 4, background: '#e6ecf0', borderRadius: 13, maxWidth: 420 }}>
+              <span aria-hidden style={{ position: 'absolute', top: 4, bottom: 4, left: 4, width: 'calc(50% - 4px)', borderRadius: 10, background: accent, boxShadow: '0 2px 8px rgba(31,122,82,.35)', transform: s.startScreen === '伝票入力' ? 'translateX(100%)' : 'translateX(0)', transition: 'transform .22s ease' }} />
+              {([['ホーム', 'ホーム画面'], ['伝票入力', '伝票入力画面']] as const).map(([key, label]) => {
                 const on = s.startScreen === key;
-                return (
-                  <label key={key} data-start-screen={key} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', border: '1.5px solid ' + (on ? accent : '#e2e8ee'), background: on ? accent + '0d' : '#fff', borderRadius: 11, cursor: 'pointer' }}>
-                    <input type="radio" name="home-start" checked={on} onChange={() => setSession({ startScreen: key })} style={{ marginTop: 3, accentColor: accent }} />
-                    <span><span style={{ display: 'block', fontSize: 14, fontWeight: 700 }}>{label}</span><span style={{ display: 'block', fontSize: 11.5, color: '#7a8794', marginTop: 2, lineHeight: 1.6 }}>{note}</span></span>
-                  </label>
-                );
+                return <button key={key} type="button" role="radio" aria-checked={on} data-start-screen={key} onClick={() => setSession({ startScreen: key })} style={{ position: 'relative', zIndex: 1, padding: '10px 12px', border: 'none', borderRadius: 10, background: 'transparent', color: on ? '#fff' : '#48565f', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', transition: 'color .2s' }}>{label}</button>;
               })}
             </div>
+            <div style={{ fontSize: 11.5, color: '#5b6773', marginTop: 8 }}>{s.startScreen === 'ホーム' ? 'ホーム画面：残高やお知らせを確認してから作業を始めます。' : '伝票入力画面：すぐに伝票（仕訳伝票形式）の入力を始めます。'}</div>
           </div>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>ダッシュボードに表示するメニュー</div>

@@ -148,7 +148,7 @@ export default function App() {
   );
 }
 
-/** プロトタイプ用：権限の切替バー（画面下中央）。右端に、プロトタイプ確認用の「機能一覧（サイトマップ）」への入口を置く（製品のメニューやフッターには置かない）。
+/** プロトタイプ用：権限の切替バー（画面下中央）。右端に、プロトタイプ確認用のページ（機能一覧／画面遷移図／確認事項・やりとり）への入口を置く（製品のメニューやフッターには置かない）。
  *  参照のみ権限のときの見え方（訂正・削除・入換の無効表示）を確認するための仕掛けで、本番の画面要素ではない */
 function RoleSwitchBar() {
   const s = useSession();
@@ -157,7 +157,7 @@ function RoleSwitchBar() {
     { key: '参照のみ', label: '参照のみ権限', hint: '閲覧のみ（訂正・削除・入換は無効表示）', accent: '#b7791f' },
   ];
   return (
-    <div title="プロトタイプ用：利用者権限の表示確認" style={{ position: 'fixed', left: '50%', bottom: 18, transform: 'translateX(-50%)', zIndex: 200, display: 'flex', alignItems: 'center', gap: 4, padding: 4, background: '#fff', border: '1px solid #dde4ea', borderRadius: 12, boxShadow: '0 6px 22px rgba(30,50,70,.16)' }}>
+    <div title="プロトタイプ用：利用者権限の表示確認" style={{ position: 'fixed', left: '50%', bottom: 18, transform: 'translateX(-50%)', zIndex: 200, display: 'flex', alignItems: 'center', gap: 4, padding: 4, width: 'max-content', maxWidth: 'calc(100vw - 24px)', whiteSpace: 'nowrap', background: '#fff', border: '1px solid #dde4ea', borderRadius: 12, boxShadow: '0 6px 22px rgba(30,50,70,.16)' }}>
       <span style={{ fontSize: 10.5, fontWeight: 700, color: '#8290a0', padding: '0 6px 0 8px', letterSpacing: '.03em' }}>権限の表示確認</span>
       {ROLES.map((r) => {
         const on = s.role === r.key;
@@ -169,10 +169,14 @@ function RoleSwitchBar() {
         );
       })}
       <span style={{ width: 1, alignSelf: 'stretch', background: '#e2e8ee', margin: '4px 4px' }} />
-      <button type="button" data-proto-features onClick={() => { window.location.href = '?page=features'; }} title="プロトタイプ確認用：作成した画面と機能の一覧（製品の機能ではありません）" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1, padding: '7px 12px', border: 'none', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit', background: 'transparent', color: '#5b6773' }}>
-        <span style={{ fontSize: 12, fontWeight: 700, lineHeight: 1.2 }}>機能一覧</span>
-        <span style={{ fontSize: 10.5, opacity: 0.7 }}>プロトタイプ確認用</span>
-      </button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '2px 6px 2px 4px' }}>
+        <span style={{ fontSize: 10, fontWeight: 700, color: '#8290a0', letterSpacing: '.03em', padding: '0 6px' }}>プロトタイプ確認用</span>
+        <div style={{ display: 'flex', gap: 2 }}>
+          {([['features', '機能一覧'], ['flow', '画面遷移図'], ['issues', '確認事項・やりとり']] as const).map(([key, label]) => (
+            <button key={key} type="button" className="btn-outline" data-proto-link={key} onClick={() => { window.location.href = '?page=' + key; }} title="プロトタイプ確認用のページ（製品の機能ではありません）" style={{ padding: '4px 8px', border: 'none', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', background: 'transparent', color: '#3d4a56', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>{label}</button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

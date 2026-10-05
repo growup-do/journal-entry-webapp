@@ -45,7 +45,7 @@ const NODES: Node[] = [
   N('finder', '機能から探す', 'page', 'home', { open: '機能から探す' }),
   N('notices', 'お知らせ一覧', 'dialog', 'home', { open: 'ホーム' }),
   N('favedit', 'お気に入りの設定', 'dialog', 'home', { open: 'ホーム' }),
-  N('homeedit', 'ダッシュボードに表示させるメニューの編集', 'dialog', 'home', { open: 'ホーム', note: '表示メニュー／最初に表示する画面' }),
+  N('homeedit', 'ダッシュボード表示オプション', 'dialog', 'home', { open: 'ホーム', note: '表示メニュー／最初に表示する画面' }),
   N('support', 'サポートサイト', 'external', 'home', { url: 'https://www.child.co.jp/' }),
   // 伝票入力
   N('e-voucher', '仕訳伝票形式', 'page', 'entry', { open: '伝票入力' }),
@@ -140,7 +140,7 @@ const E = (from: string, to: string, label?: string, weak = false): Edge => ({ f
 const EDGES: Edge[] = [
   E('login', 'pwreset', 'お忘れですか', true), E('login', 'division', 'ログイン'), E('division', 'merge', '合算追加', true), E('division', 'divinfo', '部門情報の変更', true),
   E('division', 'home', 'OK（初期画面：ホーム）'), E('login', 'home', 'ログイン（区分選択を1か月表示しない設定のとき）', true), E('division', 'e-voucher', 'OK（初期画面：伝票入力）', true),
-  E('home', 'finder', '機能から探す'), E('home', 'notices', '一覧', true), E('home', 'favedit', '編集', true), E('home', 'homeedit', '右上の編集ボタン', true), E('homeedit', 'favedit', '登録する画面を編集', true), E('home', 's-update', '年度更新の案内'), E('home', 'support', 'FAQ すべて見る', true), E('home', 'e-voucher', '伝票入力をはじめる'), E('usersettings', 'pwmail', 'パスワードを変更', true),
+  E('home', 'finder', '機能から探す'), E('home', 'notices', '一覧', true), E('home', 'favedit', '編集', true), E('home', 'homeedit', '右上のボタン', true), E('homeedit', 'favedit', '登録する画面を編集', true), E('home', 's-update', '年度更新の案内'), E('home', 'support', 'FAQ すべて見る', true), E('home', 'e-voucher', '伝票入力をはじめる'), E('usersettings', 'pwmail', 'パスワードを変更', true),
   E('home', 'count', '調査・チェック'), E('home', 'daily', '調査・チェック'), E('home', 'auditm', '調査・チェック'), E('home', 'balcheck', '残高照合へ', true), E('widepanel', 'balcheck', '残高照合の画面を開く', true),
   E('finder', 'trial', '機能を選ぶ', true),
   E('e-voucher', 'e-single', '形式切替'), E('e-single', 'e-transfer', '形式切替'), E('e-transfer', 'e-tsingle', '形式切替'),
