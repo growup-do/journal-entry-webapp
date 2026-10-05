@@ -446,18 +446,18 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                         <FlagButtons shohyo={r.shohyo} check={r.check} fusen={r.fusen} disabled={ro} onChange={(p) => setRow(i, p)} />
                       </div>
                       {/* 2行目：資金（薄い帯）…率／予算残・資金科目 */}
-                      <div className="pp-cell pp-band pp-col" style={bandCell}>
+                      <div className="pp-cell pp-auto pp-col" style={bandCell}>
                         <div style={{ marginTop: -8 }}><BudgetHintLive account={r.kari} threshold={budgetTh} onOpen={() => setGraphAcct(r.kari)} /></div>
                       </div>
-                      <div className="pp-cell pp-band" style={{ ...bandCell, gap: 8 }}>
+                      <div className="pp-cell pp-auto" style={{ ...bandCell, gap: 8 }}>
                         <span style={{ flex: 'none', fontSize: 11, fontWeight: 700, color: PAPER.ink, marginTop: 5 }}>資金</span>
                         <div style={{ flex: 1, minWidth: 0 }}><FundAccountLine name={r.kari} other={r.kashi} mode={fundMode} /></div>
                       </div>
-                      <div className="pp-cell pp-band" style={{ ...bandCell, gap: 8 }}>
+                      <div className="pp-cell pp-auto" style={{ ...bandCell, gap: 8 }}>
                         <span style={{ flex: 'none', fontSize: 11, fontWeight: 700, color: PAPER.ink, marginTop: 5 }}>資金</span>
                         <div style={{ flex: 1, minWidth: 0 }}><FundAccountLine name={r.kashi} other={r.kari} mode={fundMode} /></div>
                       </div>
-                      <div className="pp-cell pp-band pp-col" style={bandCell}>
+                      <div className="pp-cell pp-auto pp-col" style={bandCell}>
                         <div style={{ marginTop: -8 }}><BudgetHintLive account={r.kashi} threshold={budgetTh} onOpen={() => setGraphAcct(r.kashi)} /></div>
                       </div>
                       <div className="pp-cell pp-band pp-center" style={{ ...bandCell, gap: 4, paddingTop: 4 }}>

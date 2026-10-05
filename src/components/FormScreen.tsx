@@ -457,7 +457,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                     </div>
                     <div className="pp-row" style={{ gridTemplateColumns: '64px minmax(0,1fr)' }}>
                       <div className="pp-lab pp-band"><span>資金科目<span className="pp-sub">CF</span></span></div>
-                      <div className="pp-cell pp-col pp-band" style={{ padding: '2px 8px 7px' }}>
+                      <div className="pp-cell pp-col pp-auto" style={{ padding: '2px 8px 7px' }}>
                         <FundAccountLine name={s.value} other={s.other} mode={fundMode} />
                         <BudgetHintLive account={s.value} threshold={budgetTh} onOpen={() => setGraphAcct(s.value)} />
                       </div>

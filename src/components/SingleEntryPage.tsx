@@ -393,7 +393,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
 
           {/* 入力行（紙の単一式入力の配置：上に サービス区分、下に 4段の項目） */}
           <div style={{ display: 'flex', alignItems: 'stretch', gap: 12, margin: '14px 0 8px', flexWrap: 'wrap' }}>
-            <span style={{ alignSelf: 'center', fontSize: 12.5, color: PAPER.ink, fontWeight: 700, whiteSpace: 'nowrap' }}>令和 <b className="pp-ro pp-ro-s pp-num" style={{ fontSize: 13, fontWeight: 700, color: '#22303c', margin: '0 3px' }}>8</b> 年　入力中の伝票</span>
+            <span style={{ alignSelf: 'center', fontSize: 12.5, color: PAPER.ink, fontWeight: 700, whiteSpace: 'nowrap' }}>令和 <b className="pp-num" style={{ padding: '0 3px' }}>8</b> 年　入力中の伝票</span>
             <div className="ef-field" style={{ display: 'flex', width: 250 }}>
               <PaperBox label="サービス区分" grow>
                 <ComboField id="se-service" kind="service" value={f.service} onChange={(x) => v.setField('service', x)} onCommit={() => focusId('se-month')} placeholder="コード・名称で指定" dropUp disabled={ro} padY={6} />
@@ -437,7 +437,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
                   <input id="se-month" className="ef-input pp-input" aria-label="月" disabled={ro} value={f.month} onChange={(e) => v.setField('month', e.target.value)} onKeyDown={onEnter(() => focusId('se-day'))} inputMode="numeric" style={dateInput} />
                   <span style={{ color: '#9aa5b1' }}>/</span>
                   <input id="se-day" className="ef-input pp-input" aria-label="日" disabled={ro} value={f.day} onChange={(e) => v.setField('day', e.target.value)} onKeyDown={onEnter(() => focusId('se-kari'))} inputMode="numeric" style={dateInput} />
-                  <span className="pp-ro pp-ro-s" title="曜日は日付から自動で表示します" style={{ fontSize: 12.5, color: wd ? '#48565f' : '#a3adb8', minWidth: 30, justifyContent: 'center' }}>（{wd || '－'}）</span>
+                  <span title="曜日は日付から自動で表示します" style={{ fontSize: 12.5, color: wd ? '#48565f' : '#a3adb8', minWidth: 30, textAlign: 'center' }}>（{wd || '－'}）</span>
                 </div>
                 <div className="pp-cell ef-field" style={valCell}>
                   <ComboField id="se-kari" kind="account" value={f.kariKamoku} onChange={(x) => v.setField('kariKamoku', x)} onCommit={() => focusId('se-kashi')} placeholder="コード・名称・フリガナ" dropUp listWidth={400} disabled={ro} invalid={fieldState(issues, 'kari', 'pair')} />
@@ -464,8 +464,8 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
                 <div className="pp-cell" style={valCell}>
                   <FlagButtons shohyo={flags.shohyo} check={flags.check} fusen={flags.fusen} disabled={ro} showShohyo={false} onChange={(p) => setFlags((s) => ({ ...s, ...p }))} />
                 </div>
-                <div className="pp-cell pp-band" style={{ ...valCell, minHeight: 36 }}><FundAccountLine name={f.kariKamoku} other={f.kashiKamoku} mode={fundMode} /></div>
-                <div className="pp-cell pp-band" style={{ ...valCell, minHeight: 36 }}><FundAccountLine name={f.kashiKamoku} other={f.kariKamoku} mode={fundMode} /></div>
+                <div className="pp-cell pp-auto" style={{ ...valCell, minHeight: 36 }}><FundAccountLine name={f.kariKamoku} other={f.kashiKamoku} mode={fundMode} /></div>
+                <div className="pp-cell pp-auto" style={{ ...valCell, minHeight: 36 }}><FundAccountLine name={f.kashiKamoku} other={f.kariKamoku} mode={fundMode} /></div>
                 <div className="pp-cell ef-field" style={valCell}>
                   {showCheque ? (
                     <input id="se-cheque" className="ef-input pp-input" disabled={ro} value={cheque} onChange={(e) => setCheque(e.target.value)} onKeyDown={onEnter(() => focusId('se-amount'))} placeholder="任意" autoComplete="off" style={textInput} />
@@ -482,10 +482,10 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
                 {lab('')}
               </div>
               <div className="pp-row" style={{ gridTemplateColumns: PCOLS }}>
-                <div className="pp-cell" style={{ ...valCell, gridColumn: 'span 3' }}><span className="pp-ro pp-ro-fill" style={{ fontSize: 11.5, color: issues.length ? '#7a5600' : '#8290a0', background: issues.length ? '#fff6dd' : undefined }}>{issues.length ? `${issues.length} 件（下に表示）` : '問題なし'}</span></div>
-                <div className="pp-cell pp-band" style={{ ...valCell, minHeight: 36 }}><div style={{ width: '100%', marginTop: -11 }}><BudgetHintLive account={f.kariKamoku} threshold={budgetTh} onOpen={() => setGraphAcct(f.kariKamoku)} /></div></div>
-                <div className="pp-cell pp-band" style={{ ...valCell, minHeight: 36 }}><div style={{ width: '100%', marginTop: -11 }}><BudgetHintLive account={f.kashiKamoku} threshold={budgetTh} onOpen={() => setGraphAcct(f.kashiKamoku)} /></div></div>
-                <div className="pp-cell" style={valCell} />
+                <div className="pp-cell" style={{ ...valCell, gridColumn: 'span 3' }}><span className="pp-ro pp-ro-fill" style={{ fontSize: 11.5, fontWeight: issues.length ? 700 : 400, color: issues.length ? '#7a5600' : '#8290a0' }}>{issues.length ? `${issues.length} 件（下に表示）` : '問題なし'}</span></div>
+                <div className="pp-cell pp-auto" style={{ ...valCell, minHeight: 36 }}><div style={{ width: '100%', marginTop: -11 }}><BudgetHintLive account={f.kariKamoku} threshold={budgetTh} onOpen={() => setGraphAcct(f.kariKamoku)} /></div></div>
+                <div className="pp-cell pp-auto" style={{ ...valCell, minHeight: 36 }}><div style={{ width: '100%', marginTop: -11 }}><BudgetHintLive account={f.kashiKamoku} threshold={budgetTh} onOpen={() => setGraphAcct(f.kashiKamoku)} /></div></div>
+                <div className="pp-cell pp-auto" style={valCell} />
               </div>
               {/* 4段目 */}
               <div className="pp-row" style={{ gridTemplateColumns: PCOLS }}>
