@@ -143,6 +143,14 @@ a:hover {
   border-color: #2c5f9e;
 }
 
+/* ホームの「機能から探す」入力欄（丸い枠全体にフォーカスの輪を出す） */
+.finder-bar {
+  transition: box-shadow 0.12s;
+}
+.finder-bar:focus-within {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--finder-accent, #1f7a52) 22%, transparent);
+}
+
 /* 汎用ボタン hover（クリア・折りたたみトグル等） */
 .btn-outline {
   transition: border-color 0.12s, color 0.12s;

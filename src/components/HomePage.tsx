@@ -97,12 +97,12 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
 
         {/* 伝票入力をはじめる（大きく目立たせ、横幅の中央に置く） */}
         <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <button type="button" className="submit-btn" data-home-start disabled={!canEntry} title={!canEntry ? '入力区分で起動すると伝票を入力できます' : undefined} onClick={() => onNavigate('伝票入力')} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 30px 16px 22px', borderRadius: 14, border: 'none', background: accent, color: '#fff', fontFamily: 'inherit', cursor: !canEntry ? 'not-allowed' : 'pointer', opacity: !canEntry ? 0.45 : 1, boxShadow: '0 8px 22px rgba(31,122,82,.32)', textAlign: 'left', flex: 'none', minWidth: 360, justifyContent: 'center' }}>
-              <span aria-hidden style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+          <button type="button" className="submit-btn" data-home-start disabled={!canEntry} title={!canEntry ? '入力区分で起動すると伝票を入力できます' : undefined} onClick={() => onNavigate('伝票入力')} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '24px 34px 24px 26px', borderRadius: 16, border: 'none', background: accent, color: '#fff', fontFamily: 'inherit', cursor: !canEntry ? 'not-allowed' : 'pointer', opacity: !canEntry ? 0.45 : 1, boxShadow: '0 8px 22px rgba(31,122,82,.32)', textAlign: 'left', flex: 'none', minWidth: 360, justifyContent: 'center' }}>
+              <span aria-hidden style={{ width: 48, height: 48, borderRadius: 13, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
               </span>
               <span>
-                <span style={{ display: 'block', fontSize: 19, fontWeight: 700, lineHeight: 1.3, whiteSpace: 'nowrap' }}>伝票入力をはじめる</span>
+                <span style={{ display: 'block', fontSize: 20, fontWeight: 700, lineHeight: 1.3, whiteSpace: 'nowrap' }}>伝票入力をはじめる</span>
                 <span style={{ display: 'block', fontSize: 11.5, fontWeight: 500, opacity: 0.9, marginTop: 2, whiteSpace: 'nowrap' }}>{canEntry ? `${s.division} の伝票を入力します` : '入力区分で起動すると入力できます'}</span>
               </span>
             </button>
