@@ -443,7 +443,7 @@ export function useEntryTools(o: EntryToolsOptions) {
     { key: 'A', label: '自動按分', group: G3, run: () => setDlg('按分'), disabled: ro },
     { key: 'G', label: '仕訳登録（入力中の伝票を定型として登録）', group: G3, run: saveAsTemplate, disabled: ro },
     { key: 'U', label: '内部取引のオン／オフ（スイッチ上では Shift+Enter でも切替）', group: G3, run: o.onInternal, disabled: ro },
-    { key: 'M', label: '資金モードの切替（自動資金 → 強制資金 → 非資金）', group: G3, run: cycleFund, disabled: ro },
+    { key: 'M', label: '資金モードの切替（自動資金⇄強制資金）', group: G3, run: cycleFund, disabled: ro },
     { key: 'B', label: '科目別残高', group: G4, run: () => setDlg('科目別残') },
     { key: 'Z', label: '現預金残高', group: G4, run: () => setDlg('現預金残') },
     { key: 'H', label: 'キーボード操作一覧', group: 'ヘルプ', run: () => setDlg('ヘルプ') },
@@ -470,7 +470,7 @@ export function useEntryTools(o: EntryToolsOptions) {
   const submitButton: ReactNode = viewOnly ? null : <ActButton id={o.submitId} label={`${name}を登録`} k="S" tone="primary" accent={o.accent} disabled={ro || !!o.blocked} title={ro ? reason : o.blocked ? '登録できないエラーがあります。入力欄の下の表示を直すと登録できます' : '入力中の伝票を登録します'} onClick={o.onSubmit} />;
   /** 定型仕訳ボタン（各形式の見出し行の右端に置く）。左に「印刷」（日記帳・伝票・振替伝票） */
   const templateButton: ReactNode = <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><ScreenPrintMenu page="伝票入力" accent={o.accent} tone="act" />{!viewOnly && <ActButton label="定型仕訳" k="T" accent={o.accent} disabled={ro} title={why('登録済みの定型仕訳を、入力中の伝票に呼び出します')} onClick={() => setDlg('定型')} />}</span>;
-  /** 資金モードの切替（自動資金 → 強制資金 → 非資金）。取引区分の右、または伝票の1段目の右端に置く */
+  /** 資金モードの切替（自動資金⇄強制資金）。取引区分の右、または伝票の1段目の右端に置く */
   const fundSwitch: ReactNode = viewOnly ? null : (
     <span role="radiogroup" aria-label="資金モード" data-fund-switch title={ro ? reason : FUND_MODE_NOTE[o.fundMode]} style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 2, padding: 2, border: '1px solid #cfd8e0', borderRadius: 8, background: '#eef2f5' }}>
       {FUND_MODES.map((m) => {

@@ -11,7 +11,7 @@ import { ExportDialog, type ExportKind, type ExportSpec } from './ExportDialog';
 import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
-import { Field, Notice, SettingsShell, Tabs, Toggle, btn, card, cardHead, input, lbl } from './ui';
+import { Field, Notice, SelectionBar, SettingsShell, Tabs, Toggle, btn, card, cardHead, input, lbl } from './ui';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { ACCOUNT_META, accountMatches, toKatakana, type AccountMeta } from '../lib/accounts';
 import { ACCOUNTS, SERVICES, SUMMARIES, displayName } from '../data';
@@ -388,12 +388,13 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                 <span style={{ display: 'inline-flex', gap: 5, alignItems: 'center' }}><Badge kind="項目" />集計上の見出し（伝票には入力しません）</span>
                 <span style={{ display: 'inline-flex', gap: 5, alignItems: 'center' }}><Badge kind="科目" />伝票に入力する科目</span>
                 <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 6 }}>
-                  {bulk.length > 0 && <><span style={{ fontSize: 12, color: '#3d4a56', alignSelf: 'center' }} data-bulk-count>{bulk.length} 科目を選択中</span><button type="button" onClick={() => setBulkOpen(true)} style={btn(accent, true, true)} data-bulk-open>まとめて設定</button><button type="button" onClick={() => setBulk([])} style={btn('#5b6773', false, true)}>選択解除</button></>}
                   <button type="button" onClick={() => setCollapsed([])} style={btn('#5b6773', false, true)}>すべて開く</button>
                   <button type="button" onClick={() => setCollapsed(GROUPS.map((g) => g.name))} style={btn('#5b6773', false, true)}>項目だけ表示</button>
                 </span>
               </div>
             </div>
+            {/* 複数科目を選んだときの操作（日記帳と同じ選択バー） */}
+            <SelectionBar count={bulk.length} unit="科目" hint="行頭のチェックで追加・解除" onClear={() => setBulk([])} actions={<button type="button" onClick={() => setBulkOpen(true)} style={btn(accent, true, true)} data-bulk-open>まとめて設定</button>} />
             <div style={{ overflow: 'auto', maxHeight: scrollH }}>
               <div role="row" style={{ display: 'grid', gridTemplateColumns: cols, alignItems: 'center', height: 32, background: '#f6f8fa', borderBottom: '1px solid #e2e8ee', position: 'sticky', top: 0, zIndex: 1 }}>
                 <span style={hcell}>{fundTab ? '資金科目' : '科目名称'}</span><span style={hcell}>表示コード</span><span style={hcell}>区分コード</span><span style={hcell}>貸借</span>

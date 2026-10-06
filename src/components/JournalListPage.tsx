@@ -14,7 +14,7 @@ import { NUM, ReportShell, SwitchPill, TD, TH, useMoney } from './ReportShell';
 import { ACTION_HEAD, ACTION_TH, useRowActions } from './RowActions';
 import { ToastView, useToast } from './Toast';
 import { AdvancedSearchModal, DeleteVoucherModal, EMPTY_COND, applyCond, condActive, type SearchCond } from './VoucherEdit';
-import { btn } from './ui';
+import { SelectionBar, btn } from './ui';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { displayName } from '../data';
 import { useVouchers, type Voucher } from '../store/journalStore';
@@ -139,16 +139,7 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
       notice={ra.notice}
     >
       <ToastView msg={toast.msg} />
-      {sel.length > 0 && (
-        <div data-selection-bar style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: '#fff7cc', borderBottom: '1px solid #f3e3a0', fontSize: 12.5 }}>
-          <b>{sel.length} 行を選択中</b>
-          <span style={{ color: '#7a8794' }}>Shift＋クリックで範囲、Ctrl／⌘＋クリックで追加・解除</span>
-          <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
-            <button type="button" onClick={() => setSel([])} style={btn('#5b6773', false, true)}>選択解除</button>
-            <button type="button" data-action="選択した行を削除" onClick={() => setDelOpen(true)} style={btn('#c0392b', true, true)}>選択した行を削除</button>
-          </span>
-        </div>
-      )}
+      <SelectionBar count={sel.length} unit="行" hint="Shift＋クリックで範囲、Ctrl／⌘＋クリックで追加・解除" onClear={() => setSel([])} actions={<button type="button" data-action="選択した行を削除" onClick={() => setDelOpen(true)} style={btn('#c0392b', true, true)}>選択した行を削除</button>} />
       <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 330px)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>

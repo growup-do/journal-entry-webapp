@@ -1,6 +1,6 @@
 // 環境設定（提案I）：既存【動作環境】（マニュアル 4.2）と【ワイド画面 設定】（5.5.1）をWeb向けに整理。
 //   依頼書 5.5.1／6.3：全項目を「全区分共通（システム全体）」と「区分ごと（起動中の区分）」の2区画に分けて表示する。
-//   他画面へ移した項目は「移動した設定」に一覧する。金額書式はプレビューつき。
+//   他画面へ移した項目の対応表は「確認事項・やりとり」のスレッドに記録（画面には出さない）。金額書式はプレビューつき。
 
 import { useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
@@ -15,30 +15,10 @@ import { LoadDivisionSettings } from './DivisionSettingsLoad';
 import { FUSEN_COLORS } from '../store/journalStore';
 
 const DIV_TABS = ['金額書式', '伝票入力', '画面・バックアップ'];
-/** 動作環境から他画面へ移した設定（旧 → 新しい場所 → 開く画面キー） */
-const MOVED: [string, string, string?][] = [
-  ['補正予算額の入力方式（補正額／補正後予算額）', `${displayName('予算')}（補正予算タブ）`, '予算'],
-  ['決算附属明細書 設定2・3 の「収入に合わせる／支出に合わせる」', displayName('決算附属明細書'), '決算附属明細書'],
-  ['画面サイズ', 'Web版では不要（ブラウザの幅に合わせて表示）'],
-  ['ワイド画面の初期表示（初期表示画面・選択月・元帳の初期科目・表示順）', '伝票入力の参照パネル'],
-  ['印刷に関わる設定（0データ・印刷位置・フォント・捺印欄 など）', '各帳票の印刷（詳細設定 › この帳票のみ／全帳票共通）', '共通の印刷設定'],
-  ['帳票の色・印字（カラー帳票・罫線色・網掛け色、帳票印刷の速度、1行のみの改ページ抑制、Excel／PDFの注意書き、試算表の予備費出力）', '各帳票の印刷（詳細設定 › 全帳票共通）または 共通の印刷設定', '共通の印刷設定'],
-  ['決算書の「社会福祉法人名」を印字しない', '各帳票の印刷（詳細設定 › 全帳票共通「法人名を印刷する」）', '共通の印刷設定'],
-  // 旧【動作環境】パネル（ボタン式メニュー）の各項目
-  ['動作環境パネル「仕訳数の確認」', displayName('仕訳数'), '仕訳数'],
-  ['動作環境パネル「帳票選択」', '帳票の印刷（帳票選択 → 基本条件 → 詳細設定 → 出力先）', '印刷センター'],
-  ['動作環境パネル「消費税動作環境」', displayName('税区分'), '税区分'],
-  ['動作環境パネル「お気に入りメニュー」', 'ホームの「お気に入り」（右上のボタンで編集）', 'ホーム'],
-  ['動作環境パネル「ワイド画面 設定」', '伝票入力の参照パネル（この画面の「区分ごと › 画面・バックアップ」にも初期表示を残しています）', '伝票入力'],
-  ['動作環境パネル「アプリケーション設定」', displayName('ユーザー設定') + '（起動直後の画面・表示の設定）', 'ユーザー設定'],
-  ['動作環境パネル「法人管理者設定」', displayName('メンバーの追加、管理') + '（管理者権限・使える区分）', 'メンバーの追加、管理'],
-  ['動作環境パネル「部門情報の変更」', 'この画面右上の「部門情報の変更」'],
-  ['保守メニュー「動作印刷設定の読込」', 'この画面右上の「他の区分の設定を読み込む」'],
-];
 const grid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 14, alignItems: 'start' };
 const colorLbl: CSSProperties = { fontSize: 12, display: 'flex', gap: 6, alignItems: 'center' };
 
-export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'form' | 'sheet'; accent: string; /** 他画面を開く（印刷の詳細設定・移動した設定の移動先） */ onNavigate?: (page: string) => void }) {
+export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'form' | 'sheet'; accent: string; /** 他画面を開く（印刷の詳細設定） */ onNavigate?: (page: string) => void }) {
   const [infoOpen, setInfoOpen] = useState(false);
   const [fileOpen, setFileOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -204,12 +184,6 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
           </div>
         </ScopeBlock>
 
-        <section style={{ border: '1px dashed #cfd8e0', borderRadius: 12, padding: '12px 14px', background: '#fbfcfd' }}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>移動した設定<span style={{ fontWeight: 500, color: '#7a8794', marginLeft: 8, fontSize: 11.5 }}>同じ設定が複数の画面に重複しないよう、使う画面へ移しました。</span></div>
-          <table style={{ borderCollapse: 'collapse', fontSize: 12.5, width: '100%' }}>
-            <tbody>{MOVED.map(([from, to, page]) => <tr key={from}><td style={{ padding: '5px 8px', borderTop: '1px solid #eef2f5', color: '#5b6773' }}>{from}</td><td style={{ padding: '5px 4px', borderTop: '1px solid #eef2f5', color: '#9aa5b1', width: 20 }}>→</td><td style={{ padding: '5px 8px', borderTop: '1px solid #eef2f5', fontWeight: 600 }}>{to}{page && onNavigate && <button type="button" onClick={() => onNavigate(page)} style={{ marginLeft: 8, border: 'none', background: 'transparent', color: accent, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, textDecoration: 'underline', padding: 0 }}>開く</button>}</td></tr>)}</tbody>
-          </table>
-        </section>
       </div>
     </SettingsShell>
   );

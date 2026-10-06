@@ -12,7 +12,7 @@ import { NUM, TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
 import { ExportDialog } from './ExportDialog';
 import type { ExportSpec } from './ExportDialog';
-import { Notice } from './ui';
+import { Notice, SelectionBar, btn as uiBtn } from './ui';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { ACCOUNT_META, accountMatches } from '../lib/accounts';
 import { SUMMARIES } from '../data';
@@ -597,14 +597,7 @@ export function DepreciationPage({ variant, accent }: Props) {
                 {(['すべて', '償却中', '償却終了', '対象外'] as const).map((st) => <button key={st} type="button" className="chip" onClick={() => setStatusFilter(st)} style={{ padding: '5px 12px', borderRadius: 14, border: '1px solid ' + (statusFilter === st ? accent : '#d3dbe3'), background: statusFilter === st ? accent : '#fff', color: statusFilter === st ? '#fff' : '#5b6773', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{st}</button>)}
                 <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="名称・コード・科目で検索" autoComplete="off" style={{ marginLeft: 'auto', width: 240, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 12.5, fontFamily: 'inherit', outline: 'none' }} />
               </div>
-              {sel.size > 0 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 22px', background: '#fff7e6', borderTop: '1px solid #f3d9b0', borderBottom: '1px solid #f3d9b0', fontSize: 12.5 }}>
-                  <b>{sel.size} 件選択中</b>
-                  <button type="button" className="btn-outline" onClick={() => { setTab('disposal'); }} style={btn()}>除却・売却・移管へ</button>
-                  <button type="button" className="btn-outline" onClick={deleteSel} style={btn('#c0392b')}>削除</button>
-                  <button type="button" className="btn-outline" onClick={() => setSel(new Set())} style={{ ...btn(), marginLeft: 'auto' }}>選択解除</button>
-                </div>
-              )}
+              <SelectionBar count={sel.size} unit="件" hint="行頭のチェックで追加・解除" style={{ padding: '8px 22px', borderTop: '1px solid #f3e3a0' }} onClear={() => setSel(new Set())} actions={<><button type="button" onClick={() => { setTab('disposal'); }} style={uiBtn('#5b6773', false, true)}>除却・売却・移管へ</button><button type="button" onClick={deleteSel} style={uiBtn('#c0392b', true, true)}>削除</button></>} />
               <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 470px)' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead><tr><th style={{ ...TH, width: 36 }}><input type="checkbox" checked={list.length > 0 && list.every((a) => sel.has(a.code))} onChange={(e) => setSel(e.target.checked ? new Set(list.map((a) => a.code)) : new Set())} /></th><th style={TH}>状態</th><th style={TH}>コード</th><th style={TH}>固定資産名称</th><th style={TH}>科目</th><th style={TH}>取得年月日</th><th style={{ ...TH, textAlign: 'right' }}>耐用</th><th style={{ ...TH, textAlign: 'right' }}>取得価額</th><th style={{ ...TH, textAlign: 'right' }}>期首帳簿価額</th><th style={{ ...TH, textAlign: 'right' }}>当期償却額</th><th style={{ ...TH, textAlign: 'right' }}>期末帳簿価額</th></tr></thead>

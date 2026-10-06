@@ -83,3 +83,18 @@ export function SettingsShell({ variant, title, desc, badge = '設定', draft = 
     </main>
   );
 }
+
+/** 一覧で複数行を選んだときの操作バー（日記帳の見た目で全画面共通）。件数＋ヒント、右端に「選択解除」と画面ごとの操作ボタン */
+export function SelectionBar({ count, unit = '行', hint, onClear, actions, style }: { count: number; unit?: string; hint?: ReactNode; onClear: () => void; actions?: ReactNode; style?: CSSProperties }) {
+  if (count <= 0) return null;
+  return (
+    <div data-selection-bar style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: '#fff7cc', borderBottom: '1px solid #f3e3a0', fontSize: 12.5, ...style }}>
+      <b>{count} {unit}を選択中</b>
+      {hint && <span style={{ color: '#7a8794' }}>{hint}</span>}
+      <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+        <button type="button" onClick={onClear} style={btn('#5b6773', false, true)}>選択解除</button>
+        {actions}
+      </span>
+    </div>
+  );
+}
