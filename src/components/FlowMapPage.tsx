@@ -33,7 +33,7 @@ const GROUPS: Group[] = [
 const N = (id: string, label: string, kind: Kind, group: string, extra: Partial<Node> = {}): Node => ({ id, label, kind, group, ...extra });
 const NODES: Node[] = [
   // 起動・終了
-  N('login', 'ログイン', 'page', 'start', { open: 'ログイン' }),
+  N('login', 'ログイン', 'page', 'start', { open: 'ログイン', note: '通常アカウント／確認用アカウント（確認メモなどを出さない）' }),
   N('pwreset', 'パスワード再設定', 'dialog', 'start', { open: 'ログイン', note: 'メール → コード → 新パスワード' }),
   N('division', '伝票入力区分の選択', 'dialog', 'start', { open: 'ホーム', note: '会計年度・区分（組織図／一覧）／1か月間表示しない' }),
   N('yearconfirm', '年度切替確認', 'dialog', 'start', { open: 'ホーム', note: '翌年度以降＝黄／前年度以前＝緑。年度を切り替える／元に戻る' }),

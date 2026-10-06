@@ -1,4 +1,5 @@
 // ログイン画面（プロトタイプ：メール／パスワードは入力済み。そのまま「ログイン」で入れる）
+//   確認用アカウント（store/review.ts）でログインすると、確認メモなどプロトタイプ確認用の表示を出さない。
 
 import { useState } from 'react';
 import { Footer } from './Footer';
@@ -6,13 +7,14 @@ import type { CSSProperties, KeyboardEvent } from 'react';
 import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
 import { Notice, Steps } from './ui';
+import { REVIEW_ACCOUNT, isReviewAccount } from '../store/review';
 
 const GREEN = '#1f7a52';
 const RESET_STEPS = ['メールアドレス', '確認コード', '新しいパスワード', '完了'];
 /** IME 変換確定の Enter（isComposing／keyCode 229）を無視する */
 const isImeEnter = (e: KeyboardEvent) => e.nativeEvent.isComposing || (e.nativeEvent as unknown as { keyCode: number }).keyCode === 229;
 
-export function LoginPage({ onLogin }: { onLogin: () => void }) {
+export function LoginPage({ onLogin }: { onLogin: (kind: 'standard' | 'review') => void }) {
   const [email, setEmail] = useState('keiri@example.jp');
   const [pw, setPw] = useState('password123');
   const [show, setShow] = useState(false);
@@ -23,8 +25,11 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
   const lbl: CSSProperties = { display: 'block', fontSize: 11.5, fontWeight: 700, color: '#8290a0', marginBottom: 6 };
   const submit = () => {
     if (!email.trim() || !pw) return toast.show('メールアドレスとパスワードを入力してください');
+    // 確認用アカウント：パスワードを確認し、プロトタイプ確認用の表示（確認メモなど）を出さないモードで入る
+    const review = isReviewAccount(email);
+    if (review && pw !== REVIEW_ACCOUNT.password) return toast.show('パスワードが違います');
     setBusy(true);
-    setTimeout(() => { setBusy(false); onLogin(); }, 500);
+    setTimeout(() => { setBusy(false); onLogin(review ? 'review' : 'standard'); }, 500);
   };
   const onEnter = (e: KeyboardEvent) => {
     if (e.key === 'Enter' && !isImeEnter(e)) submit();
@@ -91,7 +96,8 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
             </button>
           </div>
           <div style={{ marginTop: 16, padding: '10px 12px', background: '#fff7e6', border: '1px solid #f3d9b0', borderRadius: 9, fontSize: 11.5, color: '#8a5a00', lineHeight: 1.6 }}>
-            プロトタイプのため、メールアドレス・パスワードは入力済みです。そのまま「ログイン」を押してください。
+            プロトタイプのため、メールアドレス・パスワードは入力済みです。そのまま「ログイン」を押してください。<br />
+            他部署の方の確認用には別のアカウントをお渡しします。確認用アカウントでログインすると、確認メモなどプロトタイプ確認用の表示は出ません。
           </div>
         </div>
         <div style={{ textAlign: 'center', fontSize: 11, color: '#9aa5b1', marginTop: 14 }}>ご利用には事業者の管理者による招待が必要です。</div>

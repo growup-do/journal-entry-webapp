@@ -14,6 +14,7 @@ import { DailyAuditModal } from './components/DailyAuditPage';
 import { CorporatePrintModal } from './components/CorporatePrintModal';
 import { DEFAULT_MENU } from './data';
 import { LoginPage } from './components/LoginPage';
+import { isReviewMode, setReviewMode } from './store/review';
 import { FeatureListPage } from './components/FeatureListPage';
 import { LegalPage } from './components/LegalPage';
 import { FlowMapPage } from './components/FlowMapPage';
@@ -60,17 +61,19 @@ export default function App() {
   // 静的ページ（フッターから同じタブで開く）：機能一覧／利用規約／個人情報保護方針
   const params = new URLSearchParams(window.location.search);
   const staticPage = params.get('page');
+  // 確認用アカウントでログインしたブラウザ：確認メモ・確認事項・やりとりなどプロトタイプ確認用の表示を出さない
+  const review = isReviewMode();
   if (staticPage === 'features') {
     return (
       <>
         <FeatureListPage />
-        <MemoLayer screenKey={FEATURES_KEY} screenLabel={labelOf} onNavigate={(key) => { if (key === FEATURES_KEY) return; const [m, pg] = key.split(':'); window.location.href = key === 'login' ? '?open=ログイン' : `?open=${encodeURIComponent(pg ?? '')}&mode=${m}`; }} />
+        {!review && <MemoLayer screenKey={FEATURES_KEY} screenLabel={labelOf} onNavigate={(key) => { if (key === FEATURES_KEY) return; const [m, pg] = key.split(':'); window.location.href = key === 'login' ? '?open=ログイン' : `?open=${encodeURIComponent(pg ?? '')}&mode=${m}`; }} />}
       </>
     );
   }
   if (staticPage === 'terms') return <LegalPage />;
   if (staticPage === 'flow') return <FlowMapPage />;
-  if (staticPage === 'issues') return <IssueBoardPage />;
+  if (staticPage === 'issues' && !review) return <IssueBoardPage />;
   const boot = BOOT;
   const bootPage = boot && boot.open !== 'ログイン' && !MODAL_MENU.includes(boot.open) ? boot.open : null;
   // ログイン状態（プロトタイプ：タブを閉じるまで保持）
@@ -90,7 +93,9 @@ export default function App() {
       return false;
     }
   });
-  const login = () => {
+  const login = (kind: 'standard' | 'review' = 'standard') => {
+    // 確認用アカウントならプロトタイプ確認用の表示を出さないモードに（通常アカウントで解除）
+    setReviewMode(kind === 'review');
     try { sessionStorage.setItem('proto-logged-in', '1'); } catch { /* ignore */ }
     // 起動時は区分・年度の選択を先に表示し、その後は設定された初期画面（ホーム／伝票入力）へ
     try { sessionStorage.setItem('proto-pick-division', '1'); } catch { /* ignore */ }
@@ -141,7 +146,7 @@ export default function App() {
     return (
       <>
         <LoginPage onLogin={login} />
-        <MemoLayer screenKey="login" screenLabel={screenLabel} onNavigate={navigateTo} />
+        {!review && <MemoLayer screenKey="login" screenLabel={screenLabel} onNavigate={navigateTo} />}
       </>
     );
   }
@@ -149,21 +154,21 @@ export default function App() {
   return (
     <>
       <FormScreen page={page} onNavigate={selectMenu} onLogout={logout} />
-      <RoleSwitchBar />
+      <RoleSwitchBar review={review} />
       <CorporatePrintModal open={corpPrintOpen} onClose={() => setCorpPrintOpen(false)} />
 
       <SettlementAuditModal open={auditOpen} onClose={() => setAuditOpen(false)} onNavigate={(p) => { setAuditOpen(false); setPage(p); }} />
       <JournalCountModal open={countOpen} onClose={() => setCountOpen(false)} />
       <DailyAuditModal open={dailyOpen} onClose={() => setDailyOpen(false)} onNavigate={(p) => { setDailyOpen(false); selectMenu(p); }} accent="#1f7a52" />
 
-      <MemoLayer screenKey={screenKey} screenLabel={screenLabel} onNavigate={navigateTo} />
+      {!review && <MemoLayer screenKey={screenKey} screenLabel={screenLabel} onNavigate={navigateTo} />}
     </>
   );
 }
 
 /** プロトタイプ用：権限の切替バー（画面下中央）。右端に、プロトタイプ確認用のページ（機能一覧／画面遷移図／確認事項・やりとり）への入口を置く（製品のメニューやフッターには置かない）。
  *  参照のみ権限のときの見え方（訂正・削除・入換の無効表示）を確認するための仕掛けで、本番の画面要素ではない */
-function RoleSwitchBar() {
+function RoleSwitchBar({ review }: { /** 確認用アカウント：確認事項・やりとりへの入口を出さない */ review: boolean }) {
   const s = useSession();
   const ROLES: { key: typeof s.role; label: string; hint: string; accent: string }[] = [
     { key: '入力可', label: '入力権限', hint: '伝票の入力・訂正・削除ができる', accent: '#1f7a52' },
@@ -185,7 +190,7 @@ function RoleSwitchBar() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '2px 6px 2px 4px' }}>
         <span style={{ fontSize: 10, fontWeight: 700, color: '#8290a0', letterSpacing: '.03em', padding: '0 6px' }}>プロトタイプ確認用</span>
         <div style={{ display: 'flex', gap: 2 }}>
-          {([['features', '機能一覧'], ['flow', '画面遷移図'], ['issues', '確認事項・やりとり']] as const).map(([key, label]) => (
+          {([['features', '機能一覧'], ['flow', '画面遷移図'], ['issues', '確認事項・やりとり']] as const).filter(([key]) => !review || key !== 'issues').map(([key, label]) => (
             <button key={key} type="button" className="btn-outline" data-proto-link={key} onClick={() => { window.location.href = '?page=' + key; }} title="プロトタイプ確認用のページ（製品の機能ではありません）" style={{ padding: '4px 8px', border: 'none', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', background: 'transparent', color: '#3d4a56', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>{label}</button>
           ))}
         </div>
