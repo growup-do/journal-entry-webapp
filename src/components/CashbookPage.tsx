@@ -461,7 +461,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
           </div>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 14 }}>
             <button type="button" className="btn-outline" onClick={() => setAggSel(new Set(aggregable.map((r) => r.id)))} style={btn()}>すべて選択</button>
-            <button type="button" className="submit-btn" disabled={aggSel.size === 0} onClick={() => setAggConfirm(true)} style={{ ...btn(true), opacity: aggSel.size ? 1 : 0.5 }}>OK</button>
+            <span data-tip={aggSel.size === 0 ? '集計する明細にチェックを入れると押せます' : undefined} style={{ display: 'inline-flex' }}><button type="button" className="submit-btn" disabled={aggSel.size === 0} onClick={() => setAggConfirm(true)} style={{ ...btn(true), opacity: aggSel.size ? 1 : 0.5 }}>OK</button></span>
             <button type="button" onClick={() => setAggOpen(false)} style={btn()}>キャンセル</button>
           </div>
         </div>
@@ -639,7 +639,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
           )}
           <div style={{ marginTop: 10, fontSize: 11.5, color: '#7a8794', lineHeight: 1.7 }}>信頼度が低い行は推定科目を選び直せます。取り込んだ明細は「承認待ち」となり、「AI自動仕訳 会計確認」で承認すると通常の明細として集計できます。</div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
-            <button type="button" className="submit-btn" disabled={aiLines.filter((l) => l.on).length === 0} onClick={importAi} style={{ ...btn(true), opacity: aiLines.some((l) => l.on) ? 1 : 0.5 }}>取り込む（{aiLines.filter((l) => l.on).length} 件）</button>
+            <span data-tip={aiLines.some((l) => l.on) ? undefined : '取り込む行にチェックを入れると押せます'} style={{ display: 'inline-flex' }}><button type="button" className="submit-btn" disabled={aiLines.filter((l) => l.on).length === 0} onClick={importAi} style={{ ...btn(true), opacity: aiLines.some((l) => l.on) ? 1 : 0.5 }}>取り込む（{aiLines.filter((l) => l.on).length} 件）</button></span>
             <button type="button" onClick={() => setAiOpen(false)} style={btn()}>キャンセル</button>
           </div>
         </div>

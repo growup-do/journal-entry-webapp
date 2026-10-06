@@ -10,7 +10,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { DivisionPicker } from './DivisionPicker';
 import { FiscalYearBanner } from './FiscalYearPage';
 import { AttachedStatementModal, BudgetGraphModal, BudgetHintLive, EntryConfirmModal, SpecialAmountModal, TorihikiBadge, useEntryTools } from './EntryExtras';
-import { ComboField, EntryStyles, isIme, FieldLabel, FlagButtons, FundAccountLine, IssueList, PAPER, PaperBox, PaperDate, PaperFootItems, PaperStyles, PaperTitle, PaperToggle, fieldState, fmtNum, focusId, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, watchedStatement, type FundMode, type FusenColor } from './EntryCommon';
+import { ComboField, EntryStyles, isIme, FieldLabel, FlagButtons, FundAccountLine, PAPER, PaperBox, PaperDate, PaperFootItems, PaperStyles, PaperTitle, PaperToggle, fieldMessage, fieldState, fmtNum, focusId, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, watchedStatement, type FundMode, type FusenColor } from './EntryCommon';
 import { WIDE_TAB_SPACE, WIDE_WIDTH, WidePanel, useWidePanel } from './WidePanel';
 import { ToastView, useToast } from './Toast';
 import { judgeTorihiki } from '../lib/accounts';
@@ -155,7 +155,7 @@ function groupLines(lines: TemplateLine[]): LineGroup[] {
 }
 
 const SUBMIT_ID = 'fe-submit';
-const ENTER_ORDER = '月 → 日 →（伝票No）→ 借方科目 → 貸方科目 →（内部取引相手区分）→ 1行目の摘要 → 業者 → 金額 → 次の行の摘要 …　何も入力していない最後の行の摘要で Enter を押すと「伝票登録」へ移ります';
+const ENTER_ORDER = '月 → 日 →（伝票No）→ 借方科目 → 貸方科目 → 内部取引スイッチ（Shift+Enter でオン／オフ）→（オンのとき：相手区分）→ 1行目の摘要 → 業者 → 金額 → 次の行の摘要 …　何も入力していない最後の行の摘要で Enter を押すと「伝票登録」へ移ります';
 const FE_CSS = `
 .fe-actions { background: #fff; }
 /* 機能ボタンの下部固定は縦に十分な余裕がある画面だけ（低い画面では入力欄が隠れるため通常配置）。下端はプロトタイプの切替バー／メモボタンと重ならないよう余白を取る */
@@ -302,14 +302,8 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
     if (!editable) return;
     const be = basicError();
     if (be) { setErr(be); return; }
-    if (blocked) { setErr('登録できない仕訳です。科目の下に表示しているエラーの内容を確認してください。'); focusId(issues.find((i) => i.level === 'error')?.field === 'aite' ? 'fe-aite' : issues.find((i) => i.level === 'error')?.field === 'kari' ? 'fe-kari' : 'fe-kashi'); return; }
+    if (blocked) { setErr('登録できない仕訳です。入力欄の下に表示しているエラーの内容を確認してください。'); focusId(issues.find((i) => i.level === 'error')?.field === 'aite' ? 'fe-aite' : issues.find((i) => i.level === 'error')?.field === 'kari' ? 'fe-kari' : 'fe-kashi'); return; }
     if (warns.length) { setConfirmOpen(true); return; }
-    finalize();
-  };
-  const confirmNow = () => {
-    if (!editable) return;
-    const be = basicError();
-    if (be) { setErr(be); return; }
     finalize();
   };
 
@@ -338,6 +332,9 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
     onRowDelete: rowDelete,
     internal: partner,
     internalLocked: needsPartner({ kari, kashi, internal: false }),
+    internalId: 'fe-internal',
+    onInternalNext: () => focusId(partner ? 'fe-aite' : 'fe-tek-0'),
+    blocked,
     onInternal: () => { const on = !internal; setInternal(on); if (on) focusId('fe-aite'); else if (!needsPartner({ kari, kashi, internal: false })) setAite(''); },
     onLoadTemplate: (t: JournalTemplate, mode) => {
       const groups = groupLines(t.lines);
@@ -444,8 +441,8 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
               {/* 2段目：借方（BS&PL）／貸方（BS&PL）と、その下の資金（CF） */}
               <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 14, marginBottom: 12 }}>
                 {([
-                  { side: '借方', id: 'fe-kari', color: BLUE, value: kari, other: kashi, set: setKari, commit: () => focusId('fe-kashi'), state: fieldState(issues, 'kari', 'pair') },
-                  { side: '貸方', id: 'fe-kashi', color: PINK, value: kashi, other: kari, set: setKashi, commit: (v: string) => focusId(needsPartner({ kari, kashi: v, internal }) ? 'fe-aite' : 'fe-tek-0'), state: fieldState(issues, 'kashi', 'pair') },
+                  { side: '借方', id: 'fe-kari', color: BLUE, value: kari, other: kashi, set: setKari, commit: () => focusId('fe-kashi'), state: fieldState(issues, 'kari', 'pair'), msg: fieldMessage(issues, 'kari') },
+                  { side: '貸方', id: 'fe-kashi', color: PINK, value: kashi, other: kari, set: setKashi, commit: () => focusId('fe-internal'), state: fieldState(issues, 'kashi', 'pair'), msg: fieldMessage(issues, 'kashi', 'pair') },
                 ] as const).map((s) => (
                   <div key={s.id} className="pp-table ef-field" style={{ gridTemplateColumns: '1fr' }}>
                     <div className="pp-row" style={{ gridTemplateColumns: '64px minmax(0,1fr)' }}>
@@ -453,7 +450,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                         <span><FieldLabel color={s.color} style={{ fontSize: 12, marginBottom: 0, display: 'inline' }}>{s.side}科目</FieldLabel><span className="pp-sub">BS&amp;PL</span></span>
                       </div>
                       <div className="pp-cell" style={{ padding: '7px 8px' }}>
-                        <ComboField id={s.id} kind="account" value={s.value} onChange={s.set} onCommit={s.commit} disabled={!editable} invalid={s.state} placeholder={`${s.side}科目：コード・科目名・フリガナ`} fontSize={14.5} padY={10} listWidth={400} />
+                        <ComboField id={s.id} kind="account" value={s.value} onChange={s.set} onCommit={s.commit} disabled={!editable} invalid={s.state} message={s.msg} placeholder={`${s.side}科目：コード・科目名・フリガナ`} fontSize={14.5} padY={10} listWidth={400} />
                       </div>
                     </div>
                     <div className="pp-row" style={{ gridTemplateColumns: '64px minmax(0,1fr)' }}>
@@ -472,17 +469,10 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                 <div style={{ alignSelf: 'center' }}>{tools.internalSwitch}</div>
                 <div style={{ opacity: partner ? 1 : 0.5, transition: 'opacity .15s' }}>
                   <FieldLabel color={partner ? '#6b3fb5' : '#8895a3'}>内部取引相手区分{partner ? '（必須）' : ''}</FieldLabel>
-                  <ComboField id="fe-aite" kind="service" value={aite} onChange={setAite} onCommit={() => focusId('fe-tek-0')} disabled={!editable || !partner} invalid={partner ? fieldState(issues, 'aite') : undefined} placeholder="コード・区分名・フリガナ" />
+                  <ComboField id="fe-aite" title={!partner ? '左の「内部取引」スイッチをオンにすると入力できます（内部取引科目を選ぶと自動でオンになります）' : undefined} kind="service" value={aite} onChange={setAite} onCommit={() => focusId('fe-tek-0')} disabled={!editable || !partner} invalid={partner ? fieldState(issues, 'aite') : undefined} message={partner ? fieldMessage(issues, 'aite') : undefined} placeholder="コード・区分名・フリガナ" />
                 </div>
                 <div style={{ fontSize: 11.5, color: partner ? '#6b5a8a' : '#8895a3', lineHeight: 1.7, paddingBottom: 4 }}>{partner ? <>内部取引の相手先となる区分を指定します。入力中の区分（{sess.division}）とは別の区分を選んでください。</> : '内部取引のときは、スイッチをオンにして相手区分を指定します。内部取引科目を選ぶと自動でオンになります。'}</div>
               </div>
-
-              {/* 登録できない仕訳（赤）／確認して登録できる警告（黄） */}
-              {issues.length > 0 && (
-                <div style={{ marginBottom: 12 }}>
-                  <IssueList issues={issues} onConfirm={editable ? confirmNow : undefined} confirmDisabled={basicError() || undefined} confirmId="fe-confirm" />
-                </div>
-              )}
 
               {/* 3段目：明細（コード｜摘要／業者｜金額｜行の操作）。空の罫線行を足して用紙らしく見せる */}
               <div className="pp-table" style={{ gridTemplateColumns: '1fr' }}>

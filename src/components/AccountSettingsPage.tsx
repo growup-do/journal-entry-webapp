@@ -185,7 +185,7 @@ const RelRow = ({ label, note, state, on, onOpen, disabled }: { label: string; n
       <div style={{ fontSize: 11, color: '#8290a0', lineHeight: 1.5 }}>{note}</div>
     </div>
     <span style={{ fontSize: 12, fontWeight: 700, color: on ? '#1f7a52' : '#9aa5b1', textAlign: 'right', maxWidth: 150 }}>{state}</span>
-    <button type="button" onClick={onOpen} disabled={disabled} style={{ ...btn('#5b6773', false, true), opacity: disabled ? 0.45 : 1, cursor: disabled ? 'default' : 'pointer' }}>設定</button>
+    <span data-tip={disabled ? '左のスイッチをオンにすると設定できます' : undefined} style={{ display: 'inline-flex' }}><button type="button" onClick={onOpen} disabled={disabled} style={{ ...btn('#5b6773', false, true), opacity: disabled ? 0.45 : 1, cursor: disabled ? 'default' : 'pointer' }}>設定</button></span>
   </div>
 );
 
@@ -593,7 +593,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
           </div>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <button type="button" onClick={() => setAddOpen(false)} style={btn()}>キャンセル</button>
-            <button type="button" className="submit-btn" onClick={doAdd} disabled={!addChecked.length} style={{ ...btn(accent, true), opacity: addChecked.length ? 1 : 0.5 }}>チェックした科目を追加{addChecked.length ? `（${addChecked.length} 件）` : ''}</button>
+            <span data-tip={addChecked.length ? undefined : '追加する科目にチェックを入れると押せます'} style={{ display: 'inline-flex' }}><button type="button" className="submit-btn" onClick={doAdd} disabled={!addChecked.length} style={{ ...btn(accent, true), opacity: addChecked.length ? 1 : 0.5 }}>チェックした科目を追加{addChecked.length ? `（${addChecked.length} 件）` : ''}</button></span>
           </div>
         </div>
       </Modal>
@@ -663,8 +663,8 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                 </div>); })}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" onClick={() => moveSwap(swap.cur, swap.cur - 1)} disabled={swap.cur <= 0} style={{ ...btn(), opacity: swap.cur <= 0 ? 0.5 : 1 }}>▲ 上へ</button>
-              <button type="button" onClick={() => moveSwap(swap.cur, swap.cur + 1)} disabled={swap.cur >= swap.keys.length - 1} style={{ ...btn(), opacity: swap.cur >= swap.keys.length - 1 ? 0.5 : 1 }}>▼ 下へ</button>
+              <span data-tip={swap.cur <= 0 ? '先頭の科目のため、これ以上は上へ動かせません' : undefined} style={{ display: 'inline-flex' }}><button type="button" onClick={() => moveSwap(swap.cur, swap.cur - 1)} disabled={swap.cur <= 0} style={{ ...btn(), opacity: swap.cur <= 0 ? 0.5 : 1 }}>▲ 上へ</button></span>
+              <span data-tip={swap.cur >= swap.keys.length - 1 ? '最後の科目のため、これ以上は下へ動かせません' : undefined} style={{ display: 'inline-flex' }}><button type="button" onClick={() => moveSwap(swap.cur, swap.cur + 1)} disabled={swap.cur >= swap.keys.length - 1} style={{ ...btn(), opacity: swap.cur >= swap.keys.length - 1 ? 0.5 : 1 }}>▼ 下へ</button></span>
               <button type="button" onClick={() => moveSwap(swap.cur, 0)} style={btn()}>先頭へ</button>
               <button type="button" onClick={() => moveSwap(swap.cur, swap.keys.length - 1)} style={btn()}>末尾へ</button>
               <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}><button type="button" onClick={() => setSwap(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={applySwap} style={btn(accent, true)}>OK</button></span>

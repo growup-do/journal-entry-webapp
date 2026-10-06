@@ -173,3 +173,17 @@ a:hover {
 .menu-sub:hover {
   background: #f4f6f8;
 }
+
+/* 無効（グレーアウト）な操作の理由：data-tip にマウスを載せると小さな説明を出す */
+[data-tip] { position: relative; }
+[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute; right: 0; top: calc(100% + 6px);
+  z-index: 400; width: max-content; max-width: 280px; padding: 6px 9px; border-radius: 7px;
+  background: #22303c; color: #fff; font-size: 11px; font-weight: 500; line-height: 1.55; text-align: left; white-space: normal;
+  box-shadow: 0 6px 18px rgba(10,20,30,.25); pointer-events: none;
+}
+[data-tip]:hover::before {
+  content: ''; position: absolute; right: 12px; top: calc(100% - 4px);
+  border: 5px solid transparent; border-bottom-color: #22303c; z-index: 400; pointer-events: none;
+}

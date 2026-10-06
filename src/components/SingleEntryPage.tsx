@@ -8,8 +8,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { ToastView, useToast } from './Toast';
-import { BudgetGraphModal, BudgetHintLive, TorihikiBadge, useEntryTools, type EntryFlags } from './EntryExtras';
-import { ComboField, ConfirmModal, EntryStyles, FlagButtons, FundAccountLine, IssueList, PAPER, PaperBox, PaperStyles, PaperTitle, PaperToggle, fieldState, focusId, hasError, hasWarn, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor } from './EntryCommon';
+import { BudgetGraphModal, BudgetHintLive, EntryConfirmModal, TorihikiBadge, useEntryTools, type EntryFlags } from './EntryExtras';
+import { ComboField, ConfirmModal, EntryStyles, FlagButtons, FundAccountLine, PAPER, PaperBox, PaperStyles, PaperTitle, PaperToggle, fieldMessage, fieldState, focusId, hasError, hasWarn, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor } from './EntryCommon';
 import { useWidePanel } from './WidePanel';
 import { yearOfMonth } from './SingleEntryTools';
 import { judgeTorihiki } from '../lib/accounts';
@@ -17,7 +17,7 @@ import { makeSingleSeed } from '../data';
 import { useEntryForm } from '../hooks/useEntryForm';
 import { applyMonth } from '../lib/format';
 import { FUSEN_COLORS, addVoucher, deleteVoucher, getVouchers, updateVoucher } from '../store/journalStore';
-import { useSession, type TemplateLine } from '../store/session';
+import { useSession, type TemplateLine, setSession } from '../store/session';
 import type { FormState, JournalEntry } from '../types';
 
 const PINK = '#b0426a';
@@ -53,7 +53,7 @@ function weekdayOfDate(date: string): string {
   return weekdayOf(m ?? '', d ?? '');
 }
 
-const ENTER_ORDER = '月 → 日 → 借方科目 → 貸方科目 →（内部取引のとき：相手区分）→ 摘要 → 業者 → 金額。金額で Enter を押すと登録し、次の伝票の借方科目へ移ります';
+const ENTER_ORDER = '月 → 日 → 借方科目 → 貸方科目 → 内部取引スイッチ（Shift+Enter でオン／オフ）→（オンのとき：相手区分）→ 摘要 → 業者 → 金額。金額で Enter を押すと登録し、次の伝票の借方科目へ移ります';
 
 /** 一覧の行に付ける情報（チェック・付箋・内部取引相手区分・共有ストア側の id） */
 interface RowMeta { storeId?: number; check: boolean; fusen: FusenColor; aite: string }
@@ -74,6 +74,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
   const [cheque, setCheque] = useState('');
   const [fundMode, setFundMode] = useState<FundMode>('自動資金');
   const [internal, setInternal] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [aite, setAite] = useState('');
   /** 連続定型：テンプレートの行を1枚ずつ続けて登録する */
   const [queue, setQueue] = useState<{ name: string; lines: TemplateLine[]; i: number } | null>(null);
@@ -128,15 +129,11 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
     }
     if (blocked) {
       const first = issues.find((i) => i.level === 'error');
-      toast.show('登録できない内容があります。入力欄の下の表示を確認してください');
+      toast.show('登録できない内容があります。入力欄の下に表示しているエラーを直してください');
       focusId(first?.field === 'aite' ? 'se-aite' : first?.field === 'kari' ? 'se-kari' : 'se-kashi');
       return;
     }
-    if (hasWarn(issues) && !confirmed) {
-      toast.show('確認が必要な内容があります。「確認して登録」を押すと登録します');
-      focusId('se-confirm');
-      return;
-    }
+    if (hasWarn(issues) && !confirmed) { setConfirmOpen(true); return; }
     const stored = addVoucher({ kind: '単一', date: `${f.month}/${f.day}`, kari: f.kariKamoku, kashi: f.kashiKamoku, tekiyo: f.tekiyo, amount: toNum(f.amount), service: f.service, gyosha: f.gyosha || undefined, shohyo: flags.shohyo, cheque: cheque.trim() || undefined, internal: partner || undefined });
     if (flags.check || flags.fusen) updateVoucher(stored.id, { check: flags.check, fusen: flags.fusen });
     if (partner) setPartner(stored.id, aite);
@@ -185,6 +182,9 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
     onCancel: () => { clearEntry(); focusId('se-kari'); },
     internal: partner,
     internalLocked: needsPartner({ kari: f.kariKamoku, kashi: f.kashiKamoku, internal: false }),
+    internalId: 'se-internal',
+    onInternalNext: () => focusId(partner ? 'se-aite' : 'se-tekiyo'),
+    blocked,
     onInternal: () => {
       if (internal) { setInternal(false); return; }
       setInternal(true);
@@ -268,7 +268,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
     fontFamily: 'inherit',
     cursor: 'pointer',
   });
-  const afterKashi = () => focusId(needsPartner({ kari: f.kariKamoku, kashi: f.kashiKamoku, internal }) ? 'se-aite' : 'se-tekiyo');
+  const afterKashi = () => focusId('se-internal');
   const budgetTh = sess.env.budgetCheck ? sess.env.budgetThreshold : 101;
   const divisionName = f.service.replace(/^\d+\s*/, '');
   /** 入力欄の列：伝票No／Seq No ｜ 日・証憑 ｜ 付箋・チェック ｜ 借方 ｜ 貸方 ｜ 右端（取引区分・小切手No・金額） */
@@ -282,6 +282,19 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
       <PaperStyles />
       <ToastView msg={toast.msg} />
       {tools.dialogs}
+      <EntryConfirmModal
+        open={confirmOpen}
+        kind={judgeTorihiki(f.kariKamoku, f.kashiKamoku, fundMode === '強制資金').kind}
+        issues={issues.filter((i) => i.level === 'warn')}
+        onClose={() => setConfirmOpen(false)}
+        onProceed={(dont) => {
+          const warns = issues.filter((i) => i.level === 'warn');
+          if (dont) setSession({ env: { ...sess.env, ...(warns.some((w) => w.code === 'expense') ? { confirmExpense: false } : {}), ...(warns.some((w) => w.code === 'income') ? { confirmIncome: false } : {}) } });
+          setConfirmOpen(false);
+          doSubmit(true);
+        }}
+        accent={accent}
+      />
       <BudgetGraphModal open={!!graphAcct} onClose={() => setGraphAcct(null)} account={graphAcct ?? ''} />
       <ConfirmModal open={delTarget != null} title="伝票削除の確認" okLabel="この伝票を削除する" cancelLabel="削除しない" danger accent={accent} onClose={() => setDelTarget(null)} onOk={doDelete}>
         {delTarget && (
@@ -405,7 +418,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', minWidth: 0 }}>
                   {tools.internalSwitch}
                   <div style={{ flex: 1, minWidth: 0, opacity: partner ? 1 : 0.5 }}>
-                    <ComboField id="se-aite" kind="service" value={aite} onChange={setAite} onCommit={() => focusId('se-tekiyo')} placeholder="相手先の区分を指定" dropUp disabled={ro || !partner} invalid={partner ? fieldState(issues, 'aite') : undefined} padY={6} />
+                    <ComboField id="se-aite" title={!partner ? '左の「内部取引」スイッチをオンにすると入力できます（内部取引科目を選ぶと自動でオンになります）' : undefined} kind="service" value={aite} onChange={setAite} onCommit={() => focusId('se-tekiyo')} placeholder="相手先の区分を指定" dropUp disabled={ro || !partner} invalid={partner ? fieldState(issues, 'aite') : undefined} message={partner ? fieldMessage(issues, 'aite') : undefined} padY={6} />
                   </div>
                 </div>
               </PaperBox>
@@ -440,10 +453,10 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
                   <span title="曜日は日付から自動で表示します" style={{ fontSize: 12.5, color: wd ? '#48565f' : '#a3adb8', minWidth: 30, textAlign: 'center' }}>（{wd || '－'}）</span>
                 </div>
                 <div className="pp-cell ef-field" style={valCell}>
-                  <ComboField id="se-kari" kind="account" value={f.kariKamoku} onChange={(x) => v.setField('kariKamoku', x)} onCommit={() => focusId('se-kashi')} placeholder="コード・名称・フリガナ" dropUp listWidth={400} disabled={ro} invalid={fieldState(issues, 'kari', 'pair')} />
+                  <ComboField id="se-kari" kind="account" value={f.kariKamoku} onChange={(x) => v.setField('kariKamoku', x)} onCommit={() => focusId('se-kashi')} placeholder="コード・名称・フリガナ" dropUp listWidth={400} disabled={ro} invalid={fieldState(issues, 'kari', 'pair')} message={fieldMessage(issues, 'kari')} />
                 </div>
                 <div className="pp-cell ef-field" style={valCell}>
-                  <ComboField id="se-kashi" kind="account" value={f.kashiKamoku} onChange={(x) => v.setField('kashiKamoku', x)} onCommit={afterKashi} placeholder="コード・名称・フリガナ" dropUp listWidth={400} disabled={ro} invalid={fieldState(issues, 'kashi', 'pair')} />
+                  <ComboField id="se-kashi" kind="account" value={f.kashiKamoku} onChange={(x) => v.setField('kashiKamoku', x)} onCommit={afterKashi} placeholder="コード・名称・フリガナ" dropUp listWidth={400} disabled={ro} invalid={fieldState(issues, 'kashi', 'pair')} message={fieldMessage(issues, 'kashi', 'pair')} />
                 </div>
                 <div className="pp-cell" data-torihiki-cell style={valCell}><span className="pp-ro pp-ro-fill" style={{ fontSize: 12, fontWeight: 700, color: blocked ? '#c0392b' : f.kariKamoku && f.kashiKamoku ? '#3d4a56' : '#a3adb8' }}>{blocked ? '登録できません' : f.kariKamoku && f.kashiKamoku ? judgeTorihiki(f.kariKamoku, f.kashiKamoku, fundMode === '強制資金').kind : '－'}</span></div>
               </div>
@@ -522,13 +535,8 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
             <span style={{ fontSize: 11.5, color: '#7a8794', minWidth: 0 }}>Enter：{ENTER_ORDER.split('。')[0]}。金額で Enter → 登録</span>
             <span style={{ marginLeft: 'auto', flex: 'none' }}>{tools.submitButton}</span>
           </div>
-          {/* 入力内容の判定（エラー＝登録不可／確認＝確認して登録） */}
-          {(issues.length > 0 || v.err) && (
-            <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
-              {v.err && <div role="alert" style={{ color: '#c0392b', fontSize: 12.5, fontWeight: 600 }}>{v.err}</div>}
-              <IssueList issues={issues} confirmId="se-confirm" onConfirm={() => doSubmit(true)} confirmDisabled={ro ? tools.reason : !toNum(f.amount) ? '金額を入力すると登録できます' : undefined} />
-            </div>
-          )}
+          {/* 未入力などのメッセージ（科目の組み合わせのエラーは各入力欄の直下、確認はモーダルで表示） */}
+          {v.err && <div role="alert" style={{ marginTop: 8, color: '#c0392b', fontSize: 12.5, fontWeight: 600 }}>{v.err}</div>}
         </div>
 
         {/* 機能ボタン（入力補助／参照） */}

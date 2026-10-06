@@ -5,7 +5,7 @@
 //   （依頼書 5.3.3／5.3.4／5.3.6／付録A：ファンクションキーの代替）。
 
 import { useMemo, useState } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
+import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
 import { Field, Notice, Toggle, btn, input, lbl, numInput, toInt, yen } from './ui';
@@ -64,10 +64,21 @@ export function TorihikiBadge({ kari, kashi, force, blocked, right }: { kari: st
 }
 
 /* ---------------- 内部取引スイッチ（相手区分の入力欄の中に置く） ---------------- */
-export function InternalSwitch({ on, onToggle, disabled, locked, title }: { on: boolean; onToggle: () => void; disabled?: boolean; /** 内部取引科目を使っているため自動でオン（切り替え不可） */ locked?: boolean; title?: string }) {
+export function InternalSwitch({ on, onToggle, disabled, locked, title, id, onNext }: { on: boolean; onToggle: () => void; disabled?: boolean; /** 内部取引科目を使っているため自動でオン（切り替え不可） */ locked?: boolean; title?: string; /** Enter 送りの順序に入れるための id */ id?: string; /** Enter で次の入力欄へ（Shift+Enter はオン／オフの切替） */ onNext?: () => void }) {
   const off = disabled || locked;
+  const onKey = (e: KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
+    e.preventDefault();
+    if (e.shiftKey) {
+      // キーボードでの切替はカーソルをスイッチに残す（続けて Shift+Enter で戻せる。Enter で次の欄へ）
+      const el = e.currentTarget;
+      if (!off) { onToggle(); window.setTimeout(() => el.focus(), 10); }
+      return;
+    }
+    onNext?.();
+  };
   return (
-    <button type="button" role="switch" aria-checked={on} data-menu="内部取引" tabIndex={-1} disabled={off} onClick={onToggle} title={title ?? (locked ? '内部取引科目を使っているため、自動でオンになっています' : on ? '内部取引をオフにします（相手区分の入力欄を閉じます）' : '内部取引としてあつかい、相手区分を入力できるようにします')} style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 7, padding: '3px 4px', border: 'none', background: 'transparent', fontFamily: 'inherit', cursor: off ? 'not-allowed' : 'pointer', opacity: disabled ? 0.55 : 1 }}>
+    <button id={id} type="button" role="switch" aria-checked={on} data-menu="内部取引" className="ef-act" disabled={disabled} aria-disabled={off || undefined} onKeyDown={onKey} onClick={() => { if (!off) onToggle(); }} data-tip={off ? (title ?? (locked ? '内部取引科目（区分間繰入金など）を使っているため自動でオンです。科目を変えるとオフにできます' : undefined)) : undefined} title={off ? undefined : (title ?? (on ? '内部取引をオフにします（相手区分の入力欄を閉じます）。Shift+Enter でも切替' : '内部取引としてあつかい、相手区分を入力できるようにします。Shift+Enter でも切替'))} style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 7, padding: '3px 4px', border: 'none', background: 'transparent', fontFamily: 'inherit', cursor: off ? 'not-allowed' : 'pointer', opacity: disabled ? 0.55 : 1 }}>
       <span style={{ fontSize: 12, fontWeight: 700, color: on ? '#6b3fb5' : '#5b6773', whiteSpace: 'nowrap' }}>内部取引</span>
       <span aria-hidden style={{ position: 'relative', width: 38, height: 22, borderRadius: 11, background: on ? '#6b3fb5' : '#c3ccd4', transition: 'background .15s', flex: 'none' }}>
         <span style={{ position: 'absolute', top: 2, left: 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,.25)', transform: on ? 'translateX(16px)' : 'translateX(0)', transition: 'transform .15s' }} />
@@ -362,6 +373,11 @@ export interface EntryToolsOptions {
   onRowDelete?: () => void;
   internal: boolean;
   onInternal: () => void;
+  /** 内部取引スイッチの id と、スイッチで Enter を押したときの移動先 */
+  internalId?: string;
+  onInternalNext?: () => void;
+  /** 登録できないエラーがある（登録ボタンをグレーにする） */
+  blocked?: boolean;
   /** 内部取引科目を使っているため、内部取引スイッチを自動でオンに固定する */
   internalLocked?: boolean;
   onLoadTemplate: (t: JournalTemplate, mode: '定型' | '連続') => void;
@@ -407,7 +423,7 @@ export function useEntryTools(o: EntryToolsOptions) {
 
   const G1 = '伝票の操作', G2 = '行の操作', G3 = '入力補助', G4 = '参照';
   const shortcuts: Shortcut[] = [
-    { key: 'S', label: '伝票登録', group: G1, run: o.onSubmit, disabled: ro },
+    { key: 'S', label: '伝票登録', group: G1, run: o.onSubmit, disabled: ro || !!o.blocked },
     { key: 'O', label: '入力の変更（表示項目）', group: G1, run: () => setDlg('入力の変更') },
     ...(o.onNavigate ? ENTRY_FORMATS.map((k, i): Shortcut => ({ key: String(i + 1), label: `形式の切替：${displayName(k)}`, group: G1, run: () => { if (k !== o.format) go(k); } })) : []),
     ...(o.multiRow ? [
@@ -424,7 +440,7 @@ export function useEntryTools(o: EntryToolsOptions) {
     { key: 'R', label: '連続定型', group: G3, run: () => setDlg('連続'), disabled: ro },
     { key: 'A', label: '自動按分', group: G3, run: () => setDlg('按分'), disabled: ro },
     { key: 'G', label: '仕訳登録（入力中の伝票を定型として登録）', group: G3, run: saveAsTemplate, disabled: ro },
-    { key: 'U', label: '内部取引のオン／オフ（相手区分の入力欄を有効にする）', group: G3, run: o.onInternal, disabled: ro },
+    { key: 'U', label: '内部取引のオン／オフ（スイッチ上では Shift+Enter でも切替）', group: G3, run: o.onInternal, disabled: ro },
     { key: 'M', label: '資金モードの切替（自動資金⇄強制資金）', group: G3, run: cycleFund, disabled: ro },
     { key: 'B', label: '科目別残高', group: G4, run: () => setDlg('科目別残') },
     { key: 'Z', label: '現預金残高', group: G4, run: () => setDlg('現預金残') },
@@ -449,7 +465,7 @@ export function useEntryTools(o: EntryToolsOptions) {
 
   const why = (t: string) => (ro ? reason : t);
   /** 伝票登録ボタン（各形式の入力欄の中に置く。伝票の操作グループは廃止） */
-  const submitButton: ReactNode = <ActButton id={o.submitId} label={`${name}を登録`} k="S" tone="primary" accent={o.accent} disabled={ro} title={why('入力中の伝票を登録します')} onClick={o.onSubmit} />;
+  const submitButton: ReactNode = <ActButton id={o.submitId} label={`${name}を登録`} k="S" tone="primary" accent={o.accent} disabled={ro || !!o.blocked} title={ro ? reason : o.blocked ? '登録できないエラーがあります。入力欄の下の表示を直すと登録できます' : '入力中の伝票を登録します'} onClick={o.onSubmit} />;
   /** 定型仕訳ボタン（各形式の見出し行の右端に置く）。左に「印刷」（日記帳・伝票・振替伝票） */
   const templateButton: ReactNode = <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><ScreenPrintMenu page="伝票入力" accent={o.accent} tone="act" /><ActButton label="定型仕訳" k="T" accent={o.accent} disabled={ro} title={why('登録済みの定型仕訳を、入力中の伝票に呼び出します')} onClick={() => setDlg('定型')} /></span>;
   /** 資金モードの切替（自動資金⇄強制資金）。取引区分の右、または伝票の1段目の右端に置く */
@@ -462,7 +478,7 @@ export function useEntryTools(o: EntryToolsOptions) {
     </span>
   );
   /** 内部取引スイッチ（相手区分の入力欄の中に置く） */
-  const internalSwitch: ReactNode = <InternalSwitch on={o.internal} onToggle={o.onInternal} disabled={ro} locked={o.internalLocked} title={ro ? reason : undefined} />;
+  const internalSwitch: ReactNode = <InternalSwitch on={o.internal} onToggle={o.onInternal} disabled={ro} locked={o.internalLocked} title={ro ? reason : undefined} id={o.internalId} onNext={o.onInternalNext} />;
   const actionBar: ReactNode = (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 8 }}>
       <ActionGroup caption="入力補助">

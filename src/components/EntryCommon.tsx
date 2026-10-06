@@ -38,7 +38,6 @@ const CSS = `
 .ef-box:focus-within { outline: 3px solid var(--ef-accent, #1f7a52); outline-offset: 1px; background: #fff8d6 !important; border-color: var(--ef-accent, #1f7a52) !important; }
 .ef-bare { outline: none !important; background: transparent !important; }
 .ef-now { display: none; margin-left: 6px; padding: 1px 7px; border-radius: 8px; background: var(--ef-accent, #1f7a52); color: #fff; font-size: 10px; font-weight: 800; letter-spacing: .06em; vertical-align: 1px; }
-.ef-field:focus-within .ef-now { display: inline-block; }
 .ef-row { transition: background .1s; }
 .ef-row:focus-within { background: #fffdf0 !important; box-shadow: inset 4px 0 0 var(--ef-accent, #1f7a52); }
 .ef-rownow { display: none; }
@@ -61,12 +60,11 @@ export function EntryStyles() {
 /** アクセント色の CSS 変数を付けるラッパー用スタイル */
 export const scopeStyle = (accent: string): CSSProperties => ({ '--ef-accent': accent } as CSSProperties);
 
-/** 入力欄の見出し。フォーカス中は「入力中」マークが付く（親に className="ef-field" が必要） */
+/** 入力欄の見出し（入力位置は太枠と背景色で示す。「入力中」マークは廃止） */
 export function FieldLabel({ children, color, style }: { children: ReactNode; color?: string; style?: CSSProperties }) {
   return (
     <span className="ef-label" style={{ display: 'block', fontSize: 11, fontWeight: 700, color: color ?? '#8290a0', marginBottom: 6, letterSpacing: '.03em', whiteSpace: 'nowrap', ...style }}>
       {children}
-      <span className="ef-now">入力中</span>
     </span>
   );
 }
@@ -106,7 +104,6 @@ export interface Candidate { value: string; code: string; kana: string; group?: 
 const EXTRA_ACCOUNTS: Candidate[] = [
   { value: '手数料', code: '5290', kana: 'テスウリョウ', group: '事業費' },
   { value: '減価償却費', code: '5310', kana: 'ゲンカショウキャクヒ', group: '事業費' },
-  { value: '器具及び備品', code: '1710', kana: 'キグオヨビビヒン', group: '固定資産' },
   { value: '寄附金収益', code: '4210', kana: 'キフキンシュウエキ', group: '事業収益' },
   { value: '健康保険', code: '5122', kana: 'ケンコウホケン', group: '特殊摘要科目' },
   { value: '厚生年金', code: '5123', kana: 'コウセイネンキン', group: '特殊摘要科目' },
@@ -123,7 +120,7 @@ const SERVICE_KANA: Record<string, string> = { '001': 'ホンブ', '002': 'ホ�
 const CANDIDATES: Record<ComboKind, Candidate[]> = {
   account: [
     ...ACCOUNTS.flatMap((g) => g.items.map((name) => { const m = ACCOUNT_META.find((x) => x.name === name); return { value: name, code: m?.code ?? '', kana: m?.kana ?? '', group: g.group }; })),
-    ...EXTRA_ACCOUNTS,
+    ...EXTRA_ACCOUNTS.filter((x) => !ACCOUNTS.some((g) => g.items.includes(x.value))),
   ],
   vendor: VENDORS.filter((v) => v !== '（なし）').map((v, i) => ({ value: v, code: String(101 + i), kana: VENDOR_KANA[v] ?? '' })),
   summary: SUMMARIES.map((v, i) => ({ value: v, code: String(i + 1).padStart(2, '0'), kana: SUMMARY_KANA[v] ?? '' })),
@@ -162,6 +159,8 @@ interface ComboProps {
   dropUp?: boolean;
   disabled?: boolean;
   invalid?: 'error' | 'warn';
+  /** 入力欄の直下に出すメッセージ（エラーの内容） */
+  message?: string;
   fontSize?: number;
   padY?: number;
   listWidth?: number;
@@ -169,7 +168,7 @@ interface ComboProps {
   title?: string;
 }
 
-export function ComboField({ id, kind, value, onChange, onCommit, placeholder, freeText, dropUp, disabled, invalid, fontSize = 13.5, padY = 9, listWidth, onFocusField, title }: ComboProps) {
+export function ComboField({ id, kind, value, onChange, onCommit, placeholder, freeText, dropUp, disabled, invalid, message, fontSize = 13.5, padY = 9, listWidth, onFocusField, title }: ComboProps) {
   const all = useMemo(() => candidatesOf(kind), [kind]);
   const [text, setText] = useState(value);
   const [editing, setEditing] = useState(false);
@@ -265,7 +264,8 @@ export function ComboField({ id, kind, value, onChange, onCommit, placeholder, f
 
   const border = invalid === 'error' ? '#c0392b' : invalid === 'warn' ? '#d9a400' : '#cfd8e0';
   return (
-    <div className="ef-box" data-combo title={title} style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%', boxSizing: 'border-box', border: '1px solid ' + border, borderRadius: 8, background: disabled ? '#f5f7f9' : '#fff', minWidth: 0 }}>
+    <div className="ef-combo" data-tip={disabled && title ? title : undefined} style={{ flex: '1 1 auto', minWidth: 0, width: '100%' }}>
+    <div className="ef-box" data-combo title={disabled ? undefined : title} style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%', boxSizing: 'border-box', border: '1px solid ' + border, borderRadius: 8, background: disabled ? '#f5f7f9' : invalid === 'error' ? '#fdeee9' : '#fff', minWidth: 0 }}>
       {cur?.code && !editing && <span style={{ flex: 'none', marginLeft: 8, padding: '1px 6px', borderRadius: 5, background: '#eef2f6', color: '#5b6773', fontSize: 11, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{cur.code}</span>}
       <input
         id={id}
@@ -319,6 +319,8 @@ export function ComboField({ id, kind, value, onChange, onCommit, placeholder, f
           </div>
         </div>
       )}
+    </div>
+    {message && <div className="ef-msg" role="alert" data-field-msg style={{ marginTop: 4, fontSize: 11.5, fontWeight: 700, color: '#a5281b', lineHeight: 1.45 }}>{message}</div>}
     </div>
   );
 }
@@ -414,6 +416,8 @@ export function judgeEntry(x: JudgeInput, env: EnvSettings): Issue[] {
 }
 export const hasError = (list: Issue[]) => list.some((i) => i.level === 'error');
 export const hasWarn = (list: Issue[]) => list.some((i) => i.level === 'warn');
+/** 入力欄の直下に出すエラー文（最初のエラーの見出し） */
+export const fieldMessage = (list: Issue[], ...fields: IssueField[]): string | undefined => list.find((i) => i.level === 'error' && fields.includes(i.field))?.title;
 /** 入力欄の枠色（ComboField の invalid） */
 export const fieldState = (list: Issue[], ...fields: IssueField[]): 'error' | 'warn' | undefined =>
   list.some((i) => i.level === 'error' && fields.includes(i.field)) ? 'error' : list.some((i) => i.level === 'warn' && fields.includes(i.field)) ? 'warn' : undefined;
@@ -478,10 +482,13 @@ interface ActProps {
 export function ActButton({ label, k, onClick, tone = 'normal', accent = '#1f7a52', disabled, title, active, id, menu }: ActProps) {
   const c = tone === 'danger' ? '#c0392b' : tone === 'primary' ? accent : '#48565f';
   const solid = tone === 'primary';
+  const tip = [title, k ? `ショートカット：Alt+${k}` : ''].filter(Boolean).join('　');
   return (
-    <button id={id} type="button" className="ef-act" data-menu={menu ?? (typeof label === 'string' ? label : undefined)} disabled={disabled} aria-pressed={active} title={[title, k ? `ショートカット：Alt+${k}` : ''].filter(Boolean).join('　')} onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', padding: solid ? '8px 16px' : '6px 10px', borderRadius: 8, border: '1px solid ' + (solid ? c : tone === 'danger' ? '#e6b3ab' : active ? accent : '#cfd8e0'), background: solid ? c : active ? accent + '18' : '#fff', color: solid ? '#fff' : active ? accent : c, fontSize: solid ? 13.5 : 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: solid ? '0 3px 10px rgba(30,50,70,.18)' : 'none' }}>
+    <span data-tip={disabled && title ? title : undefined} style={{ display: 'inline-flex' }}>
+    <button id={id} type="button" className="ef-act" data-menu={menu ?? (typeof label === 'string' ? label : undefined)} disabled={disabled} aria-pressed={active} title={disabled ? undefined : tip} onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', padding: solid ? '8px 16px' : '6px 10px', borderRadius: 8, border: '1px solid ' + (solid ? c : tone === 'danger' ? '#e6b3ab' : active ? accent : '#cfd8e0'), background: solid ? c : active ? accent + '18' : '#fff', color: solid ? '#fff' : active ? accent : c, fontSize: solid ? 13.5 : 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: solid ? '0 3px 10px rgba(30,50,70,.18)' : 'none' }}>
       {label}
     </button>
+    </span>
   );
 }
 export function ActionGroup({ caption, note, children, danger }: { caption: string; note?: ReactNode; children: ReactNode; danger?: boolean }) {
@@ -800,7 +807,7 @@ export function PaperBox({ label, children, width, grow, muted }: { label: React
 /** 有／無・☐／☑ などの小さな切替（下段の チェック／証憑 用。tabIndex=-1 でEnter送りの順序には入らない） */
 export function PaperToggle({ on, onLabel, offLabel, onChange, disabled, title }: { on: boolean; onLabel: string; offLabel: string; onChange: (v: boolean) => void; disabled?: boolean; title?: string }) {
   return (
-    <button type="button" tabIndex={-1} className={'pp-toggle' + (on ? ' pp-on' : '')} disabled={disabled} aria-pressed={on} title={title} onClick={() => onChange(!on)}>
+    <button type="button" tabIndex={-1} className={'pp-toggle' + (on ? ' pp-on' : '')} disabled={disabled} aria-pressed={on} title={disabled ? undefined : title} data-tip={disabled && title ? title : undefined} onClick={() => onChange(!on)}>
       {on ? onLabel : offLabel}
     </button>
   );

@@ -77,7 +77,7 @@ export function ExportDialog({ spec, onClose, accent }: { spec: ExportSpec | nul
   return (
     <>
       <ToastView msg={toast.msg} />
-      <Modal open={!!spec} onClose={onClose} width={620} title={isFile ? '名前を付けて保存' : '印刷'}>
+      <Modal open={!!spec} onClose={onClose} width="auto" title={isFile ? '名前を付けて保存' : '印刷'}>
         <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <Field label="対象" span={2}><div style={{ ...input, background: '#f5f7f9' }}>{spec.title}{spec.meta ? <span style={{ color: '#7a8794', fontSize: 12 }}>　{spec.meta}</span> : null}</div></Field>

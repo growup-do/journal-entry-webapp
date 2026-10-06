@@ -10,13 +10,14 @@ import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
 import { DivisionDialog } from './DivisionPicker';
-import { BudgetGraphModal, BudgetHintLive, useEntryTools } from './EntryExtras';
-import { ComboField, EntryStyles, isIme, FlagButtons, FundAccountLine, IssueList, PAPER, PaperBox, PaperDate, PaperFootItems, PaperStyles, PaperTitle, PaperToggle, fieldState, fmtNum, focusId, hasError, hasWarn, isInternalAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor, type Issue } from './EntryCommon';
+import { BudgetGraphModal, BudgetHintLive, EntryConfirmModal, useEntryTools } from './EntryExtras';
+import { judgeTorihiki } from '../lib/accounts';
+import { ComboField, EntryStyles, isIme, FlagButtons, FundAccountLine, PAPER, PaperBox, PaperDate, PaperFootItems, PaperStyles, PaperTitle, PaperToggle, fieldMessage, fieldState, fmtNum, focusId, hasError, hasWarn, isInternalAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor, type Issue } from './EntryCommon';
 import { useWidePanel } from './WidePanel';
 import { makeSheetSeed } from '../data';
 import { applyMonth } from '../lib/format';
 import { addVoucher, getVouchers, updateVoucher } from '../store/journalStore';
-import { getSession, useSession, type TemplateLine } from '../store/session';
+import { getSession, setSession, useSession, type TemplateLine } from '../store/session';
 import type { JournalEntry, MonthFilter } from '../types';
 
 const PINK = '#b0426a';
@@ -74,6 +75,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
   const [err, setErr] = useState('');
   const [fundMode, setFundMode] = useState<FundMode>('自動資金');
   const [internal, setInternal] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [aite, setAite] = useState('');
   const [journal, setJournal] = useState<JournalEntry[]>(() => makeSheetSeed());
   const [monthFilter, setMonthFilter] = useState<MonthFilter>('8');
@@ -147,15 +149,11 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
     if (single && (!rows[0].kari || !rows[0].kashi)) { setErr('借方科目・貸方科目の両方を入力してください。'); focusId(fid(0, rows[0].kari ? 's' : 'k')); return; }
     if (!balanced) { setErr(`借方合計と貸方合計が一致していません（差額 ${Math.abs(kariTotal - kashiTotal).toLocaleString('ja-JP')} 円）。`); return; }
     if (blocked) {
-      toast.show('登録できない内容があります。行の下の表示を確認してください');
+      toast.show('登録できない内容があります。入力欄の下に表示しているエラーを直してください');
       if (partner && !aite) focusId(`${pre}-aite`);
       return;
     }
-    if (hasWarn(allIssues) && !confirmed) {
-      toast.show('確認が必要な内容があります。「確認して登録」を押すと登録します');
-      focusId(`${pre}-confirm`);
-      return;
-    }
+    if (hasWarn(allIssues) && !confirmed) { setConfirmOpen(true); return; }
     const date = `${month}/${day}`;
     const ids: number[] = [];
     const storeIds: number[] = [];
@@ -228,6 +226,9 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
     },
     internal: internalOn,
     internalLocked: hasInternalAcc,
+    internalId: `${pre}-internal`,
+    onInternalNext: () => focusId(internalOn && !aite ? `${pre}-aite` : fid(cur, 't')),
+    blocked,
     onInternal: () => {
       if (internal) { setInternal(false); return; }
       setInternal(true);
@@ -252,21 +253,18 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
     onOpenPanel: () => { wide.setCollapsed(false); toast.show('画面の下に参照パネルを開きました'); },
     submitId: `${pre}-submit`,
     enterOrder: single
-      ? '月 → 日 → 借方金額 → 借方科目 → 貸方科目 → 貸方金額 →（内部取引のとき：相手区分）→ 摘要 → 伝票登録ボタン（Enter で登録）'
-      : '月 → 日 → 行ごとに［借方金額 → 借方科目 → 貸方科目 → 貸方金額 → 摘要］→ 次の行。貸借が一致したあとの空行で Enter を押すと伝票登録ボタンへ移ります',
+      ? '月 → 日 → 借方金額 → 借方科目 → 貸方科目 → 貸方金額 → 内部取引スイッチ（Shift+Enter でオン／オフ）→（オンのとき：相手区分）→ 摘要 → 伝票登録ボタン（Enter で登録）'
+      : '月 → 日 → 行ごとに［借方金額 → 借方科目 → 貸方科目 → 貸方金額 → 内部取引スイッチ（Shift+Enter でオン／オフ）→ 摘要］→ 次の行。貸借が一致したあとの空行で Enter を押すと伝票登録ボタンへ移ります',
   });
   const ro = !tools.editable;
 
   /** 摘要の次：次の行へ。貸借が一致していて次が空行（または最終行）のときは登録ボタンへ */
   /** 摘要（行の最後）で Enter：登録（警告があれば「確認して登録」へ）。Shift+Enter：この行の下に1行追加 */
-  const afterTekiyo = () => {
-    if (hasWarn(allIssues) && !blocked) { focusId(`${pre}-confirm`); return; }
-    submit();
-  };
+  const afterTekiyo = () => submit();
   const rowAddAfter = (i: number) => { if (ro) return; setRows((rs) => [...rs.slice(0, i + 1), emptyRow(), ...rs.slice(i + 1)]); setActive(i + 1); focusId(fid(i + 1, 'ka')); };
   /** 空の借方金額で Enter：貸借が一致していれば登録ボタンへ（空行で入力を終える） */
   const afterKariAmt = (i: number) => {
-    if (i > 0 && balanced && !isUsed(rows[i])) { focusId(hasWarn(allIssues) && !blocked ? `${pre}-confirm` : `${pre}-submit`); return; }
+    if (i > 0 && balanced && !isUsed(rows[i])) { focusId(`${pre}-submit`); return; }
     focusId(fid(i, 'k'));
   };
   /** 貸方科目の次：貸方金額が空なら借方金額を写す（1行で貸借が一致する伝票を速く入力できるように） */
@@ -275,7 +273,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
     if (value && !r.kashiAmt && r.kariAmt && r.kari) setRow(i, { kashiAmt: r.kariAmt });
     focusId(fid(i, 'sa'));
   };
-  const afterKashiAmt = (i: number) => focusId(partner && !aite ? `${pre}-aite` : fid(i, 't'));
+  const afterKashiAmt = () => focusId(`${pre}-internal`);
 
   const list = applyMonth(journal, monthFilter);
   const isSheet = variant === 'sheet';
@@ -320,6 +318,19 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
       <PaperStyles />
       <ToastView msg={toast.msg} />
       {tools.dialogs}
+      <EntryConfirmModal
+        open={confirmOpen}
+        kind={judgeTorihiki(rows[cur]?.kari ?? '', rows[cur]?.kashi ?? '', fundMode === '強制資金').kind}
+        issues={allIssues.filter((i) => i.level === 'warn')}
+        onClose={() => setConfirmOpen(false)}
+        onProceed={(dont) => {
+          const warns = allIssues.filter((i) => i.level === 'warn');
+          if (dont) setSession({ env: { ...sess.env, ...(warns.some((w) => /expense$/.test(w.code)) ? { confirmExpense: false } : {}), ...(warns.some((w) => /income$/.test(w.code)) ? { confirmIncome: false } : {}) } });
+          setConfirmOpen(false);
+          submit(true);
+        }}
+        accent={accent}
+      />
       <BudgetGraphModal open={!!graphAcct} onClose={() => setGraphAcct(null)} account={graphAcct ?? ''} />
 
       {/* 振替伝票形式の注意（複数行の内部取引には非対応） */}
@@ -399,7 +410,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', minWidth: 0 }}>
                       {tools.internalSwitch}
                       <div style={{ flex: 1, minWidth: 0, opacity: internalOn ? 1 : 0.5 }}>
-                        <ComboField id={`${pre}-aite`} kind="service" value={aite} onChange={setAite} onCommit={() => focusId(fid(rows.findIndex(isUsed) >= 0 ? rows.findIndex(isUsed) : 0, 't'))} placeholder="相手先の区分を指定" disabled={ro || !internalOn} padY={6} invalid={internalOn ? fieldState(rowIssues.flat(), 'aite') : undefined} />
+                        <ComboField id={`${pre}-aite`} title={!internalOn ? '左の「内部取引」スイッチをオンにすると入力できます（内部取引科目を選ぶと自動でオンになります）' : undefined} kind="service" value={aite} onChange={setAite} onCommit={() => focusId(fid(rows.findIndex(isUsed) >= 0 ? rows.findIndex(isUsed) : 0, 't'))} placeholder="相手先の区分を指定" disabled={ro || !internalOn} padY={6} invalid={internalOn ? fieldState(rowIssues.flat(), 'aite') : undefined} message={internalOn ? fieldMessage(rowIssues.flat(), 'aite') : undefined} />
                       </div>
                     </div>
                   </PaperBox>
@@ -428,13 +439,13 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                         <input id={fid(i, 'ka')} className="ef-input pp-input" aria-label={`${i + 1}行目 借方金額`} disabled={ro} value={fmtNum(r.kariAmt)} onChange={(e) => setRow(i, { kariAmt: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => afterKariAmt(i))} inputMode="numeric" placeholder="0" autoComplete="off" style={amt} />
                       </div>
                       <div className="pp-cell" style={{ ...cell, background: bg }}>
-                        <ComboField id={fid(i, 'k')} kind="account" value={r.kari} onChange={(x) => setRow(i, { kari: x })} onCommit={() => focusId(fid(i, 's'))} placeholder="借方科目（コード・名称・フリガナ）" listWidth={400} padY={8} disabled={ro} invalid={fieldState(rowIssues[i], 'kari', 'pair')} />
+                        <ComboField id={fid(i, 'k')} kind="account" value={r.kari} onChange={(x) => setRow(i, { kari: x })} onCommit={() => focusId(fid(i, 's'))} placeholder="借方科目（コード・名称・フリガナ）" listWidth={400} padY={8} disabled={ro} invalid={fieldState(rowIssues[i], 'kari', 'pair')} message={fieldMessage(rowIssues[i], 'kari')} />
                       </div>
                       <div className="pp-cell" style={{ ...cell, background: bg }}>
-                        <ComboField id={fid(i, 's')} kind="account" value={r.kashi} onChange={(x) => setRow(i, { kashi: x })} onCommit={(x) => afterKashi(i, x)} placeholder="貸方科目（コード・名称・フリガナ）" listWidth={400} padY={8} disabled={ro} invalid={fieldState(rowIssues[i], 'kashi', 'pair')} />
+                        <ComboField id={fid(i, 's')} kind="account" value={r.kashi} onChange={(x) => setRow(i, { kashi: x })} onCommit={(x) => afterKashi(i, x)} placeholder="貸方科目（コード・名称・フリガナ）" listWidth={400} padY={8} disabled={ro} invalid={fieldState(rowIssues[i], 'kashi', 'pair')} message={fieldMessage(rowIssues[i], 'kashi', 'pair')} />
                       </div>
                       <div className="pp-cell" style={{ ...cell, background: bg }}>
-                        <input id={fid(i, 'sa')} className="ef-input pp-input" aria-label={`${i + 1}行目 貸方金額`} disabled={ro} value={fmtNum(r.kashiAmt)} onChange={(e) => setRow(i, { kashiAmt: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => afterKashiAmt(i))} inputMode="numeric" placeholder="0" autoComplete="off" style={amt} />
+                        <input id={fid(i, 'sa')} className="ef-input pp-input" aria-label={`${i + 1}行目 貸方金額`} disabled={ro} value={fmtNum(r.kashiAmt)} onChange={(e) => setRow(i, { kashiAmt: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => afterKashiAmt())} inputMode="numeric" placeholder="0" autoComplete="off" style={amt} />
                       </div>
                       <div className="pp-cell pp-center" style={{ ...cell, padding: '6px 4px', gap: 6, background: bg }}>
                         {!single && (
@@ -477,11 +488,6 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                       </div>
                       <div className="pp-cell" style={{ ...cell, padding: '4px 8px', background: bg }} />
                       <div className="pp-cell" style={{ ...cell, background: bg }} />
-                      {rowIssues[i].length > 0 && (
-                        <div className="pp-cell" style={{ ...cell, gridColumn: '1 / -1', padding: '4px 8px 8px', background: bg }}>
-                          <div style={{ width: '100%' }}><IssueList issues={rowIssues[i]} compact /></div>
-                        </div>
-                      )}
                     </div>
                   );
                 })}
@@ -537,10 +543,10 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
               </div>
             </div>
 
-            {/* 伝票全体の判定（エラー＝登録不可／確認＝確認して登録） */}
-            {allIssues.length > 0 && (
-              <div style={{ marginTop: 12 }}>
-                <IssueList issues={allIssues} confirmId={`${pre}-confirm`} onConfirm={() => submit(true)} confirmDisabled={ro ? tools.reason : !balanced ? '借方合計と貸方合計が一致すると登録できます' : undefined} />
+            {/* 伝票全体のエラー（行の入力欄には出せないもの）。確認が必要な内容は登録時にモーダルで表示 */}
+            {voucherIssues.length > 0 && (
+              <div role="alert" style={{ marginTop: 12, padding: '9px 12px', borderRadius: 9, border: '1px solid #f0b9ae', borderLeft: '5px solid #a5281b', background: '#fdeee9', color: '#a5281b', fontSize: 12.5, lineHeight: 1.6 }}>
+                {voucherIssues.map((i) => <div key={i.code}><b>{i.title}</b>　<span style={{ fontWeight: 400 }}>{i.detail}</span></div>)}
               </div>
             )}
           </div>

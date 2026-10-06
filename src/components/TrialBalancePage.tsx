@@ -139,7 +139,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
       subtitle={<>{isClosing ? '当年度末（決算）の残高を一覧します。' : '前月繰越・当月の借方／貸方・残高を一覧します。'}科目の行の「元帳」ボタン（または行のダブルクリック）で、右側に総勘定元帳を表示します。別の行を押すと差し替わり、全画面で見たいときはパネルの「元帳の画面で開く」を使います。</>}
       tools={isClosing ? [
         { label: '残高グラフ', onClick: () => setGraph(true) },
-        { label: '収支分析', onClick: () => setAnalysis(true), disabled: analysisBlocked, title: analysisBlocked ? '合算区分で起動中のため収支分析は使えません' : '収入・支出の構成と比率を表示します' },
+        { label: '収支分析', onClick: () => setAnalysis(true), disabled: analysisBlocked, title: analysisBlocked ? '合算区分で起動中のため収支分析は使えません。単独の区分（入力区分・拠点区分など）で起動すると使えます' : '収入・支出の構成と比率を表示します' },
         { label: '充実残額', onClick: () => onNavigate('充実残額') },
       ] : []}
       period={
@@ -154,7 +154,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
         <>
           <Segmented label="表示階層" items={DEPTHS} value={view.depth} onChange={(d) => setView({ depth: d })} accent={accent} />
           <Segmented label="行の配色" items={PATTERNS} value={view.pattern} onChange={(p) => setView({ pattern: p })} accent={accent} />
-          <SwitchPill label="内訳（区分ごと）" on={members.length > 0 && view.breakdown} onChange={(v) => setView({ breakdown: v })} accent={accent} disabled={members.length === 0} title={members.length === 0 ? '合算区分・親区分で起動したときに、区分ごとの金額を表示できます' : '区分ごとの金額の列を表示します'} />
+          <SwitchPill label="内訳（区分ごと）" on={members.length > 0 && view.breakdown} onChange={(v) => setView({ breakdown: v })} accent={accent} disabled={members.length === 0} title={members.length === 0 ? `入力区分（${s.division}）で起動中は内訳がないため切り替えできません。合算区分または親区分（法人・事業区分・拠点区分）で起動すると、区分ごとの金額を表示できます` : '区分ごとの金額の列を表示します'} />
         </>
       }
       controls={

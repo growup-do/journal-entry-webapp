@@ -117,8 +117,8 @@ export function MembersPage({ variant, accent }: Props) {
                       <td style={{ ...TD, textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', gap: 6 }}>
                           {m.status === '招待中' && <button type="button" className="btn-outline" onClick={() => toast.show(`${m.email} に招待メールを再送しました（プロトタイプ）`)} style={btn()}>再送</button>}
-                          <button type="button" className="btn-outline" disabled={lastAdmin} onClick={() => toggleActive(m)} style={{ ...btn(), opacity: lastAdmin ? 0.4 : 1 }}>{m.status === '招待中' ? '取消' : m.status === '有効' ? '無効化' : '有効化'}</button>
-                          <button type="button" className="btn-outline" disabled={lastAdmin} onClick={() => remove(m)} style={{ ...btn('#c0392b'), opacity: lastAdmin ? 0.4 : 1 }}>削除</button>
+                          <span data-tip={lastAdmin ? '最後の管理者は無効化できません。先に別のメンバーを管理者にしてください' : undefined} style={{ display: 'inline-flex' }}><button type="button" className="btn-outline" disabled={lastAdmin} onClick={() => toggleActive(m)} style={{ ...btn(), opacity: lastAdmin ? 0.4 : 1 }}>{m.status === '招待中' ? '取消' : m.status === '有効' ? '無効化' : '有効化'}</button></span>
+                          <span data-tip={lastAdmin ? '最後の管理者は削除できません。先に別のメンバーを管理者にしてください' : undefined} style={{ display: 'inline-flex' }}><button type="button" className="btn-outline" disabled={lastAdmin} onClick={() => remove(m)} style={{ ...btn('#c0392b'), opacity: lastAdmin ? 0.4 : 1 }}>削除</button></span>
                         </div>
                       </td>
                     </tr>

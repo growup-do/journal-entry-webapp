@@ -7,7 +7,8 @@ import type { CSSProperties, ReactNode } from 'react';
 interface Props {
   open: boolean;
   onClose: () => void;
-  width?: number;
+  /** 数値＝固定幅。'auto'＝内容に合わせる（横スクロールが出ないよう、画面幅までは広がる） */
+  width?: number | 'auto';
   title?: ReactNode;
   children: ReactNode;
   /** 旧指定（互換のため残す。現在は既定が「背景クリックで閉じない」） */
@@ -44,7 +45,8 @@ export function Modal({ open, onClose, width = 720, title, children, dismissible
     >
       <div
         style={{
-          width,
+          width: width === 'auto' ? 'fit-content' : width,
+          minWidth: width === 'auto' ? 620 : undefined,
           maxWidth: '100%',
           maxHeight: '92vh',
           overflow: 'auto',

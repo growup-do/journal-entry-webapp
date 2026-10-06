@@ -142,7 +142,7 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {extraTools}
             {tools.map((t) => (
-              <span key={t.label} title={t.title}>
+              <span key={t.label} title={t.disabled ? undefined : t.title} data-tip={t.disabled ? t.title : undefined} style={{ display: 'inline-flex' }}>
                 <button type="button" className="btn-outline" disabled={t.disabled} onClick={t.onClick ?? (() => toast.show(NOT_IMPL))} style={{ ...toolStyle(t.primary ? accent : undefined), ...(t.disabled ? { opacity: 0.45, cursor: 'not-allowed', pointerEvents: 'none' } : {}) }}>
                   {t.label}
                 </button>
@@ -233,7 +233,7 @@ export function Segmented<T extends string>({ label, items, value, onChange, acc
 export function SwitchPill({ label, on, onChange, accent, disabled, title }: { label: string; on: boolean; onChange: (v: boolean) => void; accent: string; disabled?: boolean; title?: string }) {
   const act = () => { if (!disabled) onChange(!on); };
   return (
-    <span title={title} data-switch={label} aria-disabled={disabled} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 10px', border: '1px solid #e2e8ee', borderRadius: 20, background: disabled ? '#f5f7f9' : '#fff', opacity: disabled ? 0.6 : 1, cursor: disabled ? 'not-allowed' : 'pointer' }}>
+    <span title={disabled ? undefined : title} data-tip={disabled ? title : undefined} data-switch={label} aria-disabled={disabled} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 10px', border: '1px solid #e2e8ee', borderRadius: 20, background: disabled ? '#f5f7f9' : '#fff', opacity: disabled ? 0.6 : 1, cursor: disabled ? 'not-allowed' : 'pointer' }}>
       <span onClick={act} style={{ fontSize: 12, fontWeight: on && !disabled ? 800 : 500, color: on && !disabled ? accent : '#9aa5b1' }}>{label}</span>
       <span role="switch" aria-checked={on && !disabled} onClick={act} style={{ display: 'inline-block', width: 36, height: 20, borderRadius: 10, background: on && !disabled ? accent : '#cfd8e0', position: 'relative', flex: 'none' }}>
         <span style={{ position: 'absolute', top: 2, left: on && !disabled ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left .15s' }} />
