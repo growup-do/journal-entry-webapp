@@ -1,4 +1,4 @@
-// 設定メニューの各画面（叩き台）
+// 設定メニューの各画面
 //   マスタ系（勘定科目／税区分／部門／タグ／摘要辞書／仕訳辞書／取引先）… 共通のマスタ管理画面（検索・追加・編集・有効/無効・削除・CSV）
 //   事業者 … 法人情報・会計期間・拠点区分／サービス区分
 //   開始残高 … 期首の貸借残高を拠点ごとに入力（貸借一致チェック）
@@ -34,7 +34,7 @@ function Shell({ variant, title, desc, actions, children }: { variant: 'form' | 
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21 }}>
               {title} <span style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#eef2f6', color: '#3d4a56', verticalAlign: 'middle', marginLeft: 6 }}>設定</span>
             </div>
-            <div style={{ color: '#7a8794', fontSize: 12, marginTop: 4 }}>{desc}<span style={{ color: '#b7791f' }}>（叩き台）</span></div>
+            <div style={{ color: '#7a8794', fontSize: 12, marginTop: 4 }}>{desc}</div>
           </div>
           {actions && <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>{actions}</div>}
         </div>
@@ -353,7 +353,7 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
           </div>
         ))}
       </div>
-      <div style={{ padding: '10px 22px 16px', fontSize: 11.5, color: '#9aa5b1' }}>※ 科目は主要なもののみ表示しています（叩き台）。確定後は前年仕訳の「繰越」として各元帳に反映されます。</div>
+      <div style={{ padding: '10px 22px 16px', fontSize: 11.5, color: '#9aa5b1' }}>※ 科目は主要なもののみ表示しています。確定後は前年仕訳の「繰越」として各元帳に反映されます。</div>
       </>}
     </Shell>
   );

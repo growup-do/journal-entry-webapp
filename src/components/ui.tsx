@@ -64,7 +64,7 @@ export function Notice({ children, tone = 'info' }: { children: ReactNode; tone?
 }
 
 /** 設定系画面の共通シェル（SettingsPages の Shell と同じ見た目） */
-export function SettingsShell({ variant, title, desc, badge = '設定', draft = true, actions, children }: { variant: 'form' | 'sheet'; title: string; desc: ReactNode; badge?: string; draft?: boolean; actions?: ReactNode; children: ReactNode }) {
+export function SettingsShell({ variant, title, desc, badge = '設定', draft = false, actions, children }: { variant: 'form' | 'sheet'; title: string; desc: ReactNode; badge?: string; draft?: boolean; actions?: ReactNode; children: ReactNode }) {
   const isSheet = variant === 'sheet';
   return (
     <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
