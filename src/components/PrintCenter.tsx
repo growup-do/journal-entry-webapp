@@ -13,6 +13,7 @@ import { TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
 import { Field, Notice, SettingsShell, Toggle, btn, card, cardHead, input, lbl, numInput } from './ui';
 import { ExportDialog, runExport, type ExportKind, type ExportSpec } from './ExportDialog';
+import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { ACCOUNTS, displayName } from '../data';
 import { PRINT_ITEMS, divisionLabel, flattenDivisions, setSession, startKindOf, useSession, type EnvSettings, type PrintCommon, type Session } from '../store/session';
 
@@ -669,6 +670,7 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
   const FOOT_REPORTS = ['資金収支計算書（第一号第一様式）', '資金収支計算書（第一号第四様式）', '事業活動計算書', '貸借対照表'];
   return (
     <SettingsShell variant={variant} title="共通の印刷設定" badge="印刷" desc={<><ScopeBadge kind="全帳票共通" />　すべての帳票の印刷に反映される設定です。同じ内容は、各帳票の印刷の「詳細設定 ＞ 全帳票共通の設定」からも変更できます。</>} actions={<>
+      <ScreenPrintMenu page="共通の印刷設定" accent={accent} label="備考・摘要の印刷" />
       <button type="button" className="btn-outline" onClick={() => setPreview(true)} style={btn()}>プレビューで確認</button>
       <button type="button" className="btn-outline" onClick={() => toast.show('他の区分の印刷設定を読み込みました（プロトタイプ）')} style={btn()}>他区分の設定を読込</button>
       <button type="button" className="submit-btn" onClick={() => toast.show('共通の印刷設定を保存しました')} style={btn(accent, true)}>決定</button>

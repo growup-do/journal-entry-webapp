@@ -15,6 +15,7 @@ import { seededSeries } from '../lib/hier';
 import { displayName } from '../data';
 import { useSession } from '../store/session';
 import { LedgerDrawer, useLedgerDrawer } from './LedgerDrawer';
+import { ScreenPrintMenu } from './ScreenPrintMenu';
 
 export type TrendKind = 'account' | 'fund' | 'vendor';
 /** 画面キー（ルーティング・確認メモで使用。表示名は displayName で現行の用語に合わせる） */
@@ -68,9 +69,9 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
     return { m, d, c, accD, b, accB, bal: accB - accD };
   });
   // 元帳へのドリルダウン：右側の元帳パネルにその月の元帳を出す
-  const drawer = useLedgerDrawer();
+  const drawer = useLedgerDrawer(KEY[kind], kind);
   const openLedger = (month: string) => drawer.open({ account: target, month, kind, from: KEY[kind] });
-  const picked = (month: string) => !!drawer.target && drawer.target.account === target && drawer.target.month === month;
+  const picked = (month: string) => !drawer.collapsed && !!drawer.target && drawer.target.account === target && drawer.target.month === month;
   const fieldBtn: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, width: 260, boxSizing: 'border-box', padding: '7px 10px', background: '#fff', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left', color: 'inherit' };
 
   return (
@@ -79,6 +80,7 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
       variant={variant}
       accent={accent}
       asideWidth={drawer.asideWidth}
+      extraTools={isVendor ? <ScreenPrintMenu page="業者推移" accent={accent} /> : undefined}
       title={title}
       subtitle={<>{isVendor ? '指定した業者' : '指定した科目'}の月ごとの推移を年度で一覧します。月の行の「元帳」ボタン（または行のダブルクリック）で、右側にその月の元帳を表示します。全画面で見たいときはパネルの「元帳の画面で開く」を使います。<span style={{ color: '#b7791f' }}>（表示中の値はサンプルです）</span></>}
       tools={[{ label: isVendor ? '業者検索' : '科目検索', onClick: () => assist.open('target', isVendor ? 'vendor' : 'account') }, { label: 'グラフ作成', onClick: () => setGraphOpen(true), primary: true }]}
@@ -211,7 +213,7 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
         </div>
       </Modal>
     </ReportShell>
-    <LedgerDrawer target={drawer.target} onClose={drawer.close} accent={accent} onNavigate={onNavigate} />
+    <LedgerDrawer state={drawer} accent={accent} onNavigate={onNavigate} />
     </>
   );
 }

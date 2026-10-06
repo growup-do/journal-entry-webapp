@@ -7,6 +7,7 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { LABEL, NUM, pct, ReportShell, Segmented, TD, TH, useMoney, useViewState } from './ReportShell';
+import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { BUDGET_ROWS, displayName } from '../data';
 import { grandTotal, rollup } from '../lib/hier';
 
@@ -45,6 +46,7 @@ export function BudgetComparePage({ variant, accent }: Props) {
       accent={accent}
       title={displayName(KEY)}
       subtitle="現額予算と実績額を科目ごとに対比し、予算残高・達成率・構成比を表示します。表とグラフ（実績／達成率／構成比）を切り替えできます。"
+      extraTools={<ScreenPrintMenu page="予算対比" accent={accent} />}
       tools={[{ label: '再計算' }]}
       period={
         <>

@@ -12,7 +12,7 @@ import { LABEL, NUM, ReportShell, TD, TH, useMoney } from './ReportShell';
 import { ACTION_HEAD, ACTION_TH, useRowActions } from './RowActions';
 import { ToastView, useToast } from './Toast';
 import { AdvancedSearchModal, EMPTY_COND, applyCond, condActive, type SearchCond } from './VoucherEdit';
-import { PrintDialog, PreviewModal, REPORTS } from './PrintCenter';
+import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { displayName } from '../data';
 import { useVouchers } from '../store/journalStore';
 import { getSession, setSession, useSession } from '../store/session';
@@ -40,8 +40,6 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
   const [cond, setCond] = useState<SearchCond>(EMPTY_COND);
   const [searchOpen, setSearchOpen] = useState(false);
   const [showBiz, setShowBiz] = useState(false);
-  const [print, setPrint] = useState(false);
-  const [preview, setPreview] = useState<{ title: string; opts: { from: string; to: string; output: string } } | null>(null);
   const [exp, setExp] = useState<ExportSpec | null>(null);
   const toast = useToast();
   const dt = useDivisionTools(all, accent);
@@ -75,8 +73,8 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
       tools={[
         { label: '検索条件', onClick: () => setSearchOpen(true), primary: true },
         { label: 'CSV出力', onClick: () => setExp({ kind: 'csv', title, fileName: `日記帳_令和8年${month ?? '全'}月`, meta: `${periodLabel}　${rows.length} 件${filtered ? '（絞り込み中）' : ''}`, ...table }) },
-        { label: '印刷', onClick: () => setPrint(true) },
       ]}
+      extraTools={<ScreenPrintMenu page="仕訳一覧" accent={accent} data={table} />}
       period={
         <>
           <span style={LABEL}>集計期間</span>
@@ -153,8 +151,6 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
       </div>
       {ra.modals}
       <AdvancedSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} cond={cond} onApply={setCond} accent={accent} />
-      <PrintDialog open={print} onClose={() => setPrint(false)} report={REPORTS[0]} accent={accent} onPreview={(t, opts) => setPreview({ title: t, opts })} data={table} />
-      <PreviewModal open={!!preview} onClose={() => setPreview(null)} title={preview?.title ?? ''} opts={preview?.opts} accent={accent} data={table} />
       <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
       {dt.modal}
     </ReportShell>

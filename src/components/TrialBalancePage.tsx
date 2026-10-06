@@ -16,6 +16,7 @@ import { grandTotal, rollup } from '../lib/hier';
 import { Modal } from './Modal';
 import { divisionLabel, flattenDivisions, startKindOf, useSession, type Session } from '../store/session';
 import { LedgerDrawer, useLedgerDrawer } from './LedgerDrawer';
+import { ScreenPrintMenu } from './ScreenPrintMenu';
 
 const PARTS = ['資産の部', '負債の部', '事業活動', '資金の部'];
 const DEPTHS = ['大区分', '中区分', '小区分', '細区分', '細々区分'] as const;
@@ -120,9 +121,9 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
   const flat = groups.flatMap((g) => g.cols.map((c) => ({ ...c, breakdown: g.breakdown })));
 
   // 元帳へのドリルダウン：右側の元帳パネルに出す（全画面の元帳はパネルの「元帳の画面で開く」から）
-  const drawer = useLedgerDrawer();
+  const drawer = useLedgerDrawer(KEY);
   const openLedger = (name: string) => drawer.open({ account: name, month: view.month, kind: 'account', from: KEY });
-  const picked = (name: string) => drawer.target?.account === name;
+  const picked = (name: string) => !drawer.collapsed && drawer.target?.account === name;
   const rowBg = (r: { name: string; level: number; leaf: boolean }, i: number) => (view.pattern === '標準' ? (r.level === 0 ? '#f3f6f9' : i % 2 ? '#fbfcfd' : 'transparent') : info.test(r.name, r.leaf) ? info.color : 'transparent');
   const linkBtn: CSSProperties = { marginLeft: 10, padding: '1px 8px', borderRadius: 6, border: '1px solid #dde4ea', background: '#fff', color: accent, fontSize: 10.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' };
   const analysisBlocked = kind === '合算区分';
@@ -133,6 +134,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
       variant={variant}
       accent={accent}
       asideWidth={drawer.asideWidth}
+      extraTools={<ScreenPrintMenu page={KEY} accent={accent} />}
       title={displayName(KEY)}
       subtitle={<>{isClosing ? '当年度末（決算）の残高を一覧します。' : '前月繰越・当月の借方／貸方・残高を一覧します。'}科目の行の「元帳」ボタン（または行のダブルクリック）で、右側に総勘定元帳を表示します。別の行を押すと差し替わり、全画面で見たいときはパネルの「元帳の画面で開く」を使います。</>}
       tools={isClosing ? [
@@ -266,7 +268,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
         </div>
       </Modal>
     </ReportShell>
-    <LedgerDrawer target={drawer.target} onClose={drawer.close} accent={accent} onNavigate={onNavigate} />
+    <LedgerDrawer state={drawer} accent={accent} onNavigate={onNavigate} />
     </>
   );
 }

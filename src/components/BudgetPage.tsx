@@ -9,6 +9,7 @@ import { ToastView, useToast } from './Toast';
 import { ExplainModal } from './ExplainModal';
 import { FISCAL_MONTHS } from './FiscalMonthTabs';
 import { Field, Notice, SettingsShell, Tabs, btn, input, numInput, toInt, yen } from './ui';
+import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { VENDORS, displayName } from '../data';
 import { ScopeBadge } from './PrintCenter';
 import { setSession, useSession } from '../store/session';
@@ -108,6 +109,7 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
 
   return (
     <SettingsShell variant={variant} title={displayName('予算')} desc="資金収支計算書の予算（前年度／当初／補正／次年度）と業者別予算を入力します。補正予算は月ごとに入力でき、収支差額と期末支払資金残高を確認しながら設定できます。" badge="予算" actions={<>
+      <ScreenPrintMenu page="予算" accent={accent} />
       {tab === '次年度予算' && <button type="button" className="btn-outline" onClick={() => setWizard(true)} style={btn(accent)}>次年度予算作成</button>}
       <button type="button" className="btn-outline" onClick={() => setExplainOpen(true)} style={btn()}>説明</button>
       <button type="button" className="submit-btn" onClick={() => toast.show('予算を保存しました（プロトタイプ）')} style={btn(accent, true)}>保存</button>

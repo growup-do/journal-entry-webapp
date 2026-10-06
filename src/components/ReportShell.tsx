@@ -43,6 +43,8 @@ interface Props {
   title: string;
   subtitle?: ReactNode;
   tools?: ToolButton[];
+  /** ツールボタンの並びに加える要素（画面の「印刷」メニューなど） */
+  extraTools?: ReactNode;
   /** 呼び出し元へ戻るバー（ドリルダウンで開いたときだけ渡す） */
   returnTo?: ReturnSpec | null;
   /** 1) 集計期間（月タブなど） */
@@ -72,7 +74,7 @@ interface Props {
 
 const PART_COLORS = ['#e8791e', '#d9a400', '#d9a400', '#d9a400'];
 
-export function ReportShell({ variant, accent, title, subtitle, tools = [], returnTo, period, periodAside, parts, target, switches, controls, notice, children, badge, org, embedded, asideWidth = 0 }: Props) {
+export function ReportShell({ variant, accent, title, subtitle, tools = [], extraTools, returnTo, period, periodAside, parts, target, switches, controls, notice, children, badge, org, embedded, asideWidth = 0 }: Props) {
   const toast = useToast();
   const s = useSession();
   const isSheet = variant === 'sheet';
@@ -138,6 +140,7 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], retu
             {subtitle && <div style={{ color: '#7a8794', fontSize: 12, marginTop: 4 }}>{subtitle}</div>}
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {extraTools}
             {tools.map((t) => (
               <span key={t.label} title={t.title}>
                 <button type="button" className="btn-outline" disabled={t.disabled} onClick={t.onClick ?? (() => toast.show(NOT_IMPL))} style={{ ...toolStyle(t.primary ? accent : undefined), ...(t.disabled ? { opacity: 0.45, cursor: 'not-allowed', pointerEvents: 'none' } : {}) }}>

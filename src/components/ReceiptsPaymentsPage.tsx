@@ -8,6 +8,7 @@ import type { CSSProperties } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { Modal } from './Modal';
 import { LABEL, NUM, ReportShell, TD, TH, yen } from './ReportShell';
+import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { ToastView, useToast } from './Toast';
 import { JOURNAL_COUNTS, JOURNAL_ROWS, type JournalRow } from '../data';
 import type { MonthFilter } from '../types';
@@ -100,6 +101,7 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
       title="収入・支出調書 印刷"
       badge={badge}
       subtitle="伺書（支出伺・収入伺など）を出力する伝票を選び、Excelへ出力します。"
+      extraTools={<ScreenPrintMenu page="収入支出" accent={accent} />}
       tools={[{ label: '詳細設定', onClick: () => setDetailOpen(true) }, { label: '未出力数', onClick: () => setCountOpen(true) }, { label: 'Excel出力', onClick: doExport, primary: true }]}
       controls={
         <>

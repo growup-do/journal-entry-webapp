@@ -14,6 +14,7 @@ import { taxOf } from './InquiryPages';
 import { CHECK, LABEL, NUM, ReportShell, SwitchPill, TD, TH, moneyText, useMoney } from './ReportShell';
 import { ACTION_HEAD, ACTION_TH, useRowActions } from './RowActions';
 import { ToastView, useToast } from './Toast';
+import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { displayName } from '../data';
 import { useVouchers } from '../store/journalStore';
 import { getSession, setSession, useSession } from '../store/session';
@@ -76,12 +77,16 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
   const toggle = (k: keyof typeof opts) => setOpts((o) => ({ ...o, [k]: !o[k] }));
   const taxCols = isFund && showTax;
   // 印刷／Excel：表示中の明細（繰越・月計を含む）をそのまま出力
-  const openExport = (out: 'print' | 'excel') => {
+  const exportTable = () => {
     const header = isVendor ? ['月日', 'Seq-No', '借方科目', '貸方科目', '摘要', '金額', '残高'] : ['月日', 'Seq-No', '相手科目', '摘要', '業者', ...(taxCols ? ['税区分', '税額'] : []), '借方', '貸方', '残高'];
     const pad = taxCols ? ['', ''] : [];
     const body: (string | number)[][] = isVendor
       ? [['', '', '繰越金額', '', '', '', CARRY], ...lines.map((l) => [l.r.date, l.r.seq, l.r.kari, l.r.kashi, l.r.tekiyo, l.debit, l.bal]), ['月計', '', '', '', '', sumD, bal]]
       : [['', '', '繰越金額', '', '', ...pad, '', '', CARRY], ...lines.map((l) => [l.r.date, l.r.seq, l.other, l.r.tekiyo, l.r.gyosha ?? '', ...(taxCols ? [l.tax, l.taxAmt || ''] : []), l.debit || '', l.credit || '', l.bal]), ['月計', '', '', '', '', ...(taxCols ? ['', sumTax] : []), sumD, sumC, bal]];
+    return { header, rows: body };
+  };
+  const openExport = (out: 'print' | 'excel') => {
+    const { header, rows: body } = exportTable();
     setExp({ kind: out, title: `${title}　${target}`, fileName: `${title}_${target}_令和8年${m}月`, meta: `${s.fiscalYear}　${s.division}　令和8年 ${m}月1日〜${m}月末日`, header, rows: body });
   };
 
@@ -100,7 +105,8 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
       title={title}
       subtitle={isVendor ? '指定した業者の取引を日付順に表示します。行の右端の「訂正」「削除」、または行のダブルクリックで伝票を訂正できます。' : '指定した科目の仕訳を日付順に表示し、残高を計算します。行の右端の「訂正」「削除」、または行のダブルクリックで伝票を訂正できます。'}
       returnTo={from ? { from, onBack: () => onNavigate(from), here: `${target}　${m}月` } : null}
-      tools={[{ label: isVendor ? '業者検索' : '科目検索', onClick: () => assist.open('target', isVendor ? 'vendor' : 'account'), primary: true }, { label: '印刷', onClick: () => openExport('print') }, { label: 'Excel', onClick: () => openExport('excel') }, { label: '再計算', onClick: () => toast.show(`再計算しました（${lines.length} 件　残高 ${moneyText(bal, s.env)}）`) }]}
+      extraTools={<ScreenPrintMenu page={kind === 'vendor' ? '業者元帳' : kind === 'fund' ? '資金元帳' : '勘定元帳'} accent={accent} data={exportTable()} />}
+      tools={[{ label: isVendor ? '業者検索' : '科目検索', onClick: () => assist.open('target', isVendor ? 'vendor' : 'account'), primary: true }, { label: 'Excel', onClick: () => openExport('excel') }, { label: '再計算', onClick: () => toast.show(`再計算しました（${lines.length} 件　残高 ${moneyText(bal, s.env)}）`) }]}
       period={
         <>
           <span style={LABEL}>集計期間</span>

@@ -7,6 +7,7 @@ import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { BarChart } from './BarChart';
 import { LABEL, ReportShell, Segmented } from './ReportShell';
+import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { displayName, ANALYSIS_ITEMS, ERA_YEARS, GRAPH_BAR_COLOR, GRAPH_PARTS, GRAPH_TREES, MONTH_LABELS, type GraphPart } from '../data';
 import { seededSeries } from '../lib/hier';
 
@@ -54,6 +55,7 @@ export function GraphPage({ mode, variant, accent }: Props) {
       accent={accent}
       title={displayName(isYearly ? '経年グラフ' : '分析グラフ')}
       subtitle={<>{isYearly ? '科目を選ぶと、直近8年度の推移グラフを表示します。' : '経営分析の指標を選ぶと、直近8年度の推移グラフを表示します。'}<span style={{ color: '#b7791f' }}>（値はサンプルです）</span></>}
+      extraTools={<ScreenPrintMenu page={isYearly ? '経年グラフ' : '分析グラフ'} accent={accent} />}
       tools={[{ label: '選択解除', onClick: () => setSelected([]) }]}
       period={
         <>

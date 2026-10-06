@@ -13,6 +13,7 @@ import { ToastView, useToast } from './Toast';
 import { ACCOUNTS, SERVICES, SUMMARIES, VENDORS } from '../data';
 import { Tabs } from './ui';
 import { DivisionTreeEditor } from './DivisionTreeEditor';
+import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { BudgetPage } from './BudgetPage';
 import { AccountSettingsPage, SummaryAutoCompleteTab } from './AccountSettingsPage';
 import { TemplateJournalPage } from './TemplateJournalPage';
@@ -152,6 +153,7 @@ function MasterPage({ variant, accent, label, tabs }: { variant: 'form' | 'sheet
   return (
     <Shell variant={variant} title={cfg.title} desc={cfg.desc} actions={<>
       {/* CSV取込・出力：部門は簡単に変更できない項目のため不要（チャイルド社回答 2026/10/2）。税区分は検討中のため暫定で表示 */}
+      {label === '税区分' && <ScreenPrintMenu page="税区分" accent={accent} />}
       {label !== '部門' && <button type="button" className="btn-outline" onClick={() => setImp({ open: true, name: '', rows: [], byHeader: false, error: '' })} style={btn()}>CSV取込</button>}
       {label !== '部門' && <button type="button" className="btn-outline" onClick={exportCsv} style={btn()}>CSV出力</button>}
       <button type="button" className="submit-btn" onClick={() => setEdit(blank())} style={btn(accent, true)}>＋ {cfg.addLabel}</button>

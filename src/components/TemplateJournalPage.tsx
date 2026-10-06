@@ -6,6 +6,7 @@ import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { NUM, TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
 import { Field, Notice, SettingsShell, Tabs, btn, input, numInput, toInt, yen } from './ui';
+import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { SERVICES } from '../data';
 import { setSession, useSession, type AllocationTemplate, type JournalTemplate } from '../store/session';
 import { allocate } from './EntryExtras';
@@ -65,7 +66,7 @@ export function TemplateJournalPage({ variant, accent }: { variant: 'form' | 'sh
     <SettingsShell variant={variant} title="仕訳辞書" desc="定型仕訳（連続定型）と自動按分仕訳のテンプレート、特殊金額入力の按分率を管理します。伝票入力の「連続定型」「自動按分」ボタンから呼び出せます。" actions={
       tab === '連続定型仕訳' ? <button type="button" className="submit-btn" onClick={() => setWiz({ step: 0, t: blankTemplate() })} style={btn(accent, true)}>＋ 追加</button>
         : tab === '自動按分仕訳' ? <button type="button" className="submit-btn" onClick={() => setAwiz({ step: 0, t: blankAllocation() })} style={btn(accent, true)}>＋ 追加</button>
-          : tab === '自動按分出力' ? <button type="button" className="submit-btn" onClick={exportAlloc} style={btn(accent, true)}>出力（CSV）</button>
+          : tab === '自動按分出力' ? <><ScreenPrintMenu page="仕訳辞書" accent={accent} /><button type="button" className="submit-btn" onClick={exportAlloc} style={btn(accent, true)}>出力（CSV）</button></>
             : <button type="button" className="submit-btn" onClick={() => toast.show('按分率を保存しました')} style={btn(accent, true)}>保存</button>
     }>
       <ToastView msg={toast.msg} />
