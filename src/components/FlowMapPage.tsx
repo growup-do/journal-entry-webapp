@@ -146,7 +146,7 @@ const EDGES: Edge[] = [
   E('e-voucher', 'template', '定型仕訳／連続定型', true), E('e-voucher', 'alloc', '自動按分', true), E('e-voucher', 'confirm', '伝票登録', true), E('e-voucher', 'inputset', '入力の変更', true), E('e-voucher', 'keys', 'キーボード操作一覧', true),
   E('e-single', 'calendar', 'カレンダー', true), E('e-single', 'balance', '科目別残高／現預金残高', true),
   E('journal', 'search', '検索条件', true), E('journal', 'vedit', '訂正'), E('journal', 'vdelete', '削除', true), E('journal', 'saveas', 'CSV出力', true),
-  E('ledger', 'vedit', '訂正'), E('ledger', 'printflow', '印刷', true),
+  E('ledger', 'vedit', '訂正'), E('ledger', 'printflow', '印刷', true), E('journal', 'printflow', '印刷 ▾', true), E('trial', 'printflow', '印刷 ▾', true), E('closing', 'printflow', '印刷 ▾', true), E('e-voucher', 'printflow', '印刷 ▾', true), E('s-budget', 'printflow', '印刷 ▾', true), E('s-tax', 'printflow', '印刷 ▾', true), E('receipt', 'printflow', '印刷', true),
   E('daily', 'journal', '伝票表示（不一致の日）'), E('journal', 'daily', '← 戻る', true),
   E('trial', 'ledgerpanel', '科目 → 元帳'), E('closing', 'ledgerpanel', '科目 → 元帳'), E('trend', 'ledgerpanel', '月 → 元帳', true), E('ledgerpanel', 'ledger', '元帳の画面で開く'), E('ledgerpanel', 'vedit', '訂正', true), E('ledger', 'trial', '← 戻る', true),
   E('trend', 'trendgraph', 'グラフ作成', true), E('closing', 'balgraph', '残高グラフ', true), E('closing', 'analysis', '収支分析', true), E('closing', 'suff', '充実残額', true),

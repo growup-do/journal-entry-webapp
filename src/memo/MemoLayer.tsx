@@ -69,14 +69,10 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
     }
   }, [author]);
 
-  // Esc で配置中止・ポップオーバーを閉じる
+  // Esc は「メモを置く」操作の中止だけ。入力中の下書きや開いているメモは閉じない（入力途中の内容を消さない）
   useEffect(() => {
     const h = (e: globalThis.KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setPlacing(false);
-        setDraft(null);
-        setOpenId(null);
-      }
+      if (e.key === 'Escape') setPlacing(false);
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);

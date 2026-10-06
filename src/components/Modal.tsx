@@ -1,4 +1,5 @@
-// 汎用モーダル（オーバーレイクリック / Esc で閉じる）
+// 汎用モーダル。Esc キーや背景クリックでは閉じない（入力途中の内容が消えないように。全システム共通の既定）。
+//   閉じるのは ×・キャンセル・登録などの明示的なボタンだけ。表示専用で Esc／背景クリックで閉じたいときだけ dismissible を指定する。
 
 import { useEffect, useRef } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
@@ -9,17 +10,19 @@ interface Props {
   width?: number;
   title?: ReactNode;
   children: ReactNode;
-  /** true のときはオーバーレイクリックで閉じない（確認ダイアログ用） */
+  /** 旧指定（互換のため残す。現在は既定が「背景クリックで閉じない」） */
   strict?: boolean;
+  /** true のときだけ Esc と背景クリックで閉じる（入力欄のない表示専用のものに限る） */
+  dismissible?: boolean;
   /** false のときは閉じられない（×なし・オーバーレイ／Escでも閉じない）。画面内の「戻る」等で抜ける用途 */
   closable?: boolean;
   style?: CSSProperties;
 }
 
-export function Modal({ open, onClose, width = 720, title, children, strict, closable = true, style }: Props) {
+export function Modal({ open, onClose, width = 720, title, children, dismissible = false, closable = true, style }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!open) return;
+    if (!open || !dismissible) return;
     const h = (e: KeyboardEvent) => {
       // 重ねて開いたモーダルでは、最前面のものだけを閉じる
       const roots = document.querySelectorAll('[data-modal-root]');
@@ -28,14 +31,14 @@ export function Modal({ open, onClose, width = 720, title, children, strict, clo
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
-  }, [open, onClose, closable]);
+  }, [open, onClose, closable, dismissible]);
   if (!open) return null;
   return (
     <div
       ref={rootRef}
       data-modal-root
       onMouseDown={(e) => {
-        if (!strict && closable && e.target === e.currentTarget) onClose();
+        if (dismissible && closable && e.target === e.currentTarget) onClose();
       }}
       style={{ position: 'fixed', inset: 0, zIndex: 260, background: 'rgba(20,30,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
     >
