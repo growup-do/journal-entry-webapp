@@ -8,7 +8,7 @@ import type { CSSProperties } from 'react';
 import { AssistField } from './AssistField';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { ExportDialog, type ExportSpec } from './ExportDialog';
-import { LABEL, NUM, ReportShell, TD, TH, yen } from './ReportShell';
+import { LABEL, NUM, ReportShell, TD, TH, yen, SwitchPill } from './ReportShell';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { BALANCE_ACCOUNTS, JOURNAL_ROWS, displayName, type JournalRow } from '../data';
 import { useAssist } from '../hooks/useAssist';
@@ -126,7 +126,6 @@ export function LedgerInquiryPage({ slot, variant, accent, accentRgb, onNavigate
       tools={[{ label: '科目検索', onClick: () => assist.open('acc', 'account'), primary: true }]}
       period={
         <>
-          <span style={LABEL}>集計期間</span>
           <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} withAll />
         </>
       }
@@ -138,7 +137,7 @@ export function LedgerInquiryPage({ slot, variant, accent, accentRgb, onNavigate
       ))}
       target={
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
-          {field('指定科目', assistField('acc', account, '<<科目未選択>>', setAccount))}
+          {field('科目', assistField('acc', account, '<<科目未選択>>', setAccount))}
           <span style={{ fontSize: 12, color: '#7a8794', paddingBottom: 9 }}>未選択の場合は全科目の仕訳を一覧します（残高は計算しません）。</span>
         </div>
       }
@@ -243,6 +242,7 @@ export function LedgerInquiryPage({ slot, variant, accent, accentRgb, onNavigate
 export function BalanceCheckPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: string; onNavigate: (label: string) => void }) {
   const [book, setBook] = useState<number[]>(() => BALANCE_ACCOUNTS.map(() => 0));
   const [editing, setEditing] = useState(false);
+  const [ngOnly, setNgOnly] = useState(false);
   const [exp, setExp] = useState<ExportSpec | null>(null);
   const set = (i: number, v: string) => setBook((b) => b.map((x, k) => (k === i ? parseInt(v.replace(/[^0-9]/g, ''), 10) || 0 : x)));
   const ngCount = BALANCE_ACCOUNTS.filter((a, i) => book[i] !== a.system).length;
@@ -264,10 +264,12 @@ export function BalanceCheckPage({ variant, accent }: { variant: 'form' | 'sheet
       extraTools={<ScreenPrintMenu accent={accent} actions={[{ items: [{ name: '現預金残高推移表（残高照合）', onClick: openExport }] }]} />}
       period={
         <>
-          <span style={LABEL}>集計期間</span>
           <span style={{ fontSize: 12.5 }}>令和8年 8月31日 時点</span>
         </>
       }
+      target={<span>現預金科目 <b style={{ color: '#22303c' }}>{BALANCE_ACCOUNTS.length} 科目</b>（科目設定で現預金に分類した科目をすべて突合します。個別の指定はありません）</span>}
+      switches={<SwitchPill label="不一致（NG）のみ表示" on={ngOnly} onChange={setNgOnly} accent={accent} title="通帳残高とシステム残高が合わない科目だけを表示します" />}
+      listNote={<span>{ngOnly ? `不一致 ${ngCount} 件を表示` : `${BALANCE_ACCOUNTS.length} 科目`}</span>}
       periodAside={<span style={{ fontSize: 12.5, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: ngCount ? '#fdeee9' : '#eaf5ef', color: ngCount ? '#c0392b' : '#1f7a52' }}>{ngCount ? `不一致 ${ngCount} 件` : 'すべて一致'}</span>}
     >
       <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
@@ -285,6 +287,7 @@ export function BalanceCheckPage({ variant, accent }: { variant: 'form' | 'sheet
           {BALANCE_ACCOUNTS.map((a, i) => {
             const ok = book[i] === a.system;
             const diff = book[i] - a.system;
+            if (ngOnly && ok) return null;
             return (
               <tr key={a.name} style={{ background: ok ? 'transparent' : '#fff7f5' }}>
                 <td style={{ ...TD, fontWeight: 500 }}>{a.name}</td>

@@ -59,10 +59,24 @@ export function GraphPage({ mode, variant, accent }: Props) {
       tools={[{ label: '選択解除', onClick: () => setSelected([]) }]}
       period={
         <>
-          <span style={LABEL}>集計期間</span>
           <span style={{ fontSize: 12.5, color: '#48565f' }}>{byMonth ? '当年度の月別（4月〜3月）' : `直近${ERA_YEARS.length}年度`}</span>
         </>
       }
+      targetLabel={isYearly ? '指定科目' : '指定項目'}
+      target={
+        <>
+          {charts.length === 0 && <span style={{ color: '#9aa5b1' }}>左の一覧でチェックした{isYearly ? '科目' : '項目'}をグラフにします。</span>}
+          {charts.map((c) => (
+            <span key={c.key} data-picked-item={c.title} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 6px 3px 10px', borderRadius: 8, background: '#fff', border: '1px solid #cfd8e0', fontSize: 12, fontWeight: 700, color: '#22303c' }}>
+              <span style={{ width: 8, height: 8, borderRadius: 2, background: c.color }} />
+              {c.title}
+              <button type="button" aria-label={`${c.title} を外す`} onClick={() => toggle(c.key)} style={{ border: 'none', background: 'transparent', color: '#8290a0', fontSize: 13, cursor: 'pointer', padding: '0 2px', lineHeight: 1 }}>×</button>
+            </span>
+          ))}
+          {charts.length > 0 && <span style={{ fontSize: 11.5, color: '#9aa5b1' }}>{charts.length} 件</span>}
+        </>
+      }
+      listNote={<span>左：{isYearly ? '部タブと科目の一覧' : '分析項目の一覧'}　右：選んだ{isYearly ? '科目' : '項目'}ごとのグラフ</span>}
       switches={
         <>
           <Segmented label="横軸" items={['年度', '月'] as const} value={byMonth ? '月' : '年度'} onChange={(v) => setByMonth(v === '月')} accent={accent} />

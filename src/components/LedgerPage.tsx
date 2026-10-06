@@ -109,7 +109,6 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
       tools={[{ label: isVendor ? '業者検索' : '科目検索', onClick: () => assist.open('target', isVendor ? 'vendor' : 'account'), primary: true }, { label: 'Excel', onClick: () => openExport('excel') }, { label: '再計算', onClick: () => toast.show(`再計算しました（${lines.length} 件　残高 ${moneyText(bal, s.env)}）`) }]}
       period={
         <>
-          <span style={LABEL}>集計期間</span>
           <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} />
           <span style={{ fontSize: 12.5, color: '#48565f' }}>令和8年 {m}月1日 〜 令和8年 {m}月末日</span>
         </>
@@ -120,9 +119,9 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
           <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{st.value}</span>
         </div>
       ))}
+      targetLabel={isVendor ? '指定業者' : '指定科目'}
       target={
         <>
-          <span style={LABEL}>{isVendor ? '指定業者' : isFund ? '指定科目（費目－区分コード）' : '指定科目'}</span>
           <AssistField
             value={target}
             placeholder={isVendor ? '業者を選択' : '科目を選択'}

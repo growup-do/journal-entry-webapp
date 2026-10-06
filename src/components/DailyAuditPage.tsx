@@ -154,10 +154,10 @@ export function DailyAuditPage({ variant, accent, onNavigate, onClose }: Props) 
       ) : undefined}
       period={
         <>
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#8290a0' }}>集計期間</span>
           <span style={{ fontSize: 12.5, color: '#48565f' }}>令和8年度　繰越残高 〜 決算月仕訳{stopped ? `（${stopDay}で停止中）` : ''}</span>
         </>
       }
+      target={<span>全科目（資金収支・貸借・事業活動の整合を月ごとに検査します。科目の個別指定はありません）</span>}
       periodAside={<span style={{ fontSize: 12.5, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: stopped ? '#fdecea' : done ? '#fff1b8' : '#f1f4f6', color: stopped ? RED : done ? '#8a6d00' : '#8290a0' }}>{phase === 'running' ? '調査中…' : stopped ? `${stopDay}で不一致` : done ? 'すべて同額（OK）' : '未調査'}</span>}
     >
       <ToastView msg={toast.msg} />

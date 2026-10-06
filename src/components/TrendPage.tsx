@@ -86,7 +86,6 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
       tools={[{ label: isVendor ? '業者検索' : '科目検索', onClick: () => assist.open('target', isVendor ? 'vendor' : 'account') }, { label: 'グラフ作成', onClick: () => setGraphOpen(true), primary: true }]}
       period={
         <>
-          <span style={LABEL}>集計期間</span>
           <span style={{ fontSize: 12.5, color: '#48565f' }}><b style={{ color: isPrev ? '#b7791f' : '#22303c' }}>{yearLabel}</b>（4月〜3月）</span>
         </>
       }
@@ -97,9 +96,9 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
         </>
       }
       notice={isPrev ? <span>前年度（{yearLabel}）の実績を表示しています。前年度の月からは元帳を開けません（当年度に切り替えると開けます）。</span> : undefined}
+      targetLabel={isVendor ? '指定業者' : '指定科目'}
       target={
         <>
-          <span style={LABEL}>{isVendor ? '業者指定' : kind === 'fund' ? '指定科目（費目－区分コード）' : '科目指定'}</span>
           <AssistField
             value={target}
             placeholder={isVendor ? '業者を選択' : '科目を選択'}

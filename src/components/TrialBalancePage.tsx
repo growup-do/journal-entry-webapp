@@ -94,6 +94,9 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
   const [view, setView] = useViewState<View>(KEY, { month: '8', part: 0, depth: '細々区分', pattern: '標準', carry: true, debit: false, credit: false, balance: true, prev: true, diff: true, breakdown: true });
   const [graph, setGraph] = useState(false);
   const [analysis, setAnalysis] = useState(false);
+  // 指定科目：科目名の一部で一覧の行を強調（共通構成の②）
+  const [q, setQ] = useState('');
+  const hit = (name: string) => !!q.trim() && name.includes(q.trim());
   const kind = startKindOf(s);
   const members = membersOf(s);
   const showBreakdown = members.length > 0 && view.breakdown;
@@ -144,12 +147,21 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
       ] : []}
       period={
         <>
-          <span style={LABEL}>集計期間</span>
           <FiscalMonthTabs current={view.month} accent={accent} onSelect={(m) => setView({ month: m ?? '8' })} />
           <span style={{ fontSize: 12.5, color: '#48565f' }}>令和8年 {view.month}月</span>
         </>
       }
       parts={{ items: PARTS, current: view.part, onChange: (i) => setView({ part: i }) }}
+      targetLabel="科目検索"
+      target={
+        <>
+          <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="科目名の一部を入力すると一覧で強調します" autoComplete="off" style={{ width: 300, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', outline: 'none' }} />
+          {q.trim() && <span style={{ fontSize: 12, color: rows.some((r) => hit(r.name)) ? accent : '#c0392b', fontWeight: 700 }}>{rows.filter((r) => hit(r.name)).length ? `${rows.filter((r) => hit(r.name)).length} 件の科目を強調表示中` : '該当する科目がありません'}</span>}
+          {q && <button type="button" onClick={() => setQ('')} style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid #cfd8e0', background: '#fff', color: '#5b6773', fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>解除</button>}
+          <span style={{ fontSize: 11.5, color: '#9aa5b1' }}>科目の行の「元帳」で、右側に元帳を表示します</span>
+        </>
+      }
+      listNote={<span>{rows.length} 行{hiddenZero > 0 ? `（0円の ${hiddenZero} 行を非表示）` : ''}</span>}
       switches={
         <>
           <Segmented label="表示階層" items={DEPTHS} value={view.depth} onChange={(d) => setView({ depth: d })} accent={accent} />
@@ -211,7 +223,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
               {rows.map((r, i) => {
                 const bold = r.level === 0;
                 return (
-                  <tr key={r.name + ':' + r.level + ':' + i} data-account={r.name} onDoubleClick={() => { if (r.leaf) openLedger(r.name); }} title={r.leaf ? 'ダブルクリックで元帳を開く' : undefined} data-picked={picked(r.name) || undefined} style={{ background: picked(r.name) ? '#eaf5ef' : rowBg(r, i), boxShadow: picked(r.name) ? `inset 3px 0 0 ${accent}` : undefined, cursor: r.leaf ? 'pointer' : 'default' }}>
+                  <tr key={r.name + ':' + r.level + ':' + i} data-account={r.name} onDoubleClick={() => { if (r.leaf) openLedger(r.name); }} title={r.leaf ? 'ダブルクリックで元帳を開く' : undefined} data-picked={picked(r.name) || undefined} style={{ background: picked(r.name) ? '#eaf5ef' : hit(r.name) ? '#fff8d6' : rowBg(r, i), boxShadow: picked(r.name) ? `inset 3px 0 0 ${accent}` : undefined, cursor: r.leaf ? 'pointer' : 'default' }}>
                     <td style={{ ...TD, paddingLeft: 12 + r.level * 18, fontWeight: bold || picked(r.name) ? 700 : r.level === 1 ? 600 : 400, whiteSpace: 'nowrap' }}>
                       {r.name}
                       {r.leaf && <button type="button" className="btn-outline" data-action="元帳" onClick={(e) => { e.stopPropagation(); openLedger(r.name); }} style={linkBtn}>元帳 ›</button>}

@@ -55,6 +55,10 @@ interface Props {
   parts?: PartSpec;
   /** 2) 指定科目 */
   target?: ReactNode;
+  /** 指定科目の見出し（例：指定業者／絞り込み／科目検索）。既定は「指定科目」 */
+  targetLabel?: string;
+  /** 4) 一覧表の見出し行の右側に出す補足（件数など） */
+  listNote?: ReactNode;
   /** 3) 表示切替（右寄せで並ぶ） */
   switches?: ReactNode;
   /** 画面固有の条件行（絞り込み・凡例など） */
@@ -74,7 +78,7 @@ interface Props {
 
 const PART_COLORS = ['#e8791e', '#d9a400', '#d9a400', '#d9a400'];
 
-export function ReportShell({ variant, accent, title, subtitle, tools = [], extraTools, returnTo, period, periodAside, parts, target, switches, controls, notice, children, badge, org, embedded, asideWidth = 0 }: Props) {
+export function ReportShell({ variant, accent, title, subtitle, tools = [], extraTools, returnTo, period, periodAside, parts, target, targetLabel = '指定科目', switches, controls, notice, listNote, children, badge, org, embedded, asideWidth = 0 }: Props) {
   const toast = useToast();
   const s = useSession();
   const isSheet = variant === 'sheet';
@@ -150,43 +154,61 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
             ))}
           </div>
         </div>
+        {/* 問合せ画面の共通構成（依頼書 5.4.5／2.5）：① 集計期間の選択 → ② 指定科目 → ③ 表示切替 → ④ 一覧表。見出しは共通シェルが付ける */}
         {hasConditions && (
-          <div style={{ padding: '12px 22px', borderBottom: '1px solid #eef2f5', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div data-conditions style={{ padding: '12px 22px', borderBottom: '1px solid #eef2f5', display: 'grid', gridTemplateColumns: '92px minmax(0,1fr)', columnGap: 14, rowGap: 10, alignItems: 'center' }}>
             {(period || periodAside || parts) && (
-              <div style={row}>
-                {period}
-                {(periodAside || parts) && (
-                  <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                    {periodAside}
-                    {parts && (
-                      <div role="tablist" aria-label="部の切替" title="← → キーでも切り替えできます" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {parts.items.map((p, i) => {
-                          const on = parts.current === i;
-                          const color = PART_COLORS[i] ?? '#d9a400';
-                          return (
-                            <button key={p} type="button" role="tab" aria-selected={on} className="chip" data-part={p} onClick={() => parts.onChange(i)} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? color : '#fff', color: on ? '#fff' : '#5b6773', border: '1px solid ' + (on ? color : '#d3dbe3'), whiteSpace: 'nowrap' }}>
-                              {p}
-                            </button>
-                          );
-                        })}
-                        <span style={{ fontSize: 10.5, color: '#9aa5b1', whiteSpace: 'nowrap' }}>← → キーでも切替</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+              <>
+                <span style={SECTION_TAG} data-section="集計期間">集計期間</span>
+                <div style={row}>
+                  {period}
+                  {(periodAside || parts) && (
+                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                      {periodAside}
+                      {parts && (
+                        <div role="tablist" aria-label="部の切替" title="← → キーでも切り替えできます" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {parts.items.map((p, i) => {
+                            const on = parts.current === i;
+                            const color = PART_COLORS[i] ?? '#d9a400';
+                            return (
+                              <button key={p} type="button" role="tab" aria-selected={on} className="chip" data-part={p} onClick={() => parts.onChange(i)} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: '1px solid ' + (on ? color : '#e2c86a'), background: on ? color : '#fff3c4', color: on ? '#fff' : '#7a5600' }}>
+                                {p}
+                              </button>
+                            );
+                          })}
+                          <span style={{ fontSize: 10.5, color: '#9aa5b1', whiteSpace: 'nowrap' }}>← → キーでも切替</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </>
             )}
-            {target && <div style={{ ...row, fontSize: 12.5, color: '#48565f' }}>{target}</div>}
+            {target && (
+              <>
+                <span style={SECTION_TAG} data-section="指定科目">{targetLabel}</span>
+                <div style={{ ...row, fontSize: 12.5, color: '#48565f' }}>{target}</div>
+              </>
+            )}
             {switches && (
-              <div data-switches style={{ ...row, gap: 10 }}>
-                <span style={{ ...LABEL, marginRight: 'auto' }}>表示切替</span>
-                {switches}
-              </div>
+              <>
+                <span style={SECTION_TAG} data-section="表示切替">表示切替</span>
+                <div data-switches style={{ ...row, gap: 10 }}>{switches}</div>
+              </>
             )}
-            {controls}
+            {controls && (
+              <>
+                <span />
+                <div style={{ minWidth: 0 }}>{controls}</div>
+              </>
+            )}
           </div>
         )}
         {notice && <div style={{ padding: '8px 22px', borderBottom: '1px solid #eef2f5', background: '#fffaf0', fontSize: 12, color: '#8a5a00', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>{notice}</div>}
+        <div data-list-head style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '7px 22px', background: '#f8fafc', borderBottom: '1px solid #eef2f5', fontSize: 12, color: '#48565f' }}>
+          <span style={SECTION_TAG} data-section="一覧表">一覧表</span>
+          {listNote}
+        </div>
         {children}
       </div>
     </main>
@@ -293,4 +315,6 @@ export const NUM: CSSProperties = { ...TD, textAlign: 'right', fontVariantNumeri
 export const yen = (n: number) => (n < 0 ? '△' + Math.abs(n).toLocaleString('ja-JP') : n.toLocaleString('ja-JP'));
 export const pct = (n: number) => (isFinite(n) ? (n * 100).toFixed(1) + '%' : '');
 export const LABEL: CSSProperties = { fontSize: 11, fontWeight: 700, color: '#8290a0', flex: 'none' };
+/** 問合せ画面の共通構成の見出し（集計期間／指定科目／表示切替／一覧表） */
+const SECTION_TAG: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', alignSelf: 'start', minWidth: 72, padding: '4px 10px', borderRadius: 7, background: '#e9eef3', color: '#3d4a56', fontSize: 11, fontWeight: 800, letterSpacing: '.04em', whiteSpace: 'nowrap' };
 export const CHECK: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#5b6773', cursor: 'pointer' };

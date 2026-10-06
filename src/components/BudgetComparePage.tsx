@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
-import { LABEL, NUM, pct, ReportShell, Segmented, TD, TH, useMoney, useViewState } from './ReportShell';
+import { NUM, pct, ReportShell, Segmented, TD, TH, useMoney, useViewState } from './ReportShell';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { BUDGET_ROWS, displayName } from '../data';
 import { grandTotal, rollup } from '../lib/hier';
@@ -50,15 +50,14 @@ export function BudgetComparePage({ variant, accent }: Props) {
       tools={[{ label: '再計算' }]}
       period={
         <>
-          <span style={LABEL}>集計期間</span>
           <FiscalMonthTabs current={view.month} accent={accent} onSelect={(m) => setView({ month: m ?? '10' })} />
           <span style={{ fontSize: 12.5, color: '#48565f' }}>令和8年 {view.month}月</span>
         </>
       }
       parts={{ items: PARTS, current: view.part, onChange: (i) => setView({ part: i }) }}
+      targetLabel="科目検索"
       target={
         <>
-          <span style={LABEL}>科目検索</span>
           <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="科目名の一部を入力" autoComplete="off" style={{ width: 240, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 12.5, fontFamily: 'inherit', outline: 'none' }} />
           {q.trim() && <span style={{ fontSize: 12, color: hits ? accent : '#c0392b', fontWeight: 700 }}>{hits ? `${hits} 件の科目を強調表示中` : '該当する科目がありません'}</span>}
           {q && <button type="button" onClick={() => setQ('')} style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid #cfd8e0', background: '#fff', color: '#5b6773', fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>クリア</button>}

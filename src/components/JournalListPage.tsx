@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import { BizSwitch, useDivisionTools } from './DivisionTools';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { ExportDialog, type ExportSpec } from './ExportDialog';
-import { LABEL, NUM, ReportShell, TD, TH, useMoney } from './ReportShell';
+import { NUM, ReportShell, TD, TH, useMoney } from './ReportShell';
 import { ACTION_HEAD, ACTION_TH, useRowActions } from './RowActions';
 import { ToastView, useToast } from './Toast';
 import { AdvancedSearchModal, EMPTY_COND, applyCond, condActive, type SearchCond } from './VoucherEdit';
@@ -77,7 +77,6 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
       extraTools={<ScreenPrintMenu page="仕訳一覧" accent={accent} data={table} />}
       period={
         <>
-          <span style={LABEL}>集計期間</span>
           <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} withAll />
           <span style={{ fontSize: 12.5, color: '#48565f' }}>{month == null ? '令和8年 全期間' : day != null ? `令和8年 ${m}月${day}日（1日分）` : `令和8年 ${m}月1日 〜 令和8年 ${m}月末日`}</span>
           {day != null && <button type="button" onClick={() => setDay(null)} style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid ' + accent, background: '#fff', color: accent, fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{m}月{day}日のみ表示中 ×月全体を表示</button>}
@@ -93,9 +92,10 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
           )}
         </span>
       }
+      targetLabel="絞り込み"
+      listNote={<span>行の右端の「訂正」「削除」、または行のダブルクリックで伝票を訂正できます</span>}
       target={
         <>
-          <span style={LABEL}>絞り込み</span>
           <input className="search-input" value={kw} onChange={(e) => setKw(e.target.value)} placeholder="科目・摘要・業者で絞り込み" autoComplete="off" style={{ width: 240, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 12.5, fontFamily: 'inherit', outline: 'none' }} />
           {condActive(cond) && <button type="button" onClick={() => setCond(EMPTY_COND)} style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid ' + accent, background: '#fff', color: accent, fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>検索条件で絞り込み中 ×解除</button>}
           <span style={{ fontSize: 11.5, color: '#9aa5b1' }}>金額・伝票No・付箋・区分などは右上の「検索条件」で指定します</span>
