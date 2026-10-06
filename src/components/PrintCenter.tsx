@@ -67,16 +67,36 @@ export function ScopeBadge({ kind, label }: { kind: ScopeKind; label?: string })
   return <span title={c.hint} style={{ display: 'inline-block', fontSize: 10.5, fontWeight: 800, padding: '2px 8px', borderRadius: 8, background: c.bg, color: c.fg, border: '1px solid ' + c.bd, whiteSpace: 'nowrap', lineHeight: 1.5 }}>{label ?? kind}</span>;
 }
 /** 影響範囲ごとのまとまり（見出しにバッジと説明を付けた枠） */
-export function ScopeBlock({ kind, title, desc, right, children }: { kind?: ScopeKind; title: string; desc?: ReactNode; right?: ReactNode; children: ReactNode }) {
+export function ScopeBlock({ kind, title, desc, right, children, toggle }: { kind?: ScopeKind; title: string; desc?: ReactNode; right?: ReactNode; children: ReactNode; /** アコーディオン：見出し全体を押すと開閉。右端に「変更する ▾／閉じる ▴」を出す */ toggle?: { open: boolean; onToggle: () => void; openLabel?: string; closeLabel?: string } }) {
   const c = kind ? SCOPE_STYLE[kind] : { bg: '#f3f6f9', bd: '#dde4ea' };
+  const fg = kind ? SCOPE_STYLE[kind].fg : '#3d4a56';
+  const head = (
+    <>
+      {toggle && <span aria-hidden style={{ flex: 'none', width: 18, height: 18, borderRadius: 5, background: '#fff', border: '1px solid ' + c.bd, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: fg, transition: 'transform .18s', transform: toggle.open ? 'rotate(90deg)' : 'none' }}>▶</span>}
+      {kind && <ScopeBadge kind={kind} />}
+      <b style={{ fontSize: 13 }}>{title}</b>
+      {desc && <span style={{ fontSize: 11.5, color: '#5b6773' }}>{desc}</span>}
+      {(right || toggle) && (
+        <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+          {right}
+          {toggle && <span data-scope-toggle aria-hidden style={{ ...btn(fg, !toggle.open, true), display: 'inline-flex', alignItems: 'center', gap: 4 }}>{toggle.open ? (toggle.closeLabel ?? '閉じる') : (toggle.openLabel ?? '変更する')}<span style={{ fontSize: 10 }}>{toggle.open ? '▴' : '▾'}</span></span>}
+        </span>
+      )}
+    </>
+  );
   return (
-    <section style={{ border: '1px solid ' + c.bd, borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
+    <section data-scope={kind} style={{ border: '1px solid ' + c.bd, borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
+      {toggle ? (
+        <button type="button" aria-expanded={toggle.open} onClick={toggle.onToggle} title={toggle.open ? 'このブロックを閉じます' : 'このブロックを開いて設定を変更します'} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', background: c.bg, flexWrap: 'wrap', width: '100%', border: 'none', borderBottom: toggle.open ? '1px solid ' + c.bd : 'none', textAlign: 'left', fontFamily: 'inherit', color: 'inherit', cursor: 'pointer' }}>
+          {head}
+        </button>
+      ) : (
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', background: c.bg, flexWrap: 'wrap' }}>
-        {kind && <ScopeBadge kind={kind} />}
+        {head}
         <b style={{ fontSize: 13 }}>{title}</b>
         {desc && <span style={{ fontSize: 11.5, color: '#5b6773' }}>{desc}</span>}
-        {right && <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>{right}</span>}
       </div>
+      )}
       <div style={{ padding: 12 }}>{children}</div>
     </section>
   );
@@ -355,7 +375,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose, lockReport
               </div>
             </ScopeBlock>
 
-            <ScopeBlock kind="全帳票共通" title="全帳票共通の設定" desc="共通の印刷設定（印刷位置・行間・フォント・捺印欄・ページ番号）。" right={<button type="button" onClick={() => setCommonOpen((o) => !o)} style={btn('#6b3fa0', false, true)}>{commonOpen ? '閉じる' : 'ここで変更する'}</button>}>
+            <ScopeBlock kind="全帳票共通" title="全帳票共通の設定" desc={commonOpen ? 'すべての帳票の印刷に反映されます。' : '見出しを押すと開き、ここで変更できます。'} toggle={{ open: commonOpen, onToggle: () => setCommonOpen((o) => !o) }}>
               {!commonOpen ? (
                 <div style={{ display: 'flex', gap: '4px 16px', flexWrap: 'wrap', fontSize: 12, color: '#48565f' }}>
                   <span>印刷位置：{pr.depth}</span><span>行の間隔：{pr.lineGap}{pr.lineGap === '空きなし' ? '' : `（${pr.gapSize}）`}</span><span>位置調整：横 {pr.offsetX}mm／縦 {pr.offsetY}mm</span><span>フォント：{pr.fontName}</span><span>捺印欄：{pr.items.stamp ? pr.stamps.filter(Boolean).join('・') || '（氏名なし）' : '印刷しない'}</span><span>ページ番号：{pr.items.page ? `印刷する（${pr.pageStart} から）` : '印刷しない'}</span>
