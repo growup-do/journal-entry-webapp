@@ -15,12 +15,12 @@ const KANA: Record<string, string> = {
 
 export const ACCOUNT_META: AccountMeta[] = (() => {
   const out: AccountMeta[] = [];
-  const base: Record<string, number> = { 現金及び預金: 1100, 事業未収金: 1200, 事業費: 5200, 人件費: 5100, 事業収益: 4100 };
+  const base: Record<string, number> = { 現金及び預金: 1100, 事業未収金: 1200, 固定資産: 1500, 事業費: 5200, 人件費: 5100, 事業収益: 4100 };
   ACCOUNTS.forEach((g) => {
     let code = base[g.group] ?? 9000;
     g.items.forEach((name) => {
       code += 10;
-      const cls: AccountMeta['cls'] = g.group === '現金及び預金' || name === '現金（収入）' ? '現預金' : g.group === '事業未収金' ? '資産' : g.group === '事業収益' ? '収益' : '費用';
+      const cls: AccountMeta['cls'] = g.group === '現金及び預金' || name === '現金（収入）' ? '現預金' : g.group === '事業未収金' || g.group === '固定資産' ? '資産' : g.group === '事業収益' ? '収益' : '費用';
       const kind: AccountMeta['kind'] = cls === '費用' || cls === '収益' ? 'PL' : 'BS';
       const fund = cls === '費用' ? name.replace(/（.*）/, '') + '支出' : cls === '収益' ? name.replace(/収益$/, '収入').replace('補助金収入', '補助金事業収入') : cls === '現預金' ? '（支払資金）' : '—';
       out.push({ name, code: String(code), kana: KANA[name] ?? '', kind, cls, fund });

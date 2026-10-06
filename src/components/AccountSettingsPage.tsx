@@ -12,6 +12,7 @@ import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
 import { Field, Notice, SettingsShell, Tabs, Toggle, btn, card, cardHead, input, lbl } from './ui';
+import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { ACCOUNT_META, accountMatches, toKatakana, type AccountMeta } from '../lib/accounts';
 import { ACCOUNTS, SERVICES, SUMMARIES, displayName } from '../data';
 
@@ -323,7 +324,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
       <button type="button" className="btn-outline" onClick={() => setPreview(true)} style={btn()}>プレビュー</button>
       <button type="button" className="btn-outline" onClick={() => exportList('excel')} style={btn()}>Excel出力</button>
       <button type="button" className="btn-outline" onClick={() => exportList('csv')} style={btn()}>ファイル（CSV）</button>
-      <button type="button" className="btn-outline" onClick={() => exportList('print')} style={btn()}>印刷</button>
+      <ScreenPrintMenu accent={accent} actions={[{ items: [{ name: fundTab ? '資金科目一覧' : '勘定科目一覧', onClick: () => exportList('print') }] }]} />
       <button type="button" className="btn-outline" onClick={() => setCautionOpen(true)} style={btn()}>注意事項</button>
       <button type="button" className="btn-outline" onClick={() => { if (confirm('仕訳更新を開始します。1年分の全伝票を対象に、勘定科目と資金科目の連動を整理・更新します。途中で中断はできません。よろしいですか？')) runRecalc(); }} style={btn('#b7791f')}>仕訳の再集計</button>
       {listTab && <button type="button" className="submit-btn" onClick={openAdd} style={btn(accent, true)}>＋ 科目を追加</button>}

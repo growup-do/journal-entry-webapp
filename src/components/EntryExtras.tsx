@@ -451,7 +451,7 @@ export function useEntryTools(o: EntryToolsOptions) {
   /** 伝票登録ボタン（各形式の入力欄の中に置く。伝票の操作グループは廃止） */
   const submitButton: ReactNode = <ActButton id={o.submitId} label={`${name}を登録`} k="S" tone="primary" accent={o.accent} disabled={ro} title={why('入力中の伝票を登録します')} onClick={o.onSubmit} />;
   /** 定型仕訳ボタン（各形式の見出し行の右端に置く）。左に「印刷」（日記帳・伝票・振替伝票） */
-  const templateButton: ReactNode = <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><ScreenPrintMenu page="伝票入力" accent={o.accent} small /><ActButton label="定型仕訳" k="T" accent={o.accent} disabled={ro} title={why('登録済みの定型仕訳を、入力中の伝票に呼び出します')} onClick={() => setDlg('定型')} /></span>;
+  const templateButton: ReactNode = <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><ScreenPrintMenu page="伝票入力" accent={o.accent} tone="act" /><ActButton label="定型仕訳" k="T" accent={o.accent} disabled={ro} title={why('登録済みの定型仕訳を、入力中の伝票に呼び出します')} onClick={() => setDlg('定型')} /></span>;
   /** 資金モードの切替（自動資金⇄強制資金）。取引区分の右、または伝票の1段目の右端に置く */
   const fundSwitch: ReactNode = (
     <span role="radiogroup" aria-label="資金モード" data-fund-switch title={ro ? reason : FUND_MODE_NOTE[o.fundMode]} style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 2, padding: 2, border: '1px solid #cfd8e0', borderRadius: 8, background: '#eef2f5' }}>

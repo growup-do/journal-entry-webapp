@@ -9,6 +9,9 @@ import { btn } from './ui';
 
 export interface PrintItem { name: string; /** 詳細設定の元にする帳票（REPORTS の名前） */ base: string; note?: string; /** 画面に表示中の表を印刷データに使う */ screenData?: boolean }
 export interface PrintGroup { label?: string; items: PrintItem[] }
+/** 画面独自の印刷処理を呼ぶ項目（出納帳の集計内訳表など）。共通の印刷ダイアログは使わない */
+export interface PrintAction { name: string; onClick: () => void; note?: string }
+export interface PrintActionGroup { label?: string; items: PrintAction[] }
 
 const JOURNAL = (screenData: boolean): PrintItem[] => [{ name: '日記帳', base: '仕訳日記帳', screenData }, { name: '伝票', base: '仕訳伝票（伝票式）' }, { name: '振替伝票', base: '振替伝票（振替式）' }];
 const BUDGET_KINDS = ['前年度', '当初', '補正', '次年度'];
@@ -48,8 +51,8 @@ function reportOf(item: PrintItem): ReportDef {
 }
 
 /** 画面の「印刷」ボタン。帳票が1つならそのまま印刷ダイアログ、複数なら一覧から選ぶ */
-export function ScreenPrintMenu({ page, groups, accent, data, label = '印刷', small, style }: { page?: string; groups?: PrintGroup[]; accent: string; /** 画面に表示中の表（screenData の帳票に使う） */ data?: TableData; label?: string; small?: boolean; style?: CSSProperties }) {
-  const gs = groups ?? (page ? SCREEN_PRINTS[page] : undefined) ?? [];
+export function ScreenPrintMenu({ page, groups, actions, accent, data, label = '印刷', small, tone, style }: { page?: string; groups?: PrintGroup[]; /** 画面独自の印刷処理（指定時は groups／page より優先） */ actions?: PrintActionGroup[]; accent: string; /** 画面に表示中の表（screenData の帳票に使う） */ data?: TableData; label?: string; small?: boolean; /** 'act'＝伝票入力の操作ボタン（定型仕訳など）と同じ大きさ・色 */ tone?: 'act'; style?: CSSProperties }) {
+  const gs: { label?: string; items: (PrintItem | PrintAction)[] }[] = actions ?? groups ?? (page ? SCREEN_PRINTS[page] : undefined) ?? [];
   const items = gs.flatMap((g) => g.items);
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<PrintItem | null>(null);
@@ -64,13 +67,13 @@ export function ScreenPrintMenu({ page, groups, accent, data, label = '印刷', 
   }, [open]);
   if (items.length === 0) return null;
   const single = items.length === 1;
-  const choose = (it: PrintItem) => { setOpen(false); setPicked(it); };
+  const choose = (it: PrintItem | PrintAction) => { setOpen(false); if ('onClick' in it) it.onClick(); else setPicked(it); };
   const report = picked ? reportOf(picked) : null;
   const pdata = picked?.screenData ? data : undefined;
   const icon = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9V3h12v6" /><rect x="3" y="9" width="18" height="9" rx="2" /><path d="M7 14h10v7H7z" /></svg>;
   return (
-    <div ref={ref} data-screen-print={page} style={{ position: 'relative', display: 'inline-flex' }}>
-      <button type="button" className="btn-outline" aria-haspopup={single ? undefined : 'menu'} aria-expanded={single ? undefined : open} onClick={() => (single ? choose(items[0]) : setOpen((o) => !o))} title={single ? `${items[0].name} を印刷（期間・詳細設定・出力先を指定）` : 'この画面に関係する帳票を選んで印刷します'} style={{ ...btn(accent, false, small), display: 'inline-flex', alignItems: 'center', gap: 6, ...style }}>
+    <div ref={ref} data-screen-print={page ?? (actions ? 'actions' : 'custom')} style={{ position: 'relative', display: 'inline-flex' }}>
+      <button type="button" className={tone === 'act' ? 'ef-act' : 'btn-outline'} aria-haspopup={single ? undefined : 'menu'} aria-expanded={single ? undefined : open} onClick={() => (single ? choose(items[0]) : setOpen((o) => !o))} title={single ? `${items[0].name} を印刷（期間・詳細設定・出力先を指定）` : 'この画面に関係する帳票を選んで印刷します'} style={{ ...(tone === 'act' ? { padding: '6px 10px', borderRadius: 8, border: '1px solid #cfd8e0', background: '#fff', color: '#48565f', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' } : btn(accent, false, small)), display: 'inline-flex', alignItems: 'center', gap: 6, ...style }}>
         {icon}{label}{!single && <span aria-hidden style={{ fontSize: 10, marginLeft: 2 }}>▾</span>}
       </button>
       {open && !single && (

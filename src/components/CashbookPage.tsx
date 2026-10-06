@@ -12,6 +12,7 @@ import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
 import { LABEL, NUM, ReportShell, TD, TH } from './ReportShell';
+import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { useAssist } from '../hooks/useAssist';
 import { addVoucher } from '../store/journalStore';
 import { accountFlat } from '../data';
@@ -159,7 +160,6 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
   const [bankInput, setBankInput] = useState('');
   const [csvOpen, setCsvOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
-  const [printOpen, setPrintOpen] = useState(false);
   const assist = useAssist();
   const toast = useToast();
 
@@ -273,7 +273,6 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
 
   // ---- 印刷（集計内訳表／仕訳伝票／出納帳） ----
   const openPrint = (label: string) => {
-    setPrintOpen(false);
     const period = month == null ? '令和8年度（全月）' : `令和8年 ${month}月`;
     const meta = `${book}　${period}`;
     if (label === '集計内訳表') {
@@ -312,9 +311,9 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       badge={badge}
       org={`チャイルド保育園　${book}`}
       subtitle={isPetty ? '小口現金の入出金を出納帳形式で記帳し、集計して会計へ連動します。' : '預金口座ごとの入出金を出納帳形式で記帳。銀行CSVの取込と通帳残高の照合ができます。'}
+      extraTools={<ScreenPrintMenu accent={accent} actions={[{ label: '印刷および印刷プレビュー', items: ['集計内訳表', '仕訳伝票', isPetty ? '小口現金出納帳' : '預金出納帳'].map((l) => ({ name: l, onClick: () => openPrint(l) })) }]} />}
       tools={[
         { label: '会計連動', onClick: openLink },
-        { label: '印刷', onClick: () => setPrintOpen(true) },
         { label: isPetty ? '小口区分の切替' : '区分の切替', onClick: () => { if (isPetty) { setPettyPick(book); setPettyOpen(true); } else setNewBookOpen(true); } },
         ...(isPetty
           ? [{ label: '特殊行', onClick: () => setSpecialOpen(true) }, { label: '集計', onClick: () => setAggOpen(true), primary: true }]
@@ -490,15 +489,6 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
           <div style={{ marginTop: 16, padding: '10px 14px', background: '#f3f6f9', borderRadius: 10, fontSize: 12, color: '#48565f' }}>
             集計された明細に対しては以下の操作が出来なくなります。<br />①日付・金額・科目・摘要など、明細内容の訂正　②前期繰越の金額訂正　③行の挿入　④行の削除<br />※一度集計した明細に対して修正を行う場合は『集計取消』を実行してから行ってください。
           </div>
-        </div>
-      </Modal>
-
-      {/* ---- 印刷メニュー ---- */}
-      <Modal open={printOpen} onClose={() => setPrintOpen(false)} width={360} title="印刷および印刷プレビュー">
-        <div style={{ padding: '10px 12px 14px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {['集計内訳表', '仕訳伝票', isPetty ? '小口現金出納帳' : '預金出納帳'].map((l) => (
-            <button key={l} type="button" className="menu-sub" onClick={() => openPrint(l)} style={{ textAlign: 'left', padding: '10px 12px', border: 'none', background: 'transparent', borderRadius: 7, fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer' }}>{l}</button>
-          ))}
         </div>
       </Modal>
 

@@ -13,6 +13,7 @@ import { ToastView, useToast } from './Toast';
 import { ExportDialog } from './ExportDialog';
 import type { ExportSpec } from './ExportDialog';
 import { Notice } from './ui';
+import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { ACCOUNT_META, accountMatches } from '../lib/accounts';
 import { SUMMARIES } from '../data';
 
@@ -483,7 +484,6 @@ export function DepreciationPage({ variant, accent }: Props) {
   const [detail, setDetail] = useState<Asset | null>(null);
   const [assetModal, setAssetModal] = useState<{ open: boolean; asset: Asset | null; manual: boolean }>({ open: false, asset: null, manual: false });
   const [equipModal, setEquipModal] = useState(false);
-  const [printOpen, setPrintOpen] = useState(false);
   const [envOpen, setEnvOpen] = useState(false);
   const [logOpen, setLogOpen] = useState<{ open: boolean; code?: string; kind?: LogRow['kind'] }>({ open: false });
   const [logTab, setLogTab] = useState<'資産' | '備品' | 'システム'>('資産');
@@ -563,7 +563,7 @@ export function DepreciationPage({ variant, accent }: Props) {
             <button type="button" className="submit-btn" onClick={() => setAssetModal({ open: true, asset: null, manual: false })} style={btn(accent, true)}>＋ 固定資産を登録</button>
             <button type="button" className="btn-outline" onClick={() => setEquipModal(true)} style={btn()}>＋ 備品を登録</button>
             <span style={{ width: 1, background: '#e2e8ee', margin: '4px 4px' }} />
-            <button type="button" className="btn-outline" onClick={() => setPrintOpen(true)} style={btn()}>帳票印刷</button>
+            <ScreenPrintMenu accent={accent} actions={[{ label: '固定資産・備品の帳票', items: PRINT_REPORTS.map((r) => ({ name: r, onClick: () => { addLog('システム', '', r, '帳票印刷'); openReport(r); } })) }]} />
             <button type="button" className="btn-outline" onClick={() => setEnvOpen(true)} style={btn()}>環境設定</button>
             <button type="button" className="btn-outline" onClick={() => openLog('資産')} style={btn()}>操作ログ</button>
           </div>
@@ -671,15 +671,6 @@ export function DepreciationPage({ variant, accent }: Props) {
         {equipModal && <EquipForm accent={accent} equips={equips} sortItems={sortItems} imageSrc={images} onSave={(e) => { setEquips((es) => [...es, e]); addLog('備品', e.code, `${Number(e.code)}:${e.name}`, '登録'); toast.show(`備品「${e.name}」を登録しました`); }} onCancel={() => setEquipModal(false)} onReport={openReport} onLog={(code) => openLog('備品', code)} onImage={(code, name) => setImgTarget({ key: 'E:' + code, title: `備品画像：${name || code}` })} toast={toast.show} />}
       </Modal>
 
-      {/* 帳票印刷 */}
-      <Modal open={printOpen} onClose={() => setPrintOpen(false)} width={900} title="帳票印刷">
-        <div style={{ padding: '14px 22px 20px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
-            {PRINT_REPORTS.map((r) => <button key={r} type="button" className="btn-outline" onClick={() => { setPrintOpen(false); addLog('システム', '', r, '帳票印刷'); openReport(r); }} style={{ padding: '14px 12px', borderRadius: 10, border: '1px solid #cfd8e0', background: '#fff', color: '#22303c', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', lineHeight: 1.4, textAlign: 'left' }}>{r}</button>)}
-          </div>
-          <div style={{ marginTop: 12 }}><Notice>選択した帳票を印刷ダイアログで開きます（PDFに保存も可）。除却・売却・移管の一覧は「除却・売却・移管」タブで登録した処理を、移管(先)一覧は「移管取込」で登録した資産を印字します。</Notice></div>
-        </div>
-      </Modal>
       <Modal open={envOpen} onClose={() => setEnvOpen(false)} width={860} title="環境設定">
         {envOpen && <EnvSettings accent={accent} sortItems={sortItems} onSortItems={setSortItems} onClose={() => setEnvOpen(false)} onSaved={(desc) => addLog('システム', '', '動作環境設定', `登録（${desc}）`)} toast={toast.show} />}
       </Modal>

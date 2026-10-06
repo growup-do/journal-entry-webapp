@@ -9,6 +9,7 @@ import { AssistField } from './AssistField';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { LABEL, NUM, ReportShell, TD, TH, yen } from './ReportShell';
+import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { BALANCE_ACCOUNTS, JOURNAL_ROWS, displayName, type JournalRow } from '../data';
 import { useAssist } from '../hooks/useAssist';
 import type { MonthFilter } from '../types';
@@ -249,7 +250,7 @@ export function BalanceCheckPage({ variant, accent }: { variant: 'form' | 'sheet
   const sumSys = BALANCE_ACCOUNTS.reduce((a, b) => a + b.system, 0);
   // 印刷：既存では【名前を付けて保存】から「現預金残高推移表」を Excel（*.xlsx）で出力する（マニュアル 5.5.4）
   const openExport = () => setExp({
-    kind: 'excel', title: '現預金残高推移表', fileName: '現預金残高推移表_令和8年8月', meta: '残高照合　令和8年8月31日時点',
+    kind: 'print', title: '現預金残高推移表', fileName: '現預金残高推移表_令和8年8月', meta: '残高照合　令和8年8月31日時点',
     header: ['現預金科目', '判定', '通帳残高', 'システム残高', '差額'],
     rows: [...BALANCE_ACCOUNTS.map((a, i) => [a.name, book[i] === a.system ? 'OK' : 'NG', book[i], a.system, book[i] - a.system]), ['合計', sumBook === sumSys ? 'OK' : 'NG', sumBook, sumSys, sumBook - sumSys]],
   });
@@ -259,7 +260,8 @@ export function BalanceCheckPage({ variant, accent }: { variant: 'form' | 'sheet
       accent={accent}
       title={displayName('残高照合')}
       subtitle="現預金科目ごとに、通帳（実残高）とシステム残高を突合して OK／NG を表示します。"
-      tools={[{ label: editing ? '設定を終了' : '通帳残高の設定', onClick: () => setEditing((e) => !e), primary: true }, { label: '印刷', onClick: openExport }]}
+      tools={[{ label: editing ? '設定を終了' : '通帳残高の設定', onClick: () => setEditing((e) => !e), primary: true }]}
+      extraTools={<ScreenPrintMenu accent={accent} actions={[{ items: [{ name: '現預金残高推移表（残高照合）', onClick: openExport }] }]} />}
       period={
         <>
           <span style={LABEL}>集計期間</span>
