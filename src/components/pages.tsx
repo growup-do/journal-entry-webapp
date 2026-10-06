@@ -21,7 +21,7 @@ import { OptionGate } from './OptionGuidePage';
 import { FunctionFinderPage } from './FunctionFinder';
 import { FiscalYearPage } from './FiscalYearPage';
 import { AppendixPrintPage } from './AppendixPrintPage';
-import { AuditSettingsPage, BackupPage, FinancialAnalysisSettingsPage, JournalRefreshPage, PasswordSettingsPage } from './MaintenancePages';
+import { AuditSettingsPage, BackupPage, FinancialAnalysisSettingsPage, JournalRefreshPage } from './MaintenancePages';
 import { renderSettingsPage } from './SettingsPages';
 import { SETTINGS_MENU } from '../data';
 import { SingleEntryPage } from './SingleEntryPage';
@@ -38,8 +38,6 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
       return <FinancialAnalysisSettingsPage variant={variant} accent={accent} onNavigate={onNavigate} />;
     case '決算チェック設定':
       return <AuditSettingsPage variant={variant} accent={accent} onNavigate={onNavigate} />;
-    case 'パスワード':
-      return <PasswordSettingsPage variant={variant} accent={accent} />;
     case '仕訳更新':
       return <JournalRefreshPage variant={variant} accent={accent} onNavigate={onNavigate} />;
     case 'データのバックアップ':

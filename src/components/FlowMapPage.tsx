@@ -116,7 +116,6 @@ const NODES: Node[] = [
   N('s-tax', '消費税（税区分）', 'page', 'settings', { open: '税区分' }),
   N('s-template', '連続定型仕訳・自動按分仕訳の登録', 'page', 'settings', { open: '仕訳辞書' }),
   N('s-check', '伝票・科目チェック', 'page', 'settings', { open: '整合性チェック' }),
-  N('s-pw', 'パスワード', 'page', 'settings', { open: 'パスワード' }),
   N('s-env', '動作環境', 'page', 'settings', { open: '環境設定' }),
   N('s-refresh', '仕訳更新', 'page', 'settings', { open: '仕訳更新' }),
   N('s-backup', 'データのバックアップ', 'page', 'settings', { open: 'データのバックアップ' }),
