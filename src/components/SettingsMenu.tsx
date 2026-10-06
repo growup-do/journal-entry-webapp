@@ -91,16 +91,15 @@ export function SettingsMenu({ accent, active, onNavigate }: Props) {
             <span style={{ fontSize: 13.5, fontWeight: 800 }}>各種設定</span>
             <span style={{ fontSize: 11, color: '#9aa5b1' }}>起動中の区分：{session.division}（{kind}）</span>
           </div>
-          {/* 3列で高さをそろえる：左＝マスター設定（9項目）、中＝保守・運用＋Web版の追加案、右＝ユーザー・権限＋登録機能＋年度更新（警告色。右下に離して置く） */}
+          {/* 3列で高さをそろえる：左＝マスター設定（11項目）、中＝保守・運用＋登録機能、右＝ユーザー・権限＋年度更新（警告色。右下に離して置く） */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12, alignItems: 'start' }}>
             {group(by('master'))}
             <div style={{ display: 'grid', gap: 12 }}>
               {group(by('maint'))}
-              {group(by('web'))}
+              {group(by('register'))}
             </div>
             <div style={{ display: 'grid', gap: 12 }}>
               {group(by('users'))}
-              {group(by('register'))}
               {group(by('update'))}
             </div>
           </div>

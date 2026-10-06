@@ -2,7 +2,6 @@
 //   マスタ系（勘定科目／税区分／部門／タグ／摘要辞書／仕訳辞書／取引先）… 共通のマスタ管理画面（検索・追加・編集・有効/無効・削除・CSV）
 //   事業者 … 法人情報・会計期間・拠点区分／サービス区分
 //   開始残高 … 期首の貸借残高を拠点ごとに入力（貸借一致チェック）
-//   他社ソフトデータの移行 … 4ステップのウィザード
 
 import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
@@ -10,7 +9,7 @@ import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
-import { ACCOUNTS, SERVICES, SUMMARIES, VENDORS } from '../data';
+import { ACCOUNTS, SUMMARIES, VENDORS } from '../data';
 import { Tabs } from './ui';
 import { DivisionTreeEditor } from './DivisionTreeEditor';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
@@ -99,10 +98,9 @@ const acctRows = (): Record<string, string>[] => {
 const MASTERS: Record<string, MasterConfig> = {
   勘定科目: { title: '勘定科目', desc: '仕訳で使う勘定科目の一覧。分類・区分・資金科目の対応を管理します。', addLabel: '科目を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '科目名' }, { key: 'group', label: '分類', type: 'select', options: ACCOUNTS.map((g) => g.group) }, { key: 'kind', label: '区分', type: 'select', options: ['BS 資産', 'BS 負債', 'BS 純資産', 'PL 収益', 'PL 費用'], width: 110 }, { key: 'fund', label: '資金科目', width: 120 }], rows: acctRows() },
   税区分: { title: '税区分', desc: '消費税の区分と税率。仕訳入力時の既定値として使われます。', addLabel: '税区分を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '名称' }, { key: 'rate', label: '税率', type: 'number', width: 90, align: 'right' }, { key: 'kind', label: '課税区分', type: 'select', options: ['課税', '非課税', '不課税', '免税'], width: 120 }], rows: [{ code: '10', name: '課税売上 10%', rate: '10', kind: '課税' }, { code: '11', name: '課税仕入 10%', rate: '10', kind: '課税' }, { code: '08', name: '軽減税率 8%', rate: '8', kind: '課税' }, { code: '20', name: '非課税', rate: '0', kind: '非課税' }, { code: '30', name: '不課税', rate: '0', kind: '不課税' }, { code: '40', name: '免税', rate: '0', kind: '免税' }] },
-  部門: { title: '部門', desc: '拠点区分・サービス区分に対応する部門。集計や権限の単位になります。', addLabel: '部門を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '部門名' }, { key: 'site', label: '拠点区分', type: 'select', options: ['本部', 'チャイルド保育園'] }, { key: 'head', label: '責任者' }], rows: SERVICES.map((s) => { const [code, ...rest] = s.split(' '); return { code, name: rest.join(' '), site: code === '001' ? '本部' : 'チャイルド保育園', head: code === '001' ? '園長 太郎' : '事務 花子' }; }) },
-  タグ: { title: 'タグ', desc: '仕訳に付ける任意のタグ。検索・絞り込み・付箋の色分けに使います。', addLabel: 'タグを追加', fields: [{ key: 'name', label: 'タグ名' }, { key: 'color', label: '色', type: 'color', width: 80 }, { key: 'use', label: '用途' }], rows: [{ name: '要確認', color: '#c0392b', use: '内容を確認してから確定する仕訳' }, { name: '補助金対象', color: '#2c5f9e', use: '補助金の実績報告に含める支出' }, { name: '内部取引', color: '#b7791f', use: '拠点間・サービス区分間の取引' }, { name: '決算整理', color: '#1f7a52', use: '決算整理仕訳' }] },
   摘要辞書: { title: '摘要辞書', desc: 'よく使う摘要の候補。入力時のドロップダウンに表示されます。', addLabel: '摘要を追加', fields: [{ key: 'name', label: '摘要' }, { key: 'acct', label: 'よく使う科目', type: 'select', options: ACCOUNTS.flatMap((g) => g.items) }, { key: 'key', label: 'ショートカット', width: 120 }], rows: SUMMARIES.map((s, i) => ({ name: s, acct: ['法定福利費', '法定福利費', '法定福利費', '職員俸給', '委託費収益', '通信運搬費', '水道光熱費（事業）', 'その他の利用料収益', '印刷製本費', '保育材料費', '手数料'][i] ?? '', key: `;${i + 1}` })) },
   仕訳辞書: { title: '仕訳辞書', desc: '定型仕訳のひな形。単一入力・伝票入力で呼び出して金額だけ入力できます（既存の「連続定型」に相当）。', addLabel: '定型仕訳を追加', fields: [{ key: 'name', label: '名称' }, { key: 'kari', label: '借方科目', type: 'select', options: ACCOUNTS.flatMap((g) => g.items) }, { key: 'kashi', label: '貸方科目', type: 'select', options: ACCOUNTS.flatMap((g) => g.items) }, { key: 'tekiyo', label: '摘要' }, { key: 'amount', label: '金額（任意）', type: 'number', width: 110, align: 'right' }], rows: [{ name: '電話料金', kari: '通信運搬費', kashi: '普通預金（保育園）', tekiyo: '電話料金', amount: '' }, { name: '給与支給（本俸）', kari: '職員俸給', kashi: '普通預金（保育園）', tekiyo: '職員俸給', amount: '' }, { name: '副食費 保護者より', kari: '現金（収入）', kashi: 'その他の利用料収益', tekiyo: '副食費ー保護者より', amount: '4500' }, { name: 'コピー機リース', kari: '賃借料（事業）', kashi: '普通預金（保育園）', tekiyo: 'コピー機リース代', amount: '10995' }] },
+  '業者（合算集計用）': { title: '業者（合算集計用）', desc: '合算区分（法人全体・事業区分）で業者元帳・業者推移表を集計するときに、各区分の業者をまとめて扱うための名簿です。区分ごとの業者コードが違っていても、ここで同じ業者として対応づけます。', addLabel: '合算用の業者を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '業者名' }, { key: 'kana', label: 'フリガナ' }, { key: 'map', label: '対応する区分の業者（区分：コード）' }], rows: [{ code: '901', name: 'みどり電力', kana: 'ミドリデンリョク', map: '001：101 ／ 002：103 ／ 004：101' }, { code: '902', name: '山田文具', kana: 'ヤマダブング', map: '001：102 ／ 002：105' }, { code: '903', name: 'さくら給食サービス', kana: 'サクラキュウショクサービス', map: '002：104 ／ 003：104 ／ 004：102' }] },
   取引先: { title: '取引先', desc: '業者・保護者・行政などの取引先。仕訳の「業者」欄と業者元帳に使われます。', addLabel: '取引先を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '取引先名' }, { key: 'kind', label: '種別', type: 'select', options: ['業者', '保護者', '行政', 'その他'], width: 100 }, { key: 'tel', label: '連絡先' }, { key: 'note', label: '備考' }], rows: VENDORS.filter((v) => v !== '（なし）').map((v, i) => ({ code: String(101 + i), name: v, kind: v === '保護者' ? '保護者' : v === '市役所' ? '行政' : '業者', tel: v === '保護者' ? '—' : `03-0000-00${10 + i}`, note: '' })) },
 };
 
@@ -361,78 +359,12 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
   );
 }
 
-/* ---------------- 他社ソフトデータの移行 ---------------- */
-function MigrationPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: string }) {
-  const toast = useToast();
-  const [step, setStep] = useState(0);
-  const [soft, setSoft] = useState('');
-  const [file, setFile] = useState('');
-  const SOFTS = ['既存システム（Chappy）', '弥生会計', '勘定奉行', 'freee会計', 'マネーフォワード クラウド会計', 'PCA会計', 'その他（CSV）'];
-  const MAP = [['取引日', 'date', '伝票日付'], ['借方科目', 'kari', '借方勘定科目'], ['貸方科目', 'kashi', '貸方勘定科目'], ['摘要', 'tekiyo', '摘要'], ['金額', 'amount', '金額'], ['部門', 'dept', 'サービス区分'], ['取引先', 'vendor', '業者']];
-  const steps = ['移行元の選択', 'ファイルの取込', '項目の対応づけ', '確認・実行'];
-  const card: CSSProperties = { border: '1px solid #e2e8ee', borderRadius: 12, padding: 18 };
-  return (
-    <Shell variant={variant} title="他社ソフトデータの移行" desc="他の会計ソフトや既存システムから、仕訳・マスタ・開始残高を取り込みます。">
-      <ToastView msg={toast.msg} />
-      <div style={{ display: 'flex', gap: 0, padding: '16px 22px 0' }}>
-        {steps.map((s, i) => (
-          <div key={s} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 26, height: 26, borderRadius: '50%', background: i <= step ? accent : '#e2e8ee', color: i <= step ? '#fff' : '#8290a0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800 }}>{i + 1}</span>
-            <span style={{ fontSize: 12.5, fontWeight: i === step ? 700 : 500, color: i === step ? '#22303c' : '#7a8794' }}>{s}</span>
-            {i < steps.length - 1 && <span style={{ flex: 1, height: 2, background: i < step ? accent : '#e2e8ee', margin: '0 10px' }} />}
-          </div>
-        ))}
-      </div>
-      <div style={{ padding: 22 }}>
-        {step === 0 && (
-          <div style={card}>
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>移行元のソフトを選んでください</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
-              {SOFTS.map((s) => <button key={s} type="button" className="btn-outline" onClick={() => setSoft(s)} style={{ ...btn(soft === s ? accent : '#22303c', soft === s), padding: '14px 12px', textAlign: 'left' }}>{s}</button>)}
-            </div>
-            <div style={{ fontSize: 12, color: '#7a8794', marginTop: 12 }}>移行できるデータ：仕訳（当年・前年）／勘定科目／取引先／摘要辞書／開始残高</div>
-          </div>
-        )}
-        {step === 1 && (
-          <div style={card}>
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>{soft} からエクスポートしたファイルを取り込みます</div>
-            <div onClick={() => setFile('shiwake_2026.csv（1,248行）')} style={{ border: '2px dashed #cfd8e0', borderRadius: 12, padding: '40px 20px', textAlign: 'center', cursor: 'pointer', background: file ? '#eaf5ef' : '#fbfcfd' }}>
-              <div style={{ fontSize: 15, fontWeight: 700 }}>{file || 'ここにファイルをドロップ、またはクリックして選択'}</div>
-              <div style={{ fontSize: 12, color: '#7a8794', marginTop: 6 }}>CSV／Excel（xlsx）・文字コードは自動判定・最大50MB</div>
-            </div>
-          </div>
-        )}
-        {step === 2 && (
-          <div style={card}>
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>取り込んだ列を、このシステムの項目に対応づけます（自動判定済み・必要なら変更）</div>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead><tr><th style={TH}>ファイルの列</th><th style={TH}>サンプル値</th><th style={TH}>このシステムの項目</th><th style={TH}>状態</th></tr></thead>
-              <tbody>{MAP.map(([col, , to], i) => <tr key={col}><td style={{ ...TD, fontWeight: 600 }}>{col}</td><td style={{ ...TD, color: '#7a8794' }}>{['2026/08/01', '法定福利費', '普通預金（保育園）', '健康保険・厚生年金', '670,361', '002', '—'][i]}</td><td style={TD}><select defaultValue={to} style={{ ...input, padding: '5px 8px' }}>{['伝票日付', '借方勘定科目', '貸方勘定科目', '摘要', '金額', 'サービス区分', '業者', '（取り込まない）'].map((o) => <option key={o}>{o}</option>)}</select></td><td style={TD}><span style={{ fontSize: 11, fontWeight: 700, color: '#1f7a52' }}>自動判定</span></td></tr>)}</tbody>
-            </table>
-            <div style={{ fontSize: 12, color: '#7a8794', marginTop: 10 }}>科目名が一致しないものは次のステップで「勘定科目の変換表」として確認できます。</div>
-          </div>
-        )}
-        {step === 3 && (
-          <div style={card}>
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>取り込み内容の確認</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: 10, marginBottom: 12 }}>
-              {[['取込対象', '1,248 仕訳'], ['期間', '令和8年 4月〜8月'], ['科目の未対応', '3 件（要確認）'], ['取引先の新規', '12 件（自動登録）']].map(([l, v]) => <div key={l} style={{ padding: '10px 12px', border: '1px solid #e2e8ee', borderRadius: 10, background: '#fbfcfd' }}><div style={{ fontSize: 10.5, color: '#8290a0', fontWeight: 700 }}>{l}</div><div style={{ fontSize: 15, fontWeight: 800, marginTop: 2 }}>{v}</div></div>)}
-            </div>
-            <div style={{ padding: '10px 12px', background: '#fff7e6', border: '1px solid #f3d9b0', borderRadius: 10, fontSize: 12.5, color: '#8a5a00' }}>未対応の科目：「福利厚生費（旧）」「事務用消耗品費」「雑収入」→ 変換先の科目を指定してください（未指定は「諸口」として取り込みます）。</div>
-            <div style={{ fontSize: 12, color: '#7a8794', marginTop: 10 }}>取り込みは元に戻せます（「取込履歴」から一括削除）。</div>
-          </div>
-        )}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
-          <button type="button" disabled={step === 0} onClick={() => setStep((s) => s - 1)} style={{ ...btn(), opacity: step === 0 ? 0.4 : 1 }}>戻る</button>
-          {step < 3 ? (
-            <button type="button" className="submit-btn" disabled={(step === 0 && !soft) || (step === 1 && !file)} onClick={() => setStep((s) => s + 1)} style={{ ...btn(accent, true), opacity: (step === 0 && !soft) || (step === 1 && !file) ? 0.5 : 1 }}>次へ</button>
-          ) : (
-            <button type="button" className="submit-btn" onClick={() => { toast.show('取り込みを実行しました（プロトタイプ：データは変更されません）'); setStep(0); setSoft(''); setFile(''); }} style={btn(accent, true)}>取り込みを実行</button>
-          )}
-        </div>
-      </div>
-    </Shell>
-  );
+/* ---------------- 業者（業者＋合算集計用） ---------------- */
+function VendorPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: string }) {
+  const [tab, setTab] = useState('業者');
+  const tabs = <Tabs items={['業者', '業者（合算集計用）']} current={tab} onChange={setTab} accent={accent} />;
+  if (tab === '業者') return <MasterPage key="取引先" variant={variant} accent={accent} label="取引先" tabs={tabs} />;
+  return <MasterPage key="業者（合算集計用）" variant={variant} accent={accent} label="業者（合算集計用）" tabs={tabs} />;
 }
 
 /* ---------------- 摘要辞書（辞書＋自動補完候補） ---------------- */
@@ -448,18 +380,18 @@ function SummaryDictPage({ variant, accent }: { variant: 'form' | 'sheet'; accen
 }
 
 /* ---------------- 振り分け ---------------- */
-export function renderSettingsPage(label: string, variant: 'form' | 'sheet', accent: string) {
+export function renderSettingsPage(label: string, variant: 'form' | 'sheet', accent: string, onNavigate?: (page: string) => void) {
   if (label === '事業者') return <OrgPage variant={variant} accent={accent} />;
   if (label === '開始残高') return <OpeningBalancePage variant={variant} accent={accent} />;
   if (label === '予算') return <BudgetPage variant={variant} accent={accent} />;
   if (label === '年度更新・切替') return <FiscalYearPage variant={variant} accent={accent} />;
-  if (label === '環境設定') return <EnvSettingsPage variant={variant} accent={accent} />;
+  if (label === '環境設定') return <EnvSettingsPage variant={variant} accent={accent} onNavigate={onNavigate} />;
+  if (label === '取引先') return <VendorPage variant={variant} accent={accent} />;
   if (label === '決算附属明細書') return <AttachedStatementsPage variant={variant} accent={accent} />;
   if (label === '整合性チェック') return <IntegrityCheckPage variant={variant} accent={accent} />;
   if (label === '勘定科目') return <AccountSettingsPage variant={variant} accent={accent} />;
   if (label === '仕訳辞書') return <TemplateJournalPage variant={variant} accent={accent} />;
   if (label === '摘要辞書') return <SummaryDictPage variant={variant} accent={accent} />;
-  if (label === '他社ソフトデータの移行') return <MigrationPage variant={variant} accent={accent} />;
   if (MASTERS[label]) return <MasterPage key={label} variant={variant} accent={accent} label={label} />;
   return null;
 }

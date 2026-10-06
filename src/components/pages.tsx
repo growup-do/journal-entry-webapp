@@ -23,6 +23,7 @@ import { FiscalYearPage } from './FiscalYearPage';
 import { AppendixPrintPage } from './AppendixPrintPage';
 import { AuditSettingsPage, BackupPage, FinancialAnalysisSettingsPage, JournalRefreshPage } from './MaintenancePages';
 import { renderSettingsPage } from './SettingsPages';
+import { CarryoverJudgmentPage, DepreciationLinkPage } from './CarryoverPages';
 import { SETTINGS_MENU } from '../data';
 import { SingleEntryPage } from './SingleEntryPage';
 import { TransferEntryPage } from './TransferEntryPage';
@@ -36,6 +37,10 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
       return <FiscalYearPage key="fy-dep" variant={variant} accent={accent} initial="dep" onNavigate={onNavigate} />;
     case '財務分析設定':
       return <FinancialAnalysisSettingsPage variant={variant} accent={accent} onNavigate={onNavigate} />;
+    case '繰越判断':
+      return <CarryoverJudgmentPage variant={variant} accent={accent} onNavigate={onNavigate} />;
+    case '減価償却連動':
+      return <DepreciationLinkPage variant={variant} accent={accent} onNavigate={onNavigate} />;
     case '決算チェック設定':
       return <AuditSettingsPage variant={variant} accent={accent} onNavigate={onNavigate} />;
     case '仕訳更新':
@@ -47,7 +52,7 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
   }
   // メンバー管理は各種設定（ユーザー・権限）にあるが専用画面を使う
   if (page === 'メンバーの追加、管理') return <MembersPage variant={variant} accent={accent} />;
-  if (SETTINGS_MENU.includes(page)) return renderSettingsPage(page, variant, accent);
+  if (SETTINGS_MENU.includes(page)) return renderSettingsPage(page, variant, accent, onNavigate);
   switch (page) {
     case 'ホーム':
       return <HomePage variant={variant} accent={accent} onNavigate={onNavigate} />;

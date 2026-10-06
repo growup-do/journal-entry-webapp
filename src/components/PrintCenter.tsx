@@ -14,8 +14,10 @@ import { ToastView, useToast } from './Toast';
 import { Field, Notice, SettingsShell, Toggle, btn, card, cardHead, input, lbl, numInput } from './ui';
 import { ExportDialog, runExport, type ExportKind, type ExportSpec } from './ExportDialog';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
+import { LoadDivisionSettings } from './DivisionSettingsLoad';
+import { ACCOUNT_META } from '../lib/accounts';
 import { ACCOUNTS, displayName } from '../data';
-import { PRINT_ITEMS, divisionLabel, flattenDivisions, setSession, startKindOf, useSession, type EnvSettings, type PrintCommon, type Session } from '../store/session';
+import { PRINT_ITEMS, divisionLabel, flattenDivisions, fusenLabel, setSession, startKindOf, useSession, type EnvSettings, type PrintCommon, type Session } from '../store/session';
 
 /** 印刷・出力に使う表データ（各画面の実データ、または帳票ごとのサンプル） */
 export interface TableData { header: string[]; rows: (string | number)[][]; }
@@ -322,7 +324,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose, lockReport
                 <span style={lbl}>チェック・付箋で絞り込む（選ばなければ全件）</span>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', fontSize: 12.5 }}>
                   <label style={{ display: 'flex', gap: 5, alignItems: 'center' }}><input type="checkbox" checked={p.checks.check} onChange={() => set({ checks: { ...p.checks, check: !p.checks.check } })} />チェック</label>
-                  {([['red', '赤', '#c0392b'], ['blue', '青', '#2c5f9e'], ['yellow', '黄', '#b7791f'], ['green', '緑', '#1f7a52']] as const).map(([k, l, c]) => <label key={k} style={{ display: 'flex', gap: 5, alignItems: 'center', color: c }}><input type="checkbox" checked={p.checks[k]} onChange={() => set({ checks: { ...p.checks, [k]: !p.checks[k] } })} />付箋（{l}）</label>)}
+                  {([['red', '赤', '#c0392b'], ['blue', '青', '#2c5f9e'], ['yellow', '黄', '#b7791f'], ['green', '緑', '#1f7a52']] as const).map(([k, l, c]) => <label key={k} style={{ display: 'flex', gap: 5, alignItems: 'center', color: c }}><input type="checkbox" checked={p.checks[k]} onChange={() => set({ checks: { ...p.checks, [k]: !p.checks[k] } })} />付箋 {fusenLabel(l)}</label>)}
                 </div>
               </div>
             )}
@@ -712,6 +714,44 @@ export function PrintCenterPage({ variant, accent }: { variant: 'form' | 'sheet'
 }
 
 /* ---------------- 共通の印刷設定（全帳票共通） ---------------- */
+/** 「0データを印刷しない」の除外科目（旧【0データの除外科目設定】）：0円でも印刷したい科目を指定する。法人内で共通 */
+function ZeroExcludeCard({ accent }: { accent: string }) {
+  const toast = useToast();
+  const fundItems = Array.from(new Set(ACCOUNT_META.filter((m) => m.fund && m.fund !== '—' && m.fund !== '（支払資金）').map((m) => m.fund)));
+  const bsItems = ACCOUNT_META.map((m) => m.name);
+  const [fund, setFund] = useState<string[]>(['委託費収入', '利用者等利用料収入（一般）'].filter((x) => fundItems.includes(x)));
+  const [bs, setBs] = useState<string[]>(['現金', '普通預金（本部）'].filter((x) => bsItems.includes(x)));
+  const [open, setOpen] = useState(false);
+  const toggle = (list: string[], set: (v: string[]) => void, x: string) => set(list.includes(x) ? list.filter((y) => y !== x) : [...list, x]);
+  const col = (title: string, items: string[], list: string[], set: (v: string[]) => void) => (
+    <div style={card}>
+      <div style={cardHead}>{title}<span style={{ fontSize: 11, fontWeight: 600, color: '#5b6773', marginLeft: 6 }}>{list.length} 科目</span><button type="button" onClick={() => set([])} style={{ ...btn('#5b6773', false, true), marginLeft: 'auto' }}>全て OFF</button></div>
+      <div style={{ maxHeight: 300, overflow: 'auto' }}>{items.map((x) => <label key={x} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '5px 12px', fontSize: 12.5, borderTop: '1px solid #f1f4f7', background: list.includes(x) ? '#fffbe6' : '#fff', cursor: 'pointer' }}><input type="checkbox" checked={list.includes(x)} onChange={() => toggle(list, set, x)} />{x}</label>)}</div>
+    </div>
+  );
+  return (
+    <div style={card} data-zero-exclude>
+      <ToastView msg={toast.msg} />
+      <div style={cardHead}>「0データを印刷しない」の除外科目<ScopeBadge kind="全帳票共通" /></div>
+      <div style={{ padding: 14, display: 'grid', gap: 10, fontSize: 12.5 }}>
+        <div style={{ color: '#5b6773' }}>各帳票の詳細設定で「0データを表示しない」を有効にしていても、ここで指定した科目は 0 円のまま印刷します。法人内で共通の設定です。</div>
+        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span>資金科目 <b>{fund.length}</b> 科目</span><span>貸借・事業科目 <b>{bs.length}</b> 科目</span>
+          <button type="button" onClick={() => setOpen(true)} style={{ ...btn(accent, false, true), marginLeft: 'auto' }}>除外科目を指定する</button>
+        </div>
+        {(fund.length > 0 || bs.length > 0) && <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{[...fund, ...bs].map((x) => <span key={x} style={{ fontSize: 11.5, padding: '2px 8px', borderRadius: 8, background: '#fff7cc', border: '1px solid #f3e3a0' }}>{x}</span>)}</div>}
+      </div>
+      <Modal open={open} onClose={() => setOpen(false)} width={760} title="「0データを印刷しない」の除外科目設定">
+        <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
+          <Notice>印刷詳細設定「0データを印刷しない」が有効になっている場合に、0 円でも印刷を行いたい科目にチェックを付けてください。この機能を使用しない場合は「全て OFF」にします。この設定は法人内で共通です。</Notice>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>{col('資金科目', fundItems, fund, setFund)}{col('貸借・事業科目', bsItems, bs, setBs)}</div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setOpen(false)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { setOpen(false); toast.show(`除外科目を保存しました（資金 ${fund.length}・貸借事業 ${bs.length}）`); }} style={btn(accent, true)}>OK</button></div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
 export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: string }) {
   const s = useSession();
   const p = s.print;
@@ -725,13 +765,14 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
     <SettingsShell variant={variant} title="共通の印刷設定" badge="印刷" desc={<><ScopeBadge kind="全帳票共通" />　すべての帳票の印刷に反映される設定です。印刷に関わる設定はここと各帳票の「詳細設定」に集約し、動作環境には置きません。同じ内容は、各帳票の印刷の「詳細設定 ＞ 全帳票共通の設定」からも変更できます。</>} actions={<>
       <ScreenPrintMenu page="共通の印刷設定" accent={accent} label="備考・摘要の印刷" />
       <button type="button" className="btn-outline" onClick={() => setPreview(true)} style={btn()}>プレビューで確認</button>
-      <button type="button" className="btn-outline" onClick={() => toast.show('他の区分の印刷設定を読み込みました（プロトタイプ）')} style={btn()}>他区分の設定を読込</button>
+      <LoadDivisionSettings accent={accent} kind="印刷設定" onDone={(from) => toast.show(`「${from}」の印刷設定を読み込みました`)} />
       <button type="button" className="submit-btn" onClick={() => toast.show('共通の印刷設定を保存しました')} style={btn(accent, true)}>決定</button>
     </>}>
       <ToastView msg={toast.msg} />
       <div style={{ padding: '16px 22px 0' }}><Notice>帳票ごとに変えたい項目（0データを表示しない・印刷範囲・備考など）は、各帳票の印刷の「詳細設定 ＞ この帳票のみの設定」で指定します。金額の書式やカラー帳票などは「{displayName('環境設定')}」の設定が印刷に反映されます。</Notice></div>
       <div style={{ padding: 22, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 18, alignItems: 'start' }}>
         <div style={{ display: 'grid', gap: 18 }}>
+          <ZeroExcludeCard accent={accent} />
           <div style={card}>
             <div style={cardHead}>印刷位置・行の間隔</div>
             <div style={{ padding: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

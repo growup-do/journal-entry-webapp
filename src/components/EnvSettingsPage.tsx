@@ -11,22 +11,34 @@ import { Field, Notice, SettingsShell, Tabs, Toggle, btn, card, cardHead, input 
 import { DEFAULT_ENV, setSession, useSession, type EnvSettings } from '../store/session';
 import { displayName } from '../data';
 import { ScopeBlock } from './PrintCenter';
+import { LoadDivisionSettings } from './DivisionSettingsLoad';
+import { FUSEN_COLORS } from '../store/journalStore';
 
 const DIV_TABS = ['金額書式', '伝票入力', '画面・バックアップ'];
-/** 動作環境から他画面へ移した設定（旧 → 新しい場所） */
-const MOVED: [string, string][] = [
-  ['補正予算額の入力方式（補正額／補正後予算額）', `${displayName('予算')}（補正予算タブ）`],
-  ['決算附属明細書 設定2・3 の「収入に合わせる／支出に合わせる」', displayName('決算附属明細書')],
+/** 動作環境から他画面へ移した設定（旧 → 新しい場所 → 開く画面キー） */
+const MOVED: [string, string, string?][] = [
+  ['補正予算額の入力方式（補正額／補正後予算額）', `${displayName('予算')}（補正予算タブ）`, '予算'],
+  ['決算附属明細書 設定2・3 の「収入に合わせる／支出に合わせる」', displayName('決算附属明細書'), '決算附属明細書'],
   ['画面サイズ', 'Web版では不要（ブラウザの幅に合わせて表示）'],
   ['ワイド画面の初期表示（初期表示画面・選択月・元帳の初期科目・表示順）', '伝票入力の参照パネル'],
-  ['印刷に関わる設定（0データ・印刷位置・フォント・捺印欄 など）', '各帳票の印刷（詳細設定 › この帳票のみ／全帳票共通）'],
-  ['帳票の色・印字（カラー帳票・罫線色・網掛け色、帳票印刷の速度、1行のみの改ページ抑制、Excel／PDFの注意書き、試算表の予備費出力）', '各帳票の印刷（詳細設定 › 全帳票共通）または 共通の印刷設定'],
-  ['決算書の「社会福祉法人名」を印字しない', '各帳票の印刷（詳細設定 › 全帳票共通「法人名を印刷する」）'],
+  ['印刷に関わる設定（0データ・印刷位置・フォント・捺印欄 など）', '各帳票の印刷（詳細設定 › この帳票のみ／全帳票共通）', '共通の印刷設定'],
+  ['帳票の色・印字（カラー帳票・罫線色・網掛け色、帳票印刷の速度、1行のみの改ページ抑制、Excel／PDFの注意書き、試算表の予備費出力）', '各帳票の印刷（詳細設定 › 全帳票共通）または 共通の印刷設定', '共通の印刷設定'],
+  ['決算書の「社会福祉法人名」を印字しない', '各帳票の印刷（詳細設定 › 全帳票共通「法人名を印刷する」）', '共通の印刷設定'],
+  // 旧【動作環境】パネル（ボタン式メニュー）の各項目
+  ['動作環境パネル「仕訳数の確認」', displayName('仕訳数'), '仕訳数'],
+  ['動作環境パネル「帳票選択」', '帳票の印刷（帳票選択 → 基本条件 → 詳細設定 → 出力先）', '印刷センター'],
+  ['動作環境パネル「消費税動作環境」', displayName('税区分'), '税区分'],
+  ['動作環境パネル「お気に入りメニュー」', 'ホームの「お気に入り」（右上のボタンで編集）', 'ホーム'],
+  ['動作環境パネル「ワイド画面 設定」', '伝票入力の参照パネル（この画面の「区分ごと › 画面・バックアップ」にも初期表示を残しています）', '伝票入力'],
+  ['動作環境パネル「アプリケーション設定」', displayName('ユーザー設定') + '（起動直後の画面・表示の設定）', 'ユーザー設定'],
+  ['動作環境パネル「法人管理者設定」', displayName('メンバーの追加、管理') + '（管理者権限・使える区分）', 'メンバーの追加、管理'],
+  ['動作環境パネル「部門情報の変更」', 'この画面右上の「部門情報の変更」'],
+  ['保守メニュー「動作印刷設定の読込」', 'この画面右上の「他の区分の設定を読み込む」'],
 ];
 const grid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 14, alignItems: 'start' };
 const colorLbl: CSSProperties = { fontSize: 12, display: 'flex', gap: 6, alignItems: 'center' };
 
-export function EnvSettingsPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: string }) {
+export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'form' | 'sheet'; accent: string; /** 他画面を開く（印刷の詳細設定・移動した設定の移動先） */ onNavigate?: (page: string) => void }) {
   const [infoOpen, setInfoOpen] = useState(false);
   const [fileOpen, setFileOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -80,6 +92,8 @@ export function EnvSettingsPage({ variant, accent }: { variant: 'form' | 'sheet'
     <SettingsShell variant={variant} title={displayName('環境設定')} desc="システムの動作条件を設定します。「全区分共通」（システム全体）と「区分ごと」（起動中の区分のみ）に分けて表示しています。" actions={<>
       <button type="button" className="btn-outline" onClick={() => setInfoOpen(true)} style={btn()}>部門情報の変更</button>
       <button type="button" className="btn-outline" onClick={() => setFileOpen(true)} style={btn()}>設定の保存／読込</button>
+      <LoadDivisionSettings accent={accent} kind="動作設定" onDone={(from) => toast.show(`「${from}」の動作設定を読み込みました（未保存：OK（保存）で確定）`)} />
+      {onNavigate && <button type="button" className="btn-outline" onClick={() => onNavigate('共通の印刷設定')} style={btn()} data-open-print-settings>印刷の詳細設定（全帳票共通）</button>}
       <button type="button" className="btn-outline" onClick={() => { setV(DEFAULT_ENV); toast.show('初期値に戻しました（未保存）'); }} style={btn()}>初期値に戻す</button>
       <button type="button" className="submit-btn" onClick={save} style={btn(accent, true)}>OK（保存）</button>
     </>}>
@@ -107,6 +121,15 @@ export function EnvSettingsPage({ variant, accent }: { variant: 'form' | 'sheet'
               <Field label="繰入金明細の集計方法">{radios(['収入で監視', '支払いで監視'] as const, v.transferWatch, (o) => set({ transferWatch: o }))}</Field>
               {T('budgetInternalOffset', '予算の内部取引消去（内部取引を相殺する）')}
               {T('termFromStart', '月範囲の選択で、期首から月を選択する')}
+            </div></div>
+            <div style={card}><div style={cardHead}>付箋の色の意味</div><div style={{ padding: 14, display: 'grid', gap: 8 }}>
+              {(['赤', '青', '黄', '緑'] as const).map((f) => (
+                <label key={f} style={{ display: 'grid', gridTemplateColumns: '16px 24px minmax(0, 1fr)', gap: 8, alignItems: 'center', fontSize: 12.5 }}>
+                  <span aria-hidden style={{ width: 14, height: 14, borderRadius: 3, background: FUSEN_COLORS[f] }} /><span>{f}</span>
+                  <input className="field-input" value={v.fusenNames[f]} onChange={(e) => set({ fusenNames: { ...v.fusenNames, [f]: e.target.value } })} placeholder="この色の付箋の意味" aria-label={`${f}の付箋の意味`} style={{ ...input, padding: '5px 8px', fontSize: 12.5 }} data-fusen-name={f} />
+                </label>
+              ))}
+              <div style={{ fontSize: 12, color: '#7a8794' }}>伝票入力・日記帳・元帳の付箋ボタンのツールチップと、検索条件・印刷の絞り込みに「赤（{v.fusenNames.赤 || '…'}）」のように表示します。付箋の色は4色固定です。</div>
             </div></div>
             <div style={card}><div style={cardHead}>検索・日付の表記</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
               {T('noFurigana', 'フリガナ検索を無効にする（科目・業者・摘要の検索でフリガナを使わない）')}
@@ -180,7 +203,7 @@ export function EnvSettingsPage({ variant, accent }: { variant: 'form' | 'sheet'
         <section style={{ border: '1px dashed #cfd8e0', borderRadius: 12, padding: '12px 14px', background: '#fbfcfd' }}>
           <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>移動した設定<span style={{ fontWeight: 500, color: '#7a8794', marginLeft: 8, fontSize: 11.5 }}>同じ設定が複数の画面に重複しないよう、使う画面へ移しました。</span></div>
           <table style={{ borderCollapse: 'collapse', fontSize: 12.5, width: '100%' }}>
-            <tbody>{MOVED.map(([from, to]) => <tr key={from}><td style={{ padding: '5px 8px', borderTop: '1px solid #eef2f5', color: '#5b6773' }}>{from}</td><td style={{ padding: '5px 4px', borderTop: '1px solid #eef2f5', color: '#9aa5b1', width: 20 }}>→</td><td style={{ padding: '5px 8px', borderTop: '1px solid #eef2f5', fontWeight: 600 }}>{to}</td></tr>)}</tbody>
+            <tbody>{MOVED.map(([from, to, page]) => <tr key={from}><td style={{ padding: '5px 8px', borderTop: '1px solid #eef2f5', color: '#5b6773' }}>{from}</td><td style={{ padding: '5px 4px', borderTop: '1px solid #eef2f5', color: '#9aa5b1', width: 20 }}>→</td><td style={{ padding: '5px 8px', borderTop: '1px solid #eef2f5', fontWeight: 600 }}>{to}{page && onNavigate && <button type="button" onClick={() => onNavigate(page)} style={{ marginLeft: 8, border: 'none', background: 'transparent', color: accent, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, textDecoration: 'underline', padding: 0 }}>開く</button>}</td></tr>)}</tbody>
           </table>
         </section>
       </div>

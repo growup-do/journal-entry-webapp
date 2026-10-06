@@ -17,7 +17,7 @@ import { ToastView, useToast } from './Toast';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { displayName } from '../data';
 import { useVouchers } from '../store/journalStore';
-import { getSession, setSession, useSession } from '../store/session';
+import { fusenLabel, getSession, setSession, useSession } from '../store/session';
 import { useAssist } from '../hooks/useAssist';
 import type { MonthFilter } from '../types';
 
@@ -156,7 +156,7 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
             <label style={CHECK}><input type="checkbox" checked={opts.check} onChange={() => toggle('check')} />チェック</label>
             <span style={{ ...LABEL, marginLeft: 4 }}>付箋</span>
             {([['red', '赤', '#c0392b'], ['blue', '青', '#2c5f9e'], ['yellow', '黄', '#b7791f'], ['green', '緑', '#1f7a52']] as const).map(([k, l, c]) => (
-              <label key={k} style={{ ...CHECK, color: c }}><input type="checkbox" checked={opts[k]} onChange={() => toggle(k)} />{l}</label>
+              <label key={k} style={{ ...CHECK, color: c }} title={fusenLabel(l)}><input type="checkbox" checked={opts[k]} onChange={() => toggle(k)} />{fusenLabel(l)}</label>
             ))}
             {!isVendor && <label style={CHECK}><input type="checkbox" checked={opts.internal} onChange={() => toggle('internal')} />内部取引のみを表示する</label>}
             <label style={{ ...CHECK, marginLeft: 8 }}><input type="checkbox" checked={opts.daily} onChange={() => toggle('daily')} />残高を日計で表示する</label>

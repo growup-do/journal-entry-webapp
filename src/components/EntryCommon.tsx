@@ -12,7 +12,7 @@ import { Modal } from './Modal';
 import { btn } from './ui';
 import { ACCOUNTS, SERVICES, SUMMARIES, VENDORS, displayName } from '../data';
 import { ACCOUNT_META, budgetSample, judgeTorihiki, metaOf, toKatakana } from '../lib/accounts';
-import type { EnvSettings } from '../store/session';
+import { fusenLabel, type EnvSettings } from '../store/session';
 
 /* ------------------------------------------------------------------ */
 /* 形式                                                                */
@@ -679,7 +679,7 @@ export function FlagButtons({ shohyo, check, fusen, onChange, disabled, showShoh
     <span style={{ display: 'inline-flex', gap: 3 }}>
       {showShohyo && <button type="button" tabIndex={-1} disabled={disabled} title="証憑 有／無" onClick={() => onChange({ shohyo: !shohyo })} style={{ ...dot, background: shohyo ? '#eaf5ef' : '#fff', color: shohyo ? '#1f7a52' : '#b3bcc5' }}>{shohyo ? '有' : '無'}</button>}
       <button type="button" tabIndex={-1} disabled={disabled} title="チェック" onClick={() => onChange({ check: !check })} style={{ ...dot, background: check ? '#22303c' : '#fff', color: check ? '#fff' : '#b3bcc5' }}>✓</button>
-      <button type="button" tabIndex={-1} disabled={disabled} title={`付箋：${fusen || 'なし'}（赤→青→黄→緑→なし）`} onClick={() => onChange({ fusen: nextFusen(fusen) })} style={{ ...dot, background: fusen ? FUSEN_HEX[fusen] : '#fff', color: fusen ? '#fff' : '#b3bcc5' }}>■</button>
+      <button type="button" tabIndex={-1} disabled={disabled} title={`付箋：${fusenLabel(fusen)}（赤→青→黄→緑→なし）`} onClick={() => onChange({ fusen: nextFusen(fusen) })} style={{ ...dot, background: fusen ? FUSEN_HEX[fusen] : '#fff', color: fusen ? '#fff' : '#b3bcc5' }}>■</button>
     </span>
   );
 }

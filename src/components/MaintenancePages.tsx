@@ -29,7 +29,7 @@ export function ScopeBadge({ scope, note }: { scope: Scope; note?: string }) {
   );
 }
 /** 見出し直下の「適用範囲」帯 */
-function ScopeBar({ scope, note, children, right }: { scope: Scope; note?: string; children: ReactNode; right?: ReactNode }) {
+export function ScopeBar({ scope, note, children, right }: { scope: Scope; note?: string; children: ReactNode; right?: ReactNode }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 22px', background: '#fafbfc', borderBottom: '1px solid #eef2f5', fontSize: 12.5, color: '#48565f', flexWrap: 'wrap' }}>
       <ScopeBadge scope={scope} note={note} />

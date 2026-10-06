@@ -11,7 +11,8 @@ import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { NUM, ReportShell, TD, TH, useMoney } from './ReportShell';
 import { ACTION_HEAD, ACTION_TH, useRowActions } from './RowActions';
 import { ToastView, useToast } from './Toast';
-import { AdvancedSearchModal, EMPTY_COND, applyCond, condActive, type SearchCond } from './VoucherEdit';
+import { AdvancedSearchModal, DeleteVoucherModal, EMPTY_COND, applyCond, condActive, type SearchCond } from './VoucherEdit';
+import { btn } from './ui';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { displayName } from '../data';
 import { useVouchers } from '../store/journalStore';
@@ -61,7 +62,21 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
     rows: rows.map((r) => [r.seq, `令和8年${r.date.replace('/', '月')}日`, r.no, r.kind, r.kari, r.kashi, r.tekiyo, r.gyosha ?? '', r.amount, r.service]) as (string | number)[][],
   };
   const periodLabel = month == null ? '令和8年 全期間' : day != null ? `令和8年 ${m}月${day}日` : `令和8年 ${m}月1日〜${m}月末日`;
-  const colCount = 5 + (dt.nameOn ? 1 : 0) + 1;
+  /** 複数行の選択（確認メモ #28）：行頭のチェック、Shift＋クリックで範囲、Ctrl／⌘＋クリックで追加・解除 */
+  const [sel, setSel] = useState<number[]>([]);
+  const [lastIdx, setLastIdx] = useState<number | null>(null);
+  const [delOpen, setDelOpen] = useState(false);
+  useEffect(() => { setSel([]); setLastIdx(null); }, [month, day, kw, cond]);
+  const toggleSel = (id: number, idx: number, shift: boolean) => {
+    if (shift && lastIdx != null) {
+      const [a, b] = [Math.min(lastIdx, idx), Math.max(lastIdx, idx)];
+      const ids = rows.slice(a, b + 1).map((x) => x.id);
+      setSel((cur) => Array.from(new Set([...cur, ...ids])));
+    } else setSel((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+    setLastIdx(idx);
+  };
+  const selectable = ra.editable;
+  const colCount = 5 + (dt.nameOn ? 1 : 0) + 1 + (selectable ? 1 : 0);
 
   return (
     <ReportShell
@@ -93,7 +108,7 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
         </span>
       }
       targetLabel="絞り込み"
-      listNote={<span>行の右端の「訂正」「削除」、または行のダブルクリックで伝票を訂正できます</span>}
+      listNote={<span>行の右端の「訂正」「削除」、または行のダブルクリックで伝票を訂正できます{selectable && '。行頭のチェックで複数行を選び、まとめて削除できます'}</span>}
       target={
         <>
           <input className="search-input" value={kw} onChange={(e) => setKw(e.target.value)} placeholder="科目・摘要・業者で絞り込み" autoComplete="off" style={{ width: 240, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 12.5, fontFamily: 'inherit', outline: 'none' }} />
@@ -111,10 +126,21 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
       notice={ra.notice}
     >
       <ToastView msg={toast.msg} />
+      {sel.length > 0 && (
+        <div data-selection-bar style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: '#fff7cc', borderBottom: '1px solid #f3e3a0', fontSize: 12.5 }}>
+          <b>{sel.length} 行を選択中</b>
+          <span style={{ color: '#7a8794' }}>Shift＋クリックで範囲、Ctrl／⌘＋クリックで追加・解除</span>
+          <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+            <button type="button" onClick={() => setSel([])} style={btn('#5b6773', false, true)}>選択解除</button>
+            <button type="button" data-action="選択した行を削除" onClick={() => setDelOpen(true)} style={btn('#c0392b', true, true)}>選択した行を削除</button>
+          </span>
+        </div>
+      )}
       <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 330px)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
+              {selectable && <th style={{ ...TH, width: 34, textAlign: 'center' }}><input type="checkbox" aria-label="表示中の行をすべて選択" title="表示中の行をすべて選択" checked={rows.length > 0 && sel.length === rows.length} onChange={() => setSel(sel.length === rows.length ? [] : rows.map((r) => r.id))} /></th>}
               <th style={{ ...TH, width: 70 }}>Seq-No</th>
               <th style={{ ...TH, width: 70 }}>日</th>
               <th style={{ ...TH, width: 70 }}>伝票</th>
@@ -128,8 +154,9 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
             {rows.length === 0 && (
               <tr><td colSpan={colCount} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>該当する仕訳がありません。</td></tr>
             )}
-            {rows.map((r) => (
-              <tr key={r.id} data-voucher={r.id} onDoubleClick={() => ra.openEdit(r)} title={ra.editable ? 'ダブルクリックで伝票を訂正' : undefined} style={{ cursor: ra.editable ? 'pointer' : 'default', background: dt.rowBg(r) }}>
+            {rows.map((r, idx) => (
+              <tr key={r.id} data-voucher={r.id} data-selected={sel.includes(r.id) || undefined} onDoubleClick={() => ra.openEdit(r)} onClick={(e) => { if (selectable && (e.shiftKey || e.metaKey || e.ctrlKey)) { e.preventDefault(); toggleSel(r.id, idx, e.shiftKey); } }} title={ra.editable ? 'ダブルクリックで伝票を訂正' : undefined} style={{ cursor: ra.editable ? 'pointer' : 'default', background: sel.includes(r.id) ? '#fff7cc' : dt.rowBg(r) }}>
+                {selectable && <td style={{ ...TD, textAlign: 'center' }} onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}><input type="checkbox" checked={sel.includes(r.id)} onChange={() => undefined} onClick={(e) => toggleSel(r.id, idx, e.shiftKey)} aria-label={`Seq ${r.seq} を選択`} /></td>}
                 <td style={TD}><div style={{ fontWeight: 700 }}>{dt.chip(r)}{r.seq}</div></td>
                 <td style={TD}><div style={{ fontSize: 10.5, color: '#9aa5b1' }}>{r.kind}</div><div>{r.date}</div></td>
                 <td style={TD}>{r.no}</td>
@@ -150,6 +177,7 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
         </table>
       </div>
       {ra.modals}
+      {delOpen && <DeleteVoucherModal rows={all.filter((r) => sel.includes(r.id))} multi onClose={() => setDelOpen(false)} onDeleted={() => { toast.show(`${sel.length} 行の仕訳を削除しました`); setSel([]); }} />}
       <AdvancedSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} cond={cond} onApply={setCond} accent={accent} />
       <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
       {dt.modal}

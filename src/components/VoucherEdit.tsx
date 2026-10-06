@@ -13,7 +13,7 @@ import { ActButton, ActDivider, ComboField, EntryStyles, FieldLabel, FlagButtons
 import { ACCOUNTS, SERVICES, VENDORS } from '../data';
 import { FUSEN_COLORS, FUSEN_CYCLE, addVoucher, cycleFusen, deleteVoucher, getVouchers, moveVoucher, updateVoucher, useVouchers, type Fusen, type Voucher } from '../store/journalStore';
 import { judgeTorihiki, TORIHIKI_COLOR } from '../lib/accounts';
-import { canEdit, canReorder, editBlockReason, useSession, isViewOnly } from '../store/session';
+import { canEdit, canReorder, editBlockReason, fusenLabel, useSession, isViewOnly } from '../store/session';
 import type { MonthFilter } from '../types';
 
 const ACCTS = ACCOUNTS.flatMap((g) => g.items).concat(['手数料', '住民税', '健康保険', '厚生年金']);
@@ -46,36 +46,36 @@ export function FlagCell({ v, compact }: { v: Voucher; compact?: boolean }) {
     <div style={{ display: 'inline-flex', gap: 3 }} onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
       <span title={ok ? '証憑 有／無（クリックで切替）' : '証憑 ' + (v.shohyo ? '有' : '無') + why} onClick={() => ok && updateVoucher(v.id, { shohyo: !v.shohyo })} style={{ ...dot, background: v.shohyo ? '#eaf5ef' : '#fff', color: v.shohyo ? '#1f7a52' : '#b3bcc5' }}>{v.shohyo ? '有' : '無'}</span>
       <span title={ok ? 'チェック（クリックで切替）' : 'チェック' + why} onClick={() => ok && updateVoucher(v.id, { check: !v.check })} style={{ ...dot, background: v.check ? '#22303c' : '#fff', color: v.check ? '#fff' : '#b3bcc5' }}>✓</span>
-      <span title={ok ? `付箋：${v.fusen || 'なし'}（クリックで 赤→青→黄→緑→なし）` : `付箋：${v.fusen || 'なし'}${why}`} onClick={() => ok && cycleFusen(v.id)} style={{ ...dot, background: v.fusen ? FUSEN_COLORS[v.fusen] : '#fff', color: v.fusen ? '#fff' : '#b3bcc5' }}>■</span>
+      <span title={ok ? `付箋：${fusenLabel(v.fusen)}（クリックで 赤→青→黄→緑→なし）` : `付箋：${fusenLabel(v.fusen)}${why}`} onClick={() => ok && cycleFusen(v.id)} style={{ ...dot, background: v.fusen ? FUSEN_COLORS[v.fusen] : '#fff', color: v.fusen ? '#fff' : '#b3bcc5' }}>■</span>
     </div>
   );
 }
 
 /* ---------------- 伝票削除の確認（依頼書 6.4） ---------------- */
-export function DeleteVoucherModal({ rows, onClose, onDeleted }: { rows: Voucher[] | null; onClose: () => void; onDeleted?: () => void }) {
+export function DeleteVoucherModal({ rows, onClose, onDeleted, multi }: { rows: Voucher[] | null; onClose: () => void; onDeleted?: () => void; /** 一覧で複数行を選んで削除するとき（伝票単位ではなく行単位の案内にする） */ multi?: boolean }) {
   const s = useSession();
   const ok = canEdit(s);
   if (!rows || rows.length === 0) return null;
   const h = rows[0];
   const total = rows.reduce((a, r) => a + r.amount, 0);
   return (
-    <Modal open onClose={onClose} width={620} title="伝票削除の確認" strict>
+    <Modal open onClose={onClose} width={multi ? 760 : 620} title={multi ? '選択した仕訳の削除' : '伝票削除の確認'} strict>
       <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
           <span aria-hidden style={{ width: 40, height: 40, borderRadius: '50%', background: '#fdeee9', color: '#c0392b', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 900, flex: 'none' }}>!</span>
           <div style={{ fontSize: 13.5, lineHeight: 1.8 }}>
-            次の伝票を削除します。<b style={{ color: '#c0392b' }}>削除した伝票は元に戻せません。</b><br />
+            {multi ? `選択した ${rows.length} 行の仕訳を削除します。` : '次の伝票を削除します。'}<b style={{ color: '#c0392b' }}>削除した{multi ? '仕訳' : '伝票'}は元に戻せません。</b><br />
             この伝票に付随する明細データ（決算附属明細書）や固定資産（減価償却）がある場合は、あわせて削除されます。
           </div>
         </div>
         <div style={{ border: '1px solid #f0cfc9', borderRadius: 10, overflow: 'hidden' }}>
           <div style={{ padding: '8px 12px', background: '#fff5f3', fontSize: 12.5, fontWeight: 700, display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-            <span>伝票No {h.no}</span><span>令和8年 {h.date.replace('/', '月')}日</span><span>{KIND_FORMAT[h.kind]}</span><span style={{ marginLeft: 'auto' }}>{rows.length} 行　合計 {yen(total)} 円</span>
+            {multi ? <><span>選択 {rows.length} 行</span><span>伝票 {new Set(rows.map((r) => r.no)).size} 枚</span><span>{rows[0].date} 〜 {rows[rows.length - 1].date}</span></> : <><span>伝票No {h.no}</span><span>令和8年 {h.date.replace('/', '月')}日</span><span>{KIND_FORMAT[h.kind]}</span></>}<span style={{ marginLeft: 'auto' }}>{rows.length} 行　合計 {yen(total)} 円</span>
           </div>
           <div style={{ maxHeight: 220, overflowY: 'auto' }}>
             {rows.map((r, i) => (
-              <div key={r.id} style={{ display: 'grid', gridTemplateColumns: '28px minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr) 100px', gap: 8, padding: '7px 12px', borderTop: '1px solid #f6e3df', fontSize: 12.5, alignItems: 'center' }}>
-                <span style={{ color: '#9aa5b1' }}>{i + 1}</span>
+              <div key={r.id} style={{ display: 'grid', gridTemplateColumns: multi ? '84px minmax(0,1fr)' : '28px minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr) 100px', gap: 8, padding: '7px 12px', borderTop: '1px solid #f6e3df', fontSize: 12.5, alignItems: 'center' }}>
+                <span style={{ color: '#9aa5b1', fontSize: multi ? 11 : 12.5 }}>{multi ? `${r.date} ${r.seq}` : i + 1}</span>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.kari}</span>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.kashi}</span>
                 <span style={{ color: '#7a8794', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.tekiyo}</span>
@@ -87,7 +87,7 @@ export function DeleteVoucherModal({ rows, onClose, onDeleted }: { rows: Voucher
         {!ok && <Notice tone="warn">{editBlockReason(s)}</Notice>}
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
           <button type="button" className="ef-act" autoFocus onClick={onClose} style={btn()}>削除しないで戻る</button>
-          <button type="button" className="ef-act" disabled={!ok} title={ok ? undefined : editBlockReason(s)} onClick={() => { rows.forEach((r) => { deleteVoucher(r.id); setPartner(r.id, ''); }); onDeleted?.(); onClose(); }} style={btn('#c0392b', true)}>この伝票を削除する（{rows.length} 行）</button>
+          <button type="button" className="ef-act" disabled={!ok} title={ok ? undefined : editBlockReason(s)} onClick={() => { rows.forEach((r) => { deleteVoucher(r.id); setPartner(r.id, ''); }); onDeleted?.(); onClose(); }} style={btn('#c0392b', true)}>{multi ? `選択した ${rows.length} 行を削除する` : `この伝票を削除する（${rows.length} 行）`}</button>
         </div>
       </div>
     </Modal>
@@ -512,7 +512,7 @@ export function AdvancedSearchModal({ open, onClose, cond, onApply, accent }: { 
           <Field label="証憑">{tri(c.shohyo, (v) => set({ shohyo: v }))}</Field>
           <Field label="チェック">{tri(c.check, (v) => set({ check: v }))}</Field>
           <Field label="伝票種別"><div style={{ display: 'flex', gap: 10, paddingTop: 8, fontSize: 13 }}><label style={{ display: 'flex', gap: 4 }}><input type="checkbox" checked={c.normal} onChange={(e) => set({ normal: e.target.checked })} />通常伝票</label><label style={{ display: 'flex', gap: 4 }}><input type="checkbox" checked={c.migrated} onChange={(e) => set({ migrated: e.target.checked })} />移行伝票</label></div></Field>
-          <Field label="付箋"><div style={{ display: 'flex', gap: 8, paddingTop: 8, fontSize: 13, flexWrap: 'wrap' }}>{FUSEN_CYCLE.map((f) => <label key={f || 'none'} style={{ display: 'flex', gap: 4, color: f ? FUSEN_COLORS[f] : '#5b6773' }}><input type="checkbox" checked={c.fusen.has(f)} onChange={(e) => { const n = new Set(c.fusen); if (e.target.checked) n.add(f); else n.delete(f); set({ fusen: n }); }} />{f || '付箋なし'}</label>)}</div></Field>
+          <Field label="付箋"><div style={{ display: 'flex', gap: 8, paddingTop: 8, fontSize: 13, flexWrap: 'wrap' }}>{FUSEN_CYCLE.map((f) => <label key={f || 'none'} style={{ display: 'flex', gap: 4, color: f ? FUSEN_COLORS[f] : '#5b6773' }}><input type="checkbox" checked={c.fusen.has(f)} onChange={(e) => { const n = new Set(c.fusen); if (e.target.checked) n.add(f); else n.delete(f); set({ fusen: n }); }} />{f ? fusenLabel(f) : '付箋なし'}</label>)}</div></Field>
           <Field label="内部取引"><label style={{ display: 'flex', gap: 4, paddingTop: 8, fontSize: 13 }}><input type="checkbox" checked={c.internalOnly} onChange={(e) => set({ internalOnly: e.target.checked })} />内部取引伝票のみ</label></Field>
           <Field label="特殊付箋"><label style={{ display: 'flex', gap: 4, paddingTop: 8, fontSize: 13 }}><input type="checkbox" checked={c.special} onChange={(e) => set({ special: e.target.checked })} />決算チェック（10万以上）</label></Field>
         </div>

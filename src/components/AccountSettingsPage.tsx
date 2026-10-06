@@ -15,6 +15,7 @@ import { Field, Notice, SettingsShell, Tabs, Toggle, btn, card, cardHead, input,
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { ACCOUNT_META, accountMatches, toKatakana, type AccountMeta } from '../lib/accounts';
 import { ACCOUNTS, SERVICES, SUMMARIES, displayName } from '../data';
+import { useSession } from '../store/session';
 
 const HIMOKU_BS = [[1, 'サービス活動収益計 (1)'], [2, 'サービス活動費用計 (2)'], [3, 'サービス活動増減差額 (3)=(1)-(2)'], [4, 'サービス活動外収益計 (4)'], [5, 'サービス活動外費用計 (5)'], [7, '経常増減差額 (7)=(3)+(6)'], [8, '特別収益計 (8)'], [9, '特別費用計 (9)'], [11, '当期活動増減差額 (11)'], [50, '流動資産'], [51, '基本財産'], [52, 'その他の固定資産'], [60, '流動負債'], [61, '固定負債'], [70, '基本金'], [71, '国庫補助金等特別積立金'], [72, 'その他の積立金'], [80, '次期繰越活動増減差額']] as const;
 const HIMOKU_FUND = [[1, '事業活動収入計 (1)'], [2, '事業活動支出計 (2)'], [3, '事業活動資金収支差額 (3)'], [4, '施設整備等収入計 (4)'], [5, '施設整備等支出計 (5)'], [7, 'その他の活動収入計 (7)'], [8, 'その他の活動支出計 (8)'], [10, '予備費支出 (10)'], [11, '当期資金収支差額合計 (11)'], [12, '前期末支払資金残高 (12)'], [13, '当期末支払資金残高 (11)+(12)']] as const;
@@ -114,6 +115,8 @@ const F_OPTS = ['0：指定なし', '1：保育事業', '2：子育て支援'];
 const MEISAI_OPTS = ['', '借入金明細書', '基本財産及びその他の固定資産（有形・無形固定資産）の明細書', '引当金明細書', '補助金事業等収益明細書', '積立金・積立資産明細書', '事業区分間及び拠点区分間繰入金明細書'];
 /** 施設（拠点）ごとの表示名を設定できる拠点（サンプル） */
 const SITES = ['本部', 'みどり保育園', 'わかば保育園', '子育て支援センター'];
+/** まとめて設定の入力値（''＝変更しない） */
+const EMPTY_BULK = { color: '', depr: '', oneYear: '', meisai: '', internal: '' };
 const COLOR_PRESETS: { label: string; fg: string; bg: string }[] = [{ label: '赤字', fg: '#c0392b', bg: '#ffffff' }, { label: '青字', fg: '#2c5f9e', bg: '#ffffff' }, { label: '黄背景', fg: '#22303c', bg: '#fff1b8' }, { label: '緑背景', fg: '#1f5a3f', bg: '#e1f3e9' }];
 
 interface AcctRow extends AccountMeta {
@@ -219,6 +222,38 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
   const [blankGroup, setBlankGroup] = useState('事務費');
   /** ▲入換▼：選択中の科目と同じ項目の中で並び順を編集する */
   const [swap, setSwap] = useState<{ group: string; keys: number[]; cur: number; drag: number | null } | null>(null);
+  /** 使用科目設定の表示：全科目／内部取引科目／起動区分のみ（旧【使用科目】の3メニュー） */
+  const [useView, setUseView] = useState<'全科目' | '内部取引科目' | '起動区分のみ'>('全科目');
+  /** 複数科目を選んで関連する設定をまとめて変更する（確認メモ #30） */
+  const [bulk, setBulk] = useState<number[]>([]);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkVal, setBulkVal] = useState(EMPTY_BULK);
+  /** 補助簿（明細表）を作る科目（旧【補助簿（明細表）設定】） */
+  const [subLedger, setSubLedger] = useState<Record<string, boolean>>(() => Object.fromEntries(initRows().filter((r) => /未収|未払|預り|立替|仮払/.test(r.name)).map((r) => [r.name, true])));
+  const session = useSession();
+  const useCols = useView === '起動区分のみ' ? (SERVICES.includes(session.division) ? [session.division] : [SERVICES[1]]) : SERVICES;
+  const useRows = useView === '内部取引科目' ? rows.filter((m) => !m.internal.startsWith('0')) : rows;
+  /** 使用科目設定を更新：仕訳のある科目（現預金・費用・収益）を表示中の区分で「使用」にする */
+  const refreshUse = () => {
+    const names = new Set(ACCOUNT_META.filter((m) => m.cls === '現預金' || m.cls === '費用' || m.cls === '収益').map((m) => m.name));
+    let n = 0; const next = { ...use };
+    names.forEach((nm) => useCols.forEach((sv) => { if (!next[nm + '|' + sv]) { next[nm + '|' + sv] = true; n++; } }));
+    setUse(next); toast.show(n ? `仕訳のある科目 ${n} 件を「使用」にしました` : '仕訳のある科目はすべて「使用」になっています');
+  };
+  const applyBulk = () => {
+    const preset = COLOR_PRESETS.find((x) => x.label === bulkVal.color);
+    setRows((rs) => rs.map((r) => {
+      if (!bulk.includes(r.key)) return r;
+      const n = { ...r };
+      if (bulkVal.color === 'none') n.color = null; else if (preset) n.color = { fg: preset.fg, bg: preset.bg };
+      if (bulkVal.depr) n.depr = bulkVal.depr === '1';
+      if (bulkVal.oneYear) n.oneYear = bulkVal.oneYear === '1';
+      if (bulkVal.meisai) n.meisai = bulkVal.meisai === '-' ? '' : bulkVal.meisai;
+      if (bulkVal.internal) { n.internal = bulkVal.internal; if (bulkVal.internal.startsWith('0')) n.partner = ''; }
+      return n;
+    }));
+    setBulkOpen(false); toast.show(`${bulk.length} 科目の関連する設定を更新しました`); setBulk([]); setBulkVal(EMPTY_BULK);
+  };
 
   const fundTab = tab === '資金科目';
   const sel = rows.find((r) => r.key === selKey) ?? null;
@@ -330,7 +365,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
       {listTab && <button type="button" className="submit-btn" onClick={openAdd} style={btn(accent, true)}>＋ 科目を追加</button>}
     </>}>
       <ToastView msg={toast.msg} />
-      <Tabs items={['勘定科目', '資金科目', '費目', '使用科目設定']} current={tab} onChange={setTab} accent={accent} />
+      <Tabs items={['勘定科目', '資金科目', '費目', '使用科目設定', '補助簿（明細表）']} current={tab} onChange={setTab} accent={accent} />
 
       {listTab && (
         <div style={{ display: 'grid', gridTemplateColumns: sel ? 'minmax(0, 1fr) minmax(400px, 460px)' : 'minmax(0, 1fr)', minHeight: 520 }}>
@@ -353,6 +388,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                 <span style={{ display: 'inline-flex', gap: 5, alignItems: 'center' }}><Badge kind="項目" />集計上の見出し（伝票には入力しません）</span>
                 <span style={{ display: 'inline-flex', gap: 5, alignItems: 'center' }}><Badge kind="科目" />伝票に入力する科目</span>
                 <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 6 }}>
+                  {bulk.length > 0 && <><span style={{ fontSize: 12, color: '#3d4a56', alignSelf: 'center' }} data-bulk-count>{bulk.length} 科目を選択中</span><button type="button" onClick={() => setBulkOpen(true)} style={btn(accent, true, true)} data-bulk-open>まとめて設定</button><button type="button" onClick={() => setBulk([])} style={btn('#5b6773', false, true)}>選択解除</button></>}
                   <button type="button" onClick={() => setCollapsed([])} style={btn('#5b6773', false, true)}>すべて開く</button>
                   <button type="button" onClick={() => setCollapsed(GROUPS.map((g) => g.name))} style={btn('#5b6773', false, true)}>項目だけ表示</button>
                 </span>
@@ -386,7 +422,8 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                 return (
                   <div key={r.key} role="button" tabIndex={0} aria-pressed={on} className="row-hover" onClick={() => pick(on ? null : r.key)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) pick(r.key); }}
                     style={{ display: 'grid', gridTemplateColumns: cols, alignItems: 'center', minHeight: 40, borderBottom: '1px solid #f1f4f6', cursor: 'pointer', fontSize: 14, background: on ? '#eaf1f8' : '#fff', boxShadow: on ? `inset 3px 0 0 ${accent}` : 'none', opacity: used ? 1 : 0.6 }}>
-                    <span style={{ ...cell, paddingLeft: 52, display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <span style={{ ...cell, paddingLeft: 36, display: 'flex', alignItems: 'center', gap: 7 }}>
+                      <input type="checkbox" checked={bulk.includes(r.key)} onClick={(e) => e.stopPropagation()} onChange={() => setBulk((b) => (b.includes(r.key) ? b.filter((k) => k !== r.key) : [...b, r.key]))} aria-label={`${r.dispName}を選択（まとめて設定）`} title="チェックして「まとめて設定」" style={{ margin: 0 }} data-bulk-check />
                       <Badge kind="科目" />
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: on ? 700 : 500, ...(r.color ? { color: r.color.fg, background: r.color.bg, padding: '1px 6px', borderRadius: 4 } : {}) }}>{fundTab ? r.fund : r.dispName}</span>
                     </span>
@@ -512,19 +549,68 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
       {tab === '使用科目設定' && (
         <div style={{ padding: 22 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
+            <span style={lbl}>表示</span>{(['全科目', '内部取引科目', '起動区分のみ'] as const).map((l) => <label key={l} style={{ fontSize: 12.5, display: 'flex', gap: 4 }}><input type="radio" name="use-view" checked={useView === l} onChange={() => setUseView(l)} data-use-view={l} />{l}</label>)}
+            <span style={{ width: 1, height: 18, background: '#dde4ea' }} />
             <span style={lbl}>チェック連動</span>{(['しない', '区分内', '横一列'] as const).map((l) => <label key={l} style={{ fontSize: 12.5, display: 'flex', gap: 4 }}><input type="radio" checked={link === l} onChange={() => setLink(l)} />{l}</label>)}
             <button type="button" onClick={() => setUse(Object.fromEntries(Object.keys(use).map((k) => [k, true])))} style={{ ...btn('#5b6773', false, true), marginLeft: 8 }}>全て ON</button>
+            <button type="button" onClick={refreshUse} title="仕訳のある科目を自動で「使用」にします（旧【使用科目設定更新】）" style={btn('#5b6773', false, true)} data-use-refresh>使用科目設定を更新</button>
             <span style={{ marginLeft: 'auto', fontSize: 12, color: '#7a8794' }}>区分ごとに使用する科目をチェック（帳票の表示／非表示にも使います）</span>
           </div>
           <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 380px)' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead><tr><th style={TH}>科目</th>{SERVICES.map((s) => <th key={s} style={{ ...TH, textAlign: 'center', width: 110 }}>{s}</th>)}</tr></thead>
-              <tbody>{rows.map((m) => <tr key={m.key}><td style={{ ...TD, fontWeight: 500 }}>{m.dispName}<span style={{ fontSize: 10.5, color: '#9aa5b1', marginLeft: 6 }}>{m.group}</span></td>{SERVICES.map((s) => <td key={s} style={{ ...TD, textAlign: 'center' }}><input type="checkbox" aria-label={`${m.dispName}を${s}で使用`} checked={!!use[m.name + '|' + s]} onChange={() => toggleUse(m.name, s)} /></td>)}</tr>)}</tbody>
+              <thead><tr><th style={TH}>科目</th>{useCols.map((s) => <th key={s} style={{ ...TH, textAlign: 'center', width: 110 }}>{s}</th>)}</tr></thead>
+              <tbody>{useRows.length === 0 && <tr><td colSpan={useCols.length + 1} style={{ ...TD, color: '#9aa5b1', textAlign: 'center', padding: 28 }}>内部取引科目として設定された科目はありません。勘定科目タブで科目を選び「関連する設定 › 内部取引科目と相手区分」で指定します。</td></tr>}{useRows.map((m) => <tr key={m.key}><td style={{ ...TD, fontWeight: 500 }}>{m.dispName}<span style={{ fontSize: 10.5, color: '#9aa5b1', marginLeft: 6 }}>{m.group}</span>{!m.internal.startsWith('0') && <span style={{ fontSize: 10, fontWeight: 800, marginLeft: 6, padding: '0 5px', borderRadius: 4, background: '#eef2f6', color: '#3d4a56' }}>内部</span>}</td>{useCols.map((s) => <td key={s} style={{ ...TD, textAlign: 'center' }}><input type="checkbox" aria-label={`${m.dispName}を${s}で使用`} checked={!!use[m.name + '|' + s]} onChange={() => toggleUse(m.name, s)} /></td>)}</tr>)}</tbody>
             </table>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}><button type="button" onClick={() => exportUse('fund')} style={btn()}>資金科目ファイル出力</button><button type="button" onClick={() => exportUse('bs')} style={btn()}>貸借・事業科目ファイル出力</button><button type="button" className="submit-btn" onClick={() => toast.show('使用科目設定を保存しました')} style={{ ...btn(accent, true), marginLeft: 'auto' }}>OK</button></div>
         </div>
       )}
+
+      {tab === '補助簿（明細表）' && (
+        <div style={{ padding: 22, display: 'grid', gap: 12 }} data-subledger>
+          <Notice>補助簿（明細表）を作る科目を指定します。黄色の行が対象です。対象にした科目は、帳票の印刷の「補助簿」で相手先・業者ごとの明細を印刷できます（既存の【補助簿（明細表）設定】に相当）。</Notice>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, alignItems: 'start' }}>
+            {([['資産（流動資産・固定資産）', (c: string) => c === '現預金' || c === '資産'], ['負債', (c: string) => c === '負債']] as const).map(([title, f]) => {
+              const list = rows.filter((r) => f(r.cls));
+              return (
+                <div key={title} style={card}><div style={cardHead}>{title}<span style={{ fontSize: 11, fontWeight: 600, color: '#5b6773', marginLeft: 6 }}>対象 {list.filter((r) => subLedger[r.name]).length} 科目</span></div>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}><thead><tr><th style={TH}>科目・項目</th><th style={{ ...TH, textAlign: 'right', width: 150 }}>令和7年度末残高</th><th style={{ ...TH, width: 110, textAlign: 'center' }}>補助簿を作る</th></tr></thead>
+                    <tbody>
+                      {list.length === 0 && <tr><td colSpan={3} style={{ ...TD, color: '#9aa5b1', textAlign: 'center', padding: 24 }}>該当する科目がありません</td></tr>}
+                      {list.map((r) => { const on = !!subLedger[r.name]; const bal = ((r.key * 48271) % 1200) * 1000; return (
+                        <tr key={r.key} style={{ background: on ? '#fff7cc' : '#fff' }}>
+                          <td style={TD}>{r.dispName}<span style={{ fontSize: 10.5, color: '#9aa5b1', marginLeft: 6 }}>{r.group}</span></td>
+                          <td style={{ ...TD, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{bal.toLocaleString('ja-JP')}</td>
+                          <td style={{ ...TD, textAlign: 'center' }}><input type="checkbox" checked={on} onChange={() => setSubLedger((x) => ({ ...x, [r.name]: !on }))} aria-label={`${r.dispName}の補助簿を作る`} /></td>
+                        </tr>
+                      ); })}
+                    </tbody></table>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span style={{ fontSize: 12.5, color: '#5b6773' }}>対象 {Object.values(subLedger).filter(Boolean).length} 科目　残高は前年度末（令和7年度末）のサンプルです</span>
+            <button type="button" className="submit-btn" onClick={() => toast.show('補助簿（明細表）の設定を保存しました')} style={{ ...btn(accent, true), marginLeft: 'auto' }}>保存して終了</button>
+          </div>
+        </div>
+      )}
+
+      {/* ---- まとめて設定（複数科目の関連する設定を同時に変更） ---- */}
+      <Modal open={bulkOpen} onClose={() => setBulkOpen(false)} width={560} title={`関連する設定をまとめて変更：${bulk.length} 科目`}>
+        <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
+          <div style={{ fontSize: 12.5, color: '#5b6773', maxHeight: 72, overflow: 'auto' }}>対象：{rows.filter((r) => bulk.includes(r.key)).map((r) => r.dispName).join('、')}</div>
+          <Notice>「変更しない」の項目はそのままです。選んだ科目すべてに同じ値を設定します。固定資産以外の科目に減価償却連動を設定しても、減価償却では対象になりません。</Notice>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Field label="科目色"><select value={bulkVal.color} onChange={(e) => setBulkVal({ ...bulkVal, color: e.target.value })} style={small}><option value="">変更しない</option><option value="none">色を外す</option>{COLOR_PRESETS.map((x) => <option key={x.label} value={x.label}>{x.label}</option>)}</select></Field>
+            <Field label="減価償却連動"><select value={bulkVal.depr} onChange={(e) => setBulkVal({ ...bulkVal, depr: e.target.value })} style={small}><option value="">変更しない</option><option value="1">連動する</option><option value="0">連動しない</option></select></Field>
+            <Field label="1年基準科目"><select value={bulkVal.oneYear} onChange={(e) => setBulkVal({ ...bulkVal, oneYear: e.target.value })} style={small}><option value="">変更しない</option><option value="1">対象</option><option value="0">対象外</option></select></Field>
+            <Field label="決算附属明細書へ集計"><select value={bulkVal.meisai} onChange={(e) => setBulkVal({ ...bulkVal, meisai: e.target.value })} style={small}><option value="">変更しない</option>{MEISAI_OPTS.map((o) => <option key={o || '-'} value={o || '-'}>{o || '集計しない'}</option>)}</select></Field>
+            <Field label="内部取引指定" span={2}><select value={bulkVal.internal} onChange={(e) => setBulkVal({ ...bulkVal, internal: e.target.value })} style={small}><option value="">変更しない</option>{INTERNAL_OPTS.map((o) => <option key={o}>{o}</option>)}</select></Field>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setBulkOpen(false)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={applyBulk} style={btn(accent, true)} data-bulk-apply>選択した科目に適用</button></div>
+        </div>
+      </Modal>
 
       <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
 

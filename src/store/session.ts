@@ -53,6 +53,8 @@ export interface EnvSettings {
   bgMode: '色' | '画像'; bgColor: string; bgColorRight: string; autoAmountFont: boolean;
   /** 補正予算額の入力方式（依頼書 5.5.5：切替は「予算額の設定」画面内で行う。区分ごと） */
   supplementMode: '補正額' | '補正後予算額';
+  /** 付箋の色の意味（全区分共通）。付箋ボタンのツールチップ・検索条件・印刷の絞り込みに表示する */
+  fusenNames: Record<'赤' | '青' | '黄' | '緑', string>;
 }
 export const DEFAULT_ENV: EnvSettings = {
   confirmGeneral: true, confirmIncome: true, confirmExpense: true,
@@ -66,6 +68,7 @@ export const DEFAULT_ENV: EnvSettings = {
   noFurigana: false, printSpeed: false,
   negativePos: '前', backupDest: 'クラウド（標準）', backupFolder: '', bgMode: '色', bgColor: '#f3f6f9', bgColorRight: '#eef5fb', autoAmountFont: true,
   supplementMode: '補正額',
+  fusenNames: { 赤: '要確認（内容に疑問）', 青: '保留・問い合わせ中', 黄: '決算時に見直す', 緑: '確認済み' },
 };
 
 export interface InputSettings {
@@ -223,3 +226,6 @@ export const isViewOnly = (s: Session) => s.role !== '入力可';
 export const canReorder = (s: Session) => s.role === '入力可' && startKindOf(s) !== '合算区分';
 /** 使えない理由（ツールチップ用）。使えるときは空文字 */
 export const editBlockReason = (s: Session) => (s.role !== '入力可' ? '参照のみの権限のため操作できません' : startKindOf(s) === '合算区分' ? '合算区分で起動中のため操作できません（内訳の確認用）' : startKindOf(s) === '親区分' ? '親区分で起動中のため操作できません（伝票は入力区分で登録します）' : '');
+
+/** 付箋の表示名：「赤（要確認）」のように色と意味を並べる。意味は環境設定の「付箋の色の意味」で変更できる */
+export const fusenLabel = (f: string): string => (f ? `${f}（${getSession().env.fusenNames[f as '赤' | '青' | '黄' | '緑'] ?? ''}）` : 'なし');
