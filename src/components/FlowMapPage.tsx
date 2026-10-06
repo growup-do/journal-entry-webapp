@@ -125,7 +125,7 @@ const NODES: Node[] = [
   // ユーザー・共通
   N('usersettings', 'ユーザー設定', 'page', 'user', { open: 'ユーザー設定' }),
   N('pwmail', 'メールアドレスでの確認', 'dialog', 'user', { open: 'ユーザー設定', note: 'パスワード変更時の確認コード' }),
-  N('members', 'メンバーの追加、管理', 'page', 'user', { open: 'メンバーの追加、管理' }),
+  N('members', 'メンバーの追加、管理', 'page', 'settings', { open: 'メンバーの追加、管理', note: '各種設定 › ユーザー・権限' }),
   N('version', 'バージョン情報／ライセンス', 'dialog', 'user', { open: 'ホーム' }),
   N('terms', '利用規約', 'page', 'user', { url: '?page=terms' }),
   N('features', '機能一覧（プロトタイプ確認用）', 'page', 'user', { url: '?page=features', note: '製品のメニュー・フッターには置かない' }),

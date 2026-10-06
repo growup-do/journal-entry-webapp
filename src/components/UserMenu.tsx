@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useSession } from '../store/session';
 
-export const USER_MENU_ITEMS = ['事業者設定', 'ユーザー設定', 'メンバーの追加、管理'];
+export const USER_MENU_ITEMS = ['事業者設定', 'ユーザー設定'];
 
 interface Props {
   accent: string;

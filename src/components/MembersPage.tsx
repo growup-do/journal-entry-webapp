@@ -63,7 +63,7 @@ export function MembersPage({ variant, accent }: Props) {
       <div style={{ width: '100%', maxWidth: 1100, display: 'flex', flexDirection: 'column', gap: 20 }}>
         <div>
           <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 18 : 22 }}>メンバーの追加、管理</div>
-          <div style={{ color: '#7a8794', fontSize: 12.5, marginTop: 4 }}>このシステムを利用するメンバーの招待・権限・有効／無効を管理します（管理者のみ）。</div>
+          <div style={{ color: '#7a8794', fontSize: 12.5, marginTop: 4 }}>このシステムにログインする人（アカウント）を管理します。管理者がメールアドレスと権限を指定して招待し、招待された人はメールのリンクから自分のパスワードを設定してログインします。人数の上限はありません（各種設定 › ユーザー・権限）。</div>
         </div>
 
         {/* 招待 */}

@@ -97,6 +97,7 @@ export function SettingsMenu({ accent, active, onNavigate }: Props) {
             <div style={{ display: 'grid', gap: 12 }}>
               {group(by('register'))}
               {group(by('maint'))}
+              {group(by('users'))}
               {group(by('web'))}
             </div>
           </div>

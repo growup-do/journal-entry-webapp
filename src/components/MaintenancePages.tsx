@@ -540,7 +540,10 @@ export function PasswordSettingsPage({ variant, accent }: MaintenancePageProps) 
           <PasswordEditor key="admin" accent={accent} slots={admin} setSlots={setAdmin} who="法人管理者" />
         </>
       )}
-      <div style={{ padding: '0 22px 22px' }}><Notice tone="warn">ユーザ ID とパスワードを忘れると操作ができなくなります。設定した内容は、法人内で安全に保管してください。</Notice></div>
+      <div style={{ padding: '0 22px 22px', display: 'grid', gap: 10 }}>
+        <Notice>この画面は現行システムの「区分を起動するときのパスワード」（一般ユーザ 区分ごと3人・法人管理者1人）をそのまま移したものです。Web版でログインする人の追加・権限は「メンバーの追加、管理」で行います（人数の上限なし）。両方を残すか、ログインアカウントに一本化するかは確認中です。</Notice>
+        <Notice tone="warn">ユーザ ID とパスワードを忘れると操作ができなくなります。設定した内容は、法人内で安全に保管してください。</Notice>
+      </div>
     </SettingsShell>
   );
 }
