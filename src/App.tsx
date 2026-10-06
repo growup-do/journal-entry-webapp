@@ -145,8 +145,8 @@ export default function App() {
   if (!loggedIn) {
     return (
       <>
+        {/* ログイン画面には確認メモを置かない（確認用アカウントの人がログイン前に見てしまうため） */}
         <LoginPage onLogin={login} />
-        {!review && <MemoLayer screenKey="login" screenLabel={screenLabel} onNavigate={navigateTo} />}
       </>
     );
   }
