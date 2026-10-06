@@ -382,15 +382,29 @@ export function PrintFlow({ report, accent, data, onPreview, onClose, lockReport
                       <Toggle on={!!pr.items.date} onChange={(v) => setCommon({ items: { ...pr.items, date: v } })} accent="#6b3fa0" label="印刷時の日付を印刷する" />
                     </div>
                   </div>
+                  <div style={{ borderTop: '1px solid #e8e0f4', paddingTop: 10, display: 'grid', gap: 10 }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: '#6b3fa0', letterSpacing: '.04em' }}>印刷項目の切替え</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '6px 16px' }}>
+                      {PRINT_ITEMS.filter(([k]) => !['stamp', 'page', 'date'].includes(k)).map(([k, label]) => <Toggle key={k} on={!!pr.items[k]} onChange={(v) => setCommon({ items: { ...pr.items, [k]: v } })} accent="#6b3fa0" label={k === 'zero' ? '0データを印刷しない（各帳票の初期値）' : label} />)}
+                    </div>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: '#6b3fa0', letterSpacing: '.04em' }}>内訳表</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                      <Toggle on={pr.twoLineNames} onChange={(v) => setCommon({ twoLineNames: v })} accent="#6b3fa0" label="項目名を二行で印刷する" />
+                      <Toggle on={pr.autoFontHeader} onChange={(v) => setCommon({ autoFontHeader: v })} accent="#6b3fa0" label="項目名のフォントサイズを自動調整" />
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#5b6773' }}>1ページの区分数<select value={String(pr.perPage)} onChange={(e) => setCommon({ perPage: Number(e.target.value) })} style={{ ...input, width: 70, padding: '4px 6px' }}>{[4, 5, 6, 7, 8].map((o) => <option key={o}>{o}</option>)}</select></label>
+                    </div>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: '#6b3fa0', letterSpacing: '.04em' }}>帳票の色・印字 <span style={{ fontWeight: 500, color: '#8290a0', marginLeft: 6 }}>動作環境から移した項目</span></div>
+                    <ReportStyleSettings accent="#6b3fa0" compact />
+                  </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 11.5, color: '#8290a0' }}>
-                    <span>その他の共通項目（横線・網掛け・内訳表の区分数・脚注など）は「共通の印刷設定」画面にまとめています。</span>
+                    <span>同じ内容は「共通の印刷設定」画面でも変更できます。</span>
                     {changed > 0 && <button type="button" onClick={() => setSession({ print: { ...snap, unitRemarks: pr.unitRemarks } })} style={{ ...btn('#5b6773', false, true), marginLeft: 'auto' }}>開いたときの設定に戻す（{changed} 項目）</button>}
                   </div>
                 </div>
               )}
             </ScopeBlock>
 
-            <ScopeBlock title="動作環境から引き継ぐ設定" desc="印刷に反映される動作環境の設定です（ここでは確認のみ）。">
+            <ScopeBlock title="動作環境から引き継ぐ設定" desc="画面表示と印刷の両方に関わるため動作環境に残した設定です（ここでは確認のみ。区分ごと／全区分共通の別を表示）。">
               <EnvPrintSummary env={s.env} division={s.division} />
             </ScopeBlock>
           </>
@@ -445,15 +459,35 @@ export function PrintFlow({ report, accent, data, onPreview, onClose, lockReport
   );
 }
 
+/** 帳票の色・印字（全帳票共通）。動作環境にあった印刷関連の項目を、印刷の詳細設定と共通の印刷設定に集約（依頼書 5.5.1） */
+export function ReportStyleSettings({ accent, compact }: { accent: string; compact?: boolean }) {
+  const s = useSession();
+  const e = s.env;
+  const set = (patch: Partial<EnvSettings>) => setSession({ env: { ...e, ...patch } });
+  const colorLbl: CSSProperties = { fontSize: 12, display: 'flex', gap: 6, alignItems: 'center' };
+  return (
+    <div data-report-style style={{ display: 'grid', gap: compact ? 8 : 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <Toggle on={e.colorReports} onChange={(v) => set({ colorReports: v })} accent={accent} label="カラー帳票を有効にする" />
+        <label style={colorLbl}>罫線色<input type="color" value={e.lineColor} onChange={(ev) => set({ lineColor: ev.target.value })} disabled={!e.colorReports} /></label>
+        <label style={colorLbl}>網掛け色<input type="color" value={e.shadeColor} onChange={(ev) => set({ shadeColor: ev.target.value })} disabled={!e.colorReports} /></label>
+        <span style={{ fontSize: 11.5, color: '#7a8794' }}>決算書・予算書・試算表・仕訳日記帳の罫線と網掛け。元帳・伝票は帳票ごとの固定色</span>
+      </div>
+      <Toggle on={e.printSpeed} onChange={(v) => set({ printSpeed: v })} accent={accent} label="帳票印刷の速度を重視する（大量ページの作成を優先）" />
+      <Toggle on={e.onePageRow} onChange={(v) => set({ onePageRow: v })} accent={accent} label="1行のみの改ページを抑制する（1行だけが次ページに送られないようにする）" />
+      <Toggle on={e.noteOnExcel} onChange={(v) => set({ noteOnExcel: v })} accent={accent} label="Excel／PDF出力で明細書の注意書きを印字する" />
+      <Field label="試算表：予備費出力の選択"><select value={e.reserveOutput} onChange={(ev) => set({ reserveOutput: ev.target.value })} style={input}>{['予備費を標準方式で印字', '予備費の差異に計算結果を印字', '予備費の1行目に充当前の予算額を印字'].map((o) => <option key={o}>{o}</option>)}</select></Field>
+    </div>
+  );
+}
+
 /** 動作環境のうち印刷に反映される設定の一覧（影響範囲つき・確認のみ） */
 export function EnvPrintSummary({ env, division }: { env: EnvSettings; division: string }) {
   const rows: [string, ReactNode, ScopeKind][] = [
     ['金額の書式', <>桁区切り：{env.thousandsSep}／負数：<span style={{ color: amountColor(-1, env), fontVariantNumeric: 'tabular-nums' }}>{formatAmount(-89012, env)}</span>（{env.negativeColor}）</>, '区分ごと'],
     ['0項目カット', env.zeroCut ? '相殺結果が 0 円の項目を印刷しない' : '相殺結果が 0 円の項目も印刷する', '区分ごと'],
-    ['カラー帳票', env.colorReports ? <>有効（罫線 <Swatch c={env.lineColor} />　網掛け <Swatch c={env.shadeColor} />）</> : '無効（白黒）', '全区分共通'],
-    ['決算書の法人名', env.hideCorpName ? '印刷しない' : '印刷する', '全区分共通'],
     ['和暦の 1 年の表記', env.eraGannen ? '「元年」と表記' : '「1年」と表記', '全区分共通'],
-    ['帳票印刷の速度', env.printSpeed ? '速度を重視する' : '標準', '全区分共通'],
+    ['試算表の費目行の計算方式', env.trialCalc, '全区分共通'],
   ];
   return (
     <div style={{ display: 'grid', gap: 8 }}>
@@ -464,7 +498,6 @@ export function EnvPrintSummary({ env, division }: { env: EnvSettings; division:
     </div>
   );
 }
-function Swatch({ c }: { c: string }) { return <span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: 3, background: c, border: '1px solid #9aa5b1', verticalAlign: 'middle' }} />; }
 
 /* ---------------- 帳票ごとの印刷ダイアログ ---------------- */
 export function PrintDialog({ open, onClose, report, accent, onPreview, data, keepOpenOnPreview, lockReport }: { open: boolean; onClose: () => void; report: ReportDef | null; accent: string; onPreview: (title: string, opts: { from: string; to: string; output: string; hideZero?: boolean }) => void; /** 画面の実データ（省略時は帳票ごとのサンプル表） */ data?: TableData; /** プレビューを開いてもダイアログを閉じない（プレビューを後ろに重ねて描画する呼び出し側向け） */ keepOpenOnPreview?: boolean; lockReport?: boolean }) {
@@ -669,7 +702,7 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
   const [preview, setPreview] = useState(false);
   const FOOT_REPORTS = ['資金収支計算書（第一号第一様式）', '資金収支計算書（第一号第四様式）', '事業活動計算書', '貸借対照表'];
   return (
-    <SettingsShell variant={variant} title="共通の印刷設定" badge="印刷" desc={<><ScopeBadge kind="全帳票共通" />　すべての帳票の印刷に反映される設定です。同じ内容は、各帳票の印刷の「詳細設定 ＞ 全帳票共通の設定」からも変更できます。</>} actions={<>
+    <SettingsShell variant={variant} title="共通の印刷設定" badge="印刷" desc={<><ScopeBadge kind="全帳票共通" />　すべての帳票の印刷に反映される設定です。印刷に関わる設定はここと各帳票の「詳細設定」に集約し、動作環境には置きません。同じ内容は、各帳票の印刷の「詳細設定 ＞ 全帳票共通の設定」からも変更できます。</>} actions={<>
       <ScreenPrintMenu page="共通の印刷設定" accent={accent} label="備考・摘要の印刷" />
       <button type="button" className="btn-outline" onClick={() => setPreview(true)} style={btn()}>プレビューで確認</button>
       <button type="button" className="btn-outline" onClick={() => toast.show('他の区分の印刷設定を読み込みました（プロトタイプ）')} style={btn()}>他区分の設定を読込</button>
@@ -722,6 +755,10 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
                 </div>
               ))}
             </div>
+          </div>
+          <div style={card}>
+            <div style={cardHead}>帳票の色・印字 <span style={{ fontSize: 11, fontWeight: 500, color: '#8290a0', marginLeft: 6 }}>動作環境から移した項目（5.5.1）</span></div>
+            <div style={{ padding: 14 }}><ReportStyleSettings accent={accent} /></div>
           </div>
           <div style={card}>
             <div style={cardHead}>捺印欄（最大4名）・脚注</div>

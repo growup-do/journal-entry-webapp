@@ -19,7 +19,9 @@ const MOVED: [string, string][] = [
   ['決算附属明細書 設定2・3 の「収入に合わせる／支出に合わせる」', displayName('決算附属明細書')],
   ['画面サイズ', 'Web版では不要（ブラウザの幅に合わせて表示）'],
   ['ワイド画面の初期表示（初期表示画面・選択月・元帳の初期科目・表示順）', '伝票入力の参照パネル'],
-  ['印刷に関わる設定（0データ・印刷位置・フォント・捺印欄 など）', '各帳票の印刷（詳細設定）'],
+  ['印刷に関わる設定（0データ・印刷位置・フォント・捺印欄 など）', '各帳票の印刷（詳細設定 › この帳票のみ／全帳票共通）'],
+  ['帳票の色・印字（カラー帳票・罫線色・網掛け色、帳票印刷の速度、1行のみの改ページ抑制、Excel／PDFの注意書き、試算表の予備費出力）', '各帳票の印刷（詳細設定 › 全帳票共通）または 共通の印刷設定'],
+  ['決算書の「社会福祉法人名」を印字しない', '各帳票の印刷（詳細設定 › 全帳票共通「法人名を印刷する」）'],
 ];
 const grid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 14, alignItems: 'start' };
 const colorLbl: CSSProperties = { fontSize: 12, display: 'flex', gap: 6, alignItems: 'center' };
@@ -102,8 +104,6 @@ export function EnvSettingsPage({ variant, accent }: { variant: 'form' | 'sheet'
           <div style={grid}>
             <div style={card}><div style={cardHead}>試算表・繰入金明細の集計方法</div><div style={{ padding: 14, display: 'grid', gap: 12 }}>
               <Field label="試算表：費目行の計算方式"><select value={v.trialCalc} onChange={(e) => set({ trialCalc: e.target.value })} style={input}>{['費目行に表記されている計算方式で計算する', '収入の借方と支出の借方を加算する（貸方も同様）'].map((o) => <option key={o}>{o}</option>)}</select></Field>
-              <Field label="試算表：予備費出力の選択"><select value={v.reserveOutput} onChange={(e) => set({ reserveOutput: e.target.value })} style={input}>{['予備費を標準方式で印字', '予備費の差異に計算結果を印字', '予備費の1行目に充当前の予算額を印字'].map((o) => <option key={o}>{o}</option>)}</select></Field>
-              <div style={{ fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>標準方式：差異欄に予備費充当額を含めない　／　差異に計算結果：差異欄に充当額を含める　／　1行目：充当前の予算額を表示</div>
               <Field label="繰入金明細の集計方法">{radios(['収入で監視', '支払いで監視'] as const, v.transferWatch, (o) => set({ transferWatch: o }))}</Field>
               {T('budgetInternalOffset', '予算の内部取引消去（内部取引を相殺する）')}
               {T('termFromStart', '月範囲の選択で、期首から月を選択する')}
@@ -111,14 +111,6 @@ export function EnvSettingsPage({ variant, accent }: { variant: 'form' | 'sheet'
             <div style={card}><div style={cardHead}>検索・日付の表記</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
               {T('noFurigana', 'フリガナ検索を無効にする（科目・業者・摘要の検索でフリガナを使わない）')}
               {T('eraGannen', '和暦の1年を「元年」と表記する')}
-            </div></div>
-            <div style={card}><div style={cardHead}>帳票の共通動作</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>{T('colorReports', 'カラー帳票を有効にする')}<label style={colorLbl}>罫線色<input type="color" value={v.lineColor} onChange={(e) => set({ lineColor: e.target.value })} disabled={!v.colorReports} /></label><label style={colorLbl}>網掛け色<input type="color" value={v.shadeColor} onChange={(e) => set({ shadeColor: e.target.value })} disabled={!v.colorReports} /></label></div>
-              <div style={{ fontSize: 12, color: '#7a8794' }}>決算表・予算表・試算表・仕訳日記帳の罫線と網掛けの色です。</div>
-              {T('printSpeed', '帳票印刷の速度を重視する（大量ページの作成を優先）')}
-              {T('hideCorpName', '決算書の「社会福祉法人名」を印字しない')}
-              {T('onePageRow', '1行の改ページ制御（改行せず1ページに収める）')}
-              {T('noteOnExcel', 'Excel／PDF出力で明細書の注意書きを印字する')}
             </div></div>
           </div>
         </ScopeBlock>
