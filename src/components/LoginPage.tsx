@@ -1,4 +1,4 @@
-// ログイン画面（プロトタイプ：メール／パスワードは入力済み。そのまま「ログイン」で入れる）
+// ログイン画面（プロトタイプ：通常アカウント／確認用アカウントの2つだけログインできる。パスワードは store/review.ts）
 //   確認用アカウント（store/review.ts）でログインすると、確認メモなどプロトタイプ確認用の表示を出さない。
 
 import { useState } from 'react';
@@ -7,7 +7,7 @@ import type { CSSProperties, KeyboardEvent } from 'react';
 import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
 import { Notice, Steps } from './ui';
-import { REVIEW_ACCOUNT, isReviewAccount } from '../store/review';
+import { matchAccount } from '../store/review';
 
 const GREEN = '#1f7a52';
 const RESET_STEPS = ['メールアドレス', '確認コード', '新しいパスワード', '完了'];
@@ -16,7 +16,7 @@ const isImeEnter = (e: KeyboardEvent) => e.nativeEvent.isComposing || (e.nativeE
 
 export function LoginPage({ onLogin }: { onLogin: (kind: 'standard' | 'review') => void }) {
   const [email, setEmail] = useState('keiri@example.jp');
-  const [pw, setPw] = useState('password123');
+  const [pw, setPw] = useState('');
   const [show, setShow] = useState(false);
   const [keep, setKeep] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -25,11 +25,11 @@ export function LoginPage({ onLogin }: { onLogin: (kind: 'standard' | 'review') 
   const lbl: CSSProperties = { display: 'block', fontSize: 11.5, fontWeight: 700, color: '#8290a0', marginBottom: 6 };
   const submit = () => {
     if (!email.trim() || !pw) return toast.show('メールアドレスとパスワードを入力してください');
-    // 確認用アカウント：パスワードを確認し、プロトタイプ確認用の表示（確認メモなど）を出さないモードで入る
-    const review = isReviewAccount(email);
-    if (review && pw !== REVIEW_ACCOUNT.password) return toast.show('パスワードが違います');
+    // 通常アカウント／確認用アカウント（確認メモなどを出さない）のどちらかに一致したときだけ入れる
+    const kind = matchAccount(email, pw);
+    if (!kind) return toast.show('メールアドレスまたはパスワードが違います');
     setBusy(true);
-    setTimeout(() => { setBusy(false); onLogin(review ? 'review' : 'standard'); }, 500);
+    setTimeout(() => { setBusy(false); onLogin(kind); }, 500);
   };
   const onEnter = (e: KeyboardEvent) => {
     if (e.key === 'Enter' && !isImeEnter(e)) submit();
