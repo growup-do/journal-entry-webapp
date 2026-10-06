@@ -1,7 +1,7 @@
 // 推移表（科目推移表／資金推移表／業者推移表の共通部品）
 //   骨格は ReportShell 共通：指定科目（業者）→ 表示切替（当年度／前年度・金額単位）→ 一覧。
 //   指定した科目（業者）の月ごとの実績・累計（資金・業者は予算と残高も）を年度で一覧。値はサンプル。
-//   月の行から元帳へドリルダウンし、元帳の「← 戻る」で同じ科目・表示に戻る（表示状態は sessionStorage に保持）。
+//   月の行から元帳へドリルダウン：画面遷移せず右側の元帳パネルにその月の元帳を表示。全画面の元帳はパネルの「元帳の画面で開く」から（「← 戻る」で同じ科目・表示に戻る）。
 
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
@@ -13,12 +13,12 @@ import { LABEL, NUM, ReportShell, Segmented, TD, TH, useMoney, useViewState } fr
 import { useAssist } from '../hooks/useAssist';
 import { seededSeries } from '../lib/hier';
 import { displayName } from '../data';
-import { setSession, useSession } from '../store/session';
+import { useSession } from '../store/session';
+import { LedgerDrawer, useLedgerDrawer } from './LedgerDrawer';
 
 export type TrendKind = 'account' | 'fund' | 'vendor';
 /** 画面キー（ルーティング・確認メモで使用。表示名は displayName で現行の用語に合わせる） */
 const KEY: Record<TrendKind, string> = { account: '科目推移', fund: '資金推移', vendor: '業者推移' };
-const LEDGER: Record<TrendKind, string> = { account: '勘定元帳', fund: '資金元帳', vendor: '業者元帳' };
 const YEARS = ['当年度', '前年度'] as const;
 const UNITS = ['円', '千円'] as const;
 /** 令和N年度 → 前年度の表記 */
@@ -67,18 +67,20 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
     accB += b;
     return { m, d, c, accD, b, accB, bal: accB - accD };
   });
-  const openLedger = (month: string) => {
-    setSession({ ledgerTarget: { account: target, month, from: KEY[kind] } });
-    onNavigate(LEDGER[kind]);
-  };
+  // 元帳へのドリルダウン：右側の元帳パネルにその月の元帳を出す
+  const drawer = useLedgerDrawer();
+  const openLedger = (month: string) => drawer.open({ account: target, month, kind, from: KEY[kind] });
+  const picked = (month: string) => !!drawer.target && drawer.target.account === target && drawer.target.month === month;
   const fieldBtn: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, width: 260, boxSizing: 'border-box', padding: '7px 10px', background: '#fff', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left', color: 'inherit' };
 
   return (
+    <>
     <ReportShell
       variant={variant}
       accent={accent}
+      asideWidth={drawer.asideWidth}
       title={title}
-      subtitle={<>{isVendor ? '指定した業者' : '指定した科目'}の月ごとの推移を年度で一覧します。月の行の「元帳」ボタン（または行のダブルクリック）でその月の元帳を開き、元帳の「← 戻る」でこの画面に戻れます。<span style={{ color: '#b7791f' }}>（表示中の値はサンプルです）</span></>}
+      subtitle={<>{isVendor ? '指定した業者' : '指定した科目'}の月ごとの推移を年度で一覧します。月の行の「元帳」ボタン（または行のダブルクリック）で、右側にその月の元帳を表示します。全画面で見たいときはパネルの「元帳の画面で開く」を使います。<span style={{ color: '#b7791f' }}>（表示中の値はサンプルです）</span></>}
       tools={[{ label: isVendor ? '業者検索' : '科目検索', onClick: () => assist.open('target', isVendor ? 'vendor' : 'account') }, { label: 'グラフ作成', onClick: () => setGraphOpen(true), primary: true }]}
       period={
         <>
@@ -155,7 +157,7 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
               const canOpen = !future && !isPrev && !!target;
               const current = !isPrev && r.m === '8';
               return (
-                <tr key={r.m} data-month={r.m} onDoubleClick={() => { if (canOpen) openLedger(r.m); }} title={canOpen ? 'ダブルクリックでこの月の元帳を開く' : undefined} style={{ background: current ? '#fff8d6' : 'transparent', cursor: canOpen ? 'pointer' : 'default' }}>
+                <tr key={r.m} data-month={r.m} onDoubleClick={() => { if (canOpen) openLedger(r.m); }} title={canOpen ? 'ダブルクリックでこの月の元帳を開く' : undefined} data-picked={picked(r.m) || undefined} style={{ background: picked(r.m) ? '#eaf5ef' : current ? '#fff8d6' : 'transparent', boxShadow: picked(r.m) ? `inset 3px 0 0 ${accent}` : undefined, cursor: canOpen ? 'pointer' : 'default' }}>
                   <td style={{ ...TD, fontWeight: 700, whiteSpace: 'nowrap' }}>
                     {r.m}月{current && <span style={{ marginLeft: 6, fontSize: 10, color: '#b7791f' }}>当月</span>}
                     {canOpen && <button type="button" className="btn-outline" data-action="元帳" onClick={(e) => { e.stopPropagation(); openLedger(r.m); }} style={{ marginLeft: 10, padding: '1px 8px', borderRadius: 6, border: '1px solid #dde4ea', background: '#fff', color: accent, fontSize: 10.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>元帳 ›</button>}
@@ -209,6 +211,8 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
         </div>
       </Modal>
     </ReportShell>
+    <LedgerDrawer target={drawer.target} onClose={drawer.close} accent={accent} onNavigate={onNavigate} />
+    </>
   );
 }
 

@@ -2,7 +2,8 @@
 //   骨格は ReportShell 共通：集計期間（月）＋部の切替（右上のボタン／← → キー）→ 表示切替 → 一覧。
 //   表示切替＝表示階層（大区分〜細々区分）・行の配色パターン（5種）・表示列・内訳（合算区分・親区分で起動時）。
 //   決算書のみ「残高グラフ」「収支分析」（収支分析は合算区分では使えない）。
-//   科目行から元帳へドリルダウンし、元帳の「← 戻る」で同じ月・部・階層に戻る（表示状態は sessionStorage に保持）。
+//   科目行から元帳へドリルダウン：画面遷移せず右側の元帳パネルに表示（押した行を見たまま内訳を確認。別の行を押すと差し替わる）。
+//   パネルの「元帳の画面で開く」で全画面の元帳へ移り、その「← 戻る」で同じ月・部・階層に戻る（表示状態は sessionStorage に保持）。
 //   金額書式（桁区切り・負の表記・0円行のカット）は動作環境の設定に従う。
 //   資産の部のみサンプルデータあり。他の部は「サンプル未作成」。
 
@@ -13,7 +14,8 @@ import { CHECK, LABEL, NUM, ReportShell, Segmented, SwitchPill, TD, TH, pct, use
 import { BS_ASSET_ROWS, displayName, type HierRow } from '../data';
 import { grandTotal, rollup } from '../lib/hier';
 import { Modal } from './Modal';
-import { divisionLabel, flattenDivisions, setSession, startKindOf, useSession, type Session } from '../store/session';
+import { divisionLabel, flattenDivisions, startKindOf, useSession, type Session } from '../store/session';
+import { LedgerDrawer, useLedgerDrawer } from './LedgerDrawer';
 
 const PARTS = ['資産の部', '負債の部', '事業活動', '資金の部'];
 const DEPTHS = ['大区分', '中区分', '小区分', '細区分', '細々区分'] as const;
@@ -117,20 +119,22 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
   ];
   const flat = groups.flatMap((g) => g.cols.map((c) => ({ ...c, breakdown: g.breakdown })));
 
-  const openLedger = (name: string) => {
-    setSession({ ledgerTarget: { account: name, month: view.month, from: KEY } });
-    onNavigate('勘定元帳');
-  };
+  // 元帳へのドリルダウン：右側の元帳パネルに出す（全画面の元帳はパネルの「元帳の画面で開く」から）
+  const drawer = useLedgerDrawer();
+  const openLedger = (name: string) => drawer.open({ account: name, month: view.month, kind: 'account', from: KEY });
+  const picked = (name: string) => drawer.target?.account === name;
   const rowBg = (r: { name: string; level: number; leaf: boolean }, i: number) => (view.pattern === '標準' ? (r.level === 0 ? '#f3f6f9' : i % 2 ? '#fbfcfd' : 'transparent') : info.test(r.name, r.leaf) ? info.color : 'transparent');
   const linkBtn: CSSProperties = { marginLeft: 10, padding: '1px 8px', borderRadius: 6, border: '1px solid #dde4ea', background: '#fff', color: accent, fontSize: 10.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' };
   const analysisBlocked = kind === '合算区分';
 
   return (
+    <>
     <ReportShell
       variant={variant}
       accent={accent}
+      asideWidth={drawer.asideWidth}
       title={displayName(KEY)}
-      subtitle={<>{isClosing ? '当年度末（決算）の残高を一覧します。' : '前月繰越・当月の借方／貸方・残高を一覧します。'}科目の行の「元帳」ボタン（または行のダブルクリック）で総勘定元帳を開き、元帳の「← 戻る」でこの画面に戻れます。</>}
+      subtitle={<>{isClosing ? '当年度末（決算）の残高を一覧します。' : '前月繰越・当月の借方／貸方・残高を一覧します。'}科目の行の「元帳」ボタン（または行のダブルクリック）で、右側に総勘定元帳を表示します。別の行を押すと差し替わり、全画面で見たいときはパネルの「元帳の画面で開く」を使います。</>}
       tools={isClosing ? [
         { label: '残高グラフ', onClick: () => setGraph(true) },
         { label: '収支分析', onClick: () => setAnalysis(true), disabled: analysisBlocked, title: analysisBlocked ? '合算区分で起動中のため収支分析は使えません' : '収入・支出の構成と比率を表示します' },
@@ -205,8 +209,8 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
               {rows.map((r, i) => {
                 const bold = r.level === 0;
                 return (
-                  <tr key={r.name + ':' + r.level + ':' + i} data-account={r.name} onDoubleClick={() => { if (r.leaf) openLedger(r.name); }} title={r.leaf ? 'ダブルクリックで元帳を開く' : undefined} style={{ background: rowBg(r, i), cursor: r.leaf ? 'pointer' : 'default' }}>
-                    <td style={{ ...TD, paddingLeft: 12 + r.level * 18, fontWeight: bold ? 700 : r.level === 1 ? 600 : 400, whiteSpace: 'nowrap' }}>
+                  <tr key={r.name + ':' + r.level + ':' + i} data-account={r.name} onDoubleClick={() => { if (r.leaf) openLedger(r.name); }} title={r.leaf ? 'ダブルクリックで元帳を開く' : undefined} data-picked={picked(r.name) || undefined} style={{ background: picked(r.name) ? '#eaf5ef' : rowBg(r, i), boxShadow: picked(r.name) ? `inset 3px 0 0 ${accent}` : undefined, cursor: r.leaf ? 'pointer' : 'default' }}>
+                    <td style={{ ...TD, paddingLeft: 12 + r.level * 18, fontWeight: bold || picked(r.name) ? 700 : r.level === 1 ? 600 : 400, whiteSpace: 'nowrap' }}>
                       {r.name}
                       {r.leaf && <button type="button" className="btn-outline" data-action="元帳" onClick={(e) => { e.stopPropagation(); openLedger(r.name); }} style={linkBtn}>元帳 ›</button>}
                     </td>
@@ -262,6 +266,8 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
         </div>
       </Modal>
     </ReportShell>
+    <LedgerDrawer target={drawer.target} onClose={drawer.close} accent={accent} onNavigate={onNavigate} />
+    </>
   );
 }
 

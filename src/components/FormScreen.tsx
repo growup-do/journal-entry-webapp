@@ -71,7 +71,7 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* アプリバー＋年度帯＋ナビ：まとめて上部に固定（スクロールしない） */}
-      <div ref={headerRef} style={{ position: 'sticky', top: 0, zIndex: 100 }}>
+      <div ref={headerRef} data-app-top style={{ position: 'sticky', top: 0, zIndex: 100 }}>
       <header
         style={{
           background: '#fff',

@@ -68,6 +68,7 @@ const NODES: Node[] = [
   N('vedit', '伝票の訂正', 'modal', 'ledger', { open: '仕訳一覧', note: '同一伝票の全行を同時編集' }),
   N('vdelete', '削除の確認', 'dialog', 'ledger', { open: '仕訳一覧' }),
   N('ledger1', '元帳１／元帳２（参照）', 'page', 'ledger', { open: '元帳１' }),
+  N('ledgerpanel', '元帳パネル（右側）', 'panel', 'ledger', { open: '月次試算', note: '試算表・決算書・推移表の行から。画面遷移しない' }),
   N('balcheck', '残高照合', 'page', 'ledger', { open: '残高照合' }),
   // 推移
   N('trend', '科目推移表', 'page', 'trend', { open: '科目推移' }),
@@ -147,7 +148,7 @@ const EDGES: Edge[] = [
   E('journal', 'search', '検索条件', true), E('journal', 'vedit', '訂正'), E('journal', 'vdelete', '削除', true), E('journal', 'saveas', 'CSV出力', true),
   E('ledger', 'vedit', '訂正'), E('ledger', 'printflow', '印刷', true),
   E('daily', 'journal', '伝票表示（不一致の日）'), E('journal', 'daily', '← 戻る', true),
-  E('trial', 'ledger', '科目 → 元帳'), E('closing', 'ledger', '科目 → 元帳'), E('trend', 'ledger', '月 → 元帳', true), E('ledger', 'trial', '← 戻る', true),
+  E('trial', 'ledgerpanel', '科目 → 元帳'), E('closing', 'ledgerpanel', '科目 → 元帳'), E('trend', 'ledgerpanel', '月 → 元帳', true), E('ledgerpanel', 'ledger', '元帳の画面で開く'), E('ledgerpanel', 'vedit', '訂正', true), E('ledger', 'trial', '← 戻る', true),
   E('trend', 'trendgraph', 'グラフ作成', true), E('closing', 'balgraph', '残高グラフ', true), E('closing', 'analysis', '収支分析', true), E('closing', 'suff', '充実残額', true),
   E('auditm', 'auditexp', '説明／結果詳細', true), E('auditm', 'auditset', '決算チェック設定'), E('auditm', 'printflow', '結果印刷', true),
   E('printc', 'printflow', '帳票を選ぶ'), E('printflow', 'preview', 'プレビュー', true), E('printflow', 'saveas', 'CSV／Excel／PDF', true), E('printc', 'preview', 'まとめて印刷', true), E('appendix', 'printflow', '印刷', true),

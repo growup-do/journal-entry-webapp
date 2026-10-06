@@ -66,11 +66,13 @@ interface Props {
   org?: string;
   /** モーダルの中に置く（外側の余白・枠・影を付けない） */
   embedded?: boolean;
+  /** 右側に元帳パネルを並べて表示しているときの、パネルの幅（本文の右余白をその分広げる） */
+  asideWidth?: number;
 }
 
 const PART_COLORS = ['#e8791e', '#d9a400', '#d9a400', '#d9a400'];
 
-export function ReportShell({ variant, accent, title, subtitle, tools = [], returnTo, period, periodAside, parts, target, switches, controls, notice, children, badge, org, embedded }: Props) {
+export function ReportShell({ variant, accent, title, subtitle, tools = [], returnTo, period, periodAside, parts, target, switches, controls, notice, children, badge, org, embedded, asideWidth = 0 }: Props) {
   const toast = useToast();
   const s = useSession();
   const isSheet = variant === 'sheet';
@@ -103,7 +105,7 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], retu
   const row: CSSProperties = { display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' };
 
   return (
-    <main style={embedded ? { minWidth: 0 } : { flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
+    <main style={embedded ? { minWidth: 0 } : { flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, paddingRight: (isSheet ? 24 : 28) + asideWidth, transition: 'padding-right .28s ease', display: 'flex', justifyContent: 'center' }}>
       <ToastView msg={toast.msg} />
       <div style={embedded ? { width: '100%', background: '#fff', display: 'flex', flexDirection: 'column' } : { width: '100%', maxWidth: isSheet ? 'none' : 1280, background: '#fff', border: '1px solid #dde4ea', borderRadius: isSheet ? 14 : 16, boxShadow: '0 6px 26px rgba(30,50,70,.07)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {returnTo && (

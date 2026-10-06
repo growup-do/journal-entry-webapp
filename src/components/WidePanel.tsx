@@ -225,23 +225,7 @@ export function WidePanel({ accent, layout, state, top = 0, highlightIds, return
           {!account ? (
             <div style={{ padding: '36px 16px', textAlign: 'center', color: '#9aa5b1', fontSize: 12.5, lineHeight: 1.8 }}>科目が選ばれていません。<br />上の「{view}の科目」に、コード・科目名・フリガナを入力して指定してください。</div>
           ) : (
-            <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed' }}>
-              <thead><tr><th style={{ ...TH, width: 44 }}>月日</th><th style={TH}>相手科目 ／ 摘要</th><th style={{ ...TH, width: 74, textAlign: 'right' }}>借方</th><th style={{ ...TH, width: 74, textAlign: 'right' }}>貸方</th><th style={{ ...TH, width: 84, textAlign: 'right' }}>残高</th><th style={{ ...TH, width: 52 }} /></tr></thead>
-              <tbody>
-                <tr style={{ background: '#f8fafc' }}><td style={TD} colSpan={4}><span style={{ color: '#7a8794', fontWeight: 700, fontSize: 11.5 }}>繰越金額</span></td><td style={{ ...NUM, fontWeight: 700 }}>{yen(carry)}</td><td style={TD} /></tr>
-                {lines.length === 0 && <tr><td colSpan={6} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 30 }}>この月の仕訳はありません。</td></tr>}
-                {lines.map((l) => (
-                  <tr key={l.r.id} onDoubleClick={() => setEdit(l.r)} title="ダブルクリックで伝票を開きます" style={{ background: isNew(l.r) ? '#fff2c9' : 'transparent' }}>
-                    <td style={{ ...TD, color: '#8895a3', fontSize: 11 }}>{l.r.date}</td>
-                    <td style={TD}><div style={{ ...clip, fontWeight: 500 }}>{l.other}</div><div style={{ ...clip, color: '#7a8794', fontSize: 11 }}>{l.r.tekiyo}{flags(l.r)}</div></td>
-                    <td style={NUM}>{l.d ? yen(l.d) : ''}</td>
-                    <td style={NUM}>{l.c ? yen(l.c) : ''}</td>
-                    <td style={{ ...NUM, fontWeight: 700, color: l.bal < 0 ? '#c0392b' : '#22303c' }}>{yen(l.bal)}</td>
-                    <td style={{ ...TD, textAlign: 'right' }}>{editBtn(l.r)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <LedgerTable account={account} month={month} editable={editable} highlightIds={highlightIds} onEdit={setEdit} />
           )}
         </div>
       )}
@@ -288,5 +272,53 @@ export function WidePanel({ accent, layout, state, top = 0, highlightIds, return
       </aside>
       {modal}
     </div>
+  );
+}
+
+/* ---------------- 元帳の表（参照パネルと、試算表・推移表の元帳パネルで共用） ---------------- */
+export function ledgerLines(all: Voucher[], account: string, month: MonthFilter, vendor = false) {
+  const inMonth = (r: Voucher) => month == null || r.date.split('/')[0] === month;
+  const rows = all.filter((r) => inMonth(r) && account && (vendor ? r.gyosha === account : r.kari === account || r.kashi === account));
+  const carry = !vendor && metaOf(account)?.cls === '現預金' ? 5_000_000 : 0;
+  let bal = carry;
+  const lines = rows.map((r) => {
+    const d = vendor || r.kari === account ? r.amount : 0;
+    const c = !vendor && r.kashi === account ? r.amount : 0;
+    bal += d - c;
+    return { r, d, c, bal, other: vendor ? `${r.kari} ／ ${r.kashi}` : r.kari === account ? r.kashi : r.kari };
+  });
+  return { lines, carry };
+}
+export function LedgerTable({ account, month, editable, highlightIds, onEdit, vendor }: { account: string; month: MonthFilter; editable: boolean; highlightIds?: number[]; onEdit: (r: Voucher) => void; /** 業者元帳（業者で絞り込む） */ vendor?: boolean }) {
+  const all = useVouchers();
+  const { lines, carry } = ledgerLines(all, account, month, vendor);
+  const isNew = (r: Voucher) => !!highlightIds?.includes(r.id);
+  const flags = (r: Voucher) => (
+    <span style={{ display: 'inline-flex', gap: 2, marginLeft: 4, verticalAlign: 'middle' }}>
+      {r.fusen && <span title={`付箋：${r.fusen}`} style={{ width: 9, height: 9, borderRadius: 2, background: FUSEN_COLORS[r.fusen], display: 'inline-block' }} />}
+      {r.check && <span title="チェック" style={{ fontSize: 9.5, fontWeight: 900, color: '#22303c' }}>✓</span>}
+      {!r.shohyo && <span title="証憑 無" style={{ fontSize: 9, fontWeight: 700, color: '#9aa5b1' }}>証無</span>}
+    </span>
+  );
+  return (
+    <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed' }}>
+      <thead><tr><th style={{ ...TH, width: 44 }}>月日</th><th style={TH}>{vendor ? '借方科目 ／ 貸方科目 ・ 摘要' : '相手科目 ／ 摘要'}</th><th style={{ ...TH, width: 74, textAlign: 'right' }}>{vendor ? '支払' : '借方'}</th>{!vendor && <th style={{ ...TH, width: 74, textAlign: 'right' }}>貸方</th>}<th style={{ ...TH, width: 84, textAlign: 'right' }}>{vendor ? '累計' : '残高'}</th><th style={{ ...TH, width: 52 }} /></tr></thead>
+      <tbody>
+        {!vendor && <tr style={{ background: '#f8fafc' }}><td style={TD} colSpan={4}><span style={{ color: '#7a8794', fontWeight: 700, fontSize: 11.5 }}>繰越金額</span></td><td style={{ ...NUM, fontWeight: 700 }}>{yen(carry)}</td><td style={TD} /></tr>}
+        {lines.length === 0 && <tr><td colSpan={6} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 30 }}>この月の仕訳はありません。</td></tr>}
+        {lines.map((l) => (
+          <tr key={l.r.id} onDoubleClick={() => onEdit(l.r)} title="ダブルクリックで伝票を開きます" style={{ background: isNew(l.r) ? '#fff2c9' : 'transparent' }}>
+            <td style={{ ...TD, color: '#8895a3', fontSize: 11 }}>{l.r.date}</td>
+            <td style={TD}><div style={{ ...clip, fontWeight: 500 }}>{l.other}</div><div style={{ ...clip, color: '#7a8794', fontSize: 11 }}>{l.r.tekiyo}{flags(l.r)}</div></td>
+            <td style={NUM}>{l.d ? yen(l.d) : ''}</td>
+            {!vendor && <td style={NUM}>{l.c ? yen(l.c) : ''}</td>}
+            <td style={{ ...NUM, fontWeight: 700, color: l.bal < 0 ? '#c0392b' : '#22303c' }}>{yen(l.bal)}</td>
+            <td style={{ ...TD, textAlign: 'right' }}>
+              <button type="button" className="ef-act" data-menu="参照パネル:訂正" onClick={() => onEdit(l.r)} title={editable ? 'この伝票を訂正（行のダブルクリックでも開きます）' : 'この伝票の内容を表示（参照のみ）'} style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid #cfd8e0', background: '#fff', color: '#2c5f9e', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>{editable ? '訂正' : '表示'}</button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
