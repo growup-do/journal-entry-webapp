@@ -516,34 +516,6 @@ export interface Shortcut {
 }
 /** Alt＋英数字のショートカット。フォーカス位置に関係なく同じキーで同じ機能が動く。
  *  scope='page' はモーダル表示中は無効、scope='modal' は enabled のときだけ有効。IME 変換中は無視。 */
-/** Enter 送りの「戻る」：Alt+Enter で1つ前の入力欄へ（order は Enter 送りの順に並べた要素 id。表示されていない・無効な欄は飛ばす） */
-export function useBackKey(order: () => string[], enabled = true) {
-  const ref = useRef(order);
-  ref.current = order;
-  useEffect(() => {
-    if (!enabled) return;
-    const h = (e: KeyboardEvent) => {
-      if (e.key !== 'Enter' || !e.altKey || e.ctrlKey || e.metaKey) return;
-      if (e.isComposing || e.keyCode === 229) return;
-      if (document.querySelector('[data-modal-root]')) return;
-      const ids = ref.current();
-      const cur = document.activeElement?.id ?? '';
-      const i = ids.indexOf(cur);
-      if (i < 0) return;
-      e.preventDefault();
-      for (let k = i - 1; k >= 0; k--) {
-        const el = document.getElementById(ids[k]) as HTMLElement | null;
-        if (!el || (el as HTMLInputElement).disabled || el.getAttribute('aria-disabled') === 'true' || el.offsetParent === null) continue;
-        el.focus();
-        if (el instanceof HTMLInputElement) el.select();
-        return;
-      }
-    };
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
-  }, [enabled]);
-}
-
 export function useShortcuts(list: Shortcut[], scope: 'page' | 'modal' = 'page', enabled = true) {
   const ref = useRef(list);
   ref.current = list;
@@ -597,7 +569,7 @@ export function ShortcutHelpModal({ open, onClose, shortcuts, formatName, enterO
             <div style={row}><span>候補を決定して次へ</span><span style={key}>Enter</span></div>
             <div style={row}><span>候補を閉じる</span><span style={key}>Esc</span></div>
             <div style={{ fontSize: 11.5, color: '#7a8794', marginTop: 6, lineHeight: 1.7 }}>Enter の順序：{enterOrder}</div>
-            <div style={{ fontSize: 11.5, color: '#7a8794', marginTop: 4, lineHeight: 1.7 }}>戻る：<b style={{ color: '#22303c' }}>Alt+Enter</b> で1つ前の入力欄へ戻ります（Shift+Tab でも戻れます）。内部取引スイッチの上では Shift+Enter でオン／オフ。</div>
+            <div style={{ fontSize: 11.5, color: '#7a8794', marginTop: 4, lineHeight: 1.7 }}>戻る：<b style={{ color: '#22303c' }}>Shift+Tab</b> で1つ前の入力欄へ戻ります。内部取引スイッチの上では Shift+Enter でオン／オフ。</div>
           </div>
           {groups.map((g) => (
             <div key={g}>

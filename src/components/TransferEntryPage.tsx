@@ -12,7 +12,7 @@ import { ToastView, useToast } from './Toast';
 import { DivisionDialog } from './DivisionPicker';
 import { BudgetGraphModal, BudgetHintLive, EntryConfirmModal, useEntryTools } from './EntryExtras';
 import { judgeTorihiki } from '../lib/accounts';
-import { ComboField, EntryStyles, isIme, FlagButtons, FundAccountLine, PAPER, PaperBox, PaperDate, PaperFootItems, PaperStyles, PaperTitle, PaperToggle, fieldMessage, fieldState, fmtNum, focusId, useBackKey, hasError, hasWarn, isInternalAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor, type Issue } from './EntryCommon';
+import { ComboField, EntryStyles, isIme, FlagButtons, FundAccountLine, PAPER, PaperBox, PaperDate, PaperFootItems, PaperStyles, PaperTitle, PaperToggle, fieldMessage, fieldState, fmtNum, focusId, hasError, hasWarn, isInternalAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor, type Issue } from './EntryCommon';
 import { useWidePanel } from './WidePanel';
 import { makeSheetSeed } from '../data';
 import { applyMonth } from '../lib/format';
@@ -194,8 +194,6 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
     setErr('');
   };
 
-  // Alt+Enter：Enter 送りの1つ前の欄へ戻る（行ごとに 借方金額 → 借方科目 → 貸方科目 → 貸方金額 → 内部取引 → 相手区分 → 摘要）
-  useBackKey(() => [`${pre}-month`, `${pre}-day`, ...rows.flatMap((_, i) => [fid(i, 'ka'), fid(i, 'k'), fid(i, 's'), fid(i, 'sa'), `${pre}-internal`, ...(internalOn ? [`${pre}-aite`] : []), fid(i, 't')])]);
   const tools = useEntryTools({
     format: single ? '振替単一' : '振替入力',
     accent,
