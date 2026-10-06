@@ -47,6 +47,8 @@ const CSS = `
 .ef-act { transition: filter .12s, border-color .12s, box-shadow .12s; }
 .ef-act:hover:not(:disabled) { filter: brightness(.96); box-shadow: 0 0 0 3px rgba(40,60,80,.08); }
 .ef-act:focus-visible { outline: 3px solid var(--ef-accent, #1f7a52); outline-offset: 2px; }
+/* 内部取引スイッチ：Enter 送りで止まったとき、入力欄と同じ太枠＋黄色の下地で分かるようにする */
+[data-menu="内部取引"]:focus { outline: 3px solid var(--ef-accent, #1f7a52) !important; outline-offset: 1px; background: #fff8d6 !important; border-radius: 8px; }
 .ef-act:disabled { cursor: not-allowed; opacity: .45; }
 .ef-cand { cursor: pointer; }
 .ef-pickrow { cursor: pointer; }
