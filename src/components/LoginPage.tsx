@@ -95,10 +95,6 @@ export function LoginPage({ onLogin }: { onLogin: (kind: 'standard' | 'review') 
               {busy ? 'ログイン中…' : 'ログイン'}
             </button>
           </div>
-          <div style={{ marginTop: 16, padding: '10px 12px', background: '#fff7e6', border: '1px solid #f3d9b0', borderRadius: 9, fontSize: 11.5, color: '#8a5a00', lineHeight: 1.6 }}>
-            プロトタイプのため、メールアドレス・パスワードは入力済みです。そのまま「ログイン」を押してください。<br />
-            他部署の方の確認用には別のアカウントをお渡しします。確認用アカウントでログインすると、確認メモなどプロトタイプ確認用の表示は出ません。
-          </div>
         </div>
         <div style={{ textAlign: 'center', fontSize: 11, color: '#9aa5b1', marginTop: 14 }}>ご利用には事業者の管理者による招待が必要です。</div>
         <Footer compact />
