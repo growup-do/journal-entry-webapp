@@ -63,30 +63,15 @@ export default function App() {
   const staticPage = params.get('page');
   // 確認用アカウントでログインしたブラウザ：確認メモ・確認事項・やりとりなどプロトタイプ確認用の表示を出さない
   const review = isReviewMode();
-  if (staticPage === 'features') {
-    return (
-      <>
-        <FeatureListPage />
-        {!review && <MemoLayer screenKey={FEATURES_KEY} screenLabel={labelOf} onNavigate={(key) => { if (key === FEATURES_KEY) return; const [m, pg] = key.split(':'); window.location.href = key === 'login' ? '?open=ログイン' : `?open=${encodeURIComponent(pg ?? '')}&mode=${m}`; }} />}
-      </>
-    );
-  }
-  if (staticPage === 'terms') return <LegalPage />;
-  if (staticPage === 'flow') return <FlowMapPage />;
-  if (staticPage === 'issues' && !review) return <IssueBoardPage />;
   const boot = BOOT;
   const bootPage = boot && boot.open !== 'ログイン' && !MODAL_MENU.includes(boot.open) ? boot.open : null;
-  // ログイン状態（プロトタイプ：タブを閉じるまで保持）
+  // ログイン状態（プロトタイプ：タブを閉じるまで保持）。すべての画面・確認用ページはログイン必須
   const [loggedIn, setLoggedIn] = useState<boolean>(() => {
     if (boot?.open === 'ログイン') {
       try { sessionStorage.removeItem('proto-logged-in'); } catch { /* ignore */ }
       return false;
     }
-    if (boot) {
-      // サイトマップから開いたときは、ログイン画面を挟まずに該当画面へ
-      try { sessionStorage.setItem('proto-logged-in', '1'); } catch { /* ignore */ }
-      return true;
-    }
+    // ?open=／?page= で直接開いた場合も、ログイン済み（このタブ）でなければログイン画面を先に出す（ログイン必須）
     try {
       return sessionStorage.getItem('proto-logged-in') === '1';
     } catch {
@@ -97,9 +82,11 @@ export default function App() {
     // 確認用アカウントならプロトタイプ確認用の表示を出さないモードに（通常アカウントで解除）
     setReviewMode(kind === 'review');
     try { sessionStorage.setItem('proto-logged-in', '1'); } catch { /* ignore */ }
-    // 起動時は区分・年度の選択を先に表示し、その後は設定された初期画面（ホーム／伝票入力）へ
-    try { sessionStorage.setItem('proto-pick-division', '1'); } catch { /* ignore */ }
     setLoggedIn(true);
+    // ?open=／?page= で直接開いたときは、ログイン後にその画面へ（区分・年度の選択は挟まない）
+    if (bootPage || boot || staticPage) return;
+    // 通常の起動時は区分・年度の選択を先に表示し、その後は設定された初期画面（ホーム／伝票入力）へ
+    try { sessionStorage.setItem('proto-pick-division', '1'); } catch { /* ignore */ }
     setPage(getSession().startScreen ?? DEFAULT_MENU);
   };
   const logout = () => {
@@ -150,6 +137,18 @@ export default function App() {
       </>
     );
   }
+  // 確認用のページ（機能一覧／利用規約／画面遷移図／確認事項・やりとり）もログイン後にだけ表示する
+  if (staticPage === 'features') {
+    return (
+      <>
+        <FeatureListPage />
+        {!review && <MemoLayer screenKey={FEATURES_KEY} screenLabel={labelOf} onNavigate={(key) => { if (key === FEATURES_KEY) return; const [m, pg] = key.split(':'); window.location.href = key === 'login' ? '?open=ログイン' : `?open=${encodeURIComponent(pg ?? '')}&mode=${m}`; }} />}
+      </>
+    );
+  }
+  if (staticPage === 'terms') return <LegalPage />;
+  if (staticPage === 'flow') return <FlowMapPage />;
+  if (staticPage === 'issues' && !review) return <IssueBoardPage />;
 
   return (
     <>
