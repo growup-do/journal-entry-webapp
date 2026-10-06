@@ -38,7 +38,6 @@ const NODES: Node[] = [
   N('division', '伝票入力区分の選択', 'dialog', 'start', { open: 'ホーム', note: '会計年度・区分（組織図）／1か月間表示しない' }),
   N('merge', '合算部門の選択', 'dialog', 'start', { open: 'ホーム' }),
   N('divinfo', '法人名の変更、及び区分の追加、変更', 'dialog', 'start', { open: 'ホーム', note: '集計区分／法人情報／伝票入力区分' }),
-  N('exit', '終了（確認のみ）', 'page', 'start', { open: 'ログアウト', note: 'バックアップは尋ねない' }),
   // ホーム
   N('home', 'ホーム（ダッシュボード）', 'page', 'home', { open: 'ホーム' }),
   N('finder', '機能から探す', 'page', 'home', { open: '機能から探す' }),
@@ -155,7 +154,7 @@ const EDGES: Edge[] = [
   E('s-update', 'division', '完了後：会計期間を開く', true), E('s-update', 's-backup', 'バックアップの確認', true),
   E('s-acct', 's-attached', '関連する設定', true), E('auditset', 's-attached', '1年基準科目', true),
   E('s-template', 'template', '伝票入力で呼出', true),
-  E('exit', 'login', 'ログイン画面へ'),
+  E('usersettings', 'login', 'ログアウト（確認なし）', true),
   E('e-voucher', 'dep', '固定資産科目の登録時', true),
 ];
 

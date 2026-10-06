@@ -7,7 +7,6 @@ import { DepreciationPage } from './DepreciationPage';
 import { ReceiptsPaymentsPage } from './ReceiptsPaymentsPage';
 import { GraphPage } from './GraphPage';
 import { HomePage } from './HomePage';
-import { LogoutPage } from './LogoutPage';
 import { MembersPage } from './MembersPage';
 import { UserSettingsPage } from './UserSettingsPage';
 import { SufficiencyPage } from './SufficiencyPage';
@@ -28,7 +27,7 @@ import { SETTINGS_MENU } from '../data';
 import { SingleEntryPage } from './SingleEntryPage';
 import { TransferEntryPage } from './TransferEntryPage';
 
-export function renderPage(page: string, variant: 'form' | 'sheet', accent: string, accentRgb: string, onNavigate: (label: string) => void, onLogout: () => void = () => {}) {
+export function renderPage(page: string, variant: 'form' | 'sheet', accent: string, accentRgb: string, onNavigate: (label: string) => void, _onLogout: () => void = () => {}) {
   // 各種設定のうち、依頼書対応で追加・分離した画面（年度更新、保守・運用、別紙）
   switch (page) {
     case '年度更新':
@@ -58,8 +57,6 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
       return <UserSettingsPage variant={variant} accent={accent} />;
     case 'メンバーの追加、管理':
       return <MembersPage variant={variant} accent={accent} />;
-    case 'ログアウト':
-      return <LogoutPage accent={accent} onNavigate={onNavigate} onLogout={onLogout} />;
     case '単一入力':
       return <SingleEntryPage variant={variant} accent={accent} accentRgb={accentRgb} onNavigate={onNavigate} />;
     case '振替入力':

@@ -23,7 +23,7 @@ type Mode = 'form' | 'sheet';
 /** ページ遷移ではなくモーダルで開くメニュー */
 const MODAL_MENU = ['決算調査', '法人調査', '仕訳数', '日次調査', '法人印刷'];
 /** 廃止・統合した画面キーの読み替え（保存済みの画面・お気に入り・確認メモから開いたとき用） */
-const RETIRED: Record<string, string> = { 一括印刷: '印刷センター', 年度の切替: 'ホーム', '年度更新・切替': '年度更新' };
+const RETIRED: Record<string, string> = { 一括印刷: '印刷センター', 年度の切替: 'ホーム', '年度更新・切替': '年度更新', ログアウト: 'ホーム' };
 const alive = (p: string) => RETIRED[p] ?? p;
 
 /** 機能一覧（サイトマップ）からの「画面を開く」：?open=画面名（mode・year は互換のため無視）
@@ -107,6 +107,8 @@ export default function App() {
 
   // メニュー選択：決算調査はページ遷移ではなくモーダルで開く（既存システムと同じ）
   const selectMenu = (label: string) => {
+    // ログアウトは確認画面を挟まず、そのままログイン画面へ
+    if (label === 'ログアウト') { logout(); return; }
     // 法人調査は決算調査と同じ内容（右上ボタンの要否は確認メモで確認中）
     if (label === '決算調査' || label === '法人調査') setAuditOpen(true);
     else if (label === '仕訳数') setCountOpen(true);

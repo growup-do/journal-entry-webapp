@@ -101,7 +101,7 @@ function UpdateView({ variant, depOnly, go, onNavigate }: { variant: 'form' | 's
   ];
 
   return (
-    <SettingsShell variant={variant} title={title} badge="取り消しできません" desc={depOnly ? '減価償却のデータだけを次年度へ繰り越します。伝票・残高・予算は変更しません。' : '当年度のデータを締めて、次年度へ繰り越します（繰越残高・予算・摘要候補を次年度へ設定）。'} draft>
+    <SettingsShell variant={variant} title={title} badge="取り消しできません" desc={depOnly ? '減価償却のデータだけを次年度へ繰り越します。伝票・残高・予算は変更しません。' : '当年度のデータを締めて、次年度へ繰り越します（繰越残高・予算・摘要候補を次年度へ設定）。'} draft={false}>
       <ToastView msg={toast.msg} />
       <div style={{ margin: '16px 22px 0', display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 14px', border: '1px solid #ecc5bf', borderLeft: '5px solid ' + DANGER, borderRadius: 10, background: '#fdf3f2' }}>
         <WarnIcon size={24} />
