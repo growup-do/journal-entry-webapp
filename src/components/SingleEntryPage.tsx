@@ -9,7 +9,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { ToastView, useToast } from './Toast';
 import { BudgetGraphModal, BudgetHintLive, EntryConfirmModal, TorihikiBadge, useEntryTools, type EntryFlags } from './EntryExtras';
-import { ComboField, ConfirmModal, EntryStyles, FlagButtons, FundAccountLine, PAPER, PaperBox, PaperStyles, PaperTitle, PaperToggle, fieldMessage, fieldState, focusId, hasError, hasWarn, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor } from './EntryCommon';
+import { ComboField, ConfirmModal, EntryStyles, FlagButtons, FundAccountLine, PAPER, PaperBox, PaperStyles, PaperTitle, PaperToggle, fieldMessage, fieldState, focusId, hasError, hasWarn, useBackKey, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor } from './EntryCommon';
 import { useWidePanel } from './WidePanel';
 import { yearOfMonth } from './SingleEntryTools';
 import { judgeTorihiki } from '../lib/accounts';
@@ -160,6 +160,8 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
     toast.show('伝票を登録しました');
   };
 
+  // Alt+Enter：Enter 送りの1つ前の欄へ戻る
+  useBackKey(() => ['se-month', 'se-day', 'se-kari', 'se-kashi', 'se-internal', ...(partner ? ['se-aite'] : []), 'se-tekiyo', 'se-gyosha', 'se-amount']);
   const tools = useEntryTools({
     format: '単一入力',
     accent,

@@ -10,7 +10,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { DivisionPicker } from './DivisionPicker';
 import { FiscalYearBanner } from './FiscalYearPage';
 import { AttachedStatementModal, BudgetGraphModal, BudgetHintLive, EntryConfirmModal, SpecialAmountModal, TorihikiBadge, useEntryTools } from './EntryExtras';
-import { ComboField, EntryStyles, isIme, FieldLabel, FlagButtons, FundAccountLine, PAPER, PaperBox, PaperDate, PaperFootItems, PaperStyles, PaperTitle, PaperToggle, fieldMessage, fieldState, fmtNum, focusId, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, watchedStatement, type FundMode, type FusenColor } from './EntryCommon';
+import { ComboField, EntryStyles, isIme, FieldLabel, FlagButtons, FundAccountLine, PAPER, PaperBox, PaperDate, PaperFootItems, PaperStyles, PaperTitle, PaperToggle, fieldMessage, fieldState, fmtNum, focusId, useBackKey, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, watchedStatement, type FundMode, type FusenColor } from './EntryCommon';
 import { WIDE_TAB_SPACE, WIDE_WIDTH, WidePanel, useWidePanel } from './WidePanel';
 import { ToastView, useToast } from './Toast';
 import { judgeTorihiki } from '../lib/accounts';
@@ -307,6 +307,8 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
     finalize();
   };
 
+  // Alt+Enter：Enter 送りの1つ前の欄へ戻る
+  useBackKey(() => ['fe-month', 'fe-day', ...(manual ? ['fe-no'] : []), 'fe-kari', 'fe-kashi', 'fe-internal', ...(partner ? ['fe-aite'] : []), ...rows.flatMap((_, i) => [`fe-tek-${i}`, `fe-gyo-${i}`, `fe-amt-${i}`])]);
   const tools = useEntryTools({
     format: '伝票入力',
     accent: GREEN,
