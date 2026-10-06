@@ -172,7 +172,7 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 300px', alignItems: 'start' }}>
             <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 400px)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead><tr><th style={{ ...TH, width: 90 }}>コード</th><th style={TH}>科目名</th><th style={{ ...TH, textAlign: 'right', width: 150 }}>{cols.ref}</th><th style={{ ...TH, textAlign: 'right', width: 170 }}>{cols.cur}</th><th style={{ ...TH, textAlign: 'right', width: 150 }}>{cols.diff}</th><th style={{ ...TH, textAlign: 'right', width: 130 }}>実績額</th><th style={{ ...TH, width: 160 }}>摘要</th></tr></thead>
+                <thead><tr><th style={{ ...TH, width: 90 }}>コード</th><th style={{ ...TH, minWidth: 220 }}>科目名</th><th style={{ ...TH, textAlign: 'right', width: 150 }}>{cols.ref}</th><th style={{ ...TH, textAlign: 'right', width: 170 }}>{cols.cur}</th><th style={{ ...TH, textAlign: 'right', width: 150 }}>{cols.diff}</th><th style={{ ...TH, textAlign: 'right', width: 130 }}>実績額</th><th style={{ ...TH, width: 160 }}>摘要</th></tr></thead>
                 <tbody>
                   {ITEMS.map((it) => {
                     const editable = !!it.leaf;
@@ -180,7 +180,7 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
                     return (
                       <tr key={it.code} style={{ background: it.level === 0 ? '#f3f6f9' : editable ? 'transparent' : '#fdf3f6' }}>
                         <td style={{ ...TD, color: '#8290a0', fontVariantNumeric: 'tabular-nums' }}>{it.code}</td>
-                        <td style={{ ...TD, paddingLeft: 12 + it.level * 16, fontWeight: it.level === 0 ? 700 : it.level === 1 ? 600 : 400 }}>{it.name}</td>
+                        <td style={{ ...TD, paddingLeft: 12 + it.level * 16, fontWeight: it.level === 0 ? 700 : it.level === 1 ? 600 : 400, whiteSpace: 'nowrap' }}>{it.name}</td>
                         <td style={{ ...NUM, color: '#5b6773' }}>{yen(r)}</td>
                         {editable ? cell(it.code, curVal(it.code), true) : <td style={{ ...NUM, fontWeight: 600 }}>{yen(c)}</td>}
                         <td style={{ ...NUM, fontWeight: 600 }}>{yen(a)}</td>
