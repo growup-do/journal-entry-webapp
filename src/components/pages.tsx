@@ -47,6 +47,8 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
     case '別紙（注記・明細書・財産目録）':
       return <AppendixPrintPage variant={variant} accent={accent} onNavigate={onNavigate} />;
   }
+  // メンバー管理は各種設定（ユーザー・権限）にあるが専用画面を使う
+  if (page === 'メンバーの追加、管理') return <MembersPage variant={variant} accent={accent} />;
   if (SETTINGS_MENU.includes(page)) return renderSettingsPage(page, variant, accent);
   switch (page) {
     case 'ホーム':
