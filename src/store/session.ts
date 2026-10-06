@@ -217,6 +217,8 @@ export function startKindOf(s: Session): StartKind {
 }
 /** 伝票の入力・訂正・削除ができるか（参照のみ権限、親区分・合算区分での起動では不可） */
 export const canEdit = (s: Session) => s.role === '入力可' && startKindOf(s) === '入力区分';
+/** 参照のみ権限か（操作できないボタンは無効表示ではなく非表示にする。区分の都合で使えないときは無効表示＋理由） */
+export const isViewOnly = (s: Session) => s.role !== '入力可';
 /** 一覧の表示順入換ができるか（参照のみ権限・合算区分では不可） */
 export const canReorder = (s: Session) => s.role === '入力可' && startKindOf(s) !== '合算区分';
 /** 使えない理由（ツールチップ用）。使えるときは空文字 */

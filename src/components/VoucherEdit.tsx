@@ -13,7 +13,7 @@ import { ActButton, ActDivider, ComboField, EntryStyles, FieldLabel, FlagButtons
 import { ACCOUNTS, SERVICES, VENDORS } from '../data';
 import { FUSEN_COLORS, FUSEN_CYCLE, addVoucher, cycleFusen, deleteVoucher, getVouchers, moveVoucher, updateVoucher, useVouchers, type Fusen, type Voucher } from '../store/journalStore';
 import { judgeTorihiki, TORIHIKI_COLOR } from '../lib/accounts';
-import { canEdit, canReorder, editBlockReason, useSession } from '../store/session';
+import { canEdit, canReorder, editBlockReason, useSession, isViewOnly } from '../store/session';
 import type { MonthFilter } from '../types';
 
 const ACCTS = ACCOUNTS.flatMap((g) => g.items).concat(['手数料', '住民税', '健康保険', '厚生年金']);
@@ -326,6 +326,7 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { vouch
   const j = judgeTorihiki(st.shared ? st.kari : st.rows[act]?.kari ?? '', st.shared ? st.kashi : st.rows[act]?.kashi ?? '');
   const c = TORIHIKI_COLOR[j.kind];
   const ro = !editable;
+  const viewOnly = isViewOnly(sess);
   const cell: CSSProperties = { ...input, padding: '7px 9px', fontSize: 13 };
   const GRID = st.shared ? '34px minmax(0,1.5fr) minmax(0,1fr) 120px 84px 132px' : '34px minmax(0,1.1fr) minmax(0,1.1fr) minmax(0,1.2fr) minmax(0,.9fr) 112px 84px 132px';
   const afterHead = () => focusId(st.shared ? 'ed-kari' : firstField(0));
@@ -388,12 +389,12 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { vouch
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', borderBottom: '1px solid #eef2f5', background: '#fbfcfd', borderRadius: '10px 10px 0 0', flexWrap: 'wrap' }}>
               <span style={{ fontSize: 10.5, fontWeight: 800, color: '#8290a0', letterSpacing: '.05em' }}>行の操作</span>
               <span style={{ fontSize: 11.5, fontWeight: 700, color: accent }}>対象：{act + 1}行目</span>
-              <ActButton label="行追加" k="N" accent={accent} disabled={!canRow} title={!editable ? reason : !st.multi ? '1伝票1行の形式のため行は追加できません' : '最後に1行追加'} onClick={() => addRow(st.rows.length)} />
+              {!viewOnly && <><ActButton label="行追加" k="N" accent={accent} disabled={!canRow} title={!editable ? reason : !st.multi ? '1伝票1行の形式のため行は追加できません' : '最後に1行追加'} onClick={() => addRow(st.rows.length)} />
               <ActButton label="行挿入" k="I" accent={accent} disabled={!canRow} title={!editable ? reason : !st.multi ? '1伝票1行の形式のため行は挿入できません' : `${act + 1}行目の上に1行挿入`} onClick={() => addRow(act)} />
               <ActButton label="行削除" k="D" accent={accent} disabled={!canRow} title={!editable ? reason : !st.multi ? '1伝票1行の形式のため行は削除できません' : `${act + 1}行目を削除`} onClick={() => delRow(act)} />
               <ActButton label="チェック" k="C" accent={accent} disabled={ro} title={ro ? reason : undefined} active={st.rows[act]?.check} onClick={() => setRow(act, { check: !st.rows[act].check })} />
               <ActButton label="付箋" k="F" accent={accent} disabled={ro} title={ro ? reason : '赤→青→黄→緑→なし'} active={!!st.rows[act]?.fusen} onClick={() => setRow(act, { fusen: FUSEN_CYCLE[(FUSEN_CYCLE.indexOf(st.rows[act].fusen) + 1) % FUSEN_CYCLE.length] })} />
-              <ActButton label="証憑" k="V" accent={accent} disabled={ro} title={ro ? reason : '有／無'} active={st.rows[act]?.shohyo} onClick={() => setRow(act, { shohyo: !st.rows[act].shohyo })} />
+              <ActButton label="証憑" k="V" accent={accent} disabled={ro} title={ro ? reason : '有／無'} active={st.rows[act]?.shohyo} onClick={() => setRow(act, { shohyo: !st.rows[act].shohyo })} /></>}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 8, padding: '7px 10px', background: '#f6f8fa', fontSize: 10.5, fontWeight: 700, color: '#8290a0' }}>
               <div>行</div>
@@ -412,12 +413,12 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { vouch
                     <ComboField id={`ed-r${i}-tekiyo`} kind="summary" freeText value={r.tekiyo} onChange={(v) => setRow(i, { tekiyo: v })} onCommit={() => focusId(`ed-r${i}-gyosha`)} placeholder="摘要" disabled={ro} fontSize={13} padY={7} listWidth={340} />
                     <ComboField id={`ed-r${i}-gyosha`} kind="vendor" value={r.gyosha} onChange={(v) => setRow(i, { gyosha: v })} onCommit={() => focusId(`ed-r${i}-amount`)} placeholder="業者" disabled={ro} fontSize={13} padY={7} listWidth={300} />
                     <input id={`ed-r${i}-amount`} className="ef-input" disabled={ro} value={fmtNum(r.amount)} onChange={(e) => setRow(i, { amount: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => rowNext(i))} inputMode="numeric" placeholder="0" style={{ ...numInput, padding: '7px 9px', fontWeight: 700, fontSize: 14, borderColor: rowErr[r.key]?.startsWith('金額') ? '#c0392b' : '#cfd8e0' }} />
-                    <FlagButtons shohyo={r.shohyo} check={r.check} fusen={r.fusen} disabled={ro} onChange={(p) => setRow(i, p)} />
-                    <div style={{ display: 'flex', gap: 3 }}>
+                    {viewOnly ? <FlagCell v={{ ...voucher!, check: r.check, fusen: r.fusen, shohyo: r.shohyo }} compact /> : <FlagButtons shohyo={r.shohyo} check={r.check} fusen={r.fusen} disabled={ro} onChange={(p) => setRow(i, p)} />}
+                    {!viewOnly && <div style={{ display: 'flex', gap: 3 }}>
                       <button type="button" className="ef-act" disabled={ro || i === 0} title="この行を1つ上へ" onClick={() => moveRow(i, -1)} style={smallBtn}>▲</button>
                       <button type="button" className="ef-act" disabled={ro || i === st.rows.length - 1} title="この行を1つ下へ" onClick={() => moveRow(i, 1)} style={smallBtn}>▼</button>
                       <button type="button" className="ef-act" disabled={!canRow} title={canRow ? 'この行を削除' : !editable ? reason : '1伝票1行の形式です'} onClick={() => delRow(i)} style={{ ...smallBtn, color: '#c0392b', marginLeft: 6 }}>行削除</button>
-                    </div>
+                    </div>}
                   </div>
                   {(rowErr[r.key] || ri.length > 0) && (
                     <div style={{ margin: '6px 0 2px 42px', display: 'grid', gap: 5 }}>
@@ -446,12 +447,12 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { vouch
           {msg && <div role={msg.tone === 'error' ? 'alert' : 'status'} style={{ padding: '8px 12px', borderRadius: 9, fontSize: 12.5, fontWeight: 700, background: msg.tone === 'error' ? '#fdeee9' : '#eef4fb', color: msg.tone === 'error' ? '#a5281b' : '#2c5f9e', border: '1px solid ' + (msg.tone === 'error' ? '#f0b9ae' : '#c9dcf2') }}>{msg.text}</div>}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <ActButton label="伝票削除" k="X" tone="danger" disabled={ro} title={ro ? reason : 'この伝票（全行）を削除します。確認画面を表示します'} onClick={() => setDelOpen(true)} />
-            <ActDivider />
-            <span style={{ fontSize: 11.5, color: '#9aa5b1' }}>削除は確認画面のあとに実行します。元に戻せません。</span>
+            {!viewOnly && <ActButton label="伝票削除" k="X" tone="danger" disabled={ro} title={ro ? reason : 'この伝票（全行）を削除します。確認画面を表示します'} onClick={() => setDelOpen(true)} />}
+            {!viewOnly && <ActDivider />}
+            <span style={{ fontSize: 11.5, color: '#9aa5b1' }}>{viewOnly ? '参照のみの権限のため、内容の表示だけができます。' : '削除は確認画面のあとに実行します。元に戻せません。'}</span>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
               <button type="button" className="ef-act" onClick={onClose} style={btn()}>戻る（{returnTo}へ）</button>
-              <ActButton id="ed-save" label="伝票登録" k="S" tone="primary" accent={accent} disabled={ro} title={ro ? reason : '訂正した内容で、この伝票の全行を登録します'} onClick={() => save(false)} />
+              {!viewOnly && <ActButton id="ed-save" label="伝票登録" k="S" tone="primary" accent={accent} disabled={ro} title={ro ? reason : '訂正した内容で、この伝票の全行を登録します'} onClick={() => save(false)} />}
             </div>
           </div>
         </div>

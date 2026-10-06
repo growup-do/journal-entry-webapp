@@ -1,7 +1,7 @@
 // 一覧行の操作（依頼書 5.4.4／6.4／6.5）— 日記帳・各元帳で同じ部品を使う
 //   行の右端に「証憑・チェック・付箋」「▲▼（同一日内の表示順入換）」「訂正」「削除」を常に表示する。
 //   削除は訂正から離して置き、確認ダイアログ（伝票の内容＋取り消せない旨）を経てから実行する。
-//   使えない利用者（参照のみ／親区分・合算区分で起動）には、非表示ではなく無効表示＋理由のツールチップ。
+//   参照のみ権限には操作ボタンを出さず「表示」だけ。親区分・合算区分で起動して使えないときは無効表示＋理由のツールチップ。
 
 import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
@@ -11,7 +11,7 @@ import { ToastView, useToast } from './Toast';
 import { EditVoucherModal, FlagCell } from './VoucherEdit';
 import { btn } from './ui';
 import { deleteVoucher, getVouchers, moveVoucher, type Voucher } from '../store/journalStore';
-import { canEdit, canReorder, editBlockReason, startKindOf, useSession, type Session } from '../store/session';
+import { canEdit, canReorder, editBlockReason, isViewOnly, startKindOf, useSession, type Session } from '../store/session';
 
 const RED = '#c0392b';
 const yen = (n: number) => n.toLocaleString('ja-JP');
@@ -47,6 +47,16 @@ const arrow = (disabled: boolean): CSSProperties => ({
 
 /** 行の操作エリア（1行分） */
 export function RowActions({ v, accent, editable, editReason, reorderable, reorderReason, canUp, canDown, onMove, onEdit, onDelete }: RowActionsProps) {
+  const s = useSession();
+  if (isViewOnly(s)) {
+    return (
+      <div data-row-actions onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+        <FlagCell v={v} compact />
+        <span style={{ width: 1, height: 18, background: '#e2e8ee', margin: '0 4px' }} />
+        <button type="button" data-action="表示" title="伝票の内容を表示します（参照のみ）" onClick={onEdit} style={small(accent, false)}>表示</button>
+      </div>
+    );
+  }
   const upOff = !reorderable || !canUp;
   const downOff = !reorderable || !canDown;
   const moveTip = (ok: boolean, label: string) => (!reorderable ? reorderReason : ok ? label : '同一日の中でのみ入れ替えできます');
@@ -142,7 +152,8 @@ export function useRowActions({ rows, accent, returnTo }: { /** 画面に表示�
     for (let k = 0; k < steps; k++) if (!moveVoucher(v.id, dir)) break;
   };
   const openEdit = (v: Voucher) => {
-    if (!editable) { toast.show(editReason || 'この伝票は訂正できません'); return; }
+    // 参照のみ権限は「表示」として開く（訂正画面は表示専用）。区分の都合で訂正できないときは理由を出す
+    if (!editable && !isViewOnly(s)) { toast.show(editReason || 'この伝票は訂正できません'); return; }
     setEdit(v);
   };
   const openDelete = (v: Voucher) => { if (editable) setDel(v); };
@@ -157,7 +168,7 @@ export function useRowActions({ rows, accent, returnTo }: { /** 画面に表示�
       <span style={{ padding: '1px 8px', borderRadius: 6, background: '#fff', border: '1px solid #f3d9b0', fontWeight: 700, fontSize: 11 }}>{s.role !== '入力可' ? '参照のみ' : startKindOf(s)}</span>
       <span>
         {editReason || reorderReason}。
-        {!editable ? `「訂正」「削除」${!reorderable ? '「▲▼（表示順の入換）」' : ''}は使えません（無効表示）。` : '「▲▼（表示順の入換）」は使えません（無効表示）。'}
+        {isViewOnly(s) ? '行の「表示」で伝票の内容を確認できます。訂正・削除・表示順の入換のボタンは表示されません。' : !editable ? `「訂正」「削除」${!reorderable ? '「▲▼（表示順の入換）」' : ''}は使えません（無効表示）。` : '「▲▼（表示順の入換）」は使えません（無効表示）。'}
       </span>
     </>
   ) : null;

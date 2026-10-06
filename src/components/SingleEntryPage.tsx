@@ -396,8 +396,8 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
                   </div>
                   <div className="pp-cell pp-right pp-num" style={{ ...c, fontWeight: 700 }}>{e.amount.toLocaleString('ja-JP')}</div>
                   <div className="pp-cell pp-right" style={{ ...c, gap: 4, padding: '7px 6px' }}>
-                    <button type="button" className="ef-act" disabled={ro} title={ro ? tools.reason : 'この伝票を入力欄に戻して訂正します'} onClick={() => edit(e)} style={rowBtn('#2c5f9e')}>訂正</button>
-                    <button type="button" className="ef-act" disabled={ro} title={ro ? tools.reason : 'この伝票を削除します（確認あり）'} onClick={() => setDelTarget(e)} style={rowBtn('#c0392b')}>削除</button>
+                    {!tools.viewOnly && <button type="button" className="ef-act" disabled={ro} title={ro ? tools.reason : 'この伝票を入力欄に戻して訂正します'} onClick={() => edit(e)} style={rowBtn('#2c5f9e')}>訂正</button>}
+                    {!tools.viewOnly && <button type="button" className="ef-act" disabled={ro} title={ro ? tools.reason : 'この伝票を削除します（確認あり）'} onClick={() => setDelTarget(e)} style={rowBtn('#c0392b')}>削除</button>}
                   </div>
                 </div>
               );
@@ -472,10 +472,10 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
               <div className="pp-row" style={{ gridTemplateColumns: PCOLS }}>
                 <div className="pp-cell pp-num" style={valCell}><span className="pp-ro" style={{ fontSize: 12 }}>自動</span></div>
                 <div className="pp-cell" style={valCell}>
-                  <PaperToggle on={flags.shohyo} onLabel="有" offLabel="無" disabled={ro} title="証憑 有／無" onChange={(x) => setFlags((s) => ({ ...s, shohyo: x }))} />
+                  {tools.viewOnly ? <span className="pp-ro pp-ro-s">{flags.shohyo ? '有' : '無'}</span> : <PaperToggle on={flags.shohyo} onLabel="有" offLabel="無" disabled={ro} title="証憑 有／無" onChange={(x) => setFlags((s) => ({ ...s, shohyo: x }))} />}
                 </div>
                 <div className="pp-cell" style={valCell}>
-                  <FlagButtons shohyo={flags.shohyo} check={flags.check} fusen={flags.fusen} disabled={ro} showShohyo={false} onChange={(p) => setFlags((s) => ({ ...s, ...p }))} />
+                  {!tools.viewOnly && <FlagButtons shohyo={flags.shohyo} check={flags.check} fusen={flags.fusen} disabled={ro} showShohyo={false} onChange={(p) => setFlags((s) => ({ ...s, ...p }))} />}
                 </div>
                 <div className="pp-cell pp-auto" style={{ ...valCell, minHeight: 36 }}><FundAccountLine name={f.kariKamoku} other={f.kashiKamoku} mode={fundMode} /></div>
                 <div className="pp-cell pp-auto" style={{ ...valCell, minHeight: 36 }}><FundAccountLine name={f.kashiKamoku} other={f.kariKamoku} mode={fundMode} /></div>

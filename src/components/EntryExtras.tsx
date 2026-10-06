@@ -17,7 +17,7 @@ import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { displayName } from '../data';
 import { TORIHIKI_COLOR, budgetSample, judgeTorihiki, type Torihiki7 } from '../lib/accounts';
 import { addVoucher, useVouchers, type Voucher } from '../store/journalStore';
-import { canEdit, editBlockReason, setSession, useSession, type AllocationTemplate, type InputSettings, type JournalTemplate, type TemplateLine } from '../store/session';
+import { canEdit, editBlockReason, isViewOnly, setSession, useSession, type AllocationTemplate, type InputSettings, type JournalTemplate, type TemplateLine } from '../store/session';
 
 export { WATCHED, watchedStatement } from './EntryCommon';
 
@@ -400,6 +400,8 @@ export function useEntryTools(o: EntryToolsOptions) {
   const editable = canEdit(sess);
   const reason = editBlockReason(sess);
   const ro = !editable;
+  /** 参照のみ権限：登録・訂正系のボタンは表示しない（参照の操作だけ残す） */
+  const viewOnly = isViewOnly(sess);
   const [dlg, setDlg] = useState<null | '定型' | '連続' | '按分' | '科目別残' | '現預金残' | 'カレンダー' | '入力の変更' | '訂正' | '削除' | 'ヘルプ' | '中止'>(null);
   const [wiz, setWiz] = useState<TemplateWiz>(null);
   const [awiz, setAwiz] = useState<AllocationWiz>(null);
@@ -465,11 +467,11 @@ export function useEntryTools(o: EntryToolsOptions) {
 
   const why = (t: string) => (ro ? reason : t);
   /** 伝票登録ボタン（各形式の入力欄の中に置く。伝票の操作グループは廃止） */
-  const submitButton: ReactNode = <ActButton id={o.submitId} label={`${name}を登録`} k="S" tone="primary" accent={o.accent} disabled={ro || !!o.blocked} title={ro ? reason : o.blocked ? '登録できないエラーがあります。入力欄の下の表示を直すと登録できます' : '入力中の伝票を登録します'} onClick={o.onSubmit} />;
+  const submitButton: ReactNode = viewOnly ? null : <ActButton id={o.submitId} label={`${name}を登録`} k="S" tone="primary" accent={o.accent} disabled={ro || !!o.blocked} title={ro ? reason : o.blocked ? '登録できないエラーがあります。入力欄の下の表示を直すと登録できます' : '入力中の伝票を登録します'} onClick={o.onSubmit} />;
   /** 定型仕訳ボタン（各形式の見出し行の右端に置く）。左に「印刷」（日記帳・伝票・振替伝票） */
-  const templateButton: ReactNode = <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><ScreenPrintMenu page="伝票入力" accent={o.accent} tone="act" /><ActButton label="定型仕訳" k="T" accent={o.accent} disabled={ro} title={why('登録済みの定型仕訳を、入力中の伝票に呼び出します')} onClick={() => setDlg('定型')} /></span>;
+  const templateButton: ReactNode = <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><ScreenPrintMenu page="伝票入力" accent={o.accent} tone="act" />{!viewOnly && <ActButton label="定型仕訳" k="T" accent={o.accent} disabled={ro} title={why('登録済みの定型仕訳を、入力中の伝票に呼び出します')} onClick={() => setDlg('定型')} />}</span>;
   /** 資金モードの切替（自動資金⇄強制資金）。取引区分の右、または伝票の1段目の右端に置く */
-  const fundSwitch: ReactNode = (
+  const fundSwitch: ReactNode = viewOnly ? null : (
     <span role="radiogroup" aria-label="資金モード" data-fund-switch title={ro ? reason : FUND_MODE_NOTE[o.fundMode]} style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 2, padding: 2, border: '1px solid #cfd8e0', borderRadius: 8, background: '#eef2f5' }}>
       {FUND_MODES.map((m) => {
         const on = m === o.fundMode;
@@ -478,15 +480,15 @@ export function useEntryTools(o: EntryToolsOptions) {
     </span>
   );
   /** 内部取引スイッチ（相手区分の入力欄の中に置く） */
-  const internalSwitch: ReactNode = <InternalSwitch on={o.internal} onToggle={o.onInternal} disabled={ro} locked={o.internalLocked} title={ro ? reason : undefined} id={o.internalId} onNext={o.onInternalNext} />;
+  const internalSwitch: ReactNode = viewOnly ? null : <InternalSwitch on={o.internal} onToggle={o.onInternal} disabled={ro} locked={o.internalLocked} title={ro ? reason : undefined} id={o.internalId} onNext={o.onInternalNext} />;
   const actionBar: ReactNode = (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 8 }}>
-      <ActionGroup caption="入力補助">
+      {!viewOnly && <ActionGroup caption="入力補助">
         <ActButton label="連続定型" k="R" accent={o.accent} disabled={ro} title={why('テンプレートから複数の伝票を続けて登録します')} onClick={() => setDlg('連続')} />
         <ActButton label="自動按分" k="A" accent={o.accent} disabled={ro} title={why('按分テンプレートで、複数の区分・科目に金額を配分します')} onClick={() => setDlg('按分')} />
         <ActButton label="仕訳登録" k="G" accent={o.accent} disabled={ro} title={why('入力中の伝票を、定型仕訳として登録します')} onClick={saveAsTemplate} />
         <ActButton label="カレンダー" k="K" accent={o.accent} disabled={ro} title={why('カレンダーから日付を選びます')} onClick={() => setDlg('カレンダー')} />
-      </ActionGroup>
+      </ActionGroup>}
       <ActionGroup caption="参照">
         <ActButton label="科目別残高" k="B" accent={o.accent} onClick={() => setDlg('科目別残')} />
         <ActButton label="現預金残高" k="Z" accent={o.accent} onClick={() => setDlg('現預金残')} />
@@ -536,5 +538,5 @@ export function useEntryTools(o: EntryToolsOptions) {
     </>
   );
 
-  return { topBar, banner, actionBar, submitButton, templateButton, fundSwitch, internalSwitch, dialogs, editable, reason, openEdit: (v: Voucher) => setEdit(v), openDelete: (rows: Voucher[]) => setDel(rows) };
+  return { topBar, banner, actionBar, submitButton, templateButton, fundSwitch, internalSwitch, dialogs, editable, reason, viewOnly, openEdit: (v: Voucher) => setEdit(v), openDelete: (rows: Voucher[]) => setDel(rows) };
 }

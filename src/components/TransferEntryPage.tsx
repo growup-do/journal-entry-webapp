@@ -454,7 +454,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                             <span className="ef-rownow" style={{ padding: '1px 5px', borderRadius: 7, background: accent, color: '#fff', fontSize: 9.5, fontWeight: 800, whiteSpace: 'nowrap' }}>入力中</span>
                           </span>
                         )}
-                        <FlagButtons shohyo={r.shohyo} check={r.check} fusen={r.fusen} disabled={ro} onChange={(p) => setRow(i, p)} />
+                        {!tools.viewOnly && <FlagButtons shohyo={r.shohyo} check={r.check} fusen={r.fusen} disabled={ro} onChange={(p) => setRow(i, p)} />}
                       </div>
                       {/* 2行目：資金（薄い帯）…率／予算残・資金科目 */}
                       <div className="pp-cell pp-auto pp-col" style={bandCell}>
@@ -472,7 +472,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                         <div style={{ marginTop: -8 }}><BudgetHintLive account={r.kashi} threshold={budgetTh} onOpen={() => setGraphAcct(r.kashi)} /></div>
                       </div>
                       <div className="pp-cell pp-band pp-center" style={{ ...bandCell, gap: 4, paddingTop: 4 }}>
-                        {!single ? (
+                        {!single && !tools.viewOnly ? (
                           <>
                             <button type="button" className="ef-act" tabIndex={-1} disabled={ro} onClick={() => insertAt(i)} title={ro ? tools.reason : `${i + 1}行目の上に1行挿入`} style={rowBtn}>挿入</button>
                             <button type="button" className="ef-act" tabIndex={-1} disabled={ro} onClick={() => deleteAt(i)} title={ro ? tools.reason : `${i + 1}行目を削除`} style={{ ...rowBtn, color: '#c0392b', borderColor: '#f2c9c2' }}>削除</button>
@@ -518,8 +518,8 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                   <div className="pp-cell" style={{ padding: 0, gridColumn: 'span 2', background: PAPER.fill }}>
                     <PaperFootItems
                       seq="自動"
-                      check={<PaperToggle on={curRow.check} onLabel="☑" offLabel="☐" disabled={ro} title={single ? 'チェック' : `チェック（${cur + 1}行目）`} onChange={(x) => setRow(cur, { check: x })} />}
-                      shohyo={<PaperToggle on={curRow.shohyo} onLabel="有" offLabel="無" disabled={ro} title={single ? '証憑 有／無' : `証憑 有／無（${cur + 1}行目）`} onChange={(x) => setRow(cur, { shohyo: x })} />}
+                      check={tools.viewOnly ? <span className="pp-ro pp-ro-s">{curRow.check ? '☑' : '☐'}</span> : <PaperToggle on={curRow.check} onLabel="☑" offLabel="☐" disabled={ro} title={single ? 'チェック' : `チェック（${cur + 1}行目）`} onChange={(x) => setRow(cur, { check: x })} />}
+                      shohyo={tools.viewOnly ? <span className="pp-ro pp-ro-s">{curRow.shohyo ? '有' : '無'}</span> : <PaperToggle on={curRow.shohyo} onLabel="有" offLabel="無" disabled={ro} title={single ? '証憑 有／無' : `証憑 有／無（${cur + 1}行目）`} onChange={(x) => setRow(cur, { shohyo: x })} />}
                       cheque={sess.input.cheque ? <span className="pp-ro pp-ro-s pp-num">{cheque || '—'}</span> : undefined}
                     />
                   </div>
@@ -536,7 +536,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
-                {!single && <button type="button" className="ef-act" tabIndex={-1} disabled={ro} onClick={() => { const n = rows.length; setRows((rs) => [...rs, emptyRow()]); setActive(n); focusId(fid(n, 'ka')); }} title={ro ? tools.reason : '最後に1行追加します'} style={{ ...rowBtn, padding: '4px 11px', borderStyle: 'dashed', borderColor: '#b9c4cf', fontSize: 12 }}>＋ 行追加</button>}
+                {!single && !tools.viewOnly && <button type="button" className="ef-act" tabIndex={-1} disabled={ro} onClick={() => { const n = rows.length; setRows((rs) => [...rs, emptyRow()]); setActive(n); focusId(fid(n, 'ka')); }} title={ro ? tools.reason : '最後に1行追加します'} style={{ ...rowBtn, padding: '4px 11px', borderStyle: 'dashed', borderColor: '#b9c4cf', fontSize: 12 }}>＋ 行追加</button>}
                 <span style={{ fontSize: 11.5, color: '#8290a0' }}>{rows.length} 行　{single ? '摘要で Enter → 登録' : '摘要で Enter → 登録／Shift+Enter → 行追加'}</span>
                 {err && <span role="alert" style={{ color: '#c0392b', fontSize: 12.5, fontWeight: 600 }}>{err}</span>}
                 <span style={{ marginLeft: 'auto' }}>{tools.submitButton}</span>

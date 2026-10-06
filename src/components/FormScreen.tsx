@@ -520,11 +520,11 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                         />
                       </div>
                       <div className="pp-cell pp-col" style={{ padding: '4px 6px', gap: 4, alignItems: 'center', background: on ? '#f7fbf9' : undefined }}>
-                        <FlagButtons shohyo={r.shohyo} check={r.check} fusen={r.fusen} onChange={(p) => { setCur(i); patchRow(i, p); }} disabled={!editable} showShohyo={inp.shohyo} />
-                        <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                        {!tools.viewOnly && <FlagButtons shohyo={r.shohyo} check={r.check} fusen={r.fusen} onChange={(p) => { setCur(i); patchRow(i, p); }} disabled={!editable} showShohyo={inp.shohyo} />}
+                        {!tools.viewOnly && <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
                           <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={() => insertAt(i)} title={editable ? `${i + 1}行目の上に1行挿入` : tools.reason} style={rowBtn}>挿入</button>
                           <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={() => deleteAt(i)} title={editable ? `${i + 1}行目を削除` : tools.reason} style={{ ...rowBtn, color: '#c0392b', borderColor: '#f2c9c2' }}>削除</button>
-                        </div>
+                        </div>}
                       </div>
                     </div>
                   );
@@ -540,7 +540,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                 {/* 行追加・行数 */}
                 <div className="pp-row" style={{ gridTemplateColumns: '1fr' }}>
                   <div className="pp-cell" style={{ padding: '6px 10px', fontSize: 11.5, color: '#8290a0' }}>
-                    <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={rowAdd} title={editable ? '最後に1行追加します（金額欄で Shift+Enter でも行を追加できます）' : tools.reason} style={{ padding: '4px 11px', borderRadius: 7, border: '1px dashed #b9c4cf', background: '#fff', color: '#48565f', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', marginRight: 10 }}>＋ 行追加</button>
+                    {!tools.viewOnly && <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={rowAdd} title={editable ? '最後に1行追加します（金額欄で Shift+Enter でも行を追加できます）' : tools.reason} style={{ padding: '4px 11px', borderRadius: 7, border: '1px dashed #b9c4cf', background: '#fff', color: '#48565f', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', marginRight: 10 }}>＋ 行追加</button>}
                     {rows.length} 行
                     <span style={{ marginLeft: 12, color: '#9aa5b1' }}>Enter で登録／Shift+Enter で行追加</span>
                   </div>
@@ -550,8 +550,8 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                   <div className="pp-cell" style={{ padding: 0, background: PAPER.fill }}>
                     <PaperFootItems
                       seq={<span style={{ fontWeight: 700 }}>{nextSeq}</span>}
-                      check={<PaperToggle on={curRow.check} onLabel="☑" offLabel="☐" disabled={!editable} title={`チェック（${curIdx + 1}行目）`} onChange={(v) => patchRow(curIdx, { check: v })} />}
-                      shohyo={inp.shohyo ? <PaperToggle on={curRow.shohyo} onLabel="有" offLabel="無" disabled={!editable} title={`証憑 有／無（${curIdx + 1}行目）`} onChange={(v) => patchRow(curIdx, { shohyo: v })} /> : <span className="pp-ro pp-ro-s">有</span>}
+                      check={tools.viewOnly ? <span className="pp-ro pp-ro-s">{curRow.check ? '☑' : '☐'}</span> : <PaperToggle on={curRow.check} onLabel="☑" offLabel="☐" disabled={!editable} title={`チェック（${curIdx + 1}行目）`} onChange={(v) => patchRow(curIdx, { check: v })} />}
+                      shohyo={inp.shohyo && tools.viewOnly ? <span className="pp-ro pp-ro-s">{curRow.shohyo ? '有' : '無'}</span> : inp.shohyo ? <PaperToggle on={curRow.shohyo} onLabel="有" offLabel="無" disabled={!editable} title={`証憑 有／無（${curIdx + 1}行目）`} onChange={(v) => patchRow(curIdx, { shohyo: v })} /> : <span className="pp-ro pp-ro-s">有</span>}
                       cheque={inp.cheque ? <label className="ef-field" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><input className="ef-input pp-input" disabled={!editable} value={cheque} onChange={(e) => setCheque(e.target.value)} placeholder="任意" style={{ ...smallInput, border: '1px solid transparent', background: 'transparent', width: 120 }} /></label> : undefined}
                       note={<span>チェック・証憑は <b style={{ color: GREEN }}>{curIdx + 1}行目</b> が対象</span>}
                     />
