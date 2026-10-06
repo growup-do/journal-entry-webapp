@@ -10,7 +10,8 @@ import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
 import { ACCOUNTS, SUMMARIES, VENDORS } from '../data';
-import { Tabs } from './ui';
+import { Tabs, Toggle } from './ui';
+import { setSession, useSession } from '../store/session';
 import { DivisionTreeEditor } from './DivisionTreeEditor';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { BudgetPage } from './BudgetPage';
@@ -228,6 +229,7 @@ function MasterPage({ variant, accent, label, tabs }: { variant: 'form' | 'sheet
 /* ---------------- 事業者 ---------------- */
 function OrgPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: string }) {
   const toast = useToast();
+  const sess = useSession();
   const [f, setF] = useState({ name: '社会福祉法人 チャイルド保育園', kana: 'シャカイフクシホウジン チャイルドホイクエン', no: '1234567890123', zip: '100-0001', addr: '東京都千代田区千代田1-1-1', tel: '03-0000-0000', rep: '園長 太郎', fyStart: '4月1日', fyEnd: '3月31日', std: '社会福祉法人会計基準（令和8年度）', rounding: '切り捨て', tax: '税込経理' });
   const [sites, setSites] = useState([{ code: '01', name: '本部', kind: '法人本部' }, { code: '02', name: 'チャイルド保育園', kind: '保育所' }]);
   const [tab, setTab] = useState('法人情報');
@@ -261,6 +263,11 @@ function OrgPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: strin
               <div style={{ gridColumn: 'span 2' }}><span style={lbl}>適用する会計基準</span><select value={f.std} onChange={(e) => set('std', e.target.value)} style={input}><option>社会福祉法人会計基準（令和8年度）</option><option>社会福祉法人会計基準（令和7年度）</option></select></div>
               <div><span style={lbl}>端数処理</span><select value={f.rounding} onChange={(e) => set('rounding', e.target.value)} style={input}>{['切り捨て', '四捨五入', '切り上げ'].map((o) => <option key={o}>{o}</option>)}</select></div>
               <div><span style={lbl}>消費税の経理方式</span><select value={f.tax} onChange={(e) => set('tax', e.target.value)} style={input}>{['税込経理', '税抜経理'].map((o) => <option key={o}>{o}</option>)}</select></div>
+              {/* 消費税対応（依頼書 2.4）：振替伝票形式・振替単一形式に税区分・税額の欄を出す。法人単位の設定 */}
+              <div style={{ gridColumn: 'span 2', paddingTop: 6, borderTop: '1px solid #eef2f5' }} data-tax-entry>
+                <Toggle on={sess.taxEntry} onChange={(x) => { setSession({ taxEntry: x }); toast.show(x ? '振替伝票形式・振替単一形式に税区分・税額の欄を表示します' : '税区分・税額の欄を非表示にしました'); }} accent={accent} label="消費税対応（振替伝票形式・振替単一形式に税区分・税額の欄を表示する）" />
+                <div style={{ fontSize: 11.5, color: '#9aa5b1', marginTop: 4 }}>消費税の申告が必要な法人で有効にします。税区分の候補は「税区分」画面で管理し、資金元帳の「消費税表示」にも使います。</div>
+              </div>
             </div>
           </div>
           <div style={card}>

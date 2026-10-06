@@ -10,13 +10,12 @@ import { Modal } from './Modal';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { Field, Notice, btn, input, numInput, toInt, yen } from './ui';
 import { ActButton, ActDivider, ComboField, EntryStyles, FieldLabel, FlagButtons, FundAccountLine, IssueList, ReadOnlyBanner, fieldState, fmtNum, focusId, hasError, hasWarn, judgeEntry, needsPartner, onEnter, partnerOf, scopeStyle, setPartner, toNum, useShortcuts, type Issue } from './EntryCommon';
-import { ACCOUNTS, SERVICES, VENDORS } from '../data';
+import { SERVICES } from '../data';
 import { FUSEN_COLORS, FUSEN_CYCLE, addVoucher, cycleFusen, deleteVoucher, getVouchers, moveVoucher, updateVoucher, useVouchers, type Fusen, type Voucher } from '../store/journalStore';
 import { judgeTorihiki, TORIHIKI_COLOR } from '../lib/accounts';
 import { canEdit, canReorder, editBlockReason, fusenLabel, useSession, isViewOnly } from '../store/session';
 import type { MonthFilter } from '../types';
 
-const ACCTS = ACCOUNTS.flatMap((g) => g.items).concat(['手数料', '住民税', '健康保険', '厚生年金']);
 const BLUE = '#2c5f9e';
 const PINK = '#b0426a';
 
@@ -498,14 +497,15 @@ export function AdvancedSearchModal({ open, onClose, cond, onApply, accent }: { 
   const tri = (v: string, on: (x: '両方' | '有' | '無') => void) => <div style={{ display: 'flex', gap: 10, paddingTop: 8, fontSize: 13 }}>{(['両方', '有', '無'] as const).map((o) => <label key={o} style={{ display: 'flex', gap: 4 }}><input type="radio" checked={v === o} onChange={() => on(o)} />{o}</label>)}</div>;
   return (
     <Modal open={open} onClose={onClose} width={760} title="検索条件">
+      <EntryStyles />
       <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-          <Field label="借方科目">{sel(c.kari, (v) => set({ kari: v }), ACCTS)}</Field>
-          <Field label="貸方科目">{sel(c.kashi, (v) => set({ kashi: v }), ACCTS)}</Field>
+          <Field label="借方科目"><ComboField id="search-kari" kind="account" value={c.kari} onChange={(v) => set({ kari: v })} placeholder="コード・名称・フリガナで絞り込み" listWidth={360} padY={7} fontSize={13} /></Field>
+          <Field label="貸方科目"><ComboField id="search-kashi" kind="account" value={c.kashi} onChange={(v) => set({ kashi: v })} placeholder="コード・名称・フリガナで絞り込み" listWidth={360} padY={7} fontSize={13} /></Field>
           <Field label="金額（範囲）"><div style={{ display: 'flex', gap: 4, alignItems: 'center' }}><input className="field-input" value={c.amountMin} onChange={(e) => set({ amountMin: e.target.value.replace(/[^0-9]/g, '') })} placeholder="下限" inputMode="numeric" style={numInput} />〜<input className="field-input" value={c.amountMax} onChange={(e) => set({ amountMax: e.target.value.replace(/[^0-9]/g, '') })} placeholder="上限" inputMode="numeric" style={numInput} /></div><label style={{ fontSize: 11.5, display: 'flex', gap: 4, marginTop: 4 }}><input type="checkbox" checked={c.beforeAlloc} onChange={(e) => set({ beforeAlloc: e.target.checked })} />按分前の金額で検索する</label></Field>
           <Field label="摘要コード"><input className="field-input" value={c.tekiyoCode} onChange={(e) => set({ tekiyoCode: e.target.value })} style={input} /></Field>
           <Field label="摘要文字（部分一致）"><input className="field-input ring" value={c.tekiyo} onChange={(e) => set({ tekiyo: e.target.value })} style={input} /></Field>
-          <Field label="業者">{sel(c.gyosha, (v) => set({ gyosha: v }), VENDORS.filter((x) => x !== '（なし）'))}</Field>
+          <Field label="業者"><ComboField id="search-gyosha" kind="vendor" value={c.gyosha} onChange={(v) => set({ gyosha: v === '（なし）' ? '' : v })} placeholder="コード・名称・フリガナで絞り込み" listWidth={300} padY={7} fontSize={13} /></Field>
           <Field label="伝票No"><input className="field-input" value={c.no} onChange={(e) => set({ no: e.target.value })} style={input} /></Field>
           <Field label="小切手No"><input className="field-input" value={c.cheque} onChange={(e) => set({ cheque: e.target.value })} style={input} /></Field>
           <Field label="部門（親区分で起動時）">{sel(c.dept, (v) => set({ dept: v }), ['（親区分）チャイルド保育園', ...SERVICES])}</Field>

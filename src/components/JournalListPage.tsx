@@ -2,20 +2,22 @@
 //   骨格は ReportShell 共通：集計期間（月）→ 絞り込み → 表示切替 → 一覧。
 //   行の操作（証憑／チェック／付箋・▲▼入換・訂正・削除）は RowActions で全一覧共通（依頼書 5.4.4）。
 //   表示切替＝摘要／業者・区分色・区分名（区分色・区分名は合算区分・親区分で起動したときに有効）。
-//   CSV出力・検索条件・検索合計は画面上のボタン／表示（依頼書 5.4.3）。
+//   CSV出力・検索条件・検索合計・貸借の色付けは画面上のボタン／表示（依頼書 5.4.3）。
+//   旧 伝票メニューの「インポート伝票一括削除」「自動按分伝票一括削除」は右上の「一括削除 ▾」（依頼書 2.3／6.4）。
 
 import { useEffect, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { BizSwitch, useDivisionTools } from './DivisionTools';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { ExportDialog, type ExportSpec } from './ExportDialog';
-import { NUM, ReportShell, TD, TH, useMoney } from './ReportShell';
+import { NUM, ReportShell, SwitchPill, TD, TH, useMoney } from './ReportShell';
 import { ACTION_HEAD, ACTION_TH, useRowActions } from './RowActions';
 import { ToastView, useToast } from './Toast';
 import { AdvancedSearchModal, DeleteVoucherModal, EMPTY_COND, applyCond, condActive, type SearchCond } from './VoucherEdit';
 import { btn } from './ui';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { displayName } from '../data';
-import { useVouchers } from '../store/journalStore';
+import { useVouchers, type Voucher } from '../store/journalStore';
 import { getSession, setSession, useSession } from '../store/session';
 import type { MonthFilter } from '../types';
 
@@ -41,6 +43,9 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
   const [cond, setCond] = useState<SearchCond>(EMPTY_COND);
   const [searchOpen, setSearchOpen] = useState(false);
   const [showBiz, setShowBiz] = useState(false);
+  /** 借方・貸方の色付け（依頼書 2.5／5.4.3：Fキーではなく画面上の切替） */
+  const [colorDC, setColorDC] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [exp, setExp] = useState<ExportSpec | null>(null);
   const toast = useToast();
   const dt = useDivisionTools(all, accent);
@@ -76,6 +81,13 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
     setLastIdx(idx);
   };
   const selectable = ra.editable;
+  /** 一括削除（インポート伝票／自動按分伝票）：表示中の期間・絞り込みの中から対象行を選び、通常の削除確認に渡す */
+  const bulkPick = (src: NonNullable<Voucher['source']>) => {
+    setBulkOpen(false);
+    const ids = rows.filter((r) => r.source === src).map((r) => r.id);
+    if (ids.length === 0) return toast.show(`表示中の期間に${src}伝票はありません（月タブを「全月」にすると全期間が対象になります）`);
+    setSel(ids); setDelOpen(true);
+  };
   const colCount = 5 + (dt.nameOn ? 1 : 0) + 1 + (selectable ? 1 : 0);
 
   return (
@@ -89,7 +101,7 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
         { label: '検索条件', onClick: () => setSearchOpen(true), primary: true },
         { label: 'CSV出力', onClick: () => setExp({ kind: 'csv', title, fileName: `日記帳_令和8年${month ?? '全'}月`, meta: `${periodLabel}　${rows.length} 件${filtered ? '（絞り込み中）' : ''}`, ...table }) },
       ]}
-      extraTools={<ScreenPrintMenu page="仕訳一覧" accent={accent} data={table} />}
+      extraTools={<>{selectable && <BulkDeleteMenu open={bulkOpen} onToggle={() => setBulkOpen((o) => !o)} onPick={bulkPick} />}<ScreenPrintMenu page="仕訳一覧" accent={accent} data={table} /></>}
       period={
         <>
           <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} withAll />
@@ -119,6 +131,7 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
       switches={
         <>
           <BizSwitch on={showBiz} onChange={setShowBiz} accent={accent} />
+          <SwitchPill label="貸借の色付け" on={colorDC} onChange={setColorDC} accent={accent} title="借方科目を青、貸方科目を赤で表示します" />
           {dt.switches}
         </>
       }
@@ -158,14 +171,14 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
               <tr key={r.id} data-voucher={r.id} data-selected={sel.includes(r.id) || undefined} onDoubleClick={() => ra.openEdit(r)} onClick={(e) => { if (selectable && (e.shiftKey || e.metaKey || e.ctrlKey)) { e.preventDefault(); toggleSel(r.id, idx, e.shiftKey); } }} title={ra.editable ? 'ダブルクリックで伝票を訂正' : undefined} style={{ cursor: ra.editable ? 'pointer' : 'default', background: sel.includes(r.id) ? '#fff7cc' : dt.rowBg(r) }}>
                 {selectable && <td style={{ ...TD, textAlign: 'center' }} onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}><input type="checkbox" checked={sel.includes(r.id)} onChange={() => undefined} onClick={(e) => toggleSel(r.id, idx, e.shiftKey)} aria-label={`Seq ${r.seq} を選択`} /></td>}
                 <td style={TD}><div style={{ fontWeight: 700 }}>{dt.chip(r)}{r.seq}</div></td>
-                <td style={TD}><div style={{ fontSize: 10.5, color: '#9aa5b1' }}>{r.kind}</div><div>{r.date}</div></td>
+                <td style={TD}><div style={{ fontSize: 10.5, color: '#9aa5b1' }}>{r.kind}{r.source && <span data-source={r.source} title={r.source === '自動按分' ? '自動按分で登録した伝票' : '銀行CSVなどから取り込んだ伝票'} style={{ marginLeft: 3, padding: '0 4px', borderRadius: 4, background: '#eef2f5', color: '#5b6773', fontWeight: 700 }}>{r.source === '自動按分' ? '按分' : r.source}</span>}</div><div>{r.date}</div></td>
                 <td style={TD}>{r.no}</td>
                 {dt.nameOn && <td style={TD}>{dt.nameTag(r)}</td>}
                 <td style={TD}>
                   <div style={{ display: 'flex', gap: 12 }}>
-                    <span style={{ fontWeight: 500, minWidth: 180 }}>{r.kari}</span>
+                    <span style={{ fontWeight: 500, minWidth: 180, color: colorDC ? '#2c5f9e' : undefined }}>{r.kari}</span>
                     <span style={{ color: '#9aa5b1' }}>―</span>
-                    <span style={{ color: '#48565f' }}>{r.kashi}</span>
+                    <span style={{ color: colorDC ? '#b0426a' : '#48565f' }}>{r.kashi}</span>
                   </div>
                   <div style={{ fontSize: 11.5, color: '#7a8794', marginTop: 2 }}>{showBiz ? (r.gyosha || '業者なし') : r.tekiyo}{!showBiz && r.gyosha ? `　／ ${r.gyosha}` : ''}{r.cheque ? `　小切手 ${r.cheque}` : ''}</div>
                 </td>
@@ -182,5 +195,32 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
       <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
       {dt.modal}
     </ReportShell>
+  );
+}
+
+/** 旧 伝票メニューの「インポート伝票一括削除」「自動按分伝票一括削除」（依頼書 2.3／6.4）。対象の行を選んで「選択した仕訳の削除」の確認に渡す。入力内容を持たないメニューなので Esc で閉じてよい */
+function BulkDeleteMenu({ open, onToggle, onPick }: { open: boolean; onToggle: () => void; onPick: (src: NonNullable<Voucher['source']>) => void }) {
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onToggle(); };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [open, onToggle]);
+  const item: CSSProperties = { display: 'block', width: '100%', textAlign: 'left', padding: '8px 10px', border: 'none', background: 'transparent', borderRadius: 8, fontSize: 12.5, fontWeight: 700, color: '#c0392b', fontFamily: 'inherit', cursor: 'pointer' };
+  return (
+    <span style={{ position: 'relative', display: 'inline-flex' }} data-bulk-delete>
+      <button type="button" onClick={onToggle} aria-expanded={open} aria-haspopup="menu" title="インポート伝票・自動按分伝票をまとめて削除します" style={btn('#c0392b', false, true)}>一括削除 ▾</button>
+      {open && (
+        <div role="menu" style={{ position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 40, minWidth: 280, background: '#fff', border: '1px solid #e2e8ee', borderRadius: 10, boxShadow: '0 10px 30px rgba(20,30,40,.14)', padding: 6 }}>
+          <div style={{ padding: '4px 10px 6px', fontSize: 11, color: '#8290a0', lineHeight: 1.6 }}>表示中の期間・絞り込みの中から対象を選び、確認画面で削除します（削除した仕訳は元に戻せません）</div>
+          {(['インポート', '自動按分'] as const).map((src) => (
+            <button key={src} type="button" role="menuitem" data-bulk-src={src} onClick={() => onPick(src)} style={item}>
+              {src}伝票を一括削除
+              <span style={{ display: 'block', fontSize: 11, color: '#8290a0', fontWeight: 500 }}>{src === 'インポート' ? '銀行CSVなどから取り込んだ伝票（行に「インポート」の印）' : '自動按分で登録した伝票（行に「按分」の印）'}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </span>
   );
 }

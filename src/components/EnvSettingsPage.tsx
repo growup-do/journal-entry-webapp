@@ -135,6 +135,10 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
               {T('noFurigana', 'フリガナ検索を無効にする（科目・業者・摘要の検索でフリガナを使わない）')}
               {T('eraGannen', '和暦の1年を「元年」と表記する')}
             </div></div>
+            <div style={card}><div style={cardHead}>伝票入力時の通知</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
+              {T('sufficiencyNotice', '充実残額発生の可能性を伝票入力画面に表示する')}
+              <div style={{ fontSize: 12, color: '#7a8794' }}>既存の「充実残額発生の可能性確認設定」。前年度決算の簡易判定で社会福祉充実残額が発生しそうなとき、伝票入力画面の上部に案内を出します（「充実残額」で算定できます）。</div>
+            </div></div>
           </div>
         </ScopeBlock>
 

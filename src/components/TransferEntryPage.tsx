@@ -3,6 +3,7 @@
 //   各行：借方金額／借方科目（資金科目は自動表示）／貸方科目（資金科目は自動表示）／貸方金額／摘要。行の追加・挿入・削除ができる。
 //   借方合計＝貸方合計で登録可。登録した行は下の当年仕訳一覧に入る。
 //   機能ボタン（伝票の操作／行の操作／入力補助／参照）は常に表示し、Alt＋英字のショートカットでも動く。
+//   消費税対応の法人（事業者 › 会計方針）では、各行の摘要の右に税区分・税額の欄を出す（依頼書 2.4）。
 
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
@@ -31,6 +32,8 @@ interface Row {
   kashi: string;
   kashiAmt: string;
   tekiyo: string;
+  /** 税区分（消費税対応の法人のみ。空＝科目からの既定） */
+  tax?: string;
   shohyo: boolean;
   check: boolean;
   fusen: FusenColor;
@@ -38,6 +41,10 @@ interface Row {
 const emptyRow = (): Row => ({ kariAmt: '', kari: '', kashi: '', kashiAmt: '', tekiyo: '', shohyo: true, check: false, fusen: '' });
 const isUsed = (r: Row) => !!(r.kari || r.kashi || toNum(r.kariAmt) || toNum(r.kashiAmt));
 const isTouched = (r: Row) => isUsed(r) || !!r.tekiyo;
+/** 消費税対応の法人のみ使う税区分・税額（依頼書 2.4：振替伝票形式・振替単一形式の「税区分・税額の欄」。候補は税区分マスターに相当） */
+const TAX_OPTS = ['課税仕入 10%', '課税仕入（軽減）8%', '課税売上 10%', '非課税', '不課税', '対象外'];
+const taxDefault = (r: Row) => (/収益|収入/.test(r.kashi) ? '課税売上 10%' : /費|料|代/.test(r.kari) ? '課税仕入 10%' : '対象外');
+const taxAmountOf = (tax: string, amount: number) => (tax.includes('10%') ? Math.floor((amount * 10) / 110) : tax.includes('8%') ? Math.floor((amount * 8) / 108) : 0);
 
 interface Props {
   variant: 'form' | 'sheet';
@@ -486,8 +493,13 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                       <div className="pp-cell" style={{ ...cell, padding: '4px 8px', gridColumn: 'span 2', background: bg }} onKeyDownCapture={(e) => { if (e.key === 'Enter' && e.shiftKey && !isIme(e)) { e.preventDefault(); e.stopPropagation(); rowAddAfter(i); } }}>
                         <ComboField id={fid(i, 't')} kind="summary" freeText value={r.tekiyo} onChange={(x) => setRow(i, { tekiyo: x })} onCommit={() => afterTekiyo()} placeholder="摘要（任意）" listWidth={320} fontSize={12.5} padY={5} disabled={ro} />
                       </div>
-                      <div className="pp-cell" style={{ ...cell, padding: '4px 8px', background: bg }} />
-                      <div className="pp-cell" style={{ ...cell, background: bg }} />
+                      {/* 消費税対応の法人のみ：税区分・税額（依頼書 2.4。事業者 › 会計方針で切替） */}
+                      <div className="pp-cell" style={{ ...cell, padding: '4px 8px', background: bg, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {sess.taxEntry && <><span style={{ fontSize: 11, fontWeight: 700, color: PAPER.ink, flex: 'none' }}>税区分</span><select data-tax-kind aria-label={`${i + 1}行目 税区分`} disabled={ro} value={r.tax || taxDefault(r)} onChange={(e) => setRow(i, { tax: e.target.value })} className="ef-input pp-input" style={{ fontSize: 12, padding: '3px 4px', minWidth: 0, flex: 1 }}>{TAX_OPTS.map((o) => <option key={o}>{o}</option>)}</select></>}
+                      </div>
+                      <div className="pp-cell pp-num" style={{ ...cell, padding: '4px 8px', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+                        {sess.taxEntry && <><span style={{ fontSize: 11, fontWeight: 700, color: PAPER.ink }}>税額</span><span data-tax-amount style={{ fontSize: 12.5, fontVariantNumeric: 'tabular-nums', color: '#48565f' }}>{taxAmountOf(r.tax || taxDefault(r), Math.max(toNum(r.kariAmt), toNum(r.kashiAmt))).toLocaleString('ja-JP')}</span></>}
+                      </div>
                     </div>
                   );
                 })}

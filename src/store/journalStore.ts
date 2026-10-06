@@ -18,9 +18,13 @@ export interface Voucher extends JournalRow {
   /** 通常伝票／移行伝票 */
   migrated?: boolean;
   internal?: boolean;
+  /** 伝票の出どころ（インポート伝票／自動按分伝票）。旧 伝票メニューの「インポート伝票一括削除」「自動按分伝票一括削除」の対象 */
+  source?: 'インポート' | '自動按分';
 }
 
-let rows: Voucher[] = JOURNAL_ROWS.map((r, i) => ({ ...r, id: i + 1, check: false, fusen: '' }));
+/** サンプル：銀行CSVから取り込んだ体の伝票（水道料金・電話料金・リース代）と、自動按分で登録した体の伝票（ガス代） */
+const sourceOf = (r: JournalRow): Voucher['source'] => (/ガス代/.test(r.tekiyo) ? '自動按分' : /水道料金|電話料金|リース代/.test(r.tekiyo) && /預金/.test(r.kashi) ? 'インポート' : undefined);
+let rows: Voucher[] = JOURNAL_ROWS.map((r, i) => ({ ...r, id: i + 1, check: false, fusen: '', source: sourceOf(r) }));
 let nextId = rows.length + 1;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());

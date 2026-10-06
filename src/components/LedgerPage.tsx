@@ -2,7 +2,7 @@
 //   骨格は ReportShell 共通：集計期間（月）→ 指定科目（業者）→ 表示切替 → 一覧。
 //   試算表・決算書・推移表からドリルダウンで開いたときは、先頭に「← ○○に戻る」を表示する（依頼書 5.4.1）。
 //   行の操作（証憑／チェック／付箋・▲▼入換・訂正・削除）は RowActions で全一覧共通（依頼書 5.4.4）。
-//   表示切替＝摘要／業者・区分色・区分名・消費税表示（資金元帳のみ：税区分／税額の列を追加）。
+//   表示切替＝摘要／業者・区分色・区分名・貸借の色付け・消費税表示（資金元帳のみ：税区分／税額の列を追加）。
 
 import { useEffect, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
@@ -53,6 +53,8 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
   const dt = useDivisionTools(all, accent);
   const [showBiz, setShowBiz] = useState(false);
   const [showTax, setShowTax] = useState(false);
+  /** 借方・貸方の色付け（依頼書 2.5／5.4.3：Fキーではなく画面上の切替） */
+  const [colorDC, setColorDC] = useState(false);
   const [exp, setExp] = useState<ExportSpec | null>(null);
   const toast = useToast();
   const title = displayName(KEY[kind]);
@@ -146,6 +148,7 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
         <>
           {!isVendor && <BizSwitch on={showBiz} onChange={setShowBiz} accent={accent} />}
           {dt.switches}
+          <SwitchPill label="貸借の色付け" on={colorDC} onChange={setColorDC} accent={accent} title="借方を青、貸方を赤で表示します" />
           {isFund && <SwitchPill label="消費税表示" on={showTax} onChange={setShowTax} accent={accent} title="税区分と税額の列を表示します" />}
         </>
       }
@@ -199,7 +202,7 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
                 <td style={TD}>{dt.chip(l.r)}{l.r.seq}</td>
                 {dt.nameOn && <td style={TD}>{dt.nameTag(l.r)}</td>}
                 <td style={TD}>
-                  <div style={{ fontWeight: 500 }}>{isVendor ? `${l.r.kari} ― ${l.r.kashi}` : l.other}</div>
+                  <div style={{ fontWeight: 500 }}>{isVendor ? <><span style={{ color: colorDC ? '#2c5f9e' : undefined }}>{l.r.kari}</span> ― <span style={{ color: colorDC ? '#b0426a' : undefined }}>{l.r.kashi}</span></> : l.other}</div>
                   <div style={{ fontSize: 11.5, color: '#7a8794' }}>
                     {!isVendor && showBiz ? (l.r.gyosha || '業者なし') : l.r.tekiyo}{!isVendor && !showBiz && l.r.gyosha ? `　／ ${l.r.gyosha}` : ''}
                     {!isVendor && opts.spare && (l.r.spare1 || l.r.spare2) ? <span style={{ marginLeft: 8, color: '#9aa5b1' }}>予備：{[l.r.spare1, l.r.spare2].filter(Boolean).join('／')}</span> : null}
@@ -207,8 +210,8 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
                 </td>
                 {taxCols && <td style={TD}><span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 8, background: l.tax.startsWith('課税') ? '#e8f0fb' : l.tax === '非課税' ? '#eaf5ef' : '#f1f4f6', color: l.tax.startsWith('課税') ? '#2c5f9e' : l.tax === '非課税' ? '#1f7a52' : '#7a8794' }}>{l.tax}</span></td>}
                 {taxCols && <td style={{ ...NUM, color: l.taxAmt ? undefined : '#b8c2cc' }}>{l.taxAmt ? money(l.taxAmt) : '—'}</td>}
-                <td style={NUM}>{l.debit ? money(l.debit) : ''}</td>
-                {!isVendor && <td style={NUM}>{l.credit ? money(l.credit) : ''}</td>}
+                <td style={{ ...NUM, color: colorDC ? '#2c5f9e' : undefined }}>{l.debit ? money(l.debit) : ''}</td>
+                {!isVendor && <td style={{ ...NUM, color: colorDC ? '#b0426a' : undefined }}>{l.credit ? money(l.credit) : ''}</td>}
                 <td style={{ ...NUM, fontWeight: 700 }}>{!opts.daily || l.dayEnd ? money(l.bal) : ''}</td>
                 <td style={{ ...TD, paddingTop: 5, paddingBottom: 5 }}>{ra.cell(l.r)}</td>
               </tr>

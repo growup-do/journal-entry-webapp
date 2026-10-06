@@ -330,11 +330,13 @@ export function ComboField({ id, kind, value, onChange, onCommit, placeholder, f
 /* ------------------------------------------------------------------ */
 /* 登録できない仕訳／確認して続行できる警告（依頼書 5.3.2）              */
 /* ------------------------------------------------------------------ */
-export type FundMode = '自動資金' | '強制資金';
-export const FUND_MODES: FundMode[] = ['自動資金', '強制資金'];
+/** 資金モード（依頼書 2.4：自動資金／強制資金／非資金） */
+export type FundMode = '自動資金' | '強制資金' | '非資金';
+export const FUND_MODES: FundMode[] = ['自動資金', '強制資金', '非資金'];
 export const FUND_MODE_NOTE: Record<FundMode, string> = {
   自動資金: '科目から資金科目を自動で決めます（通常）',
   強制資金: '資金取引として扱い、資金収支計算書に反映します',
+  非資金: '資金科目を付けず、非資金取引として登録します（資金収支計算書に載せません）',
 };
 export const isInternalAccount = (name: string) => /区分間/.test(name);
 
@@ -649,6 +651,7 @@ export function ConfirmModal({ open, title, children, okLabel, cancelLabel = '�
 /* ------------------------------------------------------------------ */
 export function fundLabelOf(name: string, other: string, mode: FundMode): { text: string; tone: 'on' | 'off' } {
   if (!name) return { text: '科目を選ぶと表示します', tone: 'off' };
+  if (mode === '非資金') return { text: '—（非資金取引として登録）', tone: 'off' };
   const m = metaOf(name), o = metaOf(other);
   if (!m) return { text: mode === '強制資金' ? '（強制資金）' : '—', tone: mode === '強制資金' ? 'on' : 'off' };
   if (m.cls === '現預金') return { text: '支払資金（現金・預金）', tone: 'on' };

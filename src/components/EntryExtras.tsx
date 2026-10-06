@@ -443,7 +443,7 @@ export function useEntryTools(o: EntryToolsOptions) {
     { key: 'A', label: '自動按分', group: G3, run: () => setDlg('按分'), disabled: ro },
     { key: 'G', label: '仕訳登録（入力中の伝票を定型として登録）', group: G3, run: saveAsTemplate, disabled: ro },
     { key: 'U', label: '内部取引のオン／オフ（スイッチ上では Shift+Enter でも切替）', group: G3, run: o.onInternal, disabled: ro },
-    { key: 'M', label: '資金モードの切替（自動資金⇄強制資金）', group: G3, run: cycleFund, disabled: ro },
+    { key: 'M', label: '資金モードの切替（自動資金 → 強制資金 → 非資金）', group: G3, run: cycleFund, disabled: ro },
     { key: 'B', label: '科目別残高', group: G4, run: () => setDlg('科目別残') },
     { key: 'Z', label: '現預金残高', group: G4, run: () => setDlg('現預金残') },
     { key: 'H', label: 'キーボード操作一覧', group: 'ヘルプ', run: () => setDlg('ヘルプ') },
@@ -463,14 +463,14 @@ export function useEntryTools(o: EntryToolsOptions) {
       }
     />
   );
-  const banner: ReactNode = <ReadOnlyBanner reason={reason} />;
+  const banner: ReactNode = <><ReadOnlyBanner reason={reason} /><SufficiencyNotice onNavigate={o.onNavigate} /></>;
 
   const why = (t: string) => (ro ? reason : t);
   /** 伝票登録ボタン（各形式の入力欄の中に置く。伝票の操作グループは廃止） */
   const submitButton: ReactNode = viewOnly ? null : <ActButton id={o.submitId} label={`${name}を登録`} k="S" tone="primary" accent={o.accent} disabled={ro || !!o.blocked} title={ro ? reason : o.blocked ? '登録できないエラーがあります。入力欄の下の表示を直すと登録できます' : '入力中の伝票を登録します'} onClick={o.onSubmit} />;
   /** 定型仕訳ボタン（各形式の見出し行の右端に置く）。左に「印刷」（日記帳・伝票・振替伝票） */
   const templateButton: ReactNode = <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><ScreenPrintMenu page="伝票入力" accent={o.accent} tone="act" />{!viewOnly && <ActButton label="定型仕訳" k="T" accent={o.accent} disabled={ro} title={why('登録済みの定型仕訳を、入力中の伝票に呼び出します')} onClick={() => setDlg('定型')} />}</span>;
-  /** 資金モードの切替（自動資金⇄強制資金）。取引区分の右、または伝票の1段目の右端に置く */
+  /** 資金モードの切替（自動資金 → 強制資金 → 非資金）。取引区分の右、または伝票の1段目の右端に置く */
   const fundSwitch: ReactNode = viewOnly ? null : (
     <span role="radiogroup" aria-label="資金モード" data-fund-switch title={ro ? reason : FUND_MODE_NOTE[o.fundMode]} style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 2, padding: 2, border: '1px solid #cfd8e0', borderRadius: 8, background: '#eef2f5' }}>
       {FUND_MODES.map((m) => {
@@ -517,7 +517,7 @@ export function useEntryTools(o: EntryToolsOptions) {
         onClose={() => setDlg(null)}
         accent={o.accent}
         onRegister={(rows, date) => {
-          const ids = rows.map((r) => addVoucher({ kind: FORMAT_KIND[o.format], date, kari: r.kari, kashi: r.kashi, tekiyo: `${r.tekiyo}（${r.division.split(' ')[1] ?? r.division}）`, amount: r.amount, service: r.division, shohyo: true }).id);
+          const ids = rows.map((r) => addVoucher({ kind: FORMAT_KIND[o.format], date, kari: r.kari, kashi: r.kashi, tekiyo: `${r.tekiyo}（${r.division.split(' ')[1] ?? r.division}）`, amount: r.amount, service: r.division, shohyo: true, source: '自動按分' }).id);
           o.onRegistered?.(ids);
           o.toast(`自動按分：${rows.length} 枚の伝票を登録しました`);
         }}
@@ -539,4 +539,20 @@ export function useEntryTools(o: EntryToolsOptions) {
   );
 
   return { topBar, banner, actionBar, submitButton, templateButton, fundSwitch, internalSwitch, dialogs, editable, reason, viewOnly, openEdit: (v: Voucher) => setEdit(v), openDelete: (rows: Voucher[]) => setDel(rows) };
+}
+
+/** 充実残額発生の可能性の通知（依頼書 2.5「充実残額発生の可能性確認設定」）。環境設定（全区分共通）で切り替える。サンプルでは常に「可能性あり」 */
+function SufficiencyNotice({ onNavigate }: { onNavigate?: (label: string) => void }) {
+  const s = useSession();
+  const [hidden, setHidden] = useState(() => { try { return sessionStorage.getItem('proto-sufficiency-hidden') === '1'; } catch { return false; } });
+  if (!s.env.sufficiencyNotice || hidden) return null;
+  const hide = () => { try { sessionStorage.setItem('proto-sufficiency-hidden', '1'); } catch { /* ignore */ } setHidden(true); };
+  return (
+    <div data-sufficiency-notice style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 14px', background: '#fff7e6', borderBottom: '1px solid #f3d9b0', fontSize: 12, color: '#8a5a00' }}>
+      <b style={{ flex: 'none' }}>充実残額発生の可能性</b>
+      <span style={{ flex: 1, minWidth: 0 }}>前年度決算の簡易判定では、社会福祉充実残額が発生する可能性があります（サンプル）。年度内に「充実残額」で算定しておくことをおすすめします。</span>
+      {onNavigate && <button type="button" className="ef-act" onClick={() => onNavigate('充実残額')} style={{ ...btn('#8a5a00', false, true), background: '#fff' }}>充実残額を開く</button>}
+      <button type="button" className="ef-act" onClick={hide} title="このログイン中は表示しません。表示自体を止めるときは環境設定（全区分共通）で切り替えます" style={{ ...btn('#8a5a00', false, true), background: '#fff' }}>今回は閉じる</button>
+    </div>
+  );
 }

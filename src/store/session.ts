@@ -55,6 +55,8 @@ export interface EnvSettings {
   supplementMode: '補正額' | '補正後予算額';
   /** 付箋の色の意味（全区分共通）。付箋ボタンのツールチップ・検索条件・印刷の絞り込みに表示する */
   fusenNames: Record<'赤' | '青' | '黄' | '緑', string>;
+  /** 充実残額発生の可能性の通知（全区分共通。依頼書 2.5「充実残額発生の可能性確認設定」）：伝票入力画面の上部に案内を出す */
+  sufficiencyNotice: boolean;
 }
 export const DEFAULT_ENV: EnvSettings = {
   confirmGeneral: true, confirmIncome: true, confirmExpense: true,
@@ -69,6 +71,7 @@ export const DEFAULT_ENV: EnvSettings = {
   negativePos: '前', backupDest: 'クラウド（標準）', backupFolder: '', bgMode: '色', bgColor: '#f3f6f9', bgColorRight: '#eef5fb', autoAmountFont: true,
   supplementMode: '補正額',
   fusenNames: { 赤: '要確認（内容に疑問）', 青: '保留・問い合わせ中', 黄: '決算時に見直す', 緑: '確認済み' },
+  sufficiencyNotice: true,
 };
 
 export interface InputSettings {
@@ -150,6 +153,8 @@ export interface Session {
   startScreen: 'ホーム' | '伝票入力';
   /** ホーム（ダッシュボード）に表示するメニュー。利用者が「表示させるメニューの編集」で切り替える */
   homeSections: Record<HomeSectionKey, boolean>;
+  /** 消費税対応（法人単位。依頼書 2.4：振替伝票形式・振替単一形式に税区分・税額の欄を出す）。事業者 › 会計方針で切替 */
+  taxEntry: boolean;
 }
 
 const KEY = 'proto-session-v2'; // v2：区分ツリーの見直し（入力区分／親区分）に伴い保存形式を更新
@@ -171,7 +176,7 @@ const DEFAULT: Session = {
   favorites: ['単一入力', '伝票入力', '仕訳一覧', '勘定元帳', '月次試算', '日次調査'],
   env: DEFAULT_ENV, input: DEFAULT_INPUT, print: DEFAULT_PRINT, templates: DEFAULT_TEMPLATES, allocations: DEFAULT_ALLOCATIONS, specialRates: DEFAULT_SPECIAL_RATES,
   ledgerTarget: null, journalTarget: null, auditEnabled: {}, corpStartDate: '20240401', corpTax: '非課税',
-  role: '入力可', options: { 小口現金: true, 減価償却: true, 預金出納: true, 収入支出: true, 電子印: false }, startScreen: 'ホーム', homeSections: DEFAULT_HOME_SECTIONS,
+  role: '入力可', options: { 小口現金: true, 減価償却: true, 預金出納: true, 収入支出: true, 電子印: false }, startScreen: 'ホーム', homeSections: DEFAULT_HOME_SECTIONS, taxEntry: false,
 };
 
 let state: Session = (() => {
