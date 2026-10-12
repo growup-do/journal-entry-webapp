@@ -55,8 +55,6 @@ export interface EnvSettings {
   supplementMode: '補正額' | '補正後予算額';
   /** 付箋の色の意味（全区分共通）。付箋ボタンのツールチップ・検索条件・印刷の絞り込みに表示する */
   fusenNames: Record<'赤' | '青' | '黄' | '緑', string>;
-  /** 充実残額発生の可能性の通知（全区分共通。依頼書 2.5「充実残額発生の可能性確認設定」）：伝票入力画面の上部に案内を出す */
-  sufficiencyNotice: boolean;
 }
 export const DEFAULT_ENV: EnvSettings = {
   confirmGeneral: true, confirmIncome: true, confirmExpense: true,
@@ -70,8 +68,7 @@ export const DEFAULT_ENV: EnvSettings = {
   noFurigana: false, printSpeed: false,
   negativePos: '前', backupDest: 'クラウド（標準）', backupFolder: '', bgMode: '色', bgColor: '#f3f6f9', bgColorRight: '#eef5fb', autoAmountFont: true,
   supplementMode: '補正額',
-  fusenNames: { 赤: '要確認（内容に疑問）', 青: '保留・問い合わせ中', 黄: '決算時に見直す', 緑: '確認済み' },
-  sufficiencyNotice: true,
+  fusenNames: { 赤: '', 青: '', 黄: '', 緑: '' },
 };
 
 export interface InputSettings {
@@ -88,6 +85,8 @@ export interface PrintCommon {
   pageStart: number;
   /** 備考・摘要（依頼書 3.2）：単位ごとに保持する（法人の決算書／拠点の決算書／サービス区分の資金収支計算書）。1つには統合しない */
   unitRemarks: Record<string, string>;
+  /** 帳票選択（旧 動作環境パネル「帳票選択」。確認メモ #49）：決算書・準決算書で使う様式。区分階層により省略できる様式は false にできる */
+  forms: Record<string, boolean>;
 }
 export const PRINT_ITEMS: [string, string][] = [
   ['zero', '0データを印刷しない'], ['shade', '費目行を網掛け、太字にする'], ['bold', '費目下を太線にする'], ['stamp', '捺印欄を印刷する'], ['corp', '法人名を印刷する'],
@@ -99,7 +98,7 @@ export const DEFAULT_PRINT: PrintCommon = {
   items: Object.fromEntries(PRINT_ITEMS.map(([k]) => [k, ['zero', 'shade', 'corp', 'autofont', 'page', 'date'].includes(k)])),
   offsetX: 0, offsetY: 0, widthName: 60, widthAmount: 28, fontHeader: 'Noto Sans JP 11pt', fontName: 'Noto Sans JP 9pt', fontAmount: 'Noto Sans JP 9pt',
   stamps: ['理事長', '園長', '事務長', ''], footnotes: {},
-  pageStart: 1, unitRemarks: {},
+  pageStart: 1, unitRemarks: {}, forms: {},
 };
 
 /* ---------- 定型仕訳・自動按分 ---------- */
@@ -233,4 +232,5 @@ export const canReorder = (s: Session) => s.role === '入力可' && startKindOf(
 export const editBlockReason = (s: Session) => (s.role !== '入力可' ? '参照のみの権限のため操作できません' : startKindOf(s) === '合算区分' ? '合算区分で起動中のため操作できません（内訳の確認用）' : startKindOf(s) === '親区分' ? '親区分で起動中のため操作できません（伝票は入力区分で登録します）' : '');
 
 /** 付箋の表示名：「赤（要確認）」のように色と意味を並べる。意味は環境設定の「付箋の色の意味」で変更できる */
-export const fusenLabel = (f: string): string => (f ? `${f}（${getSession().env.fusenNames[f as '赤' | '青' | '黄' | '緑'] ?? ''}）` : 'なし');
+/** 付箋の表示名：色＋（意味）。意味は環境設定で任意に付ける（既定は空。確認メモ #49：利用者が自由に使い分けているため） */
+export const fusenLabel = (f: string): string => { if (!f) return 'なし'; const n = getSession().env.fusenNames[f as '赤' | '青' | '黄' | '緑'] ?? ''; return n ? `${f}（${n}）` : f; };

@@ -114,7 +114,7 @@ export function CarryoverJudgmentPage({ variant, accent, onNavigate }: Maintenan
   const judge = (over: boolean, yes: string, no: string) => <span style={{ color: over ? '#c0392b' : '#1f7a52' }}>{over ? yes : no}</span>;
 
   return (
-    <SettingsShell variant={variant} title="繰越判断の基準" badge="マスター設定" draft={false} desc="委託費の繰越・積立に関する判断（収支分析表の提出、高額繰越、前期末支払資金残高の取り扱い、取崩しの事前協議）の基準となる科目と端数処理を設定します。設定した内容は、決算チェック・収支分析表の印刷で使います。" actions={<>
+    <SettingsShell variant={variant} title="繰越判断の基準" badge="マスター設定" draft={false} desc="決算書（月次決算）の「繰越判断」ボタンからも開きます（旧 F10 繰越）。委託費の繰越・積立に関する判断（収支分析表の提出、高額繰越、前期末支払資金残高の取り扱い、取崩しの事前協議）の基準となる科目と端数処理を設定します。設定した内容は、決算チェック・収支分析表の印刷で使います。" actions={<>
       <button type="button" className="btn-outline" onClick={() => setNoticeOpen(true)} style={btn()}>関連資料（通知文）</button>
       <button type="button" className="submit-btn" onClick={() => toast.show(`「${tab}」の基準を保存しました`)} style={btn(accent, true)}>設定を保存</button>
     </>}>

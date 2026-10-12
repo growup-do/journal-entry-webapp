@@ -1,6 +1,6 @@
 // 試算表（月次試算）／決算書（月次決算）（共通部品）
 //   骨格は ReportShell 共通：集計期間（月）＋部の切替（右上のボタン／← → キー）→ 表示切替 → 一覧。
-//   表示切替＝表示階層（大区分〜細々区分）・行の配色パターン（5種）・表示列・内訳（合算区分・親区分で起動時）。
+//   表示切替＝表示階層（大区分〜細々区分、就労授産＝細々区分の下に就労支援事業の科目を結合して表示）・行の配色パターン（5種。確認メモ #28 の定義）・表示列・内訳（合算区分・親区分で起動時）。
 //   決算書のみ「残高グラフ」「収支分析」（収支分析は合算区分では使えない）。
 //   科目行から元帳へドリルダウン：画面遷移せず右側の元帳パネルに表示（押した行を見たまま内訳を確認。別の行を押すと差し替わる）。
 //   パネルの「元帳の画面で開く」で全画面の元帳へ移り、その「← 戻る」で同じ月・部・階層に戻る（表示状態は sessionStorage に保持）。
@@ -13,24 +13,28 @@ import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { CHECK, LABEL, NUM, ReportShell, Segmented, SwitchPill, TD, TH, pct, useMoney, useViewState } from './ReportShell';
 import { BS_ASSET_ROWS, displayName, type HierRow } from '../data';
 import { grandTotal, rollup } from '../lib/hier';
+import { metaOf } from '../lib/accounts';
+import { WATCHED } from './EntryCommon';
 import { Modal } from './Modal';
 import { divisionLabel, flattenDivisions, startKindOf, useSession, type Session } from '../store/session';
 import { LedgerDrawer, useLedgerDrawer } from './LedgerDrawer';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 
 const PARTS = ['資産の部', '負債の部', '事業活動', '資金の部'];
-const DEPTHS = ['大区分', '中区分', '小区分', '細区分', '細々区分'] as const;
+/** 表示階層。「就労授産」は細々区分より下の扱い（就労支援事業の科目を特定の項目・科目の子として結合表示。確認メモ #28） */
+const DEPTHS = ['大区分', '中区分', '小区分', '細区分', '細々区分', '就労授産'] as const;
 const PATTERNS = ['標準', '科目項目', '資金', '内部', '寄附補助'] as const;
 type Depth = (typeof DEPTHS)[number];
 type Pattern = (typeof PATTERNS)[number];
 
 /** 配色パターンごとの塗り分け（凡例にも使う） */
+/** 配色パターンごとの塗り分け（凡例にも使う）。塗り分けの基準はクライアント回答（確認メモ #28）に合わせる */
 const PATTERN_INFO: Record<Pattern, { color: string; note: string; test: (name: string, leaf: boolean) => boolean }> = {
-  標準: { color: '#f3f6f9', note: '大区分の行を薄く塗り、1行おきに縞模様', test: () => false },
-  科目項目: { color: '#fff1b8', note: '黄＝項目（集計行）／白＝科目', test: (_n, leaf) => !leaf },
-  資金: { color: '#d8f0f5', note: '水色＝支払資金に関わる科目', test: (n, leaf) => leaf && /現金|預金|未収|貯蔵|立替|前払|仮払|未払|預り/.test(n) },
-  内部: { color: '#fbe3c4', note: '橙＝内部取引の科目（区分間の貸付・繰入など）', test: (n) => /区分間|拠点間|内部/.test(n) },
-  寄附補助: { color: '#e9defa', note: '紫＝寄附金・補助金に関わる科目', test: (n) => /補助|寄附/.test(n) },
+  標準: { color: '#f3f6f9', note: '1行おきに交互に色を変える', test: () => false },
+  科目項目: { color: '#fff1b8', note: '黄＝項目（親）／白＝科目（子）を判別', test: (_n, leaf) => !leaf },
+  資金: { color: '#d8f0f5', note: '水色＝科目マスターの「資金処理区分」が資金の科目（白＝非資金）', test: (n, leaf) => { const m = metaOf(n); return leaf && !!m && (m.cls === '現預金' || m.cls === '費用' || m.cls === '収益'); } },
+  内部: { color: '#fbe3c4', note: '橙＝科目マスターの「内部取引」が通常取引以外の科目', test: (n) => /区分間|拠点間|内部/.test(n) },
+  寄附補助: { color: '#e9defa', note: '紫＝決算附属明細書設定で寄附金収益明細書・補助金事業等収益明細書の科目にチェックのある科目', test: (n) => WATCHED.filter((w) => w.key === 'kifu' || w.key === 'hojo').some((w) => w.test.test(n)) },
 };
 
 /** サンプル：配色パターン（内部／寄附補助）を確認できるよう、資産の部に該当科目の金額を補う */
@@ -127,7 +131,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
   const drawer = useLedgerDrawer(KEY);
   const openLedger = (name: string) => drawer.open({ account: name, month: view.month, kind: 'account', from: KEY });
   const picked = (name: string) => !drawer.collapsed && drawer.target?.account === name;
-  const rowBg = (r: { name: string; level: number; leaf: boolean }, i: number) => (view.pattern === '標準' ? (r.level === 0 ? '#f3f6f9' : i % 2 ? '#fbfcfd' : 'transparent') : info.test(r.name, r.leaf) ? info.color : 'transparent');
+  const rowBg = (r: { name: string; level: number; leaf: boolean }, i: number) => (view.pattern === '標準' ? (i % 2 ? '#f3f6f9' : 'transparent') : info.test(r.name, r.leaf) ? info.color : 'transparent');
   const linkBtn: CSSProperties = { marginLeft: 10, padding: '1px 8px', borderRadius: 6, border: '1px solid #dde4ea', background: '#fff', color: accent, fontSize: 10.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' };
   const analysisBlocked = kind === '合算区分';
 
@@ -144,6 +148,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
         { label: '残高グラフ', onClick: () => setGraph(true) },
         { label: '収支分析', onClick: () => setAnalysis(true), disabled: analysisBlocked, title: analysisBlocked ? '合算区分で起動中のため収支分析は使えません。単独の区分（入力区分・拠点区分など）で起動すると使えます' : '収入・支出の構成と比率を表示します' },
         { label: '充実残額', onClick: () => onNavigate('充実残額') },
+        { label: '繰越判断', onClick: () => onNavigate('繰越判断'), title: '委託費の繰越・積立の判断（繰越判断の基準）を開きます（旧 F10 繰越）' },
       ] : []}
       period={
         <>
@@ -165,6 +170,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
       switches={
         <>
           <Segmented label="表示階層" items={DEPTHS} value={view.depth} onChange={(d) => setView({ depth: d })} accent={accent} />
+          {view.depth === '就労授産' && <span style={{ fontSize: 11.5, color: '#7a8794' }}>就労支援事業の科目を、特定の項目・科目の子として結合して表示します（サンプルには就労支援事業の科目がありません）</span>}
           <Segmented label="行の配色" items={PATTERNS} value={view.pattern} onChange={(p) => setView({ pattern: p })} accent={accent} />
           <SwitchPill label="内訳（区分ごと）" on={members.length > 0 && view.breakdown} onChange={(v) => setView({ breakdown: v })} accent={accent} disabled={members.length === 0} title={members.length === 0 ? `入力区分（${s.division}）で起動中は内訳がないため切り替えできません。合算区分または親区分（法人・事業区分・拠点区分）で起動すると、区分ごとの金額を表示できます` : '区分ごとの金額の列を表示します'} />
         </>

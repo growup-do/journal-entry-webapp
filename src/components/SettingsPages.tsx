@@ -107,6 +107,7 @@ const MASTERS: Record<string, MasterConfig> = {
 
 function MasterPage({ variant, accent, label, tabs }: { variant: 'form' | 'sheet'; accent: string; label: string; tabs?: ReactNode }) {
   const cfg = MASTERS[label];
+  const sess = useSession();
   const [rows, setRows] = useState<Row[]>(() => cfg.rows.map((r, i) => ({ ...r, _id: String(i + 1), _on: '1' })));
   const [q, setQ] = useState('');
   const [edit, setEdit] = useState<Row | null>(null);
@@ -159,6 +160,13 @@ function MasterPage({ variant, accent, label, tabs }: { variant: 'form' | 'sheet
     </>}>
       <ToastView msg={toast.msg} />
       {tabs}
+      {label === '税区分' && (
+        /* 旧 保守メニュー＞動作環境＞消費税動作環境（確認メモ #55）：消費税対応の切替。振替伝票形式・振替単一形式に税区分・税額の欄を出す。法人単位の設定 */
+        <div data-tax-entry style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 22px', background: '#f8fafc', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
+          <Toggle on={sess.taxEntry} onChange={(x) => { setSession({ taxEntry: x }); toast.show(x ? '振替伝票形式・振替単一形式に税区分・税額の欄を表示します' : '税区分・税額の欄を非表示にしました'); }} accent={accent} label="消費税対応（振替伝票形式・振替単一形式に税区分・税額の欄を表示する）" />
+          <span style={{ fontSize: 11.5, color: '#7a8794' }}>旧「消費税動作環境」。消費税の申告が必要な法人で有効にします。税率は下の税区分ごとに持ち、税額は 金額 × 税率 ÷（100 ＋ 税率）の切り捨てで計算します（手入力で変更可）。</span>
+        </div>
+      )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 22px', borderBottom: '1px solid #eef2f5' }}>
         <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="検索" autoComplete="off" style={{ ...input, width: 260 }} />
         <span style={{ marginLeft: 'auto', fontSize: 12, color: '#8895a3' }}>{list.length} 件（無効 {rows.filter((r) => r._on !== '1').length}）</span>
@@ -229,7 +237,6 @@ function MasterPage({ variant, accent, label, tabs }: { variant: 'form' | 'sheet
 /* ---------------- 事業者 ---------------- */
 function OrgPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: string }) {
   const toast = useToast();
-  const sess = useSession();
   const [f, setF] = useState({ name: '社会福祉法人 チャイルド保育園', kana: 'シャカイフクシホウジン チャイルドホイクエン', no: '1234567890123', zip: '100-0001', addr: '東京都千代田区千代田1-1-1', tel: '03-0000-0000', rep: '園長 太郎', fyStart: '4月1日', fyEnd: '3月31日', std: '社会福祉法人会計基準（令和8年度）', rounding: '切り捨て', tax: '税込経理' });
   const [sites, setSites] = useState([{ code: '01', name: '本部', kind: '法人本部' }, { code: '02', name: 'チャイルド保育園', kind: '保育所' }]);
   const [tab, setTab] = useState('法人情報');
@@ -263,11 +270,6 @@ function OrgPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: strin
               <div style={{ gridColumn: 'span 2' }}><span style={lbl}>適用する会計基準</span><select value={f.std} onChange={(e) => set('std', e.target.value)} style={input}><option>社会福祉法人会計基準（令和8年度）</option><option>社会福祉法人会計基準（令和7年度）</option></select></div>
               <div><span style={lbl}>端数処理</span><select value={f.rounding} onChange={(e) => set('rounding', e.target.value)} style={input}>{['切り捨て', '四捨五入', '切り上げ'].map((o) => <option key={o}>{o}</option>)}</select></div>
               <div><span style={lbl}>消費税の経理方式</span><select value={f.tax} onChange={(e) => set('tax', e.target.value)} style={input}>{['税込経理', '税抜経理'].map((o) => <option key={o}>{o}</option>)}</select></div>
-              {/* 消費税対応（依頼書 2.4）：振替伝票形式・振替単一形式に税区分・税額の欄を出す。法人単位の設定 */}
-              <div style={{ gridColumn: 'span 2', paddingTop: 6, borderTop: '1px solid #eef2f5' }} data-tax-entry>
-                <Toggle on={sess.taxEntry} onChange={(x) => { setSession({ taxEntry: x }); toast.show(x ? '振替伝票形式・振替単一形式に税区分・税額の欄を表示します' : '税区分・税額の欄を非表示にしました'); }} accent={accent} label="消費税対応（振替伝票形式・振替単一形式に税区分・税額の欄を表示する）" />
-                <div style={{ fontSize: 11.5, color: '#9aa5b1', marginTop: 4 }}>消費税の申告が必要な法人で有効にします。税区分の候補は「税区分」画面で管理し、資金元帳の「消費税表示」にも使います。</div>
-              </div>
             </div>
           </div>
           <div style={card}>

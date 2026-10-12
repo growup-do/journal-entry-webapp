@@ -34,6 +34,8 @@ interface Row {
   tekiyo: string;
   /** 税区分（消費税対応の法人のみ。空＝科目からの既定） */
   tax?: string;
+  /** 税額の手入力（未指定＝自動計算。端数の調整用。確認メモ #55） */
+  taxAmt?: string;
   shohyo: boolean;
   check: boolean;
   fusen: FusenColor;
@@ -493,12 +495,12 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                       <div className="pp-cell" style={{ ...cell, padding: '4px 8px', gridColumn: 'span 2', background: bg }} onKeyDownCapture={(e) => { if (e.key === 'Enter' && e.shiftKey && !isIme(e)) { e.preventDefault(); e.stopPropagation(); rowAddAfter(i); } }}>
                         <ComboField id={fid(i, 't')} kind="summary" freeText value={r.tekiyo} onChange={(x) => setRow(i, { tekiyo: x })} onCommit={() => afterTekiyo()} placeholder="摘要（任意）" listWidth={320} fontSize={12.5} padY={5} disabled={ro} />
                       </div>
-                      {/* 消費税対応の法人のみ：税区分・税額（依頼書 2.4。事業者 › 会計方針で切替） */}
+                      {/* 消費税対応の法人のみ：税区分・税額（依頼書 2.4。税区分の画面「消費税対応」で切替） */}
                       <div className="pp-cell" style={{ ...cell, padding: '4px 8px', background: bg, display: 'flex', alignItems: 'center', gap: 6 }}>
                         {sess.taxEntry && <><span style={{ fontSize: 11, fontWeight: 700, color: PAPER.ink, flex: 'none' }}>税区分</span><select data-tax-kind aria-label={`${i + 1}行目 税区分`} disabled={ro} value={r.tax || taxDefault(r)} onChange={(e) => setRow(i, { tax: e.target.value })} className="ef-input pp-input" style={{ fontSize: 12, padding: '3px 4px', minWidth: 0, flex: 1 }}>{TAX_OPTS.map((o) => <option key={o}>{o}</option>)}</select></>}
                       </div>
                       <div className="pp-cell pp-num" style={{ ...cell, padding: '4px 8px', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
-                        {sess.taxEntry && <><span style={{ fontSize: 11, fontWeight: 700, color: PAPER.ink }}>税額</span><span data-tax-amount style={{ fontSize: 12.5, fontVariantNumeric: 'tabular-nums', color: '#48565f' }}>{taxAmountOf(r.tax || taxDefault(r), Math.max(toNum(r.kariAmt), toNum(r.kashiAmt))).toLocaleString('ja-JP')}</span></>}
+                        {sess.taxEntry && <><span style={{ fontSize: 11, fontWeight: 700, color: PAPER.ink }}>税額</span><input data-tax-amount aria-label={`${i + 1}行目 税額`} disabled={ro} className="ef-input pp-input" inputMode="numeric" value={fmtNum(r.taxAmt ?? String(taxAmountOf(r.tax || taxDefault(r), Math.max(toNum(r.kariAmt), toNum(r.kashiAmt)))))} onChange={(e) => setRow(i, { taxAmt: e.target.value.replace(/[^0-9]/g, '') })} onBlur={() => { if (r.taxAmt === '') setRow(i, { taxAmt: undefined }); }} title="金額 × 税率 ÷（100 ＋ 税率）の切り捨てで自動計算。端数の調整は手入力で変更できます（空にすると自動計算に戻ります）" style={{ width: 90, textAlign: 'right', fontSize: 12.5, padding: '3px 6px', color: r.taxAmt != null ? '#22303c' : '#48565f' }} /></>}
                       </div>
                     </div>
                   );

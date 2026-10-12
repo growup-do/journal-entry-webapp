@@ -4,8 +4,9 @@
 //   表示切替＝摘要／業者・区分色・区分名（区分色・区分名は合算区分・親区分で起動したときに有効）。
 //   CSV出力・検索条件・検索合計・貸借の色付けは画面上のボタン／表示（依頼書 5.4.3）。
 //   旧 伝票メニューの「インポート伝票一括削除」「自動按分伝票一括削除」は右上の「一括削除 ▾」（依頼書 2.3／6.4）。
+//   一括削除は年度内の全件が対象で、取込・按分の実行単位（GUID）ごとに消す（確認メモ #56）。
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { BizSwitch, useDivisionTools } from './DivisionTools';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
@@ -14,7 +15,8 @@ import { NUM, ReportShell, SwitchPill, TD, TH, useMoney } from './ReportShell';
 import { ACTION_HEAD, ACTION_TH, useRowActions } from './RowActions';
 import { ToastView, useToast } from './Toast';
 import { AdvancedSearchModal, DeleteVoucherModal, EMPTY_COND, applyCond, condActive, type SearchCond } from './VoucherEdit';
-import { SelectionBar, btn } from './ui';
+import { Notice, SelectionBar, btn } from './ui';
+import { Modal } from './Modal';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { displayName } from '../data';
 import { useVouchers, type Voucher } from '../store/journalStore';
@@ -81,13 +83,10 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
     setLastIdx(idx);
   };
   const selectable = ra.editable;
-  /** 一括削除（インポート伝票／自動按分伝票）：表示中の期間・絞り込みの中から対象行を選び、通常の削除確認に渡す */
-  const bulkPick = (src: NonNullable<Voucher['source']>) => {
-    setBulkOpen(false);
-    const ids = rows.filter((r) => r.source === src).map((r) => r.id);
-    if (ids.length === 0) return toast.show(`表示中の期間に${src}伝票はありません（月タブを「全月」にすると全期間が対象になります）`);
-    setSel(ids); setDelOpen(true);
-  };
+  /** 一括削除（インポート伝票／自動按分伝票）：年度内の全件から取込・按分の実行単位を選び、通常の削除確認に渡す */
+  const [bulkSrc, setBulkSrc] = useState<NonNullable<Voucher['source']> | null>(null);
+  const bulkPick = (src: NonNullable<Voucher['source']>) => { setBulkOpen(false); setBulkSrc(src); };
+  const bulkConfirm = (ids: number[]) => { setBulkSrc(null); setSel(ids); setDelOpen(true); };
   const colCount = 5 + (dt.nameOn ? 1 : 0) + 1 + (selectable ? 1 : 0);
 
   return (
@@ -162,7 +161,7 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
               <tr key={r.id} data-voucher={r.id} data-selected={sel.includes(r.id) || undefined} onDoubleClick={() => ra.openEdit(r)} onClick={(e) => { if (selectable && (e.shiftKey || e.metaKey || e.ctrlKey)) { e.preventDefault(); toggleSel(r.id, idx, e.shiftKey); } }} title={ra.editable ? 'ダブルクリックで伝票を訂正' : undefined} style={{ cursor: ra.editable ? 'pointer' : 'default', background: sel.includes(r.id) ? '#fff7cc' : dt.rowBg(r) }}>
                 {selectable && <td style={{ ...TD, textAlign: 'center' }} onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}><input type="checkbox" checked={sel.includes(r.id)} onChange={() => undefined} onClick={(e) => toggleSel(r.id, idx, e.shiftKey)} aria-label={`Seq ${r.seq} を選択`} /></td>}
                 <td style={TD}><div style={{ fontWeight: 700 }}>{dt.chip(r)}{r.seq}</div></td>
-                <td style={TD}><div style={{ fontSize: 10.5, color: '#9aa5b1' }}>{r.kind}{r.source && <span data-source={r.source} title={r.source === '自動按分' ? '自動按分で登録した伝票' : '銀行CSVなどから取り込んだ伝票'} style={{ marginLeft: 3, padding: '0 4px', borderRadius: 4, background: '#eef2f5', color: '#5b6773', fontWeight: 700 }}>{r.source === '自動按分' ? '按分' : r.source}</span>}</div><div>{r.date}</div></td>
+                <td style={TD}><div style={{ fontSize: 10.5, color: '#9aa5b1' }}>{r.kind}{r.source && <span data-source={r.source} title={r.source === '自動按分' ? `自動按分で登録した伝票（${r.from ?? ''}）` : `別システムから取り込んだ伝票（${r.from ?? ''}）`} style={{ marginLeft: 3, padding: '0 4px', borderRadius: 4, background: '#eef2f5', color: '#5b6773', fontWeight: 700 }}>{r.source === '自動按分' ? '按分' : r.source}</span>}</div><div>{r.date}</div></td>
                 <td style={TD}>{r.no}</td>
                 {dt.nameOn && <td style={TD}>{dt.nameTag(r)}</td>}
                 <td style={TD}>
@@ -181,6 +180,7 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
         </table>
       </div>
       {ra.modals}
+      {bulkSrc && <BulkDeleteModal src={bulkSrc} all={all} onClose={() => setBulkSrc(null)} onConfirm={bulkConfirm} />}
       {delOpen && <DeleteVoucherModal rows={all.filter((r) => sel.includes(r.id))} multi onClose={() => setDelOpen(false)} onDeleted={() => { toast.show(`${sel.length} 行の仕訳を削除しました`); setSel([]); }} />}
       <AdvancedSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} cond={cond} onApply={setCond} accent={accent} />
       <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
@@ -189,7 +189,7 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
   );
 }
 
-/** 旧 伝票メニューの「インポート伝票一括削除」「自動按分伝票一括削除」（依頼書 2.3／6.4）。対象の行を選んで「選択した仕訳の削除」の確認に渡す。入力内容を持たないメニューなので Esc で閉じてよい */
+/** 旧 伝票メニューの「インポート伝票一括削除」「自動按分伝票一括削除」（依頼書 2.3／6.4）。取込・按分の単位を選ぶ画面を開く。入力内容を持たないメニューなので Esc で閉じてよい */
 function BulkDeleteMenu({ open, onToggle, onPick }: { open: boolean; onToggle: () => void; onPick: (src: NonNullable<Voucher['source']>) => void }) {
   useEffect(() => {
     if (!open) return;
@@ -203,15 +203,62 @@ function BulkDeleteMenu({ open, onToggle, onPick }: { open: boolean; onToggle: (
       <button type="button" onClick={onToggle} aria-expanded={open} aria-haspopup="menu" title="インポート伝票・自動按分伝票をまとめて削除します" style={btn('#c0392b', false, true)}>一括削除 ▾</button>
       {open && (
         <div role="menu" style={{ position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 40, minWidth: 280, background: '#fff', border: '1px solid #e2e8ee', borderRadius: 10, boxShadow: '0 10px 30px rgba(20,30,40,.14)', padding: 6 }}>
-          <div style={{ padding: '4px 10px 6px', fontSize: 11, color: '#8290a0', lineHeight: 1.6 }}>表示中の期間・絞り込みの中から対象を選び、確認画面で削除します（削除した仕訳は元に戻せません）</div>
+          <div style={{ padding: '4px 10px 6px', fontSize: 11, color: '#8290a0', lineHeight: 1.6 }}>年度内の全件から、取込・按分の実行単位を選んで削除します（削除した仕訳は元に戻せません）</div>
           {(['インポート', '自動按分'] as const).map((src) => (
             <button key={src} type="button" role="menuitem" data-bulk-src={src} onClick={() => onPick(src)} style={item}>
               {src}伝票を一括削除
-              <span style={{ display: 'block', fontSize: 11, color: '#8290a0', fontWeight: 500 }}>{src === 'インポート' ? '銀行CSVなどから取り込んだ伝票（行に「インポート」の印）' : '自動按分で登録した伝票（行に「按分」の印）'}</span>
+              <span style={{ display: 'block', fontSize: 11, color: '#8290a0', fontWeight: 500 }}>{src === 'インポート' ? '小口現金・預金出納・減価償却・AI自動仕訳・給与などから取り込んだ伝票（行に「インポート」の印）' : '自動按分で登録した伝票（行に「按分」の印）'}</span>
             </button>
           ))}
         </div>
       )}
     </span>
+  );
+}
+
+/** 一括削除の対象を選ぶ：年度内のインポート伝票／自動按分伝票を、取込・按分の実行単位（既存の GUID）ごとに一覧し、選んだ単位の全件を削除確認へ渡す（確認メモ #56） */
+function BulkDeleteModal({ src, all, onClose, onConfirm }: { src: NonNullable<Voucher['source']>; all: Voucher[]; onClose: () => void; onConfirm: (ids: number[]) => void }) {
+  const money = useMoney();
+  const groups = useMemo(() => {
+    const map = new Map<string, Voucher[]>();
+    all.filter((r) => r.source === src).forEach((r) => { const k = r.batch ?? 'none'; map.set(k, [...(map.get(k) ?? []), r]); });
+    return Array.from(map.entries()).map(([batch, rows]) => ({ batch, rows, from: rows[0].from ?? src, first: rows[0].date, last: rows[rows.length - 1].date, total: rows.reduce((a, r) => a + r.amount, 0) }));
+  }, [all, src]);
+  const [picked, setPicked] = useState<string[]>([]);
+  const ids = groups.filter((g) => picked.includes(g.batch)).flatMap((g) => g.rows.map((r) => r.id));
+  const th: CSSProperties = { ...TH, whiteSpace: 'nowrap' };
+  return (
+    <Modal open onClose={onClose} width={760} title={`${src}伝票の一括削除`}>
+      <div data-bulk-delete-modal style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
+        <Notice tone="warn">{src === 'インポート' ? '別システム（小口現金・預金出納・減価償却・AI自動仕訳・給与など）から取り込んだ伝票を、取込の単位ごとに年度内の全件まとめて削除します。' : '自動按分で登録した伝票を、実行の単位ごとに年度内の全件まとめて削除します。'}<b style={{ color: '#c0392b' }}>削除した仕訳は元に戻せません。</b></Notice>
+        {groups.length === 0 ? (
+          <div style={{ padding: 24, textAlign: 'center', color: '#9aa5b1', fontSize: 13 }}>この年度に{src}伝票はありません。</div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead><tr><th style={{ ...th, width: 34 }}><input type="checkbox" aria-label="すべて選択" checked={picked.length === groups.length} onChange={() => setPicked(picked.length === groups.length ? [] : groups.map((g) => g.batch))} /></th><th style={th}>{src === 'インポート' ? '取込元' : '按分テンプレート'}</th><th style={th}>{src === 'インポート' ? '取込' : '実行'}の単位</th><th style={th}>期間</th><th style={{ ...th, textAlign: 'right' }}>件数</th><th style={{ ...th, textAlign: 'right' }}>合計金額</th></tr></thead>
+            <tbody>
+              {groups.map((g) => { const on = picked.includes(g.batch); return (
+                <tr key={g.batch} data-batch={g.batch} onClick={() => setPicked((p) => (on ? p.filter((x) => x !== g.batch) : [...p, g.batch]))} style={{ cursor: 'pointer', background: on ? '#fff7cc' : undefined }}>
+                  <td style={{ ...TD, textAlign: 'center' }}><input type="checkbox" checked={on} onChange={() => undefined} aria-label={`${g.from} ${g.first} を選択`} /></td>
+                  <td style={TD}><b>{g.from}</b></td>
+                  <td style={{ ...TD, fontSize: 11.5, color: '#7a8794', fontFamily: 'ui-monospace, monospace' }}>{g.batch}</td>
+                  <td style={TD}>令和8年 {g.first} 〜 {g.last}</td>
+                  <td style={NUM}>{g.rows.length} 件</td>
+                  <td style={NUM}>{money(g.total)}</td>
+                </tr>
+              ); })}
+            </tbody>
+          </table>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 12.5, color: '#48565f' }}>{picked.length} 単位・{ids.length} 件を選択中</span>
+          <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+            <button type="button" onClick={onClose} style={btn()}>キャンセル</button>
+            <button type="button" className="submit-btn" disabled={ids.length === 0} onClick={() => onConfirm(ids)} style={{ ...btn('#c0392b', true), opacity: ids.length === 0 ? 0.5 : 1 }} data-bulk-confirm>選択した {ids.length} 件の削除確認へ</button>
+          </span>
+        </div>
+        <div style={{ fontSize: 11.5, color: '#9aa5b1' }}>次の画面で対象の仕訳を確認してから削除します（通常の「選択した仕訳の削除」と同じ流れ）。</div>
+      </div>
+    </Modal>
   );
 }

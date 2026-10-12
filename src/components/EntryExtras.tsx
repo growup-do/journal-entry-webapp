@@ -463,7 +463,7 @@ export function useEntryTools(o: EntryToolsOptions) {
       }
     />
   );
-  const banner: ReactNode = <><ReadOnlyBanner reason={reason} /><SufficiencyNotice onNavigate={o.onNavigate} /></>;
+  const banner: ReactNode = <ReadOnlyBanner reason={reason} />;
 
   const why = (t: string) => (ro ? reason : t);
   /** 伝票登録ボタン（各形式の入力欄の中に置く。伝票の操作グループは廃止） */
@@ -517,7 +517,9 @@ export function useEntryTools(o: EntryToolsOptions) {
         onClose={() => setDlg(null)}
         accent={o.accent}
         onRegister={(rows, date) => {
-          const ids = rows.map((r) => addVoucher({ kind: FORMAT_KIND[o.format], date, kari: r.kari, kashi: r.kashi, tekiyo: `${r.tekiyo}（${r.division.split(' ')[1] ?? r.division}）`, amount: r.amount, service: r.division, shohyo: true, source: '自動按分' }).id);
+          // 実行ごとに固有のID（既存の GUID に相当）。一括削除はこの単位で行う（確認メモ #56）
+          const runId = 'alloc-' + Date.now().toString(36);
+          const ids = rows.map((r) => addVoucher({ kind: FORMAT_KIND[o.format], date, kari: r.kari, kashi: r.kashi, tekiyo: `${r.tekiyo}（${r.division.split(' ')[1] ?? r.division}）`, amount: r.amount, service: r.division, shohyo: true, source: '自動按分', from: '自動按分', batch: runId }).id);
           o.onRegistered?.(ids);
           o.toast(`自動按分：${rows.length} 枚の伝票を登録しました`);
         }}
@@ -539,20 +541,4 @@ export function useEntryTools(o: EntryToolsOptions) {
   );
 
   return { topBar, banner, actionBar, submitButton, templateButton, fundSwitch, internalSwitch, dialogs, editable, reason, viewOnly, openEdit: (v: Voucher) => setEdit(v), openDelete: (rows: Voucher[]) => setDel(rows) };
-}
-
-/** 充実残額発生の可能性の通知（依頼書 2.5「充実残額発生の可能性確認設定」）。環境設定（全区分共通）で切り替える。サンプルでは常に「可能性あり」 */
-function SufficiencyNotice({ onNavigate }: { onNavigate?: (label: string) => void }) {
-  const s = useSession();
-  const [hidden, setHidden] = useState(() => { try { return sessionStorage.getItem('proto-sufficiency-hidden') === '1'; } catch { return false; } });
-  if (!s.env.sufficiencyNotice || hidden) return null;
-  const hide = () => { try { sessionStorage.setItem('proto-sufficiency-hidden', '1'); } catch { /* ignore */ } setHidden(true); };
-  return (
-    <div data-sufficiency-notice style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 14px', background: '#fff7e6', borderBottom: '1px solid #f3d9b0', fontSize: 12, color: '#8a5a00' }}>
-      <b style={{ flex: 'none' }}>充実残額発生の可能性</b>
-      <span style={{ flex: 1, minWidth: 0 }}>前年度決算の簡易判定では、社会福祉充実残額が発生する可能性があります（サンプル）。年度内に「充実残額」で算定しておくことをおすすめします。</span>
-      {onNavigate && <button type="button" className="ef-act" onClick={() => onNavigate('充実残額')} style={{ ...btn('#8a5a00', false, true), background: '#fff' }}>充実残額を開く</button>}
-      <button type="button" className="ef-act" onClick={hide} title="このログイン中は表示しません。表示自体を止めるときは環境設定（全区分共通）で切り替えます" style={{ ...btn('#8a5a00', false, true), background: '#fff' }}>今回は閉じる</button>
-    </div>
-  );
 }

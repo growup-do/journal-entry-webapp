@@ -17,7 +17,7 @@ import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { LoadDivisionSettings } from './DivisionSettingsLoad';
 import { ACCOUNT_META } from '../lib/accounts';
 import { ACCOUNTS, displayName } from '../data';
-import { PRINT_ITEMS, divisionLabel, flattenDivisions, fusenLabel, setSession, startKindOf, useSession, type EnvSettings, type PrintCommon, type Session } from '../store/session';
+import { PRINT_ITEMS, divisionLabel, flattenDivisions, fusenLabel, setSession, startKindOf, useSession, type EnvSettings, type PrintCommon, type Session, type DivisionNode } from '../store/session';
 
 /** 印刷・出力に使う表データ（各画面の実データ、または帳票ごとのサンプル） */
 export interface TableData { header: string[]; rows: (string | number)[][]; }
@@ -170,7 +170,7 @@ const DESTS: { out: string; label: string; desc: string; action: string }[] = [
   { out: OUTPUTS[3], label: 'Excel', desc: 'Excel ファイルとして保存します', action: 'Excelで保存' },
   { out: OUTPUTS[2], label: 'CSV', desc: 'エクセル互換（カンマ区切り）で保存します', action: 'CSVで保存' },
 ];
-const DEPTHS = ['大区分まで印刷', '中区分まで印刷', '小区分まで印刷', '細区分まで印刷', '細々区分まで印刷'];
+const DEPTHS = ['大区分まで印刷', '中区分まで印刷', '小区分まで印刷', '細区分まで印刷', '細々区分まで印刷', '就労授産まで印刷'];
 const FONTS = ['Noto Sans JP 9pt', 'Noto Sans JP 10pt', 'Noto Sans JP 11pt', 'Noto Serif JP 10pt', 'ＭＳ 明朝 10pt', 'ＭＳ ゴシック 10pt'];
 /** 備考・摘要設定を保持する単位（依頼書 3.2：1つには統合しない） */
 export const REMARK_UNITS = ['法人の決算書', '拠点の決算書', 'サービス区分の資金収支計算書'];
@@ -319,6 +319,12 @@ export function PrintFlow({ report, accent, data, onPreview, onClose, lockReport
               </div>
               <div style={{ fontSize: 11.5, color: '#8290a0', marginTop: 4 }}>印刷する区分を変える場合は、画面上部の区分の切替で区分を選び直します。</div>
             </div>
+            {report.cat === '決算書' && (
+              <div data-forms-in-use>
+                <span style={lbl}>印刷する様式（「共通の印刷設定 › 帳票選択」で使用にした様式）</span>
+                <div style={{ fontSize: 12.5, lineHeight: 1.8 }}>{FORM_GROUPS.flatMap((g) => g.items).filter((it) => formEnabled(s.print.forms, it.key, s.tree)).map((it) => it.name).join('／')}</div>
+              </div>
+            )}
             {(report.cat === '仕訳日記帳' || report.cat === '元帳') && (
               <div>
                 <span style={lbl}>チェック・付箋で絞り込む（選ばなければ全件）</span>
@@ -752,6 +758,53 @@ function ZeroExcludeCard({ accent }: { accent: string }) {
   );
 }
 
+/** 帳票選択の様式（旧 動作環境パネル「帳票選択」）。区分階層により省略が許される様式がある（確認メモ #49） */
+const FORM_GROUPS: { title: string; items: { key: string; name: string; omit?: '事業区分' | '拠点区分' }[] }[] = [
+  { title: '資金収支計算書（第一号様式）', items: [{ key: 'c1-1', name: '第一号第一様式（法人全体）' }, { key: 'c1-2', name: '第一号第二様式（事業区分別 内訳表）', omit: '事業区分' }, { key: 'c1-3', name: '第一号第三様式（拠点区分別 内訳表）', omit: '拠点区分' }, { key: 'c1-4', name: '第一号第四様式（拠点区分）' }] },
+  { title: '事業活動計算書（第二号様式）', items: [{ key: 'c2-1', name: '第二号第一様式（法人全体）' }, { key: 'c2-2', name: '第二号第二様式（事業区分別 内訳表）', omit: '事業区分' }, { key: 'c2-3', name: '第二号第三様式（拠点区分別 内訳表）', omit: '拠点区分' }, { key: 'c2-4', name: '第二号第四様式（拠点区分）' }] },
+  { title: '貸借対照表（第三号様式）', items: [{ key: 'c3-1', name: '第三号第一様式（法人全体）' }, { key: 'c3-2', name: '第三号第二様式（事業区分別 内訳表）', omit: '事業区分' }, { key: 'c3-3', name: '第三号第三様式（拠点区分別 内訳表）', omit: '拠点区分' }, { key: 'c3-4', name: '第三号第四様式（拠点区分）' }] },
+  { title: '準決算書', items: [{ key: 'p1', name: 'C別紙6〜9' }, { key: 'p2', name: 'C1-5〜C3-6' }] },
+];
+/** 区分階層から省略できる様式を判定：事業区分が1つなら第二様式、各事業区分の拠点区分が1つなら第三様式を省略できる */
+function omittable(tree: DivisionNode): Record<'事業区分' | '拠点区分', boolean> {
+  const biz = (tree.children ?? []).filter((b) => (b.children ?? []).length > 0);
+  const sites = biz.map((b) => (b.children ?? []).length);
+  return { 事業区分: biz.length <= 1, 拠点区分: sites.every((n) => n <= 1) };
+}
+/** 帳票選択：使う様式／省略する様式。省略できる様式は既定で省略（確認メモ #49：区分階層ツリーの内容によって省略が許される帳票がある） */
+export const formEnabled = (forms: Record<string, boolean>, key: string, tree: DivisionNode) => {
+  if (key in forms) return forms[key];
+  const item = FORM_GROUPS.flatMap((g) => g.items).find((x) => x.key === key);
+  return !(item?.omit && omittable(tree)[item.omit]);
+};
+function FormSelectCard() {
+  const s = useSession();
+  const can = omittable(s.tree);
+  const set = (key: string, on: boolean) => setSession({ print: { ...s.print, forms: { ...s.print.forms, [key]: on } } });
+  return (
+    <div style={card} data-form-select>
+      <div style={cardHead}>帳票選択（決算書・準決算書で使う様式）<span style={{ fontWeight: 500, color: '#7a8794', marginLeft: 8, fontSize: 11.5 }}>旧 動作環境パネル「帳票選択」</span></div>
+      <div style={{ padding: 14, display: 'grid', gap: 12 }}>
+        <div style={{ fontSize: 12, color: '#5b6773', lineHeight: 1.7 }}>印刷メニューの決算書・準決算書に出す帳票を選びます。区分階層（事業区分・拠点区分の数）によって省略できる様式は、既定で省略しています。<br />現在の区分階層：事業区分 {can.事業区分 ? '1つ（第二様式を省略できます）' : '複数（第二様式が必要）'}／拠点区分 {can.拠点区分 ? '各1つ（第三様式を省略できます）' : '複数の事業区分あり（第三様式が必要）'}</div>
+        {FORM_GROUPS.map((g) => (
+          <div key={g.title}>
+            <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{g.title}</div>
+            <div style={{ display: 'grid', gap: 4 }}>
+              {g.items.map((it) => { const on = formEnabled(s.print.forms, it.key, s.tree); const omit = !!it.omit && can[it.omit]; return (
+                <label key={it.key} data-form={it.key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, padding: '4px 8px', borderRadius: 8, background: on ? 'transparent' : '#f6f8fa', color: on ? '#22303c' : '#8290a0' }}>
+                  <input type="checkbox" checked={on} onChange={() => set(it.key, !on)} />{on ? '使用' : '省略'}：{it.name}
+                  {omit && <span style={{ fontSize: 10.5, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: '#eaf5ef', color: '#1f7a52' }}>省略できる様式</span>}
+                  {!omit && it.omit && <span style={{ fontSize: 10.5, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: '#fff7e6', color: '#8a5a00' }}>区分階層上は必要</span>}
+                </label>
+              ); })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: string }) {
   const s = useSession();
   const p = s.print;
@@ -773,6 +826,7 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
       <div style={{ padding: 22, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 18, alignItems: 'start' }}>
         <div style={{ display: 'grid', gap: 18 }}>
           <ZeroExcludeCard accent={accent} />
+          <FormSelectCard />
           <div style={card}>
             <div style={cardHead}>印刷位置・行の間隔</div>
             <div style={{ padding: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

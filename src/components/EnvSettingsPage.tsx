@@ -106,18 +106,14 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
               {(['赤', '青', '黄', '緑'] as const).map((f) => (
                 <label key={f} style={{ display: 'grid', gridTemplateColumns: '16px 24px minmax(0, 1fr)', gap: 8, alignItems: 'center', fontSize: 12.5 }}>
                   <span aria-hidden style={{ width: 14, height: 14, borderRadius: 3, background: FUSEN_COLORS[f] }} /><span>{f}</span>
-                  <input className="field-input" value={v.fusenNames[f]} onChange={(e) => set({ fusenNames: { ...v.fusenNames, [f]: e.target.value } })} placeholder="この色の付箋の意味" aria-label={`${f}の付箋の意味`} style={{ ...input, padding: '5px 8px', fontSize: 12.5 }} data-fusen-name={f} />
+                  <input className="field-input" value={v.fusenNames[f]} onChange={(e) => set({ fusenNames: { ...v.fusenNames, [f]: e.target.value } })} placeholder="（任意）この色の付箋の使い方" aria-label={`${f}の付箋の意味`} style={{ ...input, padding: '5px 8px', fontSize: 12.5 }} data-fusen-name={f} />
                 </label>
               ))}
-              <div style={{ fontSize: 12, color: '#7a8794' }}>伝票入力・日記帳・元帳の付箋ボタンのツールチップと、検索条件・印刷の絞り込みに「赤（{v.fusenNames.赤 || '…'}）」のように表示します。付箋の色は4色固定です。</div>
+              <div style={{ fontSize: 12, color: '#7a8794' }}>意味を入れると、伝票入力・日記帳・元帳の付箋ボタンのツールチップと、検索条件・印刷の絞り込みに「赤（{v.fusenNames.赤 || '…'}）」のように表示します。空欄のときは色だけを表示します（既存では利用者が自由に使い分けているため、初期値は空です）。付箋の色は4色固定です。</div>
             </div></div>
             <div style={card}><div style={cardHead}>検索・日付の表記</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
               {T('noFurigana', 'フリガナ検索を無効にする（科目・業者・摘要の検索でフリガナを使わない）')}
               {T('eraGannen', '和暦の1年を「元年」と表記する')}
-            </div></div>
-            <div style={card}><div style={cardHead}>伝票入力時の通知</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
-              {T('sufficiencyNotice', '充実残額発生の可能性を伝票入力画面に表示する')}
-              <div style={{ fontSize: 12, color: '#7a8794' }}>既存の「充実残額発生の可能性確認設定」。前年度決算の簡易判定で社会福祉充実残額が発生しそうなとき、伝票入力画面の上部に案内を出します（「充実残額」で算定できます）。</div>
             </div></div>
           </div>
         </ScopeBlock>

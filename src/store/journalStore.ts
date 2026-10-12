@@ -18,13 +18,23 @@ export interface Voucher extends JournalRow {
   /** 通常伝票／移行伝票 */
   migrated?: boolean;
   internal?: boolean;
-  /** 伝票の出どころ（インポート伝票／自動按分伝票）。旧 伝票メニューの「インポート伝票一括削除」「自動按分伝票一括削除」の対象 */
+  /** 伝票の出どころ（インポート伝票＝別システム〔小口現金・預金出納・減価償却・AI自動仕訳・給与など〕から取り込んだ伝票／自動按分伝票）。旧 伝票メニューの一括削除の対象 */
   source?: 'インポート' | '自動按分';
+  /** 取込元のシステム名、または按分テンプレート名 */
+  from?: string;
+  /** 取込・按分の実行単位（既存の GUID に相当）。一括削除はこの単位で年度内の全件を消す（確認メモ #56） */
+  batch?: string;
 }
 
-/** サンプル：銀行CSVから取り込んだ体の伝票（水道料金・電話料金・リース代）と、自動按分で登録した体の伝票（ガス代） */
-const sourceOf = (r: JournalRow): Voucher['source'] => (/ガス代/.test(r.tekiyo) ? '自動按分' : /水道料金|電話料金|リース代/.test(r.tekiyo) && /預金/.test(r.kashi) ? 'インポート' : undefined);
-let rows: Voucher[] = JOURNAL_ROWS.map((r, i) => ({ ...r, id: i + 1, check: false, fusen: '', source: sourceOf(r) }));
+/** サンプル：別システムから取り込んだ体の伝票（預金出納＝水道料金・電話料金、減価償却＝リース代。月ごとに1回の取込）と、自動按分で登録した体の伝票（ガス代。月ごとに1回の実行） */
+const sourceOf = (r: JournalRow): Pick<Voucher, 'source' | 'from' | 'batch'> => {
+  const m = r.date.split('/')[0];
+  if (/ガス代/.test(r.tekiyo)) return { source: '自動按分', from: 'ガス代（本部／保育園／一時預かり）', batch: `alloc-gas-${m}` };
+  if (/水道料金|電話料金/.test(r.tekiyo) && /預金/.test(r.kashi)) return { source: 'インポート', from: '預金出納', batch: `imp-bank-${m}` };
+  if (/リース代/.test(r.tekiyo)) return { source: 'インポート', from: '減価償却', batch: `imp-dep-${m}` };
+  return {};
+};
+let rows: Voucher[] = JOURNAL_ROWS.map((r, i) => ({ ...r, id: i + 1, check: false, fusen: '', ...sourceOf(r) }));
 let nextId = rows.length + 1;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());

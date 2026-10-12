@@ -222,23 +222,30 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
   const [blankGroup, setBlankGroup] = useState('事務費');
   /** ▲入換▼：選択中の科目と同じ項目の中で並び順を編集する */
   const [swap, setSwap] = useState<{ group: string; keys: number[]; cur: number; drag: number | null } | null>(null);
-  /** 使用科目設定の表示：全科目／内部取引科目／起動区分のみ（旧【使用科目】の3メニュー） */
-  const [useView, setUseView] = useState<'全科目' | '内部取引科目' | '起動区分のみ'>('全科目');
+  /** 使用科目設定の表示：科目（全科目／内部取引科目）と区分（全区分／起動区分のみ）は別のグループ（確認メモ #52） */
+  const [acctView, setAcctView] = useState<'全科目' | '内部取引科目'>('全科目');
+  const [divView, setDivView] = useState<'全区分' | '起動区分のみ'>('全区分');
+  const [resetOpen, setResetOpen] = useState(false);
   /** 複数科目を選んで関連する設定をまとめて変更する（確認メモ #30） */
   const [bulk, setBulk] = useState<number[]>([]);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkVal, setBulkVal] = useState(EMPTY_BULK);
   /** 補助簿（明細表）を作る科目（旧【補助簿（明細表）設定】） */
-  const [subLedger, setSubLedger] = useState<Record<string, boolean>>(() => Object.fromEntries(initRows().filter((r) => /未収|未払|預り|立替|仮払/.test(r.name)).map((r) => [r.name, true])));
+  // 既定で対象にする科目はない（確認メモ #52）
+  const [subLedger, setSubLedger] = useState<Record<string, boolean>>({});
   const session = useSession();
-  const useCols = useView === '起動区分のみ' ? (SERVICES.includes(session.division) ? [session.division] : [SERVICES[1]]) : SERVICES;
-  const useRows = useView === '内部取引科目' ? rows.filter((m) => !m.internal.startsWith('0')) : rows;
-  /** 使用科目設定を更新：仕訳のある科目（現預金・費用・収益）を表示中の区分で「使用」にする */
-  const refreshUse = () => {
-    const names = new Set(ACCOUNT_META.filter((m) => m.cls === '現預金' || m.cls === '費用' || m.cls === '収益').map((m) => m.name));
-    let n = 0; const next = { ...use };
-    names.forEach((nm) => useCols.forEach((sv) => { if (!next[nm + '|' + sv]) { next[nm + '|' + sv] = true; n++; } }));
-    setUse(next); toast.show(n ? `仕訳のある科目 ${n} 件を「使用」にしました` : '仕訳のある科目はすべて「使用」になっています');
+  const useCols = divView === '起動区分のみ' ? (SERVICES.includes(session.division) ? [session.division] : [SERVICES[1]]) : SERVICES;
+  const useRows = acctView === '内部取引科目' ? rows.filter((m) => !m.internal.startsWith('0')) : rows;
+  /** 初期状態に戻す：区分の事業区分（事業種別）に従って使用科目を初期化する（旧【使用科目設定更新】は更新ではなく初期化の動き。確認メモ #52） */
+  const resetUse = () => {
+    const next = { ...use };
+    let n = 0;
+    initRows().forEach((m) => useCols.forEach((sv) => {
+      const def = !(sv.startsWith('005') && m.cls !== '現預金') && m.name !== '立替金' && m.name !== 'その他手当';
+      if (next[m.name + '|' + sv] !== def) { next[m.name + '|' + sv] = def; n++; }
+    }));
+    setUse(next); setResetOpen(false);
+    toast.show(n ? `${useCols.length} 区分の使用科目を初期状態に戻しました（${n} 件を変更）` : '使用科目はすでに初期状態です');
   };
   const applyBulk = () => {
     const preset = COLOR_PRESETS.find((x) => x.label === bulkVal.color);
@@ -550,11 +557,19 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
       {tab === '使用科目設定' && (
         <div style={{ padding: 22 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
-            <span style={lbl}>表示</span>{(['全科目', '内部取引科目', '起動区分のみ'] as const).map((l) => <label key={l} style={{ fontSize: 12.5, display: 'flex', gap: 4 }}><input type="radio" name="use-view" checked={useView === l} onChange={() => setUseView(l)} data-use-view={l} />{l}</label>)}
+            <span style={lbl}>科目</span>{(['全科目', '内部取引科目'] as const).map((l) => <label key={l} style={{ fontSize: 12.5, display: 'flex', gap: 4 }}><input type="radio" name="use-acct" checked={acctView === l} onChange={() => setAcctView(l)} data-use-view={l} />{l}</label>)}
+            <span style={{ width: 1, height: 18, background: '#dde4ea' }} />
+            <span style={lbl}>区分</span>{(['全区分', '起動区分のみ'] as const).map((l) => <label key={l} style={{ fontSize: 12.5, display: 'flex', gap: 4 }}><input type="radio" name="use-div" checked={divView === l} onChange={() => setDivView(l)} data-use-view={l} />{l}</label>)}
             <span style={{ width: 1, height: 18, background: '#dde4ea' }} />
             <span style={lbl}>チェック連動</span>{(['しない', '区分内', '横一列'] as const).map((l) => <label key={l} style={{ fontSize: 12.5, display: 'flex', gap: 4 }}><input type="radio" checked={link === l} onChange={() => setLink(l)} />{l}</label>)}
             <button type="button" onClick={() => setUse(Object.fromEntries(Object.keys(use).map((k) => [k, true])))} style={{ ...btn('#5b6773', false, true), marginLeft: 8 }}>全て ON</button>
-            <button type="button" onClick={refreshUse} title="仕訳のある科目を自動で「使用」にします（旧【使用科目設定更新】）" style={btn('#5b6773', false, true)} data-use-refresh>使用科目設定を更新</button>
+            <button type="button" onClick={() => setResetOpen(true)} title="表示中の区分の使用科目を、事業区分（事業種別）に応じた初期状態に戻します（旧【使用科目設定更新】）" style={btn('#5b6773', false, true)} data-use-reset>初期状態に戻す</button>
+            <Modal open={resetOpen} onClose={() => setResetOpen(false)} width={520} title="使用科目を初期状態に戻す">
+              <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
+                <Notice tone="warn">表示中の {useCols.length} 区分（{useCols.join('、')}）の使用科目を、区分の事業区分（事業種別）に従った初期状態に戻します。いまのチェック内容は上書きされます。</Notice>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setResetOpen(false)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={resetUse} style={btn(accent, true)} data-use-reset-run>初期状態に戻す</button></div>
+              </div>
+            </Modal>
             <span style={{ marginLeft: 'auto', fontSize: 12, color: '#7a8794' }}>区分ごとに使用する科目をチェック（帳票の表示／非表示にも使います）</span>
           </div>
           <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 380px)' }}>
