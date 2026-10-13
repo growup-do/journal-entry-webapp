@@ -17,7 +17,6 @@ import { CommonPrintSettingsPage, PrintCenterPage } from './PrintCenter';
 import { TrendPage } from './TrendPage';
 import { TrialBalancePage } from './TrialBalancePage';
 import { PlaceholderPage } from './PlaceholderPage';
-import { OptionGate } from './OptionGuidePage';
 import { FunctionFinderPage } from './FunctionFinder';
 import { FiscalYearPage } from './FiscalYearPage';
 import { AppendixPrintPage } from './AppendixPrintPage';
@@ -103,15 +102,15 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
     case '充実残額':
       return <SufficiencyPage variant={variant} accent={accent} onNavigate={onNavigate} />;
     case '小口現金':
-      return <OptionGate label="小口現金" accent={accent} onNavigate={onNavigate}><CashbookPage key="petty" kind="petty" variant={variant} accent={accent} accentRgb={accentRgb} /></OptionGate>;
+      return <CashbookPage key="petty" kind="petty" variant={variant} accent={accent} accentRgb={accentRgb} />;
     case '預金出納':
-      return <OptionGate label="預金出納" accent={accent} onNavigate={onNavigate}><CashbookPage key="bank" kind="bank" variant={variant} accent={accent} accentRgb={accentRgb} /></OptionGate>;
+      return <CashbookPage key="bank" kind="bank" variant={variant} accent={accent} accentRgb={accentRgb} />;
     case '収入支出':
-      return <OptionGate label="収入支出" accent={accent} onNavigate={onNavigate}><ReceiptsPaymentsPage variant={variant} accent={accent} /></OptionGate>;
+      return <ReceiptsPaymentsPage variant={variant} accent={accent} />;
     case '減価償却':
-      return <OptionGate label="減価償却" accent={accent} onNavigate={onNavigate}><DepreciationPage variant={variant} accent={accent} /></OptionGate>;
+      return <DepreciationPage variant={variant} accent={accent} />;
     case '電子印':
-      return <OptionGate label="電子印" accent={accent} onNavigate={onNavigate}><PlaceholderPage title="電子印" accent={accent} /></OptionGate>;
+      return <PlaceholderPage title="電子印" accent={accent} />;
     case '予算対比':
       return <BudgetComparePage variant={variant} accent={accent} onNavigate={onNavigate} />;
     default:

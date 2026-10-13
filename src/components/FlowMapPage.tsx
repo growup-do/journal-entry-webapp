@@ -25,7 +25,7 @@ const GROUPS: Group[] = [
   { key: 'compare', title: '試算表・決算書', note: '科目 → 元帳 → 伝票のドリルダウン', color: '#2c5f9e' },
   { key: 'audit', title: '調査・チェック（ホームから開く）', color: '#b7791f' },
   { key: 'print', title: '帳票・印刷', note: '帳票画面内で 基本条件→詳細設定→出力先→印刷', color: '#6b3fb5' },
-  { key: 'option', title: 'オプション（別売）', note: '未導入は導入案内', color: '#b45309' },
+  { key: 'option', title: '出納・償却・電子印', note: '旧オプション。本体機能として常時表示', color: '#b45309' },
   { key: 'settings', title: '各種設定', note: 'マスター設定／登録機能／保守・運用／年度', color: '#48565f' },
   { key: 'user', title: 'ユーザー・共通', color: '#48565f' },
 ];
@@ -45,6 +45,7 @@ const NODES: Node[] = [
   N('finder', '機能から探す', 'page', 'home', { open: '機能から探す' }),
   N('notices', 'お知らせ一覧', 'dialog', 'home', { open: 'ホーム' }),
   N('favedit', 'お気に入りの設定', 'dialog', 'home', { open: 'ホーム' }),
+  N('favmenu', 'お気に入り ▾（メニューバー右端）', 'dialog', 'home', { open: '伝票入力', note: '「機能から探す」の左隣。どの画面からも登録した画面を開く' }),
   N('homeedit', 'ダッシュボード表示オプション', 'dialog', 'home', { open: 'ホーム', note: '表示メニュー／最初に表示する画面' }),
   N('support', 'サポートサイト', 'external', 'home', { url: 'https://www.child.co.jp/' }),
   // 伝票入力
@@ -106,7 +107,7 @@ const NODES: Node[] = [
   N('dep', '減価償却', 'page', 'option', { open: '減価償却' }),
   N('bank', '預金出納帳', 'page', 'option', { open: '預金出納' }),
   N('receipt', '伺い書（収入・支出調書）', 'page', 'option', { open: '収入支出' }),
-  N('stamp', '電子印（未導入の案内）', 'page', 'option', { open: '電子印' }),
+  N('stamp', '電子印', 'page', 'option', { open: '電子印', note: 'プロトタイプ未作成' }),
   // 各種設定
   N('s-org', '法人・区分', 'page', 'settings', { open: '事業者' }),
   N('s-acct', '科目設定', 'page', 'settings', { open: '勘定科目' }),
@@ -138,6 +139,7 @@ const NODES: Node[] = [
 
 const E = (from: string, to: string, label?: string, weak = false): Edge => ({ from, to, label, weak });
 const EDGES: Edge[] = [
+  E('favmenu', 'favedit', 'お気に入りを編集', true), E('favmenu', 'home', '登録した画面を開く', true),
   E('journal', 'bulkdel', '一括削除 ▾', true), E('bulkdel', 'vdelete', '削除確認へ', true), E('closing', 's-carry', '繰越判断', true),
   E('login', 'pwreset', 'お忘れですか', true), E('login', 'division', 'ログイン'), E('division', 'merge', '合算追加', true), E('division', 'divinfo', '部門情報の変更', true), E('division', 'yearconfirm', '年度を変えて OK'), E('yearconfirm', 'continuity', '年度を切り替える'), E('division', 'continuity', '起動時の OK', true),
   E('division', 'home', 'OK（初期画面：ホーム）'), E('login', 'home', 'ログイン（区分選択を1か月表示しない設定のとき）', true), E('division', 'e-voucher', 'OK（初期画面：伝票入力）', true),

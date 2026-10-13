@@ -19,7 +19,6 @@ import { accountFlat } from '../data';
 import type { MonthFilter } from '../types';
 
 export type CashbookKind = 'petty' | 'bank';
-const OPTION = '#b45309';
 const yen = (n: number) => n.toLocaleString('ja-JP');
 
 interface Row {
@@ -301,7 +300,8 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
   const inp: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '6px 8px', border: '1px solid #cfd8e0', borderRadius: 6, fontSize: 13, fontFamily: 'inherit', outline: 'none', background: '#fff' };
   const fieldBtn: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, width: '100%', boxSizing: 'border-box', padding: '6px 8px', background: '#fff', border: '1px solid #cfd8e0', borderRadius: 6, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left', color: 'inherit' };
   const btn = (primary?: boolean): CSSProperties => ({ padding: '8px 16px', borderRadius: 8, border: primary ? 'none' : '1px solid #cfd8e0', background: primary ? accent : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
-  const badge = <span style={{ fontSize: 10, fontWeight: 800, color: '#fff', background: OPTION, borderRadius: 5, padding: '2px 6px', verticalAlign: 'middle', marginLeft: 6 }}>オプション</span>;
+  // 旧「オプション」バッジ：本体機能になったため表示しない（確認事項 10/9 回答）
+  const badge = null;
 
   return (
     <ReportShell

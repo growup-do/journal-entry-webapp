@@ -2,12 +2,13 @@
 //   右上の「ダッシュボード表示オプション」で、表示するメニューと最初に表示する画面（ホーム／伝票入力）を選ぶ。
 //   年度更新の時期には、上部に年度更新を促す案内を表示する。
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { ToastView, useToast } from './Toast';
-import { HOME_BANKS, HOME_CHECKS, HOME_FAQ, HOME_NOTICES, IMPLEMENTED_MENU, MENU_GROUPS, SETTINGS_MENU, displayName } from '../data';
+import { HOME_BANKS, HOME_CHECKS, HOME_FAQ, HOME_NOTICES, displayName } from '../data';
 import { FinderSearch } from './FunctionFinder';
 import { Modal } from './Modal';
+import { FavoritesEditModal } from './FavoritesEditModal';
 import { HOME_SECTIONS, setSession, startKindOf, useSession } from '../store/session';
 import { SUPPORT_URL } from './SettingsMenu';
 
@@ -45,14 +46,6 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
   const NOTICE_TAGS = ['すべて', ...Array.from(new Set(HOME_NOTICES.map((n) => n.tag)))];
   const noticeList = HOME_NOTICES.map((n, i) => ({ ...n, i })).filter((n) => noticeTag === 'すべて' || n.tag === noticeTag).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   const s = useSession();
-  const CANDIDATES = [...MENU_GROUPS.flatMap((g) => g.items), ...HOME_CHECKS, '元帳１', '元帳２', '残高照合', '法人印刷', ...SETTINGS_MENU].filter((l) => IMPLEMENTED_MENU.includes(l) || l === '印刷センター' || l === '予算' || SETTINGS_MENU.includes(l));
-  // ドラッグ＆ドロップで並べ替え
-  const [drag, setDrag] = useState<number | null>(null);
-  const [over, setOver] = useState<number | null>(null);
-  const dragRef = useRef<number | null>(null); // 描画を待たずに参照できるよう ref にも保持
-  const startDrag = (i: number) => { dragRef.current = i; setDrag(i); };
-  const dropFav = (to: number) => { const from = dragRef.current; if (from == null || from === to) return; const f = [...s.favorites]; const [m] = f.splice(from, 1); f.splice(to, 0, m); setSession({ favorites: f }); };
-  const endDrag = () => { dragRef.current = null; setDrag(null); setOver(null); };
   const toast = useToast();
   const isSheet = variant === 'sheet';
   const total = HOME_BANKS.reduce((a, b) => a + b.balance, 0);
@@ -248,39 +241,7 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
         </div>
       </div>
 
-      <Modal open={favEdit} onClose={() => setFavEdit(false)} width={640} title="お気に入りメニューの設定">
-              <div style={{ padding: '12px 22px 18px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#8290a0', marginBottom: 6 }}>登録済み（上から順に表示・ドラッグ＆ドロップで並べ替え）</div>
-                  <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, minHeight: 200 }}>
-                    {s.favorites.map((l, i) => (
-                      <div
-                        key={l}
-                        draggable
-                        onDragStart={(e) => { startDrag(i); e.dataTransfer.effectAllowed = 'move'; }}
-                        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (over !== i) setOver(i); }}
-                        onDragLeave={() => { if (over === i) setOver(null); }}
-                        onDrop={(e) => { e.preventDefault(); dropFav(i); endDrag(); }}
-                        onDragEnd={endDrag}
-                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderBottom: '1px solid #f1f4f6', fontSize: 13, cursor: 'grab', background: drag === i ? '#f3f6f9' : over === i && drag != null ? accent + '14' : '#fff', boxShadow: over === i && drag != null && drag !== i ? `inset 0 ${drag < i ? -2 : 2}px 0 ${accent}` : 'none', opacity: drag === i ? 0.5 : 1, userSelect: 'none' }}
-                      >
-                        <span aria-hidden style={{ color: '#b3bcc5', fontSize: 14, letterSpacing: -2, lineHeight: 1 }}>⋮⋮</span>
-                        <span style={{ flex: 1 }}>{l}</span>
-                        <button type="button" onClick={() => setSession({ favorites: s.favorites.filter((x) => x !== l) })} style={{ border: '1px solid #f2c9c2', background: '#fff', color: '#c0392b', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontFamily: 'inherit' }}>解除</button>
-                      </div>
-                    ))}
-                    {s.favorites.length === 0 && <div style={{ padding: 20, color: '#9aa5b1', fontSize: 12.5 }}>右の一覧から追加してください。</div>}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#8290a0', marginBottom: 6 }}>登録できる機能（クリックで追加）</div>
-                  <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: 300, overflow: 'auto' }}>
-                    {CANDIDATES.filter((c) => !s.favorites.includes(c)).map((c) => <button key={c} type="button" onClick={() => setSession({ favorites: [...s.favorites, c] })} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', border: 'none', borderBottom: '1px solid #f1f4f6', background: '#fff', fontSize: 12.5, fontFamily: 'inherit', cursor: 'pointer', color: '#22303c' }}>＋ {c}</button>)}
-                  </div>
-                </div>
-                <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end' }}><button type="button" onClick={() => setFavEdit(false)} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: accent, color: '#fff', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>閉じる</button></div>
-              </div>
-            </Modal>
+      <FavoritesEditModal open={favEdit} onClose={() => setFavEdit(false)} accent={accent} />
 
       {/* ダッシュボード表示オプション */}
       <Modal open={homeEdit} onClose={() => setHomeEdit(false)} width={620} title="ダッシュボード表示オプション">

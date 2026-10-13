@@ -1,22 +1,20 @@
 // メニュー
 //   横（フォーム型ナビ）… 大メニュー7つ。マウスオーバー（またはクリック）でその階層の項目をドロップダウン表示
 //   縦（スプレッドシート型サイドバー）… 大メニューをアコーディオンで開閉。開いている階層の項目を表示
-// オプション階層は他の階層と同じ見た目（最後尾に配置するのみ）。
+// 出納・償却・電子印（旧オプション）階層は他の階層と同じ見た目（最後尾に配置するのみ）。
 
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { MENU_GROUPS, displayName, groupOf, isOptionMenu, type MenuGroup } from '../data';
 import { startKindOf, useSession, type Session } from '../store/session';
+import { FavoritesMenu } from './FavoritesMenu';
 
-/** メニュー項目の状態（依頼書 5.1.1／5.1.4）：起動区分の種類・オプション導入状況で変わる。使えない項目は隠さず、理由つきの無効表示にする */
+/** メニュー項目の状態（依頼書 5.1.1／5.1.4）：起動区分の種類で変わる。使えない項目は隠さず、理由つきの無効表示にする（グレーアウト。確認事項 10/9 回答） */
 function itemState(label: string, s: Session): { disabled?: string; tag?: string } {
   const kind = startKindOf(s);
   if (['単一入力', '伝票入力', '振替入力', '振替単一'].includes(label) && kind !== '入力区分') return { disabled: `${kind}で起動中は伝票を入力できません（入力区分に切り替えてください）` };
   if (['業者元帳', '業者推移'].includes(label) && kind === '合算区分') return { disabled: '合算区分で起動中は利用できません' };
-  if (isOptionMenu(label)) {
-    if (!s.options[label]) return { tag: '未導入' };
-    if (kind === '合算区分') return { disabled: '合算区分で起動中はオプションを利用できません' };
-  }
+  if (isOptionMenu(label) && kind === '合算区分') return { disabled: '合算区分で起動中は利用できません（入力区分・拠点区分などで起動してください）' };
   return {};
 }
 
@@ -109,18 +107,21 @@ function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
           </div>
         );
       })}
-      {/* 右端：機能から探す（全機能の一覧と検索） */}
+      {/* 右端：お気に入り ▾（登録した画面をどの画面からも開く）＋ 機能から探す（全機能の一覧と検索） */}
+      <div style={{ position: 'absolute', right: 16, top: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <FavoritesMenu accent={accent} active={active} onNavigate={onSelect} />
       <button
         type="button"
         className="menu-item-h"
         data-menu="機能から探す"
         onClick={() => onSelect('機能から探す')}
         title="すべての機能を分類ごとに見る・キーワードで探す"
-        style={{ position: 'absolute', right: 16, top: 3, display: 'flex', alignItems: 'center', gap: 7, padding: '8px 13px', fontSize: 13, fontWeight: active === '機能から探す' ? 700 : 600, fontFamily: 'inherit', cursor: 'pointer', background: 'transparent', border: 'none', borderRadius: 8, borderBottom: '2px solid ' + (active === '機能から探す' ? accent : 'transparent'), color: active === '機能から探す' ? accent : '#3d4a56', whiteSpace: 'nowrap' }}
+        style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 13px', fontSize: 13, fontWeight: active === '機能から探す' ? 700 : 600, fontFamily: 'inherit', cursor: 'pointer', background: 'transparent', border: 'none', borderRadius: 8, borderBottom: '2px solid ' + (active === '機能から探す' ? accent : 'transparent'), color: active === '機能から探す' ? accent : '#3d4a56', whiteSpace: 'nowrap' }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none' }}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
         機能から探す
       </button>
+      </div>
     </div>
   );
 }
@@ -242,7 +243,7 @@ function SubItem({ label, active, accent, indent, onClick, state = {} }: { label
     whiteSpace: 'nowrap',
   };
   return (
-    <button type="button" className="menu-sub" data-menu={label} onClick={off ? undefined : onClick} aria-disabled={off} title={state.disabled ?? (state.tag === '未導入' ? '未導入のオプションです（クリックで導入のご案内）' : undefined)} style={style}>
+    <button type="button" className="menu-sub" data-menu={label} onClick={off ? undefined : onClick} aria-disabled={off} title={state.disabled} style={style}>
       <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName(label)}</span>
       {off && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 8, background: '#f1f4f6', color: '#9aa5b1', flex: 'none' }}>利用不可</span>}
       {state.tag && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 8, background: '#fff7e6', color: '#b7791f', flex: 'none' }}>{state.tag}</span>}

@@ -146,8 +146,6 @@ export interface Session {
   corpTax: string;
   /** 利用者の権限（依頼書 2.1-7）。参照のみ＝伝票の入力・訂正・削除・入換ができない */
   role: '入力可' | '参照のみ';
-  /** 別売オプションの導入状況（依頼書 5.1.4）。未導入は導入案内として表示 */
-  options: Record<string, boolean>;
   /** 起動直後（区分選択後）に表示する画面（依頼書 5.2.2） */
   startScreen: 'ホーム' | '伝票入力';
   /** ホーム（ダッシュボード）に表示するメニュー。利用者が「表示させるメニューの編集」で切り替える */
@@ -175,7 +173,7 @@ const DEFAULT: Session = {
   favorites: ['単一入力', '伝票入力', '仕訳一覧', '勘定元帳', '月次試算', '日次調査'],
   env: DEFAULT_ENV, input: DEFAULT_INPUT, print: DEFAULT_PRINT, templates: DEFAULT_TEMPLATES, allocations: DEFAULT_ALLOCATIONS, specialRates: DEFAULT_SPECIAL_RATES,
   ledgerTarget: null, journalTarget: null, auditEnabled: {}, corpStartDate: '20240401', corpTax: '非課税',
-  role: '入力可', options: { 小口現金: true, 減価償却: true, 預金出納: true, 収入支出: true, 電子印: false }, startScreen: 'ホーム', homeSections: DEFAULT_HOME_SECTIONS, taxEntry: false,
+  role: '入力可', startScreen: 'ホーム', homeSections: DEFAULT_HOME_SECTIONS, taxEntry: false,
 };
 
 let state: Session = (() => {
@@ -183,7 +181,7 @@ let state: Session = (() => {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULT;
     const saved = JSON.parse(raw) as Partial<Session>;
-    return { ...DEFAULT, ...saved, env: { ...DEFAULT_ENV, ...(saved.env ?? {}) }, input: { ...DEFAULT_INPUT, ...(saved.input ?? {}) }, print: { ...DEFAULT_PRINT, ...(saved.print ?? {}) }, options: { ...DEFAULT.options, ...(saved.options ?? {}) }, homeSections: { ...DEFAULT_HOME_SECTIONS, ...(saved.homeSections ?? {}) }, ledgerTarget: null, journalTarget: null };
+    return { ...DEFAULT, ...saved, env: { ...DEFAULT_ENV, ...(saved.env ?? {}) }, input: { ...DEFAULT_INPUT, ...(saved.input ?? {}) }, print: { ...DEFAULT_PRINT, ...(saved.print ?? {}) }, homeSections: { ...DEFAULT_HOME_SECTIONS, ...(saved.homeSections ?? {}) }, ledgerTarget: null, journalTarget: null };
   } catch {
     return DEFAULT;
   }
