@@ -119,7 +119,7 @@ export function FiscalMonthTabs({ current, accent, onSelect, withAll, range, onR
             </div>
           )}
           {cal && (() => { const v = parseMD(cal === 'from' ? from : to); const [cm, cd] = (v ?? `${current && current !== '決' ? current : '4'}/1`).split('/'); return (
-            <CalendarModal open accent={accent} entries={[]} month={cm} day={cd} onClose={() => setCal(null)} onPick={(mm, dd) => { (cal === 'from' ? setFrom : setTo)(`${mm}/${dd}`); setErr(''); setCal(null); }} />
+            <CalendarModal open compact accent={accent} entries={[]} month={cm} day={cd} onClose={() => setCal(null)} onPick={(mm, dd) => { (cal === 'from' ? setFrom : setTo)(`${mm}/${dd}`); setErr(''); setCal(null); }} />
           ); })()}
         </span>
       )}

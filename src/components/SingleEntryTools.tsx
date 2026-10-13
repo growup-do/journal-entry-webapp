@@ -163,7 +163,7 @@ const WEEK = ['日', '月', '火', '水', '木', '金', '土'];
 const HOLIDAYS = new Set(['2026/4/29', '2026/5/3', '2026/5/4', '2026/5/5', '2026/5/6', '2026/7/20', '2026/8/11', '2026/9/21', '2026/9/22', '2026/9/23', '2026/10/12', '2026/11/3', '2026/11/23', '2027/1/1', '2027/1/11', '2027/2/11', '2027/2/23', '2027/3/22']);
 export const yearOfMonth = (m: string) => (parseInt(m, 10) >= 4 ? 2026 : 2027);
 
-export function CalendarModal({ open, onClose, accent, entries, month, day, onPick }: { open: boolean; onClose: () => void; accent: string; entries: JournalEntry[]; month: string; day: string; onPick: (month: string, day: string) => void }) {
+export function CalendarModal({ open, onClose, accent, entries, month, day, onPick, compact }: { open: boolean; onClose: () => void; accent: string; entries: JournalEntry[]; month: string; day: string; onPick: (month: string, day: string) => void; /** 日付を選ぶだけの最小表示（集計期間の指定など。件数・金額は出さない） */ compact?: boolean }) {
   const [view, setView] = useState(month || '8');
   const [cur, setCur] = useState(() => parseInt(day, 10) || 1);
   const y = yearOfMonth(view);
@@ -196,11 +196,11 @@ export function CalendarModal({ open, onClose, accent, entries, month, day, onPi
     else if (e.key === 'Enter') { e.preventDefault(); onPick(view, String(cursor)); onClose(); }
   };
   return (
-    <Modal open={open} onClose={onClose} width={640} title="カレンダー">
-      <div tabIndex={0} ref={(el) => { if (el && !el.dataset.f) { el.dataset.f = '1'; el.focus(); } }} onKeyDown={onKey} style={{ padding: '12px 22px 18px', outline: 'none' }}>
+    <Modal open={open} onClose={onClose} width={compact ? 340 : 640} title={compact ? '日付を選ぶ' : 'カレンダー'}>
+      <div tabIndex={0} ref={(el) => { if (el && !el.dataset.f) { el.dataset.f = '1'; el.focus(); } }} onKeyDown={onKey} style={{ padding: compact ? '10px 14px 12px' : '12px 22px 18px', outline: 'none' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
           <button type="button" className="btn-outline" disabled={vi <= 0} onClick={() => setView(ORDER[vi - 1])} style={{ ...btn(), opacity: vi <= 0 ? 0.4 : 1 }}>‹ 前月</button>
-          <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 17, flex: 1, textAlign: 'center' }}>令和{y - 2018}年 {m}月 <span style={{ fontSize: 11.5, fontWeight: 500, color: '#7a8794' }}>（{y}年）</span></div>
+          <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: compact ? 14 : 17, flex: 1, textAlign: 'center' }}>令和{y - 2018}年 {m}月 {!compact && <span style={{ fontSize: 11.5, fontWeight: 500, color: '#7a8794' }}>（{y}年）</span>}</div>
           <button type="button" className="btn-outline" disabled={vi >= ORDER.length - 1} onClick={() => setView(ORDER[vi + 1])} style={{ ...btn(), opacity: vi >= ORDER.length - 1 ? 0.4 : 1 }}>翌月 ›</button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
@@ -213,18 +213,18 @@ export function CalendarModal({ open, onClose, accent, entries, month, day, onPi
             const on = isSel(d);
             const at = d === cursor;
             return (
-              <button key={d} type="button" tabIndex={-1} aria-current={at ? 'date' : undefined} onClick={() => { onPick(view, String(d)); onClose(); }} title={`${m}/${d} を入力行の日付にする`} style={{ minHeight: 58, padding: '5px 6px', textAlign: 'left', outline: at ? `3px solid ${accent}` : 'none', outlineOffset: 1, border: '1px solid ' + (on ? accent : '#e2e8ee'), background: on ? accent + '14' : hol || dow === 0 ? '#fff7f5' : dow === 6 ? '#f5f8fc' : '#fff', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <button key={d} type="button" tabIndex={-1} aria-current={at ? 'date' : undefined} onClick={() => { onPick(view, String(d)); onClose(); }} title={compact ? `${m}/${d}` : `${m}/${d} を入力行の日付にする`} style={{ minHeight: compact ? 30 : 58, padding: compact ? '3px 2px' : '5px 6px', textAlign: compact ? 'center' : 'left', outline: at ? `3px solid ${accent}` : 'none', outlineOffset: 1, border: '1px solid ' + (on ? accent : '#e2e8ee'), background: on ? accent + '14' : hol || dow === 0 ? '#fff7f5' : dow === 6 ? '#f5f8fc' : '#fff', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ fontSize: 12.5, fontWeight: 700, color: hol || dow === 0 ? '#c0392b' : dow === 6 ? '#2c5f9e' : '#22303c' }}>{d}{hol && <span style={{ fontSize: 9.5, fontWeight: 600, marginLeft: 4 }}>祝</span>}</span>
-                {info && <><span style={{ fontSize: 10.5, color: accent, fontWeight: 700 }}>{info.n}件</span><span style={{ fontSize: 10, color: '#7a8794', fontVariantNumeric: 'tabular-nums' }}>{yen(info.amt)}</span></>}
+                {info && !compact && <><span style={{ fontSize: 10.5, color: accent, fontWeight: 700 }}>{info.n}件</span><span style={{ fontSize: 10, color: '#7a8794', fontVariantNumeric: 'tabular-nums' }}>{yen(info.amt)}</span></>}
               </button>
             );
           })}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10, fontSize: 11.5, color: '#7a8794' }}>
+        {!compact && <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10, fontSize: 11.5, color: '#7a8794' }}>
           <span>当月 <b style={{ color: '#22303c' }}>{monthTotal.n}</b> 件　<b style={{ color: '#22303c', fontVariantNumeric: 'tabular-nums' }}>{yen(monthTotal.amt)}</b> 円</span>
           <span style={{ marginLeft: 'auto' }}>←→↑↓ で日を選び Enter で決定（PageUp／PageDown で月を移動）。クリックでも選べます</span>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}><button type="button" onClick={onClose} style={btn()}>閉じる</button></div>
+        </div>}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: compact ? 8 : 12 }}><button type="button" onClick={onClose} style={btn('#5b6773', false, compact)}>閉じる</button></div>
       </div>
     </Modal>
   );

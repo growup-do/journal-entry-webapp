@@ -109,11 +109,11 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
       controls={
         <>
           {/* 伺の種類：スライド式の切替（ダッシュボード表示オプションの「最初に表示する画面」と同じ見た目） */}
-          <div role="radiogroup" aria-label="伺の種類" data-kind-slider style={{ position: 'relative', display: 'grid', gridTemplateColumns: `repeat(${KINDS.length}, 1fr)`, padding: 4, background: '#f3e4d8', borderRadius: 13, maxWidth: 980 }}>
-            <span aria-hidden style={{ position: 'absolute', top: 4, bottom: 4, left: 4, width: `calc((100% - 8px) / ${KINDS.length})`, borderRadius: 10, background: '#e8791e', boxShadow: '0 2px 8px rgba(232,121,30,.35)', transform: `translateX(${Math.max(0, KINDS.findIndex((x) => x.key === kind)) * 100}%)`, transition: 'transform .22s ease' }} />
+          <div role="radiogroup" aria-label="伺の種類" data-kind-slider style={{ position: 'relative', display: 'grid', gridTemplateColumns: `repeat(${KINDS.length}, 1fr)`, padding: 4, background: '#e6ecf0', borderRadius: 13, maxWidth: 980, marginBottom: 14 }}>
+            <span aria-hidden style={{ position: 'absolute', top: 4, bottom: 4, left: 4, width: `calc((100% - 8px) / ${KINDS.length})`, borderRadius: 10, background: accent, boxShadow: '0 2px 8px rgba(30,50,70,.25)', transform: `translateX(${Math.max(0, KINDS.findIndex((x) => x.key === kind)) * 100}%)`, transition: 'transform .22s ease' }} />
             {KINDS.map((x) => {
               const on = kind === x.key;
-              return <button key={x.key} type="button" role="radio" aria-checked={on} data-kind={x.key} onClick={() => setKind(x.key)} style={{ position: 'relative', zIndex: 1, padding: '9px 6px', border: 'none', borderRadius: 10, background: 'transparent', color: on ? '#fff' : '#8a5a3a', fontSize: 13, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: '.02em', transition: 'color .2s' }}>{x.label}</button>;
+              return <button key={x.key} type="button" role="radio" aria-checked={on} data-kind={x.key} onClick={() => setKind(x.key)} style={{ position: 'relative', zIndex: 1, padding: '9px 6px', border: 'none', borderRadius: 10, background: 'transparent', color: on ? '#fff' : '#48565f', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'color .2s' }}>{x.label}</button>;
             })}
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
