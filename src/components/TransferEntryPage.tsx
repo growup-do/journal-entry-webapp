@@ -1,6 +1,7 @@
 // 振替入力（振替伝票形式）／振替単一（振替単一形式：single）
 //   振替伝票形式は、開いた直後に注意（複数行にわたる内部取引には非対応）を表示。
 //   各行：借方金額／借方科目（資金科目は自動表示）／貸方科目（資金科目は自動表示）／貸方金額／摘要。行の追加・挿入・削除ができる。
+//   Enter 送り：月 → 日 → 内部取引スイッチ →（オンのとき相手区分）→ 1行目の借方金額 →…（10/13 鈴木さん指示：日付の次に内部取引）。
 //   借方合計＝貸方合計で登録可。登録した行は下の当年仕訳一覧に入る。
 //   機能ボタン（伝票の操作／行の操作／入力補助／参照）は常に表示し、Alt＋英字のショートカットでも動く。
 //   消費税対応の法人（事業者 › 会計方針）では、各行の摘要の右に税区分・税額の欄を出す（依頼書 2.4）。
@@ -236,7 +237,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
     internal: internalOn,
     internalLocked: hasInternalAcc,
     internalId: `${pre}-internal`,
-    onInternalNext: () => focusId(internalOn && !aite ? `${pre}-aite` : fid(cur, 't')),
+    onInternalNext: () => focusId(internalOn && !aite ? `${pre}-aite` : fid(cur, 'ka')),
     blocked,
     onInternal: () => {
       if (internal) { setInternal(false); return; }
@@ -258,12 +259,12 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
       setLastIds(local.map((e) => e.id));
       setHi(ids);
     },
-    onPickDate: (m, d) => { setMonth(m); setDay(d); focusId(fid(0, 'ka')); },
+    onPickDate: (m, d) => { setMonth(m); setDay(d); focusId(`${pre}-internal`); },
     onOpenPanel: () => { wide.setCollapsed(false); toast.show('画面の下に参照パネルを開きました'); },
     submitId: `${pre}-submit`,
     enterOrder: single
-      ? '月 → 日 → 借方金額 → 借方科目 → 貸方科目 → 貸方金額 → 内部取引スイッチ（Shift+Enter でオン／オフ）→（オンのとき：相手区分）→ 摘要 → 伝票登録ボタン（Enter で登録）'
-      : '月 → 日 → 行ごとに［借方金額 → 借方科目 → 貸方科目 → 貸方金額 → 内部取引スイッチ（Shift+Enter でオン／オフ）→ 摘要］→ 次の行。貸借が一致したあとの空行で Enter を押すと伝票登録ボタンへ移ります',
+      ? '月 → 日 → 内部取引スイッチ（Shift+Enter でオン／オフ）→（オンのとき：相手区分）→ 借方金額 → 借方科目 → 貸方科目 → 貸方金額 → 摘要 → 伝票登録ボタン（Enter で登録）'
+      : '月 → 日 → 内部取引スイッチ（Shift+Enter でオン／オフ）→（オンのとき：相手区分）→ 行ごとに［借方金額 → 借方科目 → 貸方科目 → 貸方金額 → 摘要］→ 次の行。貸借が一致したあとの空行で Enter を押すと伝票登録ボタンへ移ります',
   });
   const ro = !tools.editable;
 
@@ -282,7 +283,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
     if (value && !r.kashiAmt && r.kariAmt && r.kari) setRow(i, { kashiAmt: r.kariAmt });
     focusId(fid(i, 'sa'));
   };
-  const afterKashiAmt = () => focusId(`${pre}-internal`);
+  const afterKashiAmt = () => focusId(fid(cur, 't'));
 
   const list = applyMonth(journal, monthFilter);
   const isSheet = variant === 'sheet';
@@ -400,7 +401,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                 <div className="ef-field" style={{ display: 'flex', alignItems: 'center' }}>
                   <PaperDate
                     month={<input id={`${pre}-month`} className="ef-input pp-input" aria-label="月" disabled={ro} value={month} onChange={(e) => setMonth(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))} onKeyDown={onEnter(() => focusId(`${pre}-day`))} inputMode="numeric" style={{ ...input, width: 44, padding: '8px 2px', textAlign: 'center', fontSize: 14 }} />}
-                    day={<input id={`${pre}-day`} className="ef-input pp-input" aria-label="日" disabled={ro} value={day} onChange={(e) => setDay(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))} onKeyDown={onEnter(() => focusId(fid(0, 'ka')))} inputMode="numeric" style={{ ...input, width: 44, padding: '8px 2px', textAlign: 'center', fontSize: 14 }} />}
+                    day={<input id={`${pre}-day`} className="ef-input pp-input" aria-label="日" disabled={ro} value={day} onChange={(e) => setDay(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))} onKeyDown={onEnter(() => focusId(`${pre}-internal`))} inputMode="numeric" style={{ ...input, width: 44, padding: '8px 2px', textAlign: 'center', fontSize: 14 }} />}
                   />
                 </div>
                 <PaperBox label={<span>伝票<span className="pp-sub">No</span></span>}>
@@ -409,7 +410,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                 {sess.input.cheque && (
                   <div className="ef-field" style={{ display: 'flex', width: 190 }}>
                     <PaperBox label="小切手No" grow>
-                      <input className="ef-input pp-input" disabled={ro} value={cheque} onChange={(e) => setCheque(e.target.value)} onKeyDown={onEnter(() => focusId(fid(0, 'ka')))} placeholder="任意" autoComplete="off" style={{ ...input, padding: '6px 6px' }} />
+                      <input className="ef-input pp-input" disabled={ro} value={cheque} onChange={(e) => setCheque(e.target.value)} onKeyDown={onEnter(() => focusId(`${pre}-internal`))} placeholder="任意" autoComplete="off" style={{ ...input, padding: '6px 6px' }} />
                     </PaperBox>
                   </div>
                 )}
@@ -419,7 +420,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', minWidth: 0 }}>
                       {tools.internalSwitch}
                       <div style={{ flex: 1, minWidth: 0, opacity: internalOn ? 1 : 0.5 }}>
-                        <ComboField id={`${pre}-aite`} title={!internalOn ? '左の「内部取引」スイッチをオンにすると入力できます（内部取引科目を選ぶと自動でオンになります）' : undefined} kind="service" value={aite} onChange={setAite} onCommit={() => focusId(fid(rows.findIndex(isUsed) >= 0 ? rows.findIndex(isUsed) : 0, 't'))} placeholder="相手先の区分を指定" disabled={ro || !internalOn} padY={6} invalid={internalOn ? fieldState(rowIssues.flat(), 'aite') : undefined} message={internalOn ? fieldMessage(rowIssues.flat(), 'aite') : undefined} />
+                        <ComboField id={`${pre}-aite`} title={!internalOn ? '左の「内部取引」スイッチをオンにすると入力できます（内部取引科目を選ぶと自動でオンになります）' : undefined} kind="service" value={aite} onChange={setAite} onCommit={() => focusId(fid(cur, 'ka'))} placeholder="相手先の区分を指定" disabled={ro || !internalOn} padY={6} invalid={internalOn ? fieldState(rowIssues.flat(), 'aite') : undefined} message={internalOn ? fieldMessage(rowIssues.flat(), 'aite') : undefined} />
                       </div>
                     </div>
                   </PaperBox>
