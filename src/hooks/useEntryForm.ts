@@ -18,6 +18,8 @@ export interface UseEntryFormOptions {
   seed: JournalEntry[];
   /** 登録成功後に追加で行う処理（例: 検索条件のクリア）。同一ハンドラ内で呼ぶためバッチされる。 */
   afterSubmit?: () => void;
+  /** 登録後も借方・貸方科目を残す（入力の変更「登録後も直前の科目を残す」） */
+  keepAccounts?: boolean;
   /** 月フィルターの初期値（省略時は全月） */
   initialMonth?: MonthFilter;
 }
@@ -53,7 +55,7 @@ export interface EntryForm {
   addEntries: (list: Omit<JournalEntry, 'id'>[]) => void;
 }
 
-export function useEntryForm({ initialForm, seed, afterSubmit, initialMonth = null }: UseEntryFormOptions): EntryForm {
+export function useEntryForm({ initialForm, seed, afterSubmit, keepAccounts = false, initialMonth = null }: UseEntryFormOptions): EntryForm {
   const [form, setForm] = useState<FormState>(initialForm);
   const [assist, setAssist] = useState<AssistState>({ open: false, field: '', type: '', query: '' });
   const [journal, setJournal] = useState<JournalEntry[]>(seed);
@@ -64,6 +66,8 @@ export function useEntryForm({ initialForm, seed, afterSubmit, initialMonth = nu
   const nextId = useRef(1);
   const afterSubmitRef = useRef(afterSubmit);
   afterSubmitRef.current = afterSubmit;
+  const keepAccountsRef = useRef(keepAccounts);
+  keepAccountsRef.current = keepAccounts;
 
   // 補助ドロップダウン外の mousedown（capture）で閉じる
   useEffect(() => {
@@ -155,7 +159,7 @@ export function useEntryForm({ initialForm, seed, afterSubmit, initialMonth = nu
     setLastAdded(id);
     setErr('');
     // 借方・貸方・摘要・業者・金額をクリア（日付・取引区分・サービス区分は保持）
-    setForm((s) => ({ ...s, kariKamoku: '', kashiKamoku: '', tekiyo: '', gyosha: '', amount: '' }));
+    setForm((s) => ({ ...s, ...(keepAccountsRef.current ? {} : { kariKamoku: '', kashiKamoku: '' }), tekiyo: '', gyosha: '', amount: '' }));
     // フィルターが特定月に絞られていて新規行の月と異なる場合は新規行の月へ自動切替
     setMonthFilter((mf) => (mf != null && mf !== month ? month : mf));
     afterSubmitRef.current?.();

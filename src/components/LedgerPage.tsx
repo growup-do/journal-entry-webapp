@@ -20,6 +20,7 @@ import { useVouchers } from '../store/journalStore';
 import { fusenLabel, getSession, setSession, useSession } from '../store/session';
 import { useAssist } from '../hooks/useAssist';
 import type { MonthFilter } from '../types';
+import { inPeriod, periodLabel as periodText, periodShort, type Period } from '../lib/period';
 
 export type LedgerKind = 'account' | 'fund' | 'vendor';
 /** 画面キー（ルーティング・確認メモで使用。表示名は displayName で現行の用語に合わせる） */
@@ -44,6 +45,8 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
   const s = useSession();
   const money = useMoney();
   const [month, setMonth] = useState<MonthFilter>(boot?.month ?? '8');
+  /** 集計期間の範囲（月の範囲・日付の範囲。確認メモ #57／#58）。null＝月タブの単月 */
+  const [range, setRange] = useState<Period | null>(null);
   const [target, setTarget] = useState(boot?.account ?? (kind === 'vendor' ? '中央リース' : '普通預金（保育園）'));
   const all = useVouchers();
   const [opts, setOpts] = useState({ check: false, red: false, blue: false, yellow: false, green: false, daily: true, spare: true, internal: false });
@@ -60,7 +63,7 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
   const title = displayName(KEY[kind]);
   const from = boot?.from;
 
-  const rows = all.filter((r) => (month == null || r.date.split('/')[0] === month) && (isVendor ? r.gyosha === target : r.kari === target || r.kashi === target) && (!opts.check || r.check) && (!opts.internal || !!r.internal) && (!(opts.red || opts.blue || opts.yellow || opts.green) || (opts.red && r.fusen === '赤') || (opts.blue && r.fusen === '青') || (opts.yellow && r.fusen === '黄') || (opts.green && r.fusen === '緑')));
+  const rows = all.filter((r) => (range ? inPeriod(r.date, range) : month == null || r.date.split('/')[0] === month) && (isVendor ? r.gyosha === target : r.kari === target || r.kashi === target) && (!opts.check || r.check) && (!opts.internal || !!r.internal) && (!(opts.red || opts.blue || opts.yellow || opts.green) || (opts.red && r.fusen === '赤') || (opts.blue && r.fusen === '青') || (opts.yellow && r.fusen === '黄') || (opts.green && r.fusen === '緑')));
   const ra = useRowActions({ rows, accent, returnTo: title });
   let bal = CARRY;
   const lines = rows.map((r, i) => {
@@ -76,6 +79,7 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
   const sumC = lines.reduce((a, l) => a + l.credit, 0);
   const sumTax = lines.reduce((a, l) => a + l.taxAmt, 0);
   const m = month ?? '8';
+  const periodStr = range ? periodText(range) : `令和8年 ${m}月1日 〜 令和8年 ${m}月末日`;
   const toggle = (k: keyof typeof opts) => setOpts((o) => ({ ...o, [k]: !o[k] }));
   const taxCols = isFund && showTax;
   // 印刷／Excel：表示中の明細（繰越・月計を含む）をそのまま出力
@@ -89,7 +93,7 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
   };
   const openExport = (out: 'print' | 'excel') => {
     const { header, rows: body } = exportTable();
-    setExp({ kind: out, title: `${title}　${target}`, fileName: `${title}_${target}_令和8年${m}月`, meta: `${s.fiscalYear}　${s.division}　令和8年 ${m}月1日〜${m}月末日`, header, rows: body });
+    setExp({ kind: out, title: `${title}　${target}`, fileName: range ? `${title}_${target}_令和8年${periodShort(range)}` : `${title}_${target}_令和8年${m}月`, meta: `${s.fiscalYear}　${s.division}　${periodStr}`, header, rows: body });
   };
 
   const fieldBtn: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, width: 260, boxSizing: 'border-box', padding: '7px 10px', background: '#fff', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left', color: 'inherit' };
@@ -111,8 +115,8 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
       tools={[{ label: isVendor ? '業者検索' : '科目検索', onClick: () => assist.open('target', isVendor ? 'vendor' : 'account'), primary: true }, { label: 'Excel', onClick: () => openExport('excel') }, { label: '再計算', onClick: () => toast.show(`再計算しました（${lines.length} 件　残高 ${moneyText(bal, s.env)}）`) }]}
       period={
         <>
-          <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} />
-          <span style={{ fontSize: 12.5, color: '#48565f' }}>令和8年 {m}月1日 〜 令和8年 {m}月末日</span>
+          <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} range={range} onRange={setRange} />
+          <span style={{ fontSize: 12.5, color: '#48565f' }}>{periodStr}</span>
         </>
       }
       periodAside={stats.map((st) => (

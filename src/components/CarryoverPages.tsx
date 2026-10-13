@@ -239,7 +239,7 @@ export function DepreciationLinkPage({ variant, accent, onNavigate }: Maintenanc
   const go = (p: string) => (onNavigate ? onNavigate(p) : toast.show(`「${p}」を開きます（プロトタイプ）`));
   const cols3 = { padding: 22, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, alignItems: 'start' } as const;
   return (
-    <SettingsShell variant={variant} title="減価償却との連動設定" badge="マスター設定" draft={false} desc="会計の仕訳と減価償却（別売オプション）をつなぐ設定です。固定資産の取得・備品購入の仕訳を減価償却へ連動させる科目、借入元金償還補助の仕訳を認識する科目、国庫補助金等特別積立金を自動で積み立てる仕訳の科目を指定します。" actions={<>
+    <SettingsShell variant={variant} title="減価償却との連動設定" badge="マスター設定" draft={false} desc="会計の仕訳と減価償却をつなぐ設定です。固定資産の取得・備品購入の仕訳を減価償却へ連動させる科目、借入元金償還補助の仕訳を認識する科目、国庫補助金等特別積立金を自動で積み立てる仕訳の科目を指定します。" actions={<>
       <button type="button" className="btn-outline" onClick={reset} style={btn()}>デフォルト設定にする</button>
       <button type="button" className="submit-btn" onClick={() => toast.show(`「${tab}」の設定を保存しました`)} style={btn(accent, true)}>OK（保存）</button>
     </>}>

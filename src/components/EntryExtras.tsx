@@ -40,7 +40,7 @@ export function InputSettingsModal({ open, onClose, accent }: { open: boolean; o
           <Toggle on={v.gyoshaCode} onChange={(x) => set({ gyoshaCode: x })} accent={accent} label="業者コードの入力をする（取引先から検索）" />
           <Toggle on={v.spare1} onChange={(x) => set({ spare1: x })} accent={accent} label="入力予備１を入力する（用途は自由）" />
           <Toggle on={v.spare2} onChange={(x) => set({ spare2: x })} accent={accent} label="入力予備２を入力する" />
-          <Toggle on={v.keepLast} onChange={(x) => set({ keepLast: x })} accent={accent} label="前回入力した日・科目を残すようにする" />
+          <Toggle on={v.keepLast} onChange={(x) => set({ keepLast: x })} accent={accent} label="登録後も直前の借方・貸方科目を残す（日付は常に残ります。続けて同じ科目で入力するとき）" />
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={onClose} style={btn()}>中止</button><button type="button" className="submit-btn" onClick={() => { setSession({ input: v }); onClose(); }} style={btn(accent, true)}>決定</button></div>
       </div>

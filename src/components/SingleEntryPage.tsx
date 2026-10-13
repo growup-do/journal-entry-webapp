@@ -84,12 +84,13 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
   const [graphAcct, setGraphAcct] = useState<string | null>(null);
   const pending = useRef<RowMeta | null>(null);
 
-  // 登録後：小切手Noをクリアし、借方科目へフォーカス（証憑・日付・区分は保持して連続入力）
+  // 登録後：小切手Noをクリアし、借方科目へフォーカス（証憑・日付・区分は保持して連続入力）。科目を残す設定のときは金額へ
+  const keepLast = sess.input.keepLast;
   const afterSubmit = useCallback(() => {
     setCheque('');
-    focusId('se-kari');
-  }, []);
-  const v = useEntryForm({ initialForm, seed: makeSingleSeed(), afterSubmit, initialMonth: '8' });
+    focusId(keepLast ? 'se-amount' : 'se-kari');
+  }, [keepLast]);
+  const v = useEntryForm({ initialForm, seed: makeSingleSeed(), afterSubmit, keepAccounts: keepLast, initialMonth: '8' });
   const f = v.form;
 
   // 登録した行の id が決まったら、行の情報（チェック・付箋・相手区分）をひも付ける

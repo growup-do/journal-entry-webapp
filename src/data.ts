@@ -67,7 +67,8 @@ export const MENU_GROUPS: MenuGroup[] = [
   { key: 'trend', label: '推移・分析', icon: 'trend', items: ['科目推移', '資金推移', '業者推移', '経年グラフ', '分析グラフ', '充実残額'] },
   { key: 'compare', label: '試算表・決算書', icon: 'compare', items: ['月次試算', '予算対比', '月次決算'] },
   { key: 'print', label: '帳票・印刷', icon: 'print', items: ['印刷センター', '別紙（注記・明細書・財産目録）', '共通の印刷設定'] },
-  { key: 'option', label: 'オプション', icon: 'option', items: ['小口現金', '減価償却', '預金出納', '収入支出', '電子印'], option: true },
+  // 旧「オプション」：確認メモ #56（オプションはなくなり全部標準機能）により、本体機能として常時表示する。分類名は仮置き
+  { key: 'option', label: '出納・資産・決裁', icon: 'option', items: ['小口現金', '減価償却', '預金出納', '収入支出', '電子印'] },
 ];
 /** 調査・チェック（メニューバーには置かず、ホームのダッシュボードから開く） */
 export const HOME_CHECKS = ['仕訳数', '日次調査', '決算調査'];
@@ -80,8 +81,8 @@ export const groupOf = (label: string) => MENU_GROUPS.find((g) => g.items.includ
 export const OPTION_MENU = ['小口現金', '減価償却', '預金出納', '収入支出', '電子印'];
 export const isOptionMenu = (label: string) => OPTION_MENU.includes(label);
 
-/** 法人メニュー（通常メニューと別枠でアプリバーに配置） */
-export const CORP_MENU = ['法人調査', '法人印刷'];
+/** 法人メニュー（通常メニューと別枠でアプリバーに配置）。旧「法人調査」は起動中の区分の決算調査に置き換え（確認メモ #44） */
+export const CORP_MENU = ['法人印刷'];
 
 /** 初期表示のメニュー項目 */
 export const DEFAULT_MENU = 'ホーム';

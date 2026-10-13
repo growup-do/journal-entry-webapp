@@ -248,10 +248,10 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
         <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 18 }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>最初に表示する画面</div>
-            <div style={{ fontSize: 11.5, color: '#7a8794', marginBottom: 8 }}>ログインして区分を選んだあと、最初に開く画面です。次回のログインから反映します。</div>
+            <div style={{ fontSize: 11.5, color: '#7a8794', marginBottom: 8 }}>ログインして区分を選んだあと、最初に開く画面です（既定は伝票入力画面）。次回のログインから反映します。</div>
             <div role="radiogroup" aria-label="最初に表示する画面" data-start-slider style={{ position: 'relative', display: 'grid', gridTemplateColumns: '1fr 1fr', padding: 4, background: '#e6ecf0', borderRadius: 13, maxWidth: 420 }}>
-              <span aria-hidden style={{ position: 'absolute', top: 4, bottom: 4, left: 4, width: 'calc(50% - 4px)', borderRadius: 10, background: accent, boxShadow: '0 2px 8px rgba(31,122,82,.35)', transform: s.startScreen === '伝票入力' ? 'translateX(100%)' : 'translateX(0)', transition: 'transform .22s ease' }} />
-              {([['ホーム', 'ホーム画面'], ['伝票入力', '伝票入力画面']] as const).map(([key, label]) => {
+              <span aria-hidden style={{ position: 'absolute', top: 4, bottom: 4, left: 4, width: 'calc(50% - 4px)', borderRadius: 10, background: accent, boxShadow: '0 2px 8px rgba(31,122,82,.35)', transform: s.startScreen === 'ホーム' ? 'translateX(100%)' : 'translateX(0)', transition: 'transform .22s ease' }} />
+              {([['伝票入力', '伝票入力画面'], ['ホーム', 'ホーム画面']] as const).map(([key, label]) => {
                 const on = s.startScreen === key;
                 return <button key={key} type="button" role="radio" aria-checked={on} data-start-screen={key} onClick={() => setSession({ startScreen: key })} style={{ position: 'relative', zIndex: 1, padding: '10px 12px', border: 'none', borderRadius: 10, background: 'transparent', color: on ? '#fff' : '#48565f', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', transition: 'color .2s' }}>{label}</button>;
               })}

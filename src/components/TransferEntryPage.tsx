@@ -141,8 +141,9 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
   const allIssues = [...voucherIssues, ...rowIssues.flatMap((list, i) => list.map((x) => ({ ...x, code: `${i}-${x.code}`, title: rows.length > 1 ? `${i + 1}行目：${x.title}` : x.title })))];
   const blocked = hasError(allIssues);
 
-  const resetEntry = () => {
-    setRows(Array.from({ length: rowCount }, emptyRow));
+  /** 登録後・中止後の初期化。keepAccounts＝各行の借方・貸方科目を残す（入力の変更「登録後も直前の科目を残す」。確認メモ #47） */
+  const resetEntry = (keepAccounts = false) => {
+    setRows((rs) => Array.from({ length: rowCount }, (_, i) => (keepAccounts && rs[i] ? { ...emptyRow(), kari: rs[i].kari, kashi: rs[i].kashi } : emptyRow())));
     setActive(0);
     setCheque('');
     setErr('');
@@ -185,7 +186,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
     setJournal((j) => [...j, ...entries]);
     setLastIds(ids);
     setHi(storeIds);
-    resetEntry();
+    resetEntry(sess.input.keepLast);
     setMonthFilter((mf) => (mf != null && mf !== month ? month : mf));
     toast.show(`${title}を登録しました（${entries.length}行）`);
     focusId(fid(0, 'ka'));

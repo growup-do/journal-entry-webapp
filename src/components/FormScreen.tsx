@@ -266,8 +266,10 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
     setRows(g.lines.map((l) => blankRow({ tekiyo: l.tekiyo, gyosha: l.gyosha ?? '', amount: String(l.amount ?? '').replace(/[^0-9]/g, '') })));
     setCur(0);
   };
-  const reset = () => {
-    setKari(''); setKashi(''); setAite(''); setInternal(false); setFundMode('自動資金');
+  /** 登録後・中止後の初期化。keepAccounts＝直前の借方・貸方科目を残す（入力の変更「登録後も直前の科目を残す」。確認メモ #47） */
+  const reset = (keepAccounts = false) => {
+    if (!keepAccounts) { setKari(''); setKashi(''); }
+    setAite(''); setInternal(false); setFundMode('自動資金');
     setRows([blankRow()]); setCur(0); setCheque(''); setSpare(['', '']); setManualNo('');
   };
   const finalize = () => {
@@ -288,14 +290,15 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
     const dep = isDepreciationAccount(kari) || isDepreciationAccount(kashi);
     if (w) setStmt({ label: w.label, entry: { kari, kashi, tekiyo: list[0].tekiyo, amount: sum } });
     const [next, ...rest] = queue;
-    reset();
+    reset(sess.input.keepLast);
     if (next) {
       applyGroup(next); setQueue(rest);
       toast.show(`伝票No ${no} を登録しました。定型仕訳の次の伝票（残り ${rest.length + 1} 枚）を呼び出しました`);
       focusId(SUBMIT_ID);
     } else {
       toast.show(`伝票No ${no}（${list.length} 行・合計 ${sum.toLocaleString('ja-JP')} 円）を登録しました${dep ? '。固定資産の登録は「減価償却」メニューで行ってください' : ''}`);
-      focusId('fe-month');
+      // 科目を残す設定のときは、次の伝票の1行目（摘要）から続けて入力できるようにする
+      focusId(sess.input.keepLast ? 'fe-tek-0' : 'fe-month');
     }
   };
   const submit = () => {
