@@ -8,6 +8,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { MENU_GROUPS, displayName, groupOf, isOptionMenu, type MenuGroup } from '../data';
 import { startKindOf, useSession, type Session } from '../store/session';
 import { FavoritesMenu } from './FavoritesMenu';
+import { Chevron } from './ui';
 
 /** メニュー項目の状態（依頼書 5.1.1／5.1.4）：起動区分の種類・オプション導入状況で変わる。使えない項目は隠さず、グレーアウトの無効表示にする（理由はツールチップのみ。確認事項 10/9 回答） */
 function itemState(label: string, s: Session): { disabled?: string; tag?: string } {
@@ -254,14 +255,6 @@ function SubItem({ label, active, accent, indent, onClick, state = {} }: { label
   );
 }
 
-
-function Chevron({ open, color }: { open: boolean; color: string }) {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform .15s', transform: open ? 'rotate(180deg)' : 'none', flex: 'none' }}>
-      <path d="M6 9l6 6 6-6" />
-    </svg>
-  );
-}
 
 /** 大メニューのアイコン（線画） */
 function Icon({ kind, color }: { kind: MenuGroup['icon']; color: string }): ReactNode {

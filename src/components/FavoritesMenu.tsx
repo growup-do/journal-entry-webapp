@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { FavoritesEditModal } from './FavoritesEditModal';
+import { Chevron } from './ui';
 import { displayName } from '../data';
 import { useSession } from '../store/session';
 
@@ -29,7 +30,7 @@ export function FavoritesMenu({ accent, active, onNavigate }: { accent: string; 
   return (
     <div ref={ref} style={{ position: 'relative', flex: 'none' }} data-favorites-menu onMouseEnter={enter} onMouseLeave={leave}>
       <button type="button" data-menu="お気に入りメニュー" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="menu" title="登録した画面をここから開けます（どの画面からでも）" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 9px', borderRadius: 8, border: '1px solid ' + (open ? accent : '#dde4ea'), background: open ? accent : '#f7f9fb', color: open ? '#fff' : '#22303c', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-        <span aria-hidden style={{ color: open ? '#fff' : '#d9a400' }}>★</span>お気に入りメニュー<span style={{ fontSize: 9, color: open ? '#fff' : '#9aa5b1' }}>▼</span>
+        <span aria-hidden style={{ color: open ? '#fff' : '#d9a400' }}>★</span>お気に入りメニュー<Chevron open={open} color={open ? '#fff' : '#9aa5b1'} />
       </button>
       {open && (
         <div role="menu" style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', zIndex: 120, minWidth: 220, background: '#fff', border: '1px solid #e2e8ee', borderRadius: 12, boxShadow: '0 12px 36px rgba(20,30,40,.16)', padding: 6 }}>

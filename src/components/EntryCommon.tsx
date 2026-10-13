@@ -267,7 +267,7 @@ export function ComboField({ id, kind, value, onChange, onCommit, placeholder, f
   const border = invalid === 'error' ? '#c0392b' : invalid === 'warn' ? '#d9a400' : '#cfd8e0';
   return (
     <div className="ef-combo" data-tip={disabled && title ? title : undefined} style={{ flex: '1 1 auto', minWidth: 0, width: '100%' }}>
-    <div className="ef-box" data-combo title={disabled ? undefined : title} style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%', boxSizing: 'border-box', border: '1px solid ' + border, borderRadius: 8, background: disabled ? '#f5f7f9' : invalid === 'error' ? '#fdeee9' : '#fff', minWidth: 0 }}>
+    <div className="ef-box" data-combo title={disabled ? undefined : title} style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%', boxSizing: 'border-box', border: '1px solid ' + border, borderRadius: 8, background: disabled ? '#fff' : invalid === 'error' ? '#fdeee9' : '#fffbe6', minWidth: 0 }}>
       {cur?.code && !editing && <span style={{ flex: 'none', marginLeft: 8, padding: '1px 6px', borderRadius: 5, background: '#eef2f6', color: '#5b6773', fontSize: 11, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{cur.code}</span>}
       <input
         id={id}
@@ -297,7 +297,7 @@ export function ComboField({ id, kind, value, onChange, onCommit, placeholder, f
         }}
         onClick={() => !disabled && setOpen(true)}
         onKeyDown={onKeyDown}
-        style={{ flex: 1, minWidth: 0, width: '100%', border: 'none', padding: `${padY}px 8px ${padY}px 9px`, fontSize, fontFamily: 'inherit', color: '#22303c' }}
+        style={{ flex: 1, minWidth: 0, width: '100%', border: 'none', padding: `${padY}px 8px ${padY}px 9px`, fontSize, fontFamily: 'inherit', color: disabled ? '#9aa5b1' : '#22303c' }}
       />
       <button type="button" tabIndex={-1} aria-label="候補を開く" disabled={disabled} onMouseDown={(e) => { e.preventDefault(); if (disabled) return; inputRef.current?.focus(); setOpen((o) => !o); }} style={{ flex: 'none', width: 24, alignSelf: 'stretch', border: 'none', background: 'transparent', color: '#9aa5b1', fontSize: 9, cursor: disabled ? 'default' : 'pointer', fontFamily: 'inherit' }}>▼</button>
       {open && !disabled && (
@@ -738,17 +738,18 @@ const PAPER_CSS = `
 .pp-row:focus-within .ef-rownow { display: inline-block; }
 .pp-row:focus-within .ef-rowno { display: none; }
 /* 用紙の中の素の入力欄（枠は罫線に任せ、フォーカス時だけ EntryStyles の太枠が付く） */
-/* 入力欄は用紙の罫線とは別に、必ず枠付きの白い箱にする（入力する欄と、自動表示の欄を見分けられるように） */
-.pp-input { border: 1px solid #b7c6bd; border-radius: 5px; background: #fff; font-family: inherit; color: #22303c; box-sizing: border-box; min-width: 0; min-height: 32px; padding: 4px 8px; box-shadow: inset 0 1px 0 rgba(0,0,0,.02); }
+/* 入力欄は用紙の罫線とは別に、必ず枠付きの箱にする。入力できる欄は薄い黄色（入力後も残す）、入力できない欄は白地にグレー文字（10/13 鈴木さん指示） */
+.pp-input { border: 1px solid #b7c6bd; border-radius: 5px; background: #fffbe6 !important; font-family: inherit; color: #22303c; box-sizing: border-box; min-width: 0; min-height: 32px; padding: 4px 8px; box-shadow: inset 0 1px 0 rgba(0,0,0,.02); }
 .pp-input:hover:not(:disabled) { border-color: #7fa38e; }
-.pp-input:disabled { color: #7a8794; background: #f1f4f6; border-style: dashed; }
-/* 自動表示・読み取り専用の欄：白い枠の中にグレーの箱を置くと入力欄に見えるため、枠（セル）そのものをグレーにする */
-.pp-ro { display: inline-flex; align-items: center; min-height: 32px; padding: 4px 2px; color: #5b6773; font-size: 13px; }
+.pp-input:focus:not(:disabled) { background: #fff8d6 !important; }
+.pp-input:disabled { color: #9aa5b1; background: #fff !important; border-style: dashed; }
+/* 自動表示・読み取り専用の欄：白地にグレー文字（入力できる欄の薄い黄色と見分ける） */
+.pp-ro { display: inline-flex; align-items: center; min-height: 32px; padding: 4px 2px; color: #7a8794; font-size: 13px; }
 .pp-ro small { font-size: 10px; color: #9aa5b1; margin-left: 6px; }
 .pp-ro.pp-ro-s { min-height: 24px; padding: 2px 2px; font-size: 12px; }
 .pp-ro.pp-ro-fill { display: flex; width: 100%; box-sizing: border-box; min-width: 0; }
 .pp-cell.pp-auto, .pp-val.pp-auto, .pp-cell:has(> .pp-ro), .pp-val:has(> .pp-ro),
-.pp-row:focus-within > .pp-cell.pp-auto, .pp-row:focus-within > .pp-cell:has(> .pp-ro) { background: #eceff2; }
+.pp-row:focus-within > .pp-cell.pp-auto, .pp-row:focus-within > .pp-cell:has(> .pp-ro) { background: #fff; }
 .pp-input::placeholder { color: #b3bcc5; }
 /* 下段の Seq No／チェック／証憑／小切手No の並び */
 .pp-foot { display: flex; align-items: stretch; min-width: 0; min-height: 40px; }

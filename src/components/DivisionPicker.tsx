@@ -11,7 +11,7 @@ import { Modal } from './Modal';
 import { DivisionInfoDialog } from './DivisionInfoDialog';
 import { DivisionOrgChart, OrgChartLegend } from './DivisionOrgChart';
 import { ToastView, useToast } from './Toast';
-import { Notice, btn, input, lbl } from './ui';
+import { Chevron, Notice, btn, input, lbl } from './ui';
 import { divisionLabel, flattenDivisions, setSession, startKindOf, useSession, type DivisionNode } from '../store/session';
 
 const YEARS = ['令和6年度', '令和7年度', '令和8年度', '令和9年度'];
@@ -56,7 +56,7 @@ export function DivisionPicker({ accent, compact }: { accent: string; compact?: 
         <span style={{ color: '#c3ccd4' }}>›</span>
         <b style={{ fontWeight: 700 }}>{s.division}</b>
         {kind !== '入力区分' && <span style={{ fontSize: 10, fontWeight: 800, padding: '1px 6px', borderRadius: 8, background: kind === '合算区分' ? '#fbe9d0' : '#e8f0fb', color: kind === '合算区分' ? '#b45309' : '#2c5f9e' }}>{kind}</span>}
-        <span style={{ color: '#9aa5b1', fontSize: 9 }}>▼</span>
+        <Chevron open={open} />
       </button>
       <DivisionDialog open={open} onClose={() => { setOpen(false); setStartup(false); }} accent={accent} startup={startup} onApplied={(info) => { if (info.yearChanged || info.startup) setCont({ year: info.year, division: info.division }); }} />
       <ContinuityCheckModal info={cont} accent={accent} onClose={() => setCont(null)} />

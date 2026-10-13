@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { PreviewModal, PrintDialog, REPORTS, sampleReportData, type ReportDef, type TableData } from './PrintCenter';
-import { btn } from './ui';
+import { Chevron, btn } from './ui';
 
 export interface PrintItem { name: string; /** 詳細設定の元にする帳票（REPORTS の名前） */ base: string; note?: string; /** 画面に表示中の表を印刷データに使う */ screenData?: boolean }
 export interface PrintGroup { label?: string; items: PrintItem[] }
@@ -74,7 +74,7 @@ export function ScreenPrintMenu({ page, groups, actions, accent, data, label = '
   return (
     <div ref={ref} data-screen-print={page ?? (actions ? 'actions' : 'custom')} style={{ position: 'relative', display: 'inline-flex' }}>
       <button type="button" className={tone === 'act' ? 'ef-act' : 'btn-outline'} aria-haspopup={single ? undefined : 'menu'} aria-expanded={single ? undefined : open} onClick={() => (single ? choose(items[0]) : setOpen((o) => !o))} title={single ? `${items[0].name} を印刷（期間・詳細設定・出力先を指定）` : 'この画面に関係する帳票を選んで印刷します'} style={{ ...(tone === 'act' ? { padding: '6px 10px', borderRadius: 8, border: '1px solid #cfd8e0', background: '#fff', color: '#48565f', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' } : btn(accent, false, small)), display: 'inline-flex', alignItems: 'center', gap: 6, ...style }}>
-        {icon}{label}{!single && <span aria-hidden style={{ fontSize: 10, marginLeft: 2 }}>▾</span>}
+        {icon}{label}{!single && <Chevron open={open} color="currentColor" />}
       </button>
       {open && !single && (
         <div role="menu" style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, minWidth: 280, maxWidth: 420, maxHeight: '60vh', overflowY: 'auto', background: '#fff', border: '1px solid #dde4ea', borderRadius: 10, boxShadow: '0 12px 32px rgba(24,42,62,.16)', padding: 6, zIndex: 120, textAlign: 'left' }}>

@@ -98,3 +98,12 @@ export function SelectionBar({ count, unit = '行', hint, onClear, actions, styl
     </div>
   );
 }
+
+/** プルダウンの矢印（大メニュー・印刷・お気に入りメニュー・区分の切替などで共通。開いているときは上向き） */
+export function Chevron({ open = false, color = '#9aa5b1', size = 12 }: { open?: boolean; color?: string; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transition: 'transform .15s', transform: open ? 'rotate(180deg)' : 'none', flex: 'none' }}>
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}

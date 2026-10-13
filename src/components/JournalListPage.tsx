@@ -15,7 +15,7 @@ import { NUM, ReportShell, SwitchPill, TD, TH, useMoney } from './ReportShell';
 import { ACTION_HEAD, ACTION_TH, useRowActions } from './RowActions';
 import { ToastView, useToast } from './Toast';
 import { AdvancedSearchModal, DeleteVoucherModal, EMPTY_COND, applyCond, condActive, type SearchCond } from './VoucherEdit';
-import { Notice, SelectionBar, btn } from './ui';
+import { Chevron, Notice, SelectionBar, btn } from './ui';
 import { Modal } from './Modal';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { displayName } from '../data';
@@ -200,7 +200,7 @@ function BulkDeleteMenu({ open, onToggle, onPick }: { open: boolean; onToggle: (
   const item: CSSProperties = { display: 'block', width: '100%', textAlign: 'left', padding: '8px 10px', border: 'none', background: 'transparent', borderRadius: 8, fontSize: 12.5, fontWeight: 700, color: '#c0392b', fontFamily: 'inherit', cursor: 'pointer' };
   return (
     <span style={{ position: 'relative', display: 'inline-flex' }} data-bulk-delete>
-      <button type="button" onClick={onToggle} aria-expanded={open} aria-haspopup="menu" title="インポート伝票・自動按分伝票をまとめて削除します" style={btn('#c0392b', false, true)}>一括削除 ▾</button>
+      <button type="button" onClick={onToggle} aria-expanded={open} aria-haspopup="menu" title="インポート伝票・自動按分伝票をまとめて削除します" style={{ ...btn('#c0392b', false, true), display: 'inline-flex', alignItems: 'center', gap: 4 }}>一括削除<Chevron open={open} color="currentColor" /></button>
       {open && (
         <div role="menu" style={{ position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 40, minWidth: 280, background: '#fff', border: '1px solid #e2e8ee', borderRadius: 10, boxShadow: '0 10px 30px rgba(20,30,40,.14)', padding: 6 }}>
           <div style={{ padding: '4px 10px 6px', fontSize: 11, color: '#8290a0', lineHeight: 1.6 }}>年度内の全件から、取込・按分の実行単位を選んで削除します（削除した仕訳は元に戻せません）</div>
