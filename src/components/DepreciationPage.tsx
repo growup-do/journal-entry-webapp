@@ -17,6 +17,7 @@ import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { ACCOUNT_META, accountMatches } from '../lib/accounts';
 import { SUMMARIES } from '../data';
 
+const OPTION = '#b45309';
 const yen = (n: number) => n.toLocaleString('ja-JP');
 const USER = '鈴木';
 const pad2 = (n: number) => String(n).padStart(2, '0');
@@ -553,6 +554,7 @@ export function DepreciationPage({ variant, accent }: Props) {
           <div style={{ minWidth: 0 }}>
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21 }}>
               減価償却
+              <span style={{ fontSize: 10, fontWeight: 800, color: '#fff', background: OPTION, borderRadius: 5, padding: '2px 6px', verticalAlign: 'middle', marginLeft: 8 }}>オプション</span>
               <span style={{ fontSize: 12.5, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>チャイルド保育園　令和8年度</span>
             </div>
             <div style={{ color: '#7a8794', fontSize: 12, marginTop: 4 }}>固定資産・備品の台帳管理と、減価償却の決算処理。<span style={{ color: '#b7791f' }}>（値はサンプル）</span></div>

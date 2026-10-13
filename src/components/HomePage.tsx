@@ -1,4 +1,4 @@
-// ホーム：銀行の預金残高／調査・チェック／よく使う操作／FAQ／お知らせ／バナースペース
+// ホーム：銀行の預金残高／調査・チェック／お気に入りメニュー／FAQ／お知らせ／バナースペース
 //   右上の「ダッシュボード表示オプション」で、表示するメニューと最初に表示する画面（ホーム／伝票入力）を選ぶ。
 //   年度更新の時期には、上部に年度更新を促す案内を表示する。
 
@@ -144,9 +144,9 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
             </div>
           </section>}
 
-          {/* よく使う操作 */}
+          {/* お気に入りメニュー */}
           {show.favorites && <section style={card}>
-            <div style={h2}>よく使う操作（お気に入り）<button type="button" style={link} onClick={() => setFavEdit(true)}>編集 ›</button></div>
+            <div style={h2}>お気に入りメニュー<button type="button" style={link} onClick={() => setFavEdit(true)}>編集 ›</button></div>
             <div style={{ display: 'flex', gap: 8, padding: 16, flexWrap: 'wrap' }}>
               {s.favorites.map((l) => (
                 <button key={l} type="button" className="btn-outline" onClick={() => onNavigate(l)} style={{ padding: '9px 16px', border: '1px solid #cfd8e0', borderRadius: 9, background: '#fff', color: '#22303c', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}> {displayName(l)}</button>

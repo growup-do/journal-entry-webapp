@@ -4,7 +4,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent } from 'react';
-import { HOME_CHECKS, MENU_GROUPS, SETTINGS_GROUPS, displayName } from '../data';
+import { HOME_CHECKS, MENU_GROUPS, SETTINGS_GROUPS, displayName, isOptionMenu } from '../data';
 import { startKindOf, useSession } from '../store/session';
 
 interface Group { key: string; label: string; note: string; danger: boolean; items: string[] }
@@ -63,10 +63,11 @@ export function FunctionFinderPage({ onNavigate, initialQuery = '' }: { accent: 
                 {g.note && <div style={{ fontSize: 10.5, color: g.danger ? '#b5564a' : '#9aa5b1', marginTop: 1 }}>{g.note}</div>}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
                   {g.items.map((l) => {
+                    const missing = isOptionMenu(l) && !s.options[l];
                     const off = ['単一入力', '伝票入力', '振替入力', '振替単一'].includes(l) && kind !== '入力区分';
                     return (
                       <button key={l} type="button" className="btn-outline" onClick={() => onNavigate(l)} title={off ? `${kind}で起動中は利用できません` : undefined} style={{ padding: '5px 10px', border: '1px solid ' + (g.danger ? '#f2c9c2' : '#cfd8e0'), borderRadius: 8, background: '#fff', color: off ? '#b3bcc5' : g.danger ? '#c0392b' : '#22303c', fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
-                        {displayName(l)}
+                        {displayName(l)}{missing && <span style={{ marginLeft: 5, fontSize: 9.5, color: '#b7791f' }}>未導入</span>}
                       </button>
                     );
                   })}

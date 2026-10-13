@@ -13,6 +13,7 @@ import { ToastView, useToast } from './Toast';
 import { JOURNAL_COUNTS, JOURNAL_ROWS, type JournalRow } from '../data';
 import type { MonthFilter } from '../types';
 
+const OPTION = '#b45309';
 const isCash = (a: string) => /預金|現金/.test(a);
 const isDeposit = (a: string) => /健康保険|厚生年金|所得税|住民税|預り金/.test(a);
 const isPL = (a: string) => !isCash(a) && !isDeposit(a);
@@ -91,8 +92,7 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
 
   const btn = (primary?: boolean): CSSProperties => ({ padding: '8px 16px', borderRadius: 8, border: primary ? 'none' : '1px solid #cfd8e0', background: primary ? accent : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
   const input: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 7, fontSize: 13, fontFamily: 'inherit', outline: 'none' };
-  // 旧「オプション」バッジ：本体機能になったため表示しない（確認事項 10/9 回答）
-  const badge = null;
+  const badge = <span style={{ fontSize: 10, fontWeight: 800, color: '#fff', background: OPTION, borderRadius: 5, padding: '2px 6px', verticalAlign: 'middle', marginLeft: 6 }}>オプション</span>;
 
   return (
     <ReportShell

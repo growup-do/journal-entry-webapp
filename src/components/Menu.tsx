@@ -1,7 +1,7 @@
 // メニュー
 //   横（フォーム型ナビ）… 大メニュー7つ。マウスオーバー（またはクリック）でその階層の項目をドロップダウン表示
 //   縦（スプレッドシート型サイドバー）… 大メニューをアコーディオンで開閉。開いている階層の項目を表示
-// 出納・償却・電子印（旧オプション）階層は他の階層と同じ見た目（最後尾に配置するのみ）。
+// オプション階層は他の階層と同じ見た目（最後尾に配置するのみ）。
 
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
@@ -9,12 +9,15 @@ import { MENU_GROUPS, displayName, groupOf, isOptionMenu, type MenuGroup } from 
 import { startKindOf, useSession, type Session } from '../store/session';
 import { FavoritesMenu } from './FavoritesMenu';
 
-/** メニュー項目の状態（依頼書 5.1.1／5.1.4）：起動区分の種類で変わる。使えない項目は隠さず、理由つきの無効表示にする（グレーアウト。確認事項 10/9 回答） */
+/** メニュー項目の状態（依頼書 5.1.1／5.1.4）：起動区分の種類・オプション導入状況で変わる。使えない項目は隠さず、理由を赤で示した無効表示にする（確認事項 10/9 回答：グレーアウト。10/13 鈴木さん指示：エラーのように赤で目立たせる） */
 function itemState(label: string, s: Session): { disabled?: string; tag?: string } {
   const kind = startKindOf(s);
   if (['単一入力', '伝票入力', '振替入力', '振替単一'].includes(label) && kind !== '入力区分') return { disabled: `${kind}で起動中は伝票を入力できません（入力区分に切り替えてください）` };
   if (['業者元帳', '業者推移'].includes(label) && kind === '合算区分') return { disabled: '合算区分で起動中は利用できません' };
-  if (isOptionMenu(label) && kind === '合算区分') return { disabled: '合算区分で起動中は利用できません（入力区分・拠点区分などで起動してください）' };
+  if (isOptionMenu(label)) {
+    if (!s.options[label]) return { tag: '未導入' };
+    if (kind === '合算区分') return { disabled: '合算区分で起動中はオプションを利用できません' };
+  }
   return {};
 }
 
@@ -238,14 +241,19 @@ function SubItem({ label, active, accent, indent, onClick, state = {} }: { label
     border: 'none',
     borderRadius: 7,
     borderLeft: indent ? '3px solid ' + (active ? accent : 'transparent') : 'none',
-    color: off ? '#b3bcc5' : active ? accent : '#3d4a56',
+    color: off ? '#c0392b' : active ? accent : '#3d4a56',
     fontWeight: active ? 700 : 500,
     whiteSpace: 'nowrap',
+    opacity: off ? 0.9 : 1,
   };
   return (
-    <button type="button" className="menu-sub" data-menu={label} onClick={off ? undefined : onClick} aria-disabled={off} title={state.disabled} style={style}>
-      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName(label)}</span>
-      {off && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 8, background: '#f1f4f6', color: '#9aa5b1', flex: 'none' }}>利用不可</span>}
+    <button type="button" className="menu-sub" data-menu={label} onClick={off ? undefined : onClick} aria-disabled={off} title={state.disabled ?? (state.tag === '未導入' ? '未導入のオプションです（クリックで導入のご案内）' : undefined)} style={style}>
+      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {displayName(label)}
+        {/* 使えない理由はエラーのように赤で明示（ツールチップに頼らない） */}
+        {off && <span data-disabled-reason style={{ display: 'block', fontSize: 10.5, fontWeight: 600, color: '#c0392b', whiteSpace: 'normal', lineHeight: 1.4, marginTop: 2, maxWidth: 260 }}>{state.disabled}</span>}
+      </span>
+      {off && <span style={{ fontSize: 9.5, fontWeight: 800, padding: '1px 6px', borderRadius: 8, background: '#fdecea', color: '#c0392b', border: '1px solid #f2c9c2', flex: 'none' }}>利用不可</span>}
       {state.tag && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 8, background: '#fff7e6', color: '#b7791f', flex: 'none' }}>{state.tag}</span>}
     </button>
   );

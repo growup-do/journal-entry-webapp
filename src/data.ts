@@ -67,8 +67,7 @@ export const MENU_GROUPS: MenuGroup[] = [
   { key: 'trend', label: '推移・分析', icon: 'trend', items: ['科目推移', '資金推移', '業者推移', '経年グラフ', '分析グラフ', '充実残額'] },
   { key: 'compare', label: '試算表・決算書', icon: 'compare', items: ['月次試算', '予算対比', '月次決算'] },
   { key: 'print', label: '帳票・印刷', icon: 'print', items: ['印刷センター', '別紙（注記・明細書・財産目録）', '共通の印刷設定'] },
-  // 旧「オプション」：クライアント回答（10/9）でオプションではなくなったため、本体機能として常時表示する
-  { key: 'option', label: '出納・償却・電子印', icon: 'option', items: ['小口現金', '減価償却', '預金出納', '収入支出', '電子印'] },
+  { key: 'option', label: 'オプション', icon: 'option', items: ['小口現金', '減価償却', '預金出納', '収入支出', '電子印'], option: true },
 ];
 /** 調査・チェック（メニューバーには置かず、ホームのダッシュボードから開く） */
 export const HOME_CHECKS = ['仕訳数', '日次調査', '決算調査'];
@@ -77,7 +76,7 @@ export const MENU: string[][] = MENU_GROUPS.map((g) => g.items);
 /** 項目 → 所属カテゴリ */
 export const groupOf = (label: string) => MENU_GROUPS.find((g) => g.items.includes(label));
 
-/** 旧オプション機能（合算区分で起動中は利用できない。導入状況による表示切替は廃止） */
+/** オプション契約の機能（メニュー上で色分け表示） */
 export const OPTION_MENU = ['小口現金', '減価償却', '預金出納', '収入支出', '電子印'];
 export const isOptionMenu = (label: string) => OPTION_MENU.includes(label);
 

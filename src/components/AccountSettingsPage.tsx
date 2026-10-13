@@ -718,7 +718,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
             </>}
             {rel === 'depr' && <>
               <Toggle on={sel.depr} accent={accent} label="この固定資産科目を減価償却と連動させる" onChange={(v) => upd({ depr: v })} />
-              <Notice>連動させると、減価償却の資産台帳でこの科目を選べるようになり、償却額の仕訳が自動で作成されます。土地など償却しない科目はオフにします。</Notice>
+              <Notice>連動させると、減価償却（オプション）の資産台帳でこの科目を選べるようになり、償却額の仕訳が自動で作成されます。土地など償却しない科目はオフにします。</Notice>
             </>}
             {rel === 'oneYear' && <>
               <Toggle on={sel.oneYear} accent={accent} label="1年基準の対象科目にする" onChange={(v) => upd({ oneYear: v })} />
