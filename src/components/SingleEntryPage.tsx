@@ -328,7 +328,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
         {/* 伝票用紙 */}
         <div className="pp-sheet" style={{ padding: '16px 20px 16px' }}>
           {/* 伝票に付けた付箋：用紙の右端に貼る */}
-          <FusenTab color={flags.fusen} offset={-12} top={64} />
+          <FusenTab color={flags.fusen} offset={-10} top={64} />
           <PaperTitle
             title="単一式入力"
             division={`${divisionName} 拠点区分`}

@@ -467,7 +467,7 @@ export function useEntryTools(o: EntryToolsOptions) {
 
   const why = (t: string) => (ro ? reason : t);
   /** 伝票登録ボタン（各形式の入力欄の中に置く。伝票の操作グループは廃止） */
-  const submitButton: ReactNode = viewOnly ? null : <ActButton id={o.submitId} label="登録する" k="S" tone="primary" accent={o.accent} disabled={ro || !!o.blocked} title={ro ? reason : o.blocked ? '登録できないエラーがあります。入力欄の下の表示を直すと登録できます' : '入力中の伝票を登録します'} onClick={o.onSubmit} />;
+  const submitButton: ReactNode = viewOnly ? null : <ActButton id={o.submitId} label="登録する" k="S" tone="primary" wide accent={o.accent} disabled={ro || !!o.blocked} title={ro ? reason : o.blocked ? '登録できないエラーがあります。入力欄の下の表示を直すと登録できます' : '入力中の伝票を登録します'} onClick={o.onSubmit} />;
   /** 定型仕訳ボタン（各形式の見出し行の右端に置く）。左に「印刷」（日記帳・伝票・振替伝票） */
   const templateButton: ReactNode = <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><ScreenPrintMenu page="伝票入力" accent={o.accent} tone="act" />{!viewOnly && <ActButton label="定型仕訳" k="T" accent={o.accent} disabled={ro} title={why('登録済みの定型仕訳を、入力中の伝票に呼び出します')} onClick={() => setDlg('定型')} />}</span>;
   /** 資金モードの切替（自動資金⇄強制資金）。取引区分の右、または伝票の1段目の右端に置く */

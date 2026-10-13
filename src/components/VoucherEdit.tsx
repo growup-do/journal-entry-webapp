@@ -9,7 +9,7 @@ import type { CSSProperties } from 'react';
 import { Modal } from './Modal';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { Field, Notice, btn, input, numInput, toInt, yen } from './ui';
-import { ActButton, ActDivider, ComboField, EntryStyles, FieldLabel, FlagButtons, FundAccountLine, IssueList, ReadOnlyBanner, fieldState, fmtNum, focusId, hasError, hasWarn, judgeEntry, needsPartner, onEnter, partnerOf, scopeStyle, setPartner, toNum, useShortcuts, type Issue } from './EntryCommon';
+import { ActButton, ActDivider, ComboField, EntryStyles, FieldLabel, FlagButtons, FundAccountLine, IssueList, ReadOnlyBanner, fieldState, fmtNum, focusId, hasError, hasWarn, judgeEntry, needsPartner, onEnter, partnerOf, scopeStyle, setPartner, toNum, useShortcuts, type Issue, FusenTab } from './EntryCommon';
 import { SERVICES } from '../data';
 import { FUSEN_COLORS, FUSEN_CYCLE, addVoucher, cycleFusen, deleteVoucher, getVouchers, moveVoucher, updateVoucher, useVouchers, type Fusen, type Voucher } from '../store/journalStore';
 import { judgeTorihiki, TORIHIKI_COLOR } from '../lib/accounts';
@@ -404,7 +404,9 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { vouch
             {st.rows.map((r, i) => {
               const ri = issuesOfRow(r);
               return (
-                <div key={r.key} className="ef-row" onFocus={() => setActive(i)} style={{ borderTop: '1px solid #f1f4f6', padding: '7px 10px', background: i === act ? '#fbfdff' : 'transparent' }}>
+                <div key={r.key} className="ef-row" onFocus={() => setActive(i)} style={{ borderTop: '1px solid #f1f4f6', padding: '7px 10px', background: i === act ? '#fbfdff' : 'transparent', position: 'relative' }}>
+                  {/* 入力画面と同じ：付箋を付けた行の右端に付箋 */}
+                  <FusenTab color={r.fusen} offset={-2} />
                   <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 8, alignItems: 'center' }}>
                     <div style={{ fontSize: 12, color: '#9aa5b1' }}><span className="ef-rowno">{i + 1}{r.id == null && <span style={{ color: accent, fontWeight: 700 }}> 新</span>}</span><span className="ef-rownow" style={{ fontSize: 9.5, fontWeight: 800, color: '#fff', background: accent, borderRadius: 6, padding: '1px 4px' }}>入力中</span></div>
                     {!st.shared && <ComboField id={`ed-r${i}-kari`} kind="account" value={r.kari} onChange={(v) => setRow(i, { kari: v })} onCommit={() => focusId(`ed-r${i}-kashi`)} placeholder="借方科目" disabled={ro} invalid={fieldState(ri, 'kari', 'pair')} fontSize={13} padY={7} listWidth={380} />}

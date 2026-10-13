@@ -470,6 +470,8 @@ export function Kbd({ k }: { k: string }) {
 }
 interface ActProps {
   label: ReactNode;
+  /** 横幅を広くして目立たせる（伝票の「登録する」） */
+  wide?: boolean;
   /** Alt と組み合わせる英数字（例 'S'） */
   k?: string;
   onClick: () => void;
@@ -482,13 +484,13 @@ interface ActProps {
   id?: string;
   menu?: string;
 }
-export function ActButton({ label, k, onClick, tone = 'normal', accent = '#1f7a52', disabled, title, active, id, menu }: ActProps) {
+export function ActButton({ label, k, onClick, tone = 'normal', accent = '#1f7a52', disabled, title, active, id, menu, wide }: ActProps) {
   const c = tone === 'danger' ? '#c0392b' : tone === 'primary' ? accent : '#48565f';
   const solid = tone === 'primary';
   const tip = [title, k ? `ショートカット：Alt+${k}` : ''].filter(Boolean).join('　');
   return (
     <span data-tip={disabled && title ? title : undefined} style={{ display: 'inline-flex' }}>
-    <button id={id} type="button" className="ef-act" data-menu={menu ?? (typeof label === 'string' ? label : undefined)} disabled={disabled} aria-pressed={active} title={disabled ? undefined : tip} onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', padding: solid ? '8px 16px' : '6px 10px', borderRadius: 8, border: '1px solid ' + (solid ? c : tone === 'danger' ? '#e6b3ab' : active ? accent : '#cfd8e0'), background: solid ? c : active ? accent + '18' : '#fff', color: solid ? '#fff' : active ? accent : c, fontSize: solid ? 13.5 : 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: solid ? '0 3px 10px rgba(30,50,70,.18)' : 'none' }}>
+    <button id={id} type="button" className="ef-act" data-menu={menu ?? (typeof label === 'string' ? label : undefined)} disabled={disabled} aria-pressed={active} title={disabled ? undefined : tip} onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: wide ? 220 : undefined, padding: wide ? '10px 28px' : solid ? '8px 16px' : '6px 10px', borderRadius: 8, border: '1px solid ' + (solid ? c : tone === 'danger' ? '#e6b3ab' : active ? accent : '#cfd8e0'), background: solid ? c : active ? accent + '18' : '#fff', color: solid ? '#fff' : active ? accent : c, fontSize: wide ? 15 : solid ? 13.5 : 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: solid ? '0 3px 10px rgba(30,50,70,.18)' : 'none' }}>
       {label}
     </button>
     </span>
@@ -676,12 +678,11 @@ const FUSEN_HEX: Record<Exclude<FusenColor, ''>, string> = { 赤: '#c0392b', 青
 export const nextFusen = (f: FusenColor): FusenColor => (['', '赤', '青', '黄', '緑'] as FusenColor[])[((['', '赤', '青', '黄', '緑'] as FusenColor[]).indexOf(f) + 1) % 5];
 /** 付箋の見た目：付箋を付けた行（伝票）の枠の右側に、色紙の付箋が貼られたように見せる（10/13 鈴木さん指示）。
  *  置く側の要素を position: relative にする。offset は枠からはみ出す量（右方向の負の値）。 */
-export function FusenTab({ color, offset = -32, top = '50%' }: { color: FusenColor; offset?: number; top?: number | string }) {
+export function FusenTab({ color, offset = -30, top = '50%' }: { color: FusenColor; offset?: number; top?: number | string }) {
   if (!color) return null;
   return (
-    <span aria-label={`付箋：${color}`} title={`付箋：${fusenLabel(color)}`} data-fusen-tab={color} style={{ position: 'absolute', right: offset, top, transform: 'translateY(-50%) rotate(-3deg)', width: 24, height: 38, background: FUSEN_HEX[color], borderRadius: '2px 5px 5px 2px', boxShadow: '1px 2px 5px rgba(0,0,0,.28)', pointerEvents: 'none', zIndex: 3 }}>
-      <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, background: 'rgba(0,0,0,.14)', borderRadius: '2px 0 0 2px' }} />
-      <span aria-hidden style={{ position: 'absolute', right: 0, bottom: 0, width: 0, height: 0, borderStyle: 'solid', borderWidth: '0 0 9px 9px', borderColor: 'transparent transparent rgba(255,255,255,.75) transparent' }} />
+    <span aria-label={`付箋：${color}`} title={`付箋：${fusenLabel(color)}`} data-fusen-tab={color} style={{ position: 'absolute', right: offset, top, transform: 'translateY(-50%)', width: 30, height: 13, background: FUSEN_HEX[color], borderRadius: '2px 4px 4px 2px', boxShadow: '1px 1px 3px rgba(0,0,0,.28)', pointerEvents: 'none', zIndex: 3 }}>
+      <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 5, background: 'rgba(0,0,0,.14)', borderRadius: '2px 0 0 2px' }} />
     </span>
   );
 }
