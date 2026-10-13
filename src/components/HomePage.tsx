@@ -50,7 +50,7 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
   const isSheet = variant === 'sheet';
   const total = HOME_BANKS.reduce((a, b) => a + b.balance, 0);
   const card: CSSProperties = { background: '#fff', border: '1px solid #dde4ea', borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'hidden' };
-  const h2: CSSProperties = { display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', borderBottom: '1px solid #eef2f5', fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16 };
+  const h2: CSSProperties = { display: 'flex', alignItems: 'center', gap: 10, padding: '16px 20px', borderBottom: '1px solid #eef2f5', fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16 };
   const link: CSSProperties = { marginLeft: 'auto', fontSize: 14, color: accent, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' };
   const show = s.homeSections;
   const hasRight = show.notices || show.banners;
@@ -73,7 +73,7 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
 
         {/* 年度更新を促す案内 */}
         {yearNotice && (
-          <div data-year-notice role="status" style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 18px', border: '1px solid #f0c98a', borderRadius: 14, background: '#fff8ea', flexWrap: 'wrap' }}>
+          <div data-year-notice role="status" style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px', border: '1px solid #f0c98a', borderRadius: 14, background: '#fff8ea', flexWrap: 'wrap' }}>
             <span aria-hidden style={{ flex: 'none', width: 40, height: 40, borderRadius: '50%', background: '#f5a623', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800 }}>!</span>
             <div style={{ flex: 1, minWidth: 260 }}>
               <div style={{ fontSize: 16, fontWeight: 700, color: '#7a4a00' }}>年度更新の時期です</div>

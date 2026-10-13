@@ -59,7 +59,7 @@ export function Modal({ open, onClose, width = 720, title, children, dismissible
         }}
       >
         {title && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px', borderBottom: '1px solid #eef2f5' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 22px', borderBottom: '1px solid #eef2f5' }}>
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16, flex: 1 }}>{title}</div>
             {closable && (
               <button type="button" onClick={onClose} title="閉じる" style={{ border: 'none', background: 'transparent', fontSize: 20, color: '#8290a0', cursor: 'pointer', lineHeight: 1 }}>

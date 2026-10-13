@@ -67,7 +67,7 @@ function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 7,
-                padding: '8px 13px',
+                padding: '10px 15px',
                 fontSize: 14,
                 fontWeight: on ? 700 : 500,
                 fontFamily: 'inherit',
@@ -117,7 +117,7 @@ function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
         data-menu="機能から探す"
         onClick={() => onSelect('機能から探す')}
         title="すべての機能を分類ごとに見る・キーワードで探す"
-        style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 13px', fontSize: 14, fontWeight: active === '機能から探す' ? 700 : 600, fontFamily: 'inherit', cursor: 'pointer', background: 'transparent', border: 'none', borderRadius: 8, borderBottom: '2px solid ' + (active === '機能から探す' ? accent : 'transparent'), color: active === '機能から探す' ? accent : '#3d4a56', whiteSpace: 'nowrap' }}
+        style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 15px', fontSize: 14, fontWeight: active === '機能から探す' ? 700 : 600, fontFamily: 'inherit', cursor: 'pointer', background: 'transparent', border: 'none', borderRadius: 8, borderBottom: '2px solid ' + (active === '機能から探す' ? accent : 'transparent'), color: active === '機能から探す' ? accent : '#3d4a56', whiteSpace: 'nowrap' }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none' }}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
         機能から探す
@@ -231,7 +231,7 @@ function SubItem({ label, active, accent, indent, onClick, state = {} }: { label
     gap: 6,
     width: '100%',
     textAlign: 'left',
-    padding: indent ? '7px 10px 7px 34px' : '8px 12px',
+    padding: indent ? '9px 12px 9px 36px' : '10px 14px',
     fontSize: 14,
     fontFamily: 'inherit',
     cursor: off ? 'not-allowed' : 'pointer',

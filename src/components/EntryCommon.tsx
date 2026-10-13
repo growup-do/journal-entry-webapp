@@ -490,7 +490,7 @@ export function ActButton({ label, k, onClick, tone = 'normal', accent = '#1f7a5
   const tip = [title, k ? `ショートカット：Alt+${k}` : ''].filter(Boolean).join('　');
   return (
     <span data-tip={disabled && title ? title : undefined} style={{ display: 'inline-flex' }}>
-    <button id={id} type="button" className="ef-act" data-menu={menu ?? (typeof label === 'string' ? label : undefined)} disabled={disabled} aria-pressed={active} title={disabled ? undefined : tip} onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: wide ? 220 : undefined, padding: wide ? '10px 28px' : solid ? '8px 16px' : '6px 10px', borderRadius: 8, border: '1px solid ' + (solid ? c : tone === 'danger' ? '#e6b3ab' : active ? accent : '#cfd8e0'), background: solid ? c : active ? accent + '18' : '#fff', color: solid ? '#fff' : active ? accent : c, fontSize: wide ? 16 : solid ? 14 : 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: solid ? '0 3px 10px rgba(30,50,70,.18)' : 'none' }}>
+    <button id={id} type="button" className="ef-act" data-menu={menu ?? (typeof label === 'string' ? label : undefined)} disabled={disabled} aria-pressed={active} title={disabled ? undefined : tip} onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: wide ? 240 : undefined, padding: wide ? '12px 32px' : solid ? '10px 18px' : '8px 12px', borderRadius: 8, border: '1px solid ' + (solid ? c : tone === 'danger' ? '#e6b3ab' : active ? accent : '#cfd8e0'), background: solid ? c : active ? accent + '18' : '#fff', color: solid ? '#fff' : active ? accent : c, fontSize: wide ? 16 : solid ? 14 : 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: solid ? '0 3px 10px rgba(30,50,70,.18)' : 'none' }}>
       {label}
     </button>
     </span>
@@ -734,7 +734,7 @@ const PAPER_CSS = `
 /* 罫線は「隙間を線色で塗る」方式。表＝pp-table（行の並び）、行＝pp-row（セルの並び） */
 .pp-table { display: grid; gap: 1px; background: ${PAPER.lineSoft}; border: 1px solid ${PAPER.line}; min-width: 0; }
 .pp-row { display: grid; gap: 1px; background: ${PAPER.lineSoft}; min-width: 0; }
-.pp-cell { background: #fff; min-width: 0; padding: 6px 8px; display: flex; align-items: center; gap: 6px; box-sizing: border-box; }
+.pp-cell { background: #fff; min-width: 0; padding: 8px 10px; display: flex; align-items: center; gap: 6px; box-sizing: border-box; }
 .pp-cell.pp-col { flex-direction: column; align-items: stretch; justify-content: center; gap: 0; }
 .pp-cell.pp-right { justify-content: flex-end; }
 .pp-cell.pp-center { justify-content: center; }
@@ -752,12 +752,12 @@ const PAPER_CSS = `
 .pp-row:focus-within .ef-rowno { display: none; }
 /* 用紙の中の素の入力欄（枠は罫線に任せ、フォーカス時だけ EntryStyles の太枠が付く） */
 /* 入力欄は用紙の罫線とは別に、必ず枠付きの箱にする。入力できる欄は薄い黄色（入力後も残す）、入力できない欄は白地にグレー文字（10/13 鈴木さん指示） */
-.pp-input { border: 1px solid #b7c6bd; border-radius: 5px; background: #fffbe6 !important; font-family: inherit; color: #22303c; box-sizing: border-box; min-width: 0; min-height: 32px; padding: 4px 8px; box-shadow: inset 0 1px 0 rgba(0,0,0,.02); }
+.pp-input { border: 1px solid #b7c6bd; border-radius: 5px; background: #fffbe6 !important; font-family: inherit; color: #22303c; box-sizing: border-box; min-width: 0; min-height: 36px; padding: 6px 10px; box-shadow: inset 0 1px 0 rgba(0,0,0,.02); }
 .pp-input:hover:not(:disabled) { border-color: #7fa38e; }
 .pp-input:focus:not(:disabled) { background: #fff8d6 !important; }
 .pp-input:disabled { color: #9aa5b1; background: #fff !important; border-style: dashed; }
 /* 自動表示・読み取り専用の欄：白地にグレー文字（入力できる欄の薄い黄色と見分ける） */
-.pp-ro { display: inline-flex; align-items: center; min-height: 32px; padding: 4px 2px; color: #7a8794; font-size: 14px; }
+.pp-ro { display: inline-flex; align-items: center; min-height: 36px; padding: 6px 2px; color: #7a8794; font-size: 14px; }
 .pp-ro small { font-size: 12px; color: #9aa5b1; margin-left: 6px; }
 .pp-ro.pp-ro-s { min-height: 24px; padding: 2px 2px; font-size: 14px; }
 .pp-ro.pp-ro-fill { display: flex; width: 100%; box-sizing: border-box; min-width: 0; }

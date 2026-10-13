@@ -73,9 +73,9 @@ export function FiscalMonthTabs({ current, accent, onSelect, withAll, range, onR
             title={inSel ? '選択中の期間に含まれる月' : inRange ? '期首からの累計に含まれる月（環境設定「期首から月を選択する」）' : onRange && o.value != null && o.value !== '決' ? 'クリックで1か月。Shift＋クリックで、いま選んでいる月からこの月までの範囲' : undefined}
             data-in-range={hi || undefined}
             style={{
-              minWidth: 30,
-              height: 26,
-              padding: '0 8px',
+              minWidth: 34,
+              height: 30,
+              padding: '0 10px',
               borderRadius: 6,
               fontSize: 14,
               fontWeight: 700,
@@ -92,10 +92,10 @@ export function FiscalMonthTabs({ current, accent, onSelect, withAll, range, onR
       })}
       {onRange && (
         <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-          <button type="button" className="chip" data-period-pick onClick={openPick} title="月の範囲（4月〜7月など）や日付の範囲（4/15〜6/30 など）で集計期間を指定します" style={{ height: 26, padding: '0 10px', borderRadius: 6, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: range ? accent : '#fff', color: range ? '#fff' : accent, border: '1px solid ' + accent }}>
+          <button type="button" className="chip" data-period-pick onClick={openPick} title="月の範囲（4月〜7月など）や日付の範囲（4/15〜6/30 など）で集計期間を指定します" style={{ height: 30, padding: '0 12px', borderRadius: 6, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: range ? accent : '#fff', color: range ? '#fff' : accent, border: '1px solid ' + accent }}>
             {range ? periodLabel(range).replace(/^令和\d+年 /, '') : '期間を指定'}
           </button>
-          {range && <button type="button" className="chip" onClick={() => onRange(null)} title="期間の指定を解除して、月タブの1か月に戻します" style={{ height: 26, padding: '0 8px', borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: '#fff', color: '#5b6773', border: '1px solid #d3dbe3' }}>解除</button>}
+          {range && <button type="button" className="chip" onClick={() => onRange(null)} title="期間の指定を解除して、月タブの1か月に戻します" style={{ height: 30, padding: '0 10px', borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: '#fff', color: '#5b6773', border: '1px solid #d3dbe3' }}>解除</button>}
           {pickOpen && (
             <div role="dialog" aria-label="集計期間の指定" data-period-dialog style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 60, background: '#fff', border: '1px solid #dde4ea', borderRadius: 12, boxShadow: '0 12px 32px rgba(24,42,60,.18)', padding: 12, display: 'grid', gap: 8, minWidth: 300 }}>
               <div style={{ fontSize: 14, fontWeight: 700 }}>集計期間の指定</div>

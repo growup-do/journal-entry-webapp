@@ -167,7 +167,7 @@ function MasterPage({ variant, accent, label, tabs }: { variant: 'form' | 'sheet
           <span style={{ fontSize: 12, color: '#7a8794' }}>旧「消費税動作環境」。消費税の申告が必要な法人で有効にします。税率は下の税区分ごとに持ち、税額は 金額 × 税率 ÷（100 ＋ 税率）の切り捨てで計算します（手入力で変更可）。</span>
         </div>
       )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 22px', borderBottom: '1px solid #eef2f5' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 22px', borderBottom: '1px solid #eef2f5' }}>
         <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="検索" autoComplete="off" style={{ ...input, width: 260 }} />
         <span style={{ marginLeft: 'auto', fontSize: 14, color: '#8895a3' }}>{list.length} 件（無効 {rows.filter((r) => r._on !== '1').length}）</span>
       </div>
@@ -342,7 +342,7 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
         </div>
       )}
       {tab === '貸借科目繰越残高' && <>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 22px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 22px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>拠点</span>
         {SITES.map((s, i) => <button key={s} type="button" className="chip" onClick={() => setSite(i)} style={{ padding: '5px 14px', borderRadius: 14, border: '1px solid ' + (site === i ? accent : '#d3dbe3'), background: site === i ? accent : '#fff', color: site === i ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{s}</button>)}
         <span style={{ marginLeft: 'auto', fontSize: 14, padding: '4px 12px', borderRadius: 10, background: ok ? '#eaf5ef' : '#fdeee9', color: ok ? '#1f7a52' : '#c0392b', fontWeight: 700 }}>{ok ? '貸借一致' : `差額 ${yen(Math.abs(d - c))}（${d > c ? '借方' : '貸方'}が多い）`}</span>

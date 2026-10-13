@@ -3,14 +3,14 @@
 import type { CSSProperties, ReactNode } from 'react';
 
 export const btn = (color = '#5b6773', solid = false, small = false): CSSProperties => ({
-  padding: small ? '4px 10px' : '8px 14px', borderRadius: 8, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color,
+  padding: small ? '6px 12px' : '10px 18px', borderRadius: 8, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color,
   fontSize: small ? 12 : 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap',
 });
-export const input: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '8px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none', background: '#fff', color: '#22303c' };
+export const input: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '10px 12px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none', background: '#fff', color: '#22303c' };
 export const numInput: CSSProperties = { ...input, textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
-export const lbl: CSSProperties = { display: 'block', fontSize: 14, fontWeight: 700, color: '#8290a0', marginBottom: 5 };
+export const lbl: CSSProperties = { display: 'block', fontSize: 14, fontWeight: 700, color: '#8290a0', marginBottom: 7 };
 export const card: CSSProperties = { border: '1px solid #e2e8ee', borderRadius: 12, overflow: 'hidden', background: '#fff' };
-export const cardHead: CSSProperties = { padding: '10px 14px', background: '#f6f8fa', fontSize: 14, fontWeight: 700, borderBottom: '1px solid #eef2f5', display: 'flex', alignItems: 'center', gap: 8 };
+export const cardHead: CSSProperties = { padding: '12px 16px', background: '#f6f8fa', fontSize: 14, fontWeight: 700, borderBottom: '1px solid #eef2f5', display: 'flex', alignItems: 'center', gap: 8 };
 export const yen = (n: number) => (n < 0 ? '△' + Math.abs(n).toLocaleString('ja-JP') : n.toLocaleString('ja-JP'));
 export const toInt = (v: string) => parseInt(v.replace(/[^0-9-]/g, ''), 10) || 0;
 
@@ -20,7 +20,7 @@ export function Tabs({ items, current, onChange, accent, small }: { items: strin
       {items.map((t) => {
         const on = t === current;
         return (
-          <button key={t} type="button" className="tab" data-tab={t} onClick={() => onChange(t)} style={{ padding: small ? '8px 12px' : '11px 16px', border: 'none', borderBottom: '3px solid ' + (on ? accent : 'transparent'), background: 'transparent', color: on ? accent : '#5b6773', fontSize: small ? 14 : 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', marginBottom: -1 }}>
+          <button key={t} type="button" className="tab" data-tab={t} onClick={() => onChange(t)} style={{ padding: small ? '10px 14px' : '13px 20px', border: 'none', borderBottom: '3px solid ' + (on ? accent : 'transparent'), background: 'transparent', color: on ? accent : '#5b6773', fontSize: small ? 14 : 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', marginBottom: -1 }}>
             {t}
           </button>
         );
@@ -60,7 +60,7 @@ export function Steps({ steps, current, accent }: { steps: string[]; current: nu
 
 export function Notice({ children, tone = 'info' }: { children: ReactNode; tone?: 'info' | 'warn' | 'ok' }) {
   const c = tone === 'warn' ? { bg: '#fff7e6', bd: '#f3d9b0', fg: '#8a5a00' } : tone === 'ok' ? { bg: '#eaf5ef', bd: '#bfe0cf', fg: '#1f7a52' } : { bg: '#f3f6f9', bd: '#dde4ea', fg: '#48565f' };
-  return <div style={{ padding: '10px 12px', background: c.bg, border: '1px solid ' + c.bd, borderRadius: 10, fontSize: 14, color: c.fg, lineHeight: 1.7 }}>{children}</div>;
+  return <div style={{ padding: '12px 14px', background: c.bg, border: '1px solid ' + c.bd, borderRadius: 10, fontSize: 14, color: c.fg, lineHeight: 1.8 }}>{children}</div>;
 }
 
 /** 設定系画面の共通シェル（SettingsPages の Shell と同じ見た目） */
@@ -69,7 +69,7 @@ export function SettingsShell({ variant, title, desc, badge = '設定', draft = 
   return (
     <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
       <div style={{ width: '100%', maxWidth: isSheet ? 'none' : 1240, background: '#fff', border: '1px solid #dde4ea', borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '18px 22px 14px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '22px 24px 16px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
           <div>
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21 }}>
               {title} <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#eef2f6', color: '#3d4a56', verticalAlign: 'middle', marginLeft: 6 }}>{badge}</span>

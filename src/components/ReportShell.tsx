@@ -125,7 +125,7 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
             <span style={{ marginLeft: 'auto', fontSize: 12, color: '#9aa5b1' }}>{returnTo.hint ?? '戻ると、開く前と同じ表示条件（月・部・表示階層など）で表示します'}</span>
           </div>
         )}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '18px 22px 14px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '22px 24px 16px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21 }}>
               {title} {badge}
@@ -156,7 +156,7 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
         </div>
         {/* 問合せ画面の共通構成（依頼書 5.4.5／2.5）：① 集計期間の選択 → ② 指定科目 → ③ 表示切替 → ④ 一覧表。見出しは共通シェルが付ける */}
         {hasConditions && (
-          <div data-conditions style={{ padding: '12px 22px', borderBottom: '1px solid #eef2f5', display: 'grid', gridTemplateColumns: '92px minmax(0,1fr)', columnGap: 14, rowGap: 10, alignItems: 'center' }}>
+          <div data-conditions style={{ padding: '14px 22px', borderBottom: '1px solid #eef2f5', display: 'grid', gridTemplateColumns: '92px minmax(0,1fr)', columnGap: 14, rowGap: 10, alignItems: 'center' }}>
             {(period || periodAside || parts) && (
               <>
                 <span style={SECTION_TAG} data-section="集計期間">集計期間</span>
@@ -205,7 +205,7 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
           </div>
         )}
         {notice && <div style={{ padding: '8px 22px', borderBottom: '1px solid #eef2f5', background: '#fffaf0', fontSize: 14, color: '#8a5a00', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>{notice}</div>}
-        <div data-list-head style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '7px 22px', background: '#f8fafc', borderBottom: '1px solid #eef2f5', fontSize: 14, color: '#48565f' }}>
+        <div data-list-head style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 22px', background: '#f8fafc', borderBottom: '1px solid #eef2f5', fontSize: 14, color: '#48565f' }}>
           <span style={SECTION_TAG} data-section="一覧表">一覧表</span>
           {listNote}
         </div>
@@ -217,7 +217,7 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
 
 function toolStyle(bg?: string): CSSProperties {
   return {
-    padding: '7px 14px',
+    padding: '9px 16px',
     border: '1px solid ' + (bg ?? '#cfd8e0'),
     borderRadius: 8,
     background: bg ?? '#fff',
@@ -241,7 +241,7 @@ export function Segmented<T extends string>({ label, items, value, onChange, acc
         {items.map((it, i) => {
           const on = it === value;
           return (
-            <button key={it} type="button" role="radio" aria-checked={on} disabled={disabled} data-seg={it} onClick={() => onChange(it)} style={{ padding: '5px 11px', border: 'none', borderLeft: i ? '1px solid #e2e8ee' : 'none', background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: disabled ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
+            <button key={it} type="button" role="radio" aria-checked={on} disabled={disabled} data-seg={it} onClick={() => onChange(it)} style={{ padding: '7px 13px', border: 'none', borderLeft: i ? '1px solid #e2e8ee' : 'none', background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: disabled ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
               {it}
             </button>
           );
@@ -255,7 +255,7 @@ export function Segmented<T extends string>({ label, items, value, onChange, acc
 export function SwitchPill({ label, on, onChange, accent, disabled, title }: { label: string; on: boolean; onChange: (v: boolean) => void; accent: string; disabled?: boolean; title?: string }) {
   const act = () => { if (!disabled) onChange(!on); };
   return (
-    <span title={disabled ? undefined : title} data-tip={disabled ? title : undefined} data-switch={label} aria-disabled={disabled} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 10px', border: '1px solid #e2e8ee', borderRadius: 20, background: disabled ? '#f5f7f9' : '#fff', opacity: disabled ? 0.6 : 1, cursor: disabled ? 'not-allowed' : 'pointer' }}>
+    <span title={disabled ? undefined : title} data-tip={disabled ? title : undefined} data-switch={label} aria-disabled={disabled} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', border: '1px solid #e2e8ee', borderRadius: 20, background: disabled ? '#f5f7f9' : '#fff', opacity: disabled ? 0.6 : 1, cursor: disabled ? 'not-allowed' : 'pointer' }}>
       <span onClick={act} style={{ fontSize: 14, fontWeight: on && !disabled ? 800 : 500, color: on && !disabled ? accent : '#9aa5b1' }}>{label}</span>
       <span role="switch" aria-checked={on && !disabled} onClick={act} style={{ display: 'inline-block', width: 36, height: 20, borderRadius: 10, background: on && !disabled ? accent : '#cfd8e0', position: 'relative', flex: 'none' }}>
         <span style={{ position: 'absolute', top: 2, left: on && !disabled ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left .15s' }} />
@@ -309,8 +309,8 @@ export function useMoney(): (n: number) => ReactNode {
 }
 
 /* ---- 表の共通スタイル ---- */
-export const TH: CSSProperties = { padding: '9px 12px', background: '#f6f8fa', fontSize: 14, fontWeight: 700, color: '#8290a0', borderBottom: '1px solid #eef2f5', textAlign: 'left', whiteSpace: 'nowrap' };
-export const TD: CSSProperties = { padding: '8px 12px', fontSize: 14, borderBottom: '1px solid #f1f4f6', verticalAlign: 'middle' };
+export const TH: CSSProperties = { padding: '11px 14px', background: '#f6f8fa', fontSize: 14, fontWeight: 700, color: '#8290a0', borderBottom: '1px solid #eef2f5', textAlign: 'left', whiteSpace: 'nowrap' };
+export const TD: CSSProperties = { padding: '10px 14px', fontSize: 14, borderBottom: '1px solid #f1f4f6', verticalAlign: 'middle' };
 export const NUM: CSSProperties = { ...TD, textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
 export const yen = (n: number) => (n < 0 ? '△' + Math.abs(n).toLocaleString('ja-JP') : n.toLocaleString('ja-JP'));
 export const pct = (n: number) => (isFinite(n) ? (n * 100).toFixed(1) + '%' : '');
