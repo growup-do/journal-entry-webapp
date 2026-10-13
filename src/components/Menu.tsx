@@ -268,7 +268,8 @@ function Icon({ kind, color }: { kind: MenuGroup['icon']; color: string }): Reac
     case 'audit':
       return <svg {...p}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /><path d="M8 11l2 2 4-4" /></svg>;
     case 'option':
-      return <svg {...p}><path d="M12 3l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 15.3 7.2 17.9l.9-5.4-3.9-3.8 5.4-.8z" /></svg>;
+      // 出納・資産・決裁（旧オプション）：財布（出納帳・資産）の線画
+      return <svg {...p}><rect x="3" y="6" width="18" height="14" rx="2" /><path d="M3 10h18" /><path d="M15 15h3" /><path d="M7 6V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1" /></svg>;
     case 'graph':
       return <svg {...p}><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>;
     case 'print':

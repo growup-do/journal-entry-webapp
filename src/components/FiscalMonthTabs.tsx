@@ -6,6 +6,7 @@ import type { CSSProperties } from 'react';
 import type { MonthFilter } from '../types';
 import { useSession } from '../store/session';
 import { FISCAL_MONTHS, monthRange, monthsIn, parseMD, periodLabel, type Period } from '../lib/period';
+import { CalendarModal } from './SingleEntryTools';
 
 export { FISCAL_MONTHS };
 
@@ -30,6 +31,8 @@ export function FiscalMonthTabs({ current, accent, onSelect, withAll, range, onR
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [err, setErr] = useState('');
+  /** カレンダーで選ぶ対象（開始日／終了日） */
+  const [cal, setCal] = useState<'from' | 'to' | null>(null);
   const opts: { label: string; value: MonthFilter }[] = [
     ...(withAll ? [{ label: '全月', value: null as MonthFilter }] : []),
     ...FISCAL_MONTHS.map((m) => ({ label: m, value: m })),
@@ -103,11 +106,11 @@ export function FiscalMonthTabs({ current, accent, onSelect, withAll, range, onR
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}>
                 <span style={{ color: '#7a8794' }}>令和8年</span>
-                <input className="field-input" value={from} onChange={(e) => setFrom(e.target.value)} placeholder="4/15" aria-label="開始日（月/日）" style={inp} />
+                <input className="field-input" value={from} onChange={(e) => setFrom(e.target.value)} onClick={() => setCal('from')} placeholder="4/15" aria-label="開始日（月/日）" title="クリックでカレンダーから選べます" style={inp} />
                 <span>〜</span>
-                <input className="field-input" value={to} onChange={(e) => setTo(e.target.value)} placeholder="6/30" aria-label="終了日（月/日）" style={inp} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) applyPick(); }} />
+                <input className="field-input" value={to} onChange={(e) => setTo(e.target.value)} onClick={() => setCal('to')} placeholder="6/30" aria-label="終了日（月/日）" title="クリックでカレンダーから選べます" style={inp} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) applyPick(); }} />
               </div>
-              <div style={{ fontSize: 11, color: '#8290a0' }}>月の範囲は「4/1〜7/31」のように月初・月末で、日付の範囲は「4/15〜6/30」のように指定します。月タブは Shift＋クリックでも範囲を選べます。</div>
+              <div style={{ fontSize: 11, color: '#8290a0' }}>日付の欄をクリックするとカレンダーから選べます。月の範囲は「4/1〜7/31」のように月初・月末で、日付の範囲は「4/15〜6/30」のように指定します。月タブは Shift＋クリックでも範囲を選べます。</div>
               {err && <div style={{ fontSize: 12, color: '#c0392b' }}>{err}</div>}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
                 <button type="button" onClick={() => setPickOpen(false)} style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid #cfd8e0', background: '#fff', color: '#5b6773', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>キャンセル</button>
@@ -115,6 +118,9 @@ export function FiscalMonthTabs({ current, accent, onSelect, withAll, range, onR
               </div>
             </div>
           )}
+          {cal && (() => { const v = parseMD(cal === 'from' ? from : to); const [cm, cd] = (v ?? `${current && current !== '決' ? current : '4'}/1`).split('/'); return (
+            <CalendarModal open accent={accent} entries={[]} month={cm} day={cd} onClose={() => setCal(null)} onPick={(mm, dd) => { (cal === 'from' ? setFrom : setTo)(`${mm}/${dd}`); setErr(''); setCal(null); }} />
+          ); })()}
         </span>
       )}
       {!range && fromStart && curIdx > 0 && <span data-from-start style={{ alignSelf: 'center', fontSize: 11, fontWeight: 700, color: accent, whiteSpace: 'nowrap' }} title="環境設定（全区分共通）「月範囲の選択で、期首から月を選択する」が有効です">4月〜{current}月の累計</span>}

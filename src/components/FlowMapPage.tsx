@@ -67,7 +67,7 @@ const NODES: Node[] = [
   N('fundledger', '資金元帳', 'page', 'ledger', { open: '資金元帳' }),
   N('vendorledger', '業者元帳', 'page', 'ledger', { open: '業者元帳' }),
   N('search', '検索条件', 'dialog', 'ledger', { open: '仕訳一覧', note: '14条件・検索合計' }),
-  N('period', '集計期間の指定', 'dialog', 'ledger', { open: '仕訳一覧', note: '月の範囲／日付の範囲（元帳も同じ）' }),
+  N('period', '集計期間の指定', 'dialog', 'ledger', { open: '仕訳一覧', note: '月の範囲／日付の範囲（カレンダーつき）。元帳・試算表・出納帳・収入支出調書も同じ' }),
   N('vedit', '伝票の訂正', 'modal', 'ledger', { open: '仕訳一覧', note: '同一伝票の全行を同時編集' }),
   N('vdelete', '削除の確認', 'dialog', 'ledger', { open: '仕訳一覧' }),
   N('bulkdel', 'インポート伝票／自動按分伝票の一括削除', 'dialog', 'ledger', { open: '仕訳一覧', note: '取込・按分の単位ごとに年度内の全件' }),

@@ -6,6 +6,7 @@
 import { useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
+import { inPeriod, type Period } from '../lib/period';
 import { Modal } from './Modal';
 import { LABEL, NUM, ReportShell, TD, TH, yen } from './ReportShell';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
@@ -49,6 +50,8 @@ interface Props {
 export function ReceiptsPaymentsPage({ variant, accent }: Props) {
   const [kind, setKind] = useState('exp');
   const [month, setMonth] = useState<MonthFilter>('8');
+  /** 集計期間の範囲（月の範囲・日付の範囲。確認メモ #57／#58） */
+  const [range, setRange] = useState<Period | null>(null);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [exported, setExported] = useState<Set<string>>(new Set());
   const [detailOpen, setDetailOpen] = useState(false);
@@ -77,7 +80,7 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
   };
   const k = KINDS.find((x) => x.key === kind)!;
   const rowKey = (r: JournalRow) => `${r.no}:${r.kari}:${r.amount}`;
-  const rows = useMemo(() => JOURNAL_ROWS.filter((r) => (month == null || r.date.split('/')[0] === month) && k.filter(r)), [month, k]);
+  const rows = useMemo(() => JOURNAL_ROWS.filter((r) => (range ? inPeriod(r.date, range) : month == null || r.date.split('/')[0] === month) && k.filter(r)), [month, range, k]);
   // 初期状態は全て対象
   const isOn = (r: JournalRow) => !checked.has('off:' + rowKey(r));
   const toggle = (r: JournalRow) => setChecked((s) => { const n = new Set(s); const key = 'off:' + rowKey(r); n.has(key) ? n.delete(key) : n.add(key); return n; });
@@ -113,7 +116,7 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={LABEL}>会計月</span>
-              <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} withAll />
+              <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} withAll range={range} onRange={setRange} />
             </div>
             <div style={{ marginLeft: 'auto', padding: '8px 12px', background: '#fffbe6', border: '1px solid #f3e4a6', borderRadius: 8, fontSize: 12, color: '#0a7d6b', whiteSpace: 'pre-line', lineHeight: 1.5 }}>{k.rule}</div>
           </div>

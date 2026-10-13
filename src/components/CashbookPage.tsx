@@ -9,6 +9,7 @@ import type { CSSProperties, KeyboardEvent } from 'react';
 import { AssistField } from './AssistField';
 import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
+import { inPeriod, periodLabel as periodText, type Period } from '../lib/period';
 import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
 import { LABEL, NUM, ReportShell, TD, TH } from './ReportShell';
@@ -147,6 +148,8 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
   const [rows, setRows] = useState<Row[]>(isPetty ? PETTY_SEED : BANK_SEED);
   const [opening] = useState(isPetty ? 26517 : 9630000);
   const [month, setMonth] = useState<MonthFilter>('8');
+  /** 集計期間の範囲（月の範囲・日付の範囲。確認メモ #57／#58） */
+  const [range, setRange] = useState<Period | null>(null);
   const [entry, setEntry] = useState({ inAmt: '', month: '8', day: '', tekiyo: '', account: '', outAmt: '' });
   const [specialOpen, setSpecialOpen] = useState(false);
   const [specialOpts, setSpecialOpts] = useState({ date: false, balance: false });
@@ -170,7 +173,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       return { ...r, bal };
     });
   }, [rows, opening]);
-  const view = withBal.filter((r) => month == null || r.month === month);
+  const view = withBal.filter((r) => (range ? inPeriod(`${r.month}/${r.day}`, range) : month == null || r.month === month));
   const lastBal = withBal.length ? withBal[withBal.length - 1].bal : opening;
   const monthIn = view.reduce((a, r) => a + r.inAmt, 0);
   const monthOut = view.reduce((a, r) => a + r.outAmt, 0);
@@ -272,7 +275,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
 
   // ---- 印刷（集計内訳表／仕訳伝票／出納帳） ----
   const openPrint = (label: string) => {
-    const period = month == null ? '令和8年度（全月）' : `令和8年 ${month}月`;
+    const period = range ? periodText(range) : month == null ? '令和8年度（全月）' : `令和8年 ${month}月`;
     const meta = `${book}　${period}`;
     if (label === '集計内訳表') {
       const agg = view.filter((r) => !r.special && r.aggregated);
@@ -322,7 +325,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       controls={
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <span style={LABEL}>会計月</span>
-          <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} withAll />
+          <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} withAll range={range} onRange={setRange} />
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {isPetty ? (
               <>

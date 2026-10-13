@@ -10,6 +10,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { useState } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
+import { periodLabel as periodText, type Period } from '../lib/period';
 import { CHECK, LABEL, NUM, ReportShell, Segmented, SwitchPill, TD, TH, pct, useMoney, useViewState } from './ReportShell';
 import { BS_ASSET_ROWS, displayName, type HierRow } from '../data';
 import { grandTotal, rollup } from '../lib/hier';
@@ -128,6 +129,8 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
   const flat = groups.flatMap((g) => g.cols.map((c) => ({ ...c, breakdown: g.breakdown })));
 
   // 元帳へのドリルダウン：右側の元帳パネルに出す（全画面の元帳はパネルの「元帳の画面で開く」から）
+  /** 集計期間の範囲（月の範囲・日付の範囲。確認メモ #57／#58）。サンプルの金額は月末残高のため、範囲は期間の表示に使う */
+  const [range, setRange] = useState<Period | null>(null);
   const drawer = useLedgerDrawer(KEY);
   const openLedger = (name: string) => drawer.open({ account: name, month: view.month, kind: 'account', from: KEY });
   const picked = (name: string) => !drawer.collapsed && drawer.target?.account === name;
@@ -152,8 +155,8 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
       ] : []}
       period={
         <>
-          <FiscalMonthTabs current={view.month} accent={accent} onSelect={(m) => setView({ month: m ?? '8' })} />
-          <span style={{ fontSize: 12.5, color: '#48565f' }}>令和8年 {view.month}月</span>
+          <FiscalMonthTabs current={view.month} accent={accent} onSelect={(m) => setView({ month: m ?? '8' })} range={range} onRange={setRange} />
+          <span style={{ fontSize: 12.5, color: '#48565f' }}>{range ? periodText(range) : `令和8年 ${view.month}月`}</span>
         </>
       }
       parts={{ items: PARTS, current: view.part, onChange: (i) => setView({ part: i }) }}
