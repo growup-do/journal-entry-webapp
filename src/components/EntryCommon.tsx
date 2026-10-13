@@ -621,8 +621,8 @@ export function FormatSwitcher({ current, onSwitch, accent, right }: { current: 
 export function ReadOnlyBanner({ reason }: { reason: string }) {
   if (!reason) return null;
   return (
-    <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 22px', background: '#eef2f6', borderBottom: '1px solid #d5dde5', color: '#3d4a56', fontSize: 12.5 }}>
-      <span style={{ flex: 'none', padding: '2px 9px', borderRadius: 8, background: '#5b6773', color: '#fff', fontSize: 11, fontWeight: 800 }}>参照のみ</span>
+    <div role="alert" data-readonly-banner style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 22px', background: '#fdecea', borderBottom: '1px solid #f2c9c2', color: '#8a1f16', fontSize: 12.5 }}>
+      <span style={{ flex: 'none', padding: '2px 9px', borderRadius: 8, background: '#c0392b', color: '#fff', fontSize: 11, fontWeight: 800 }}>参照のみ</span>
       <span><b>{reason}</b>　伝票の登録・訂正・削除と行の操作はできません（操作ボタンは表示されません）。参照（残高・問合せ・印刷）は利用できます。</span>
     </div>
   );
