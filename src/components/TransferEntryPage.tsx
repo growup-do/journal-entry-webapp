@@ -14,7 +14,7 @@ import { ToastView, useToast } from './Toast';
 import { DivisionDialog } from './DivisionPicker';
 import { BudgetGraphModal, BudgetHintLive, EntryConfirmModal, useEntryTools } from './EntryExtras';
 import { judgeTorihiki } from '../lib/accounts';
-import { ComboField, EntryStyles, isIme, FlagButtons, FundAccountLine, PAPER, PaperBox, PaperDate, PaperFootItems, PaperStyles, PaperTitle, PaperToggle, fieldMessage, fieldState, fmtNum, focusId, hasError, hasWarn, isInternalAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor, type Issue } from './EntryCommon';
+import { ComboField, EntryStyles, isIme, FlagButtons, FundAccountLine, PAPER, PaperBox, PaperDate, PaperFootItems, PaperStyles, PaperTitle, PaperToggle, fieldMessage, fieldState, fmtNum, focusId, hasError, hasWarn, isInternalAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor, type Issue, FusenTab } from './EntryCommon';
 import { useWidePanel } from './WidePanel';
 import { makeSheetSeed } from '../data';
 import { applyMonth } from '../lib/format';
@@ -457,7 +457,8 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                       <div className="pp-cell" style={{ ...cell, background: bg }}>
                         <input id={fid(i, 'sa')} className="ef-input pp-input" aria-label={`${i + 1}行目 貸方金額`} disabled={ro} value={fmtNum(r.kashiAmt)} onChange={(e) => setRow(i, { kashiAmt: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => afterKashiAmt())} inputMode="numeric" placeholder="0" autoComplete="off" style={amt} />
                       </div>
-                      <div className="pp-cell pp-center" style={{ ...cell, padding: '6px 4px', gap: 6, background: bg }}>
+                      <div className="pp-cell pp-center" style={{ ...cell, padding: '6px 4px', gap: 6, background: bg, position: 'relative' }}>
+                        <FusenTab color={r.fusen} />
                         {!single && (
                           <span style={{ fontSize: 12, color: '#9aa5b1', flex: 'none' }}>
                             <span className="ef-rowno pp-num" style={{ fontWeight: on ? 800 : 500, color: on ? accent : '#9aa5b1' }}>{i + 1}</span>

@@ -674,6 +674,18 @@ export function FundAccountLine({ name, other, mode }: { name: string; other: st
 export type FusenColor = '' | '赤' | '青' | '黄' | '緑';
 const FUSEN_HEX: Record<Exclude<FusenColor, ''>, string> = { 赤: '#c0392b', 青: '#2c5f9e', 黄: '#d9a400', 緑: '#1f7a52' };
 export const nextFusen = (f: FusenColor): FusenColor => (['', '赤', '青', '黄', '緑'] as FusenColor[])[((['', '赤', '青', '黄', '緑'] as FusenColor[]).indexOf(f) + 1) % 5];
+/** 付箋の見た目：付箋を付けた行（伝票）の枠の右側に、色紙の付箋が貼られたように見せる（10/13 鈴木さん指示）。
+ *  置く側の要素を position: relative にする。offset は枠からはみ出す量（右方向の負の値）。 */
+export function FusenTab({ color, offset = -32, top = '50%' }: { color: FusenColor; offset?: number; top?: number | string }) {
+  if (!color) return null;
+  return (
+    <span aria-label={`付箋：${color}`} title={`付箋：${fusenLabel(color)}`} data-fusen-tab={color} style={{ position: 'absolute', right: offset, top, transform: 'translateY(-50%) rotate(-3deg)', width: 24, height: 38, background: FUSEN_HEX[color], borderRadius: '2px 5px 5px 2px', boxShadow: '1px 2px 5px rgba(0,0,0,.28)', pointerEvents: 'none', zIndex: 3 }}>
+      <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, background: 'rgba(0,0,0,.14)', borderRadius: '2px 0 0 2px' }} />
+      <span aria-hidden style={{ position: 'absolute', right: 0, bottom: 0, width: 0, height: 0, borderStyle: 'solid', borderWidth: '0 0 9px 9px', borderColor: 'transparent transparent rgba(255,255,255,.75) transparent' }} />
+    </span>
+  );
+}
+
 export function FlagButtons({ shohyo, check, fusen, onChange, disabled, showShohyo = true }: { shohyo: boolean; check: boolean; fusen: FusenColor; onChange: (p: Partial<{ shohyo: boolean; check: boolean; fusen: FusenColor }>) => void; disabled?: boolean; showShohyo?: boolean }) {
   const dot: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: 6, border: '1px solid #dde4ea', background: '#fff', cursor: disabled ? 'not-allowed' : 'pointer', fontSize: 10.5, fontWeight: 800, fontFamily: 'inherit', padding: 0 };
   return (

@@ -10,7 +10,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { DivisionPicker } from './DivisionPicker';
 import { FiscalYearBanner } from './FiscalYearPage';
 import { AttachedStatementModal, BudgetGraphModal, BudgetHintLive, EntryConfirmModal, SpecialAmountModal, TorihikiBadge, useEntryTools } from './EntryExtras';
-import { ComboField, EntryStyles, isIme, FieldLabel, FlagButtons, FundAccountLine, PAPER, PaperBox, PaperDate, PaperFootItems, PaperStyles, PaperTitle, PaperToggle, fieldMessage, fieldState, fmtNum, focusId, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, watchedStatement, type FundMode, type FusenColor } from './EntryCommon';
+import { ComboField, EntryStyles, isIme, FieldLabel, FlagButtons, FundAccountLine, PAPER, PaperBox, PaperDate, PaperFootItems, PaperStyles, PaperTitle, PaperToggle, fieldMessage, fieldState, fmtNum, focusId, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, watchedStatement, type FundMode, type FusenColor, FusenTab } from './EntryCommon';
 import { WIDE_TAB_SPACE, WIDE_WIDTH, WidePanel, useWidePanel } from './WidePanel';
 import { ToastView, useToast } from './Toast';
 import { judgeTorihiki } from '../lib/accounts';
@@ -519,7 +519,8 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                           style={{ width: '100%', padding: '8px 10px', textAlign: 'right', fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderColor: plus ? '#6b3fb5' : 'transparent' }}
                         />
                       </div>
-                      <div className="pp-cell pp-col" style={{ padding: '4px 6px', gap: 4, alignItems: 'center', background: on ? '#f7fbf9' : undefined }}>
+                      <div className="pp-cell pp-col" style={{ padding: '4px 6px', gap: 4, alignItems: 'center', background: on ? '#f7fbf9' : undefined, position: 'relative' }}>
+                        <FusenTab color={r.fusen} />
                         {!tools.viewOnly && <FlagButtons shohyo={r.shohyo} check={r.check} fusen={r.fusen} onChange={(p) => { setCur(i); patchRow(i, p); }} disabled={!editable} showShohyo={inp.shohyo} />}
                         {!tools.viewOnly && <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
                           <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={() => insertAt(i)} title={editable ? `${i + 1}行目の上に1行挿入` : tools.reason} style={rowBtn}>挿入</button>

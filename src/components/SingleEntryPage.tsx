@@ -9,7 +9,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { ToastView, useToast } from './Toast';
 import { BudgetGraphModal, BudgetHintLive, EntryConfirmModal, TorihikiBadge, useEntryTools, type EntryFlags } from './EntryExtras';
-import { ComboField, ConfirmModal, EntryStyles, FlagButtons, FundAccountLine, PAPER, PaperBox, PaperStyles, PaperTitle, PaperToggle, fieldMessage, fieldState, focusId, hasError, hasWarn, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor } from './EntryCommon';
+import { ComboField, ConfirmModal, EntryStyles, FlagButtons, FundAccountLine, PAPER, PaperBox, PaperStyles, PaperTitle, PaperToggle, fieldMessage, fieldState, focusId, hasError, hasWarn, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor, FusenTab } from './EntryCommon';
 import { useWidePanel } from './WidePanel';
 import { yearOfMonth } from './SingleEntryTools';
 import { judgeTorihiki } from '../lib/accounts';
@@ -327,6 +327,8 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
         <div style={{ padding: '18px 22px 12px', background: '#eef1ef' }}>
         {/* 伝票用紙 */}
         <div className="pp-sheet" style={{ padding: '16px 20px 16px' }}>
+          {/* 伝票に付けた付箋：用紙の右端に貼る */}
+          <FusenTab color={flags.fusen} offset={-12} top={64} />
           <PaperTitle
             title="単一式入力"
             division={`${divisionName} 拠点区分`}
