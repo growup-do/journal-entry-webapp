@@ -209,7 +209,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
   const setCell = (ri: number, ci: number, v: string) => setRows((d) => ({ ...d, [sheet.id]: (d[sheet.id] ?? []).map((r, i) => (i === ri ? r.map((c, k) => (k === ci ? v : c)) : r)) }));
 
   const canPrint = sheet.editor !== 'merge' && !sheet.na;
-  const tag = (label: string, bg: string, fg: string): ReactNode => <span style={{ fontSize: 10.5, fontWeight: 800, padding: '2px 8px', borderRadius: 8, background: bg, color: fg, whiteSpace: 'nowrap' }}>{label}</span>;
+  const tag = (label: string, bg: string, fg: string): ReactNode => <span style={{ fontSize: 12, fontWeight: 800, padding: '2px 8px', borderRadius: 8, background: bg, color: fg, whiteSpace: 'nowrap' }}>{label}</span>;
 
   return (
     <SettingsShell variant={variant} title="別紙（注記・附属明細書・財産目録）" badge="印刷" desc="決算書に添付する別紙の編集と印刷を行います。左の一覧から別紙を選び、右側で内容の編集と印刷をします。" actions={<button type="button" className="submit-btn" onClick={() => toast.show('別紙の内容を保存しました（プロトタイプ）')} style={btn(accent, true)}>保存</button>}>
@@ -221,18 +221,18 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
             const items = SHEETS.filter((x) => x.group === g && !(hideNa && x.na));
             return (
               <div key={g} style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: '#8290a0', padding: '6px 8px 4px', display: 'flex', alignItems: 'center', gap: 6 }}>{g}{g === '附属明細書' && <span style={{ fontWeight: 500 }}>（別紙3 ①〜⑲）</span>}</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: '#8290a0', padding: '6px 8px 4px', display: 'flex', alignItems: 'center', gap: 6 }}>{g}{g === '附属明細書' && <span style={{ fontWeight: 500 }}>（別紙3 ①〜⑲）</span>}</div>
                 {items.map((x) => {
                   const on = x.id === cur; const st = statusOf(x);
                   return (
                     <button key={x.id} type="button" onClick={() => pick(x.id)} aria-current={on ? 'true' : undefined} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, width: '100%', textAlign: 'left', padding: '7px 8px', border: 'none', borderRadius: 8, background: on ? accent : 'transparent', color: on ? '#fff' : x.na ? '#9aa5b1' : '#22303c', fontFamily: 'inherit', cursor: 'pointer', marginBottom: 1 }}>
-                      <span style={{ width: 20, flex: 'none', fontSize: 13, fontWeight: 700, textAlign: 'center', opacity: 0.85 }}>{x.no}</span>
-                      <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: on ? 700 : 500, lineHeight: 1.45 }}>{x.name}</span>
-                      <span style={{ flex: 'none', fontSize: 10, fontWeight: 800, padding: '1px 6px', borderRadius: 6, background: on ? 'rgba(255,255,255,.22)' : st.bg, color: on ? '#fff' : st.fg, marginTop: 2 }}>{st.label}</span>
+                      <span style={{ width: 20, flex: 'none', fontSize: 14, fontWeight: 700, textAlign: 'center', opacity: 0.85 }}>{x.no}</span>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: on ? 700 : 500, lineHeight: 1.45 }}>{x.name}</span>
+                      <span style={{ flex: 'none', fontSize: 12, fontWeight: 800, padding: '1px 6px', borderRadius: 6, background: on ? 'rgba(255,255,255,.22)' : st.bg, color: on ? '#fff' : st.fg, marginTop: 2 }}>{st.label}</span>
                     </button>
                   );
                 })}
-                {g === '附属明細書' && <label style={{ display: 'flex', gap: 5, alignItems: 'center', fontSize: 11.5, color: '#8290a0', padding: '4px 8px', cursor: 'pointer' }}><input type="checkbox" checked={!hideNa} onChange={(e) => setHideNa(!e.target.checked)} />対象外の明細書（就労支援・授産 ⑮〜⑲）も表示</label>}
+                {g === '附属明細書' && <label style={{ display: 'flex', gap: 5, alignItems: 'center', fontSize: 12, color: '#8290a0', padding: '4px 8px', cursor: 'pointer' }}><input type="checkbox" checked={!hideNa} onChange={(e) => setHideNa(!e.target.checked)} />対象外の明細書（就労支援・授産 ⑮〜⑲）も表示</label>}
               </div>
             );
           })}
@@ -244,7 +244,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16, minWidth: 0 }}>{sheet.group === '附属明細書' ? `${sheet.no} ` : ''}{sheet.name}</div>
             {sheet.group === '附属明細書' && tag(`別紙3（${sheet.no}）`, '#eef2f6', '#3d4a56')}
             {sheet.unit && tag(`${sheet.unit}で作成`, sheet.unit === '法人全体' ? '#e4f1f0' : '#fff3dc', sheet.unit === '法人全体' ? '#1f6f6b' : '#8a5a00')}
-            <span style={{ marginLeft: 'auto', fontSize: 11.5, color: '#8290a0' }}>{s.fiscalYear}　{s.division}</span>
+            <span style={{ marginLeft: 'auto', fontSize: 12, color: '#8290a0' }}>{s.fiscalYear}　{s.division}</span>
           </div>
           {canPrint && <Tabs items={['設定・編集', '印刷']} current={mode} onChange={setMode} accent={accent} small />}
 
@@ -260,8 +260,8 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
               {sheet.editor === 'note' && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 200px', gap: 14, alignItems: 'start' }}>
                   <div style={{ display: 'grid', gap: 8 }}>
-                    <textarea aria-label={`${sheet.name}の本文`} value={notes[sheet.id] ?? ''} onChange={(e) => setNotes({ ...notes, [sheet.id]: e.target.value })} rows={18} style={{ ...input, resize: 'vertical', lineHeight: 1.8, fontSize: 12.5 }} />
-                    <div style={{ fontSize: 11.5, color: '#9aa5b1', lineHeight: 1.6 }}>[表] の位置に、「表挿入」で作成した表が入ります。法人全体用と拠点区分用は別々に保存します。</div>
+                    <textarea aria-label={`${sheet.name}の本文`} value={notes[sheet.id] ?? ''} onChange={(e) => setNotes({ ...notes, [sheet.id]: e.target.value })} rows={18} style={{ ...input, resize: 'vertical', lineHeight: 1.8, fontSize: 14 }} />
+                    <div style={{ fontSize: 12, color: '#9aa5b1', lineHeight: 1.6 }}>[表] の位置に、「表挿入」で作成した表が入ります。法人全体用と拠点区分用は別々に保存します。</div>
                   </div>
                   <div style={{ display: 'grid', gap: 6 }}>
                     <button type="button" onClick={() => setTableOpen(true)} style={btn(accent)}>表挿入</button>
@@ -278,19 +278,19 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
               {sheet.editor === 'detail' && def && (
                 <>
                   <div style={card}>
-                    <div style={cardHead}>明細入力 <span style={{ fontWeight: 500, color: '#8290a0', fontSize: 11.5 }}>金額を入力すると明細書に印刷されます</span><button type="button" onClick={() => setRows((d) => ({ ...d, [sheet.id]: [...(d[sheet.id] ?? []), def.cols.map(() => '')] }))} style={{ ...btn(accent, false, true), marginLeft: 'auto' }}>＋ 行を追加</button></div>
+                    <div style={cardHead}>明細入力 <span style={{ fontWeight: 500, color: '#8290a0', fontSize: 12 }}>金額を入力すると明細書に印刷されます</span><button type="button" onClick={() => setRows((d) => ({ ...d, [sheet.id]: [...(d[sheet.id] ?? []), def.cols.map(() => '')] }))} style={{ ...btn(accent, false, true), marginLeft: 'auto' }}>＋ 行を追加</button></div>
                     <div style={{ overflow: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead><tr>{def.cols.map((c, i) => <th key={c} style={{ ...TH, textAlign: def.num.includes(i) ? 'right' : 'left' }}>{c}</th>)}<th style={{ ...TH, width: 50 }} /></tr></thead>
                         <tbody>
-                          {myRows.map((r, ri) => <tr key={ri}>{r.map((c, ci) => { const numeric = def.num.includes(ci); return <td key={ci} style={numeric ? NUM : TD}><input className="field-input" aria-label={def.cols[ci]} value={numeric && c ? yen(toInt(c)) : c} onChange={(e) => setCell(ri, ci, numeric ? String(toInt(e.target.value)) : e.target.value)} inputMode={numeric ? 'numeric' : undefined} style={{ ...(numeric ? numInput : input), padding: '4px 8px', fontSize: 12.5, minWidth: numeric ? 96 : 110, color: numeric && toInt(c) < 0 ? '#c0392b' : undefined }} /></td>; })}<td style={TD}><button type="button" title="この行を削除" onClick={() => setRows((d) => ({ ...d, [sheet.id]: (d[sheet.id] ?? []).filter((_, i) => i !== ri) }))} style={btn('#c0392b', false, true)}>×</button></td></tr>)}
+                          {myRows.map((r, ri) => <tr key={ri}>{r.map((c, ci) => { const numeric = def.num.includes(ci); return <td key={ci} style={numeric ? NUM : TD}><input className="field-input" aria-label={def.cols[ci]} value={numeric && c ? yen(toInt(c)) : c} onChange={(e) => setCell(ri, ci, numeric ? String(toInt(e.target.value)) : e.target.value)} inputMode={numeric ? 'numeric' : undefined} style={{ ...(numeric ? numInput : input), padding: '4px 8px', fontSize: 14, minWidth: numeric ? 96 : 110, color: numeric && toInt(c) < 0 ? '#c0392b' : undefined }} /></td>; })}<td style={TD}><button type="button" title="この行を削除" onClick={() => setRows((d) => ({ ...d, [sheet.id]: (d[sheet.id] ?? []).filter((_, i) => i !== ri) }))} style={btn('#c0392b', false, true)}>×</button></td></tr>)}
                           {myRows.length === 0 && <tr><td colSpan={def.cols.length + 1} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 24 }}>明細がありません。「＋ 行を追加」で入力します。</td></tr>}
                         </tbody>
                       </table>
                     </div>
-                    {def.hint && <div style={{ padding: '8px 14px', fontSize: 11.5, color: '#9aa5b1' }}>{def.hint}</div>}
+                    {def.hint && <div style={{ padding: '8px 14px', fontSize: 12, color: '#9aa5b1' }}>{def.hint}</div>}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 12, color: '#5b6773' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 14, color: '#5b6773' }}>
                     <span>集計する科目・伝票入力時の監視は「{displayName('決算附属明細書')}」で設定します。</span>
                     <button type="button" onClick={goSettings} style={btn('#5b6773', false, true)}>{displayName('決算附属明細書')}を開く</button>
                     <button type="button" onClick={() => setMode('印刷')} style={{ ...btn(accent, true, true), marginLeft: 'auto' }}>印刷へ進む</button>
@@ -315,7 +315,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
                     <div style={card}>
                       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead><tr><th style={{ ...TH, width: 40 }}>#</th><th style={TH}>貸借対照表科目</th><th style={TH}>場所・物量等</th><th style={{ ...TH, textAlign: 'right', width: 140 }}>金額</th></tr></thead>
-                        <tbody>{invRows.map((r, i) => <tr key={i} onClick={() => setInvSel(i)} style={{ background: invSel === i ? '#eef2f6' : 'transparent', cursor: 'pointer' }}><td style={TD}>{i + 1}</td>{r.map((c, k) => <td key={k} style={k === 2 ? NUM : TD}><input className="field-input" value={c} onFocus={() => setInvSel(i)} onChange={(e) => setInv({ ...inv, [invTab]: invRows.map((x, xi) => (xi === i ? x.map((y, yi) => (yi === k ? e.target.value : y)) : x)) })} style={{ ...(k === 2 ? numInput : input), padding: '4px 8px', fontSize: 12.5 }} /></td>)}</tr>)}{invRows.length === 0 && <tr><td colSpan={4} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 24 }}>行がありません。「行挿入」または「既定に戻す」で追加してください。</td></tr>}</tbody>
+                        <tbody>{invRows.map((r, i) => <tr key={i} onClick={() => setInvSel(i)} style={{ background: invSel === i ? '#eef2f6' : 'transparent', cursor: 'pointer' }}><td style={TD}>{i + 1}</td>{r.map((c, k) => <td key={k} style={k === 2 ? NUM : TD}><input className="field-input" value={c} onFocus={() => setInvSel(i)} onChange={(e) => setInv({ ...inv, [invTab]: invRows.map((x, xi) => (xi === i ? x.map((y, yi) => (yi === k ? e.target.value : y)) : x)) })} style={{ ...(k === 2 ? numInput : input), padding: '4px 8px', fontSize: 14 }} /></td>)}</tr>)}{invRows.length === 0 && <tr><td colSpan={4} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 24 }}>行がありません。「行挿入」または「既定に戻す」で追加してください。</td></tr>}</tbody>
                       </table>
                     </div>
                     <div style={{ display: 'grid', gap: 6 }}>
@@ -328,7 +328,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
                       <button type="button" onClick={() => setMode('印刷')} style={{ ...btn(accent, true), marginTop: 8 }}>印刷へ進む</button>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', fontSize: 12.5, padding: '8px 12px', background: '#f8fafc', borderRadius: 10, fontVariantNumeric: 'tabular-nums' }}>
+                  <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', fontSize: 14, padding: '8px 12px', background: '#f8fafc', borderRadius: 10, fontVariantNumeric: 'tabular-nums' }}>
                     <span>資産合計 <b>{yen(invAmount(INVENTORY_TABS.slice(0, 3)))}</b></span><span>負債合計 <b>{yen(invAmount(INVENTORY_TABS.slice(3)))}</b></span><span>差引純資産 <b>{yen(invAmount(INVENTORY_TABS.slice(0, 3)) - invAmount(INVENTORY_TABS.slice(3)))}</b></span>
                   </div>
                   <Notice>初期状態では行が空のため、最初に「既定に戻す」で貸借対照表の科目から行を作成します。差引純資産の網掛け・行送りなど印刷の条件は、「印刷」タブの詳細設定で指定します。</Notice>
@@ -340,36 +340,36 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
                 <>
                   <Notice>内訳表（区分を横に並べた決算書・附属明細書）を印刷する前に、横軸となる区分と小計・合計の計算式を設定します。作成しないまま内訳表を印刷することはできません。</Notice>
                   <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>1ページ中の項目数</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: '#8290a0' }}>1ページ中の項目数</span>
                     <button type="button" aria-label="項目数を減らす" onClick={() => setPerPage((p) => Math.max(3, p - 1))} style={btn('#5b6773', false, true)}>▼</button><b style={{ fontVariantNumeric: 'tabular-nums' }}>{perPage}</b><button type="button" aria-label="項目数を増やす" onClick={() => setPerPage((p) => Math.min(10, p + 1))} style={btn('#5b6773', false, true)}>▲</button>
                     <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}><button type="button" onClick={exportTable} style={btn()}>テーブル書出</button><button type="button" onClick={() => tableRef.current?.click()} style={btn()}>テーブル読込</button><input ref={tableRef} type="file" accept=".csv,text/csv" onChange={(e) => onTableFile(e.target.files?.[0])} style={{ display: 'none' }} /><button type="button" onClick={() => setFmtOpen(true)} style={btn()}>印刷書式</button></span>
                   </div>
                   <div style={card}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                       <thead><tr><th style={{ ...TH, width: 50 }}>No.</th><th style={{ ...TH, width: 140 }}>コード（区分／小計／合計）</th><th style={TH}>部門名称</th><th style={{ ...TH, width: 200 }}>計算式（No.で指定）</th><th style={{ ...TH, width: 50 }} /></tr></thead>
-                      <tbody>{merge.map((m, i) => <tr key={i} style={{ background: m.code === '小計' ? '#fff8d6' : m.code === '合計' ? '#efe6fb' : 'transparent' }}><td style={TD}>{i + 1}</td><td style={TD}><select value={m.code} onChange={(e) => setMerge(merge.map((x, k) => (k === i ? { ...x, code: e.target.value } : x)))} style={{ ...input, padding: '4px 8px', fontSize: 12.5 }}>{[...SERVICES.map((v) => v.split(' ')[0]), '小計', '合計'].map((o) => <option key={o}>{o}</option>)}</select></td><td style={TD}><input className="field-input" value={m.name} onChange={(e) => setMerge(merge.map((x, k) => (k === i ? { ...x, name: e.target.value } : x)))} style={{ ...input, padding: '4px 8px', fontSize: 12.5 }} /></td><td style={TD}>{(m.code === '小計' || m.code === '合計') ? <input className="field-input" value={m.formula} onChange={(e) => setMerge(merge.map((x, k) => (k === i ? { ...x, formula: e.target.value } : x)))} placeholder="例：2+3" style={{ ...input, padding: '4px 8px', fontSize: 12.5 }} /> : <span style={{ color: '#9aa5b1', fontSize: 12 }}>—</span>}</td><td style={TD}><button type="button" title="この行を削除" onClick={() => setMerge(merge.filter((_, k) => k !== i))} style={btn('#c0392b', false, true)}>×</button></td></tr>)}</tbody>
+                      <tbody>{merge.map((m, i) => <tr key={i} style={{ background: m.code === '小計' ? '#fff8d6' : m.code === '合計' ? '#efe6fb' : 'transparent' }}><td style={TD}>{i + 1}</td><td style={TD}><select value={m.code} onChange={(e) => setMerge(merge.map((x, k) => (k === i ? { ...x, code: e.target.value } : x)))} style={{ ...input, padding: '4px 8px', fontSize: 14 }}>{[...SERVICES.map((v) => v.split(' ')[0]), '小計', '合計'].map((o) => <option key={o}>{o}</option>)}</select></td><td style={TD}><input className="field-input" value={m.name} onChange={(e) => setMerge(merge.map((x, k) => (k === i ? { ...x, name: e.target.value } : x)))} style={{ ...input, padding: '4px 8px', fontSize: 14 }} /></td><td style={TD}>{(m.code === '小計' || m.code === '合計') ? <input className="field-input" value={m.formula} onChange={(e) => setMerge(merge.map((x, k) => (k === i ? { ...x, formula: e.target.value } : x)))} placeholder="例：2+3" style={{ ...input, padding: '4px 8px', fontSize: 14 }} /> : <span style={{ color: '#9aa5b1', fontSize: 14 }}>—</span>}</td><td style={TD}><button type="button" title="この行を削除" onClick={() => setMerge(merge.filter((_, k) => k !== i))} style={btn('#c0392b', false, true)}>×</button></td></tr>)}</tbody>
                     </table>
                     <div style={{ padding: 10 }}><button type="button" onClick={() => setMerge([...merge, { code: SERVICES[0].split(' ')[0], name: '', formula: '' }])} style={btn(accent, false, true)}>＋ 行を追加</button></div>
                   </div>
-                  <div style={{ fontSize: 12, color: '#7a8794' }}>黄色＝小計、紫＝合計。計算式には、合計する行の No. を 2+3 のように入力します。</div>
+                  <div style={{ fontSize: 14, color: '#7a8794' }}>黄色＝小計、紫＝合計。計算式には、合計する行の No. を 2+3 のように入力します。</div>
                 </>
               )}
             </div>
           )}
         </div>
       </div>
-      <div style={{ borderTop: '1px solid #eef2f5', padding: '10px 22px 14px', fontSize: 11.5, color: '#8290a0', lineHeight: 1.7 }}>
+      <div style={{ borderTop: '1px solid #eef2f5', padding: '10px 22px 14px', fontSize: 12, color: '#8290a0', lineHeight: 1.7 }}>
         これまで「保守」メニューにあった「財産目録設定」「計算書類に対する注記（法人全体用／拠点区分用）」は、同じ機能が重複していたため、この画面にまとめました。
       </div>
 
       {/* 確認（既定に戻す・全行削除） */}
       <Modal open={!!ask} onClose={() => setAsk(null)} width={440} title="確認" strict>
-        {ask && <div style={{ padding: '16px 22px 18px', display: 'grid', gap: 14 }}><div style={{ fontSize: 13.5, lineHeight: 1.8 }}>{ask.msg}</div><div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setAsk(null)} style={btn()}>キャンセル</button><button type="button" onClick={() => { ask.run(); setAsk(null); }} style={btn('#c0392b', true)}>{ask.ok}</button></div></div>}
+        {ask && <div style={{ padding: '16px 22px 18px', display: 'grid', gap: 14 }}><div style={{ fontSize: 14, lineHeight: 1.8 }}>{ask.msg}</div><div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setAsk(null)} style={btn()}>キャンセル</button><button type="button" onClick={() => { ask.run(); setAsk(null); }} style={btn('#c0392b', true)}>{ask.ok}</button></div></div>}
       </Modal>
       {/* 注記の表 */}
       <Modal open={tableOpen} onClose={() => setTableOpen(false)} width={640} title="表の挿入／編集">
         <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 10 }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}><thead><tr>{['拠点区分', 'サービス区分', '資金収支計算書', '事業活動計算書', '貸借対照表'].map((h) => <th key={h} style={TH}>{h}</th>)}</tr></thead><tbody>{[['本部', '本部', '○', '○', '○'], ['チャイルド保育園', '保育事業／一時預かり', '○', '○', '○'], ['チャイルド保育園', '子育て支援', '○', '○', '○']].map((r, i) => <tr key={i}>{r.map((c, k) => <td key={k} style={TD}><input className="field-input" defaultValue={c} style={{ ...input, padding: '4px 8px', fontSize: 12.5 }} /></td>)}</tr>)}</tbody></table>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}><thead><tr>{['拠点区分', 'サービス区分', '資金収支計算書', '事業活動計算書', '貸借対照表'].map((h) => <th key={h} style={TH}>{h}</th>)}</tr></thead><tbody>{[['本部', '本部', '○', '○', '○'], ['チャイルド保育園', '保育事業／一時預かり', '○', '○', '○'], ['チャイルド保育園', '子育て支援', '○', '○', '○']].map((r, i) => <tr key={i}>{r.map((c, k) => <td key={k} style={TD}><input className="field-input" defaultValue={c} style={{ ...input, padding: '4px 8px', fontSize: 14 }} /></td>)}</tr>)}</tbody></table>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setTableOpen(false)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { setTableOpen(false); toast.show('表を注記に挿入しました'); }} style={btn(accent, true)}>OK</button></div>
         </div>
       </Modal>
@@ -377,9 +377,9 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
       <Modal open={!!load} onClose={() => setLoad(null)} width={480} title={load === 'inv' ? '設定ファイル読込 ― 財産目録の行設定' : `設定ファイル読込 ― ${sheet.name}`}>
         <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
           <Notice>「設定ファイル保存」で書き出した設定ファイル（JSON）を読み込み、現在の内容を置き換えます。読み込んだ内容は画面上部の「保存」で確定します。</Notice>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12.5 }}><span style={{ flex: 1, color: '#5b6773' }}>保存した設定ファイルを選択します。</span><button type="button" onClick={() => fileRef.current?.click()} style={btn(accent)}>ファイルを選択…</button></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14 }}><span style={{ flex: 1, color: '#5b6773' }}>保存した設定ファイルを選択します。</span><button type="button" onClick={() => fileRef.current?.click()} style={btn(accent)}>ファイルを選択…</button></div>
           <input ref={fileRef} type="file" accept=".json,application/json" onChange={(e) => onFile(e.target.files?.[0])} style={{ display: 'none' }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12.5 }}><span style={{ flex: 1, color: '#9aa5b1' }}>手元にファイルがない場合は、サンプルを読み込んで動作を確認できます。</span><button type="button" onClick={loadSample} style={btn()}>サンプルを読み込む</button></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14 }}><span style={{ flex: 1, color: '#9aa5b1' }}>手元にファイルがない場合は、サンプルを読み込んで動作を確認できます。</span><button type="button" onClick={loadSample} style={btn()}>サンプルを読み込む</button></div>
           <Notice tone="warn">一度読み込んだ内容は元に戻せません（「既定に戻す」で初期状態には戻せます）。</Notice>
         </div>
       </Modal>

@@ -43,8 +43,8 @@ function balancesOf(entries: JournalEntry[], month: string): Bal[] {
   });
 }
 
-const TH: CSSProperties = { padding: '8px 10px', fontSize: 11, fontWeight: 700, color: '#8290a0', background: '#f6f8fa', borderBottom: '1px solid #e2e8ee', textAlign: 'left', whiteSpace: 'nowrap', position: 'sticky', top: 0 };
-const TD: CSSProperties = { padding: '7px 10px', fontSize: 12.5, borderBottom: '1px solid #f1f4f6', whiteSpace: 'nowrap' };
+const TH: CSSProperties = { padding: '8px 10px', fontSize: 12, fontWeight: 700, color: '#8290a0', background: '#f6f8fa', borderBottom: '1px solid #e2e8ee', textAlign: 'left', whiteSpace: 'nowrap', position: 'sticky', top: 0 };
+const TD: CSSProperties = { padding: '7px 10px', fontSize: 14, borderBottom: '1px solid #f1f4f6', whiteSpace: 'nowrap' };
 const NUM: CSSProperties = { ...TD, textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
 const CLS_COLOR: Record<string, string> = { 現預金: '#2c5f9e', 資産: '#1f7a52', 負債: '#b45309', 費用: '#b0426a', 収益: '#6b3fb5' };
 
@@ -59,13 +59,13 @@ export function AccountBalanceModal({ open, onClose, accent, entries, month, foc
     .sort((a, b) => Number(focused.includes(b.name)) - Number(focused.includes(a.name)));
   const t = list.reduce((a, r) => ({ kari: a.kari + r.kari, kashi: a.kashi + r.kashi }), { kari: 0, kashi: 0 });
   return (
-    <Modal open={open} onClose={onClose} width={860} title={<>科目別残高 <span style={{ fontSize: 12, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>令和8年度 {month}月</span></>}>
+    <Modal open={open} onClose={onClose} width={860} title={<>科目別残高 <span style={{ fontSize: 14, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>令和8年度 {month}月</span></>}>
       <div style={{ padding: '12px 22px 18px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
           <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="科目名・コード・カナで絞り込み" autoComplete="off" style={{ ...input, width: 260 }} />
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#48565f' }}><input type="checkbox" checked={movedOnly} onChange={(e) => setMovedOnly(e.target.checked)} />当月に動きのある科目のみ</label>
-          {focused.length > 0 && <span style={{ fontSize: 11.5, color: '#7a8794' }}>入力中の科目（<b style={{ color: accent }}>{focused.join('・')}</b>）を先頭に表示</span>}
-          <span style={{ marginLeft: 'auto', fontSize: 12, color: '#7a8794' }}><b style={{ color: '#22303c' }}>{list.length}</b> 科目</span>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: '#48565f' }}><input type="checkbox" checked={movedOnly} onChange={(e) => setMovedOnly(e.target.checked)} />当月に動きのある科目のみ</label>
+          {focused.length > 0 && <span style={{ fontSize: 12, color: '#7a8794' }}>入力中の科目（<b style={{ color: accent }}>{focused.join('・')}</b>）を先頭に表示</span>}
+          <span style={{ marginLeft: 'auto', fontSize: 14, color: '#7a8794' }}><b style={{ color: '#22303c' }}>{list.length}</b> 科目</span>
         </div>
         <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'auto', maxHeight: 420 }}>
           <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
@@ -76,8 +76,8 @@ export function AccountBalanceModal({ open, onClose, accent, entries, month, foc
                 const on = focused.includes(r.name);
                 return (
                   <tr key={r.name} style={{ background: on ? accent + '14' : 'transparent' }}>
-                    <td style={{ ...TD, fontWeight: on ? 700 : 500 }}>{on && <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: 3, background: accent, marginRight: 8, verticalAlign: 'middle' }} />}{r.name}<span style={{ fontSize: 10.5, color: '#9aa5b1', marginLeft: 6 }}>{metaOf(r.name)?.code}</span></td>
-                    <td style={TD}><span style={{ fontSize: 10.5, fontWeight: 700, color: CLS_COLOR[r.cls] ?? '#5b6773' }}>{r.cls}</span></td>
+                    <td style={{ ...TD, fontWeight: on ? 700 : 500 }}>{on && <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: 3, background: accent, marginRight: 8, verticalAlign: 'middle' }} />}{r.name}<span style={{ fontSize: 12, color: '#9aa5b1', marginLeft: 6 }}>{metaOf(r.name)?.code}</span></td>
+                    <td style={TD}><span style={{ fontSize: 12, fontWeight: 700, color: CLS_COLOR[r.cls] ?? '#5b6773' }}>{r.cls}</span></td>
                     <td style={{ ...NUM, color: '#7a8794' }}>{yen(r.carry)}</td>
                     <td style={NUM}>{r.kari ? yen(r.kari) : <span style={{ color: '#c3ccd4' }}>—</span>}</td>
                     <td style={NUM}>{r.kashi ? yen(r.kashi) : <span style={{ color: '#c3ccd4' }}>—</span>}</td>
@@ -89,7 +89,7 @@ export function AccountBalanceModal({ open, onClose, accent, entries, month, foc
             {list.length > 0 && <tfoot><tr><td colSpan={3} style={{ ...TD, fontWeight: 700, background: '#f6f8fa', borderTop: '1px solid #e2e8ee' }}>合計（表示中の科目）</td><td style={{ ...NUM, fontWeight: 700, background: '#f6f8fa', borderTop: '1px solid #e2e8ee' }}>{yen(t.kari)}</td><td style={{ ...NUM, fontWeight: 700, background: '#f6f8fa', borderTop: '1px solid #e2e8ee' }}>{yen(t.kashi)}</td><td style={{ ...TD, background: '#f6f8fa', borderTop: '1px solid #e2e8ee' }} /></tr></tfoot>}
           </table>
         </div>
-        <div style={{ fontSize: 11.5, color: '#9aa5b1', marginTop: 8 }}>残高は 貸借科目＝期首残高＋当月までの増減、損益科目＝当年度の累計（借方残／貸方残）。期首残高はサンプル値です。</div>
+        <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 8 }}>残高は 貸借科目＝期首残高＋当月までの増減、損益科目＝当年度の累計（借方残／貸方残）。期首残高はサンプル値です。</div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}><button type="button" onClick={onClose} style={btn(accent, true)}>閉じる</button></div>
       </div>
     </Modal>
@@ -118,17 +118,17 @@ export function CashBalanceModal({ open, onClose, accent, entries, month, focus 
   }, [entries, month, cur]);
   const total = rows.reduce((a, r) => a + r.balance, 0);
   return (
-    <Modal open={open} onClose={onClose} width={900} title={<>現預金残高 <span style={{ fontSize: 12, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>令和8年度 {month}月</span></>}>
+    <Modal open={open} onClose={onClose} width={900} title={<>現預金残高 <span style={{ fontSize: 14, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>令和8年度 {month}月</span></>}>
       <div style={{ padding: '12px 22px 18px', display: 'grid', gridTemplateColumns: 'minmax(300px, 1fr) minmax(360px, 1.2fr)', gap: 16 }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}><span style={lbl}>現金・預金の残高</span><span style={{ marginLeft: 'auto', fontSize: 12, color: '#7a8794' }}>合計 <b style={{ color: '#22303c', fontVariantNumeric: 'tabular-nums' }}>{yen(total)}</b> 円</span></div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}><span style={lbl}>現金・預金の残高</span><span style={{ marginLeft: 'auto', fontSize: 14, color: '#7a8794' }}>合計 <b style={{ color: '#22303c', fontVariantNumeric: 'tabular-nums' }}>{yen(total)}</b> 円</span></div>
           <div style={{ display: 'grid', gap: 8 }}>
             {rows.map((r) => {
               const on = cur?.name === r.name;
               return (
                 <button key={r.name} type="button" onClick={() => setSel(r.name)} style={{ textAlign: 'left', border: '1px solid ' + (on ? accent : '#e2e8ee'), background: on ? accent + '0f' : '#fff', borderRadius: 10, padding: '10px 12px', cursor: 'pointer', fontFamily: 'inherit', color: '#22303c' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ fontSize: 13, fontWeight: 700 }}>{r.name}</span><span style={{ marginLeft: 'auto', fontSize: 16, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: r.balance < 0 ? '#c0392b' : '#22303c' }}>{yen(r.balance)}</span></div>
-                  <div style={{ display: 'flex', gap: 12, fontSize: 11, color: '#7a8794', marginTop: 4, fontVariantNumeric: 'tabular-nums' }}><span>前月繰越 {yen(r.carry)}</span><span style={{ color: '#2c5f9e' }}>入金 {yen(r.kari)}</span><span style={{ color: '#b0426a' }}>出金 {yen(r.kashi)}</span></div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ fontSize: 14, fontWeight: 700 }}>{r.name}</span><span style={{ marginLeft: 'auto', fontSize: 16, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: r.balance < 0 ? '#c0392b' : '#22303c' }}>{yen(r.balance)}</span></div>
+                  <div style={{ display: 'flex', gap: 12, fontSize: 12, color: '#7a8794', marginTop: 4, fontVariantNumeric: 'tabular-nums' }}><span>前月繰越 {yen(r.carry)}</span><span style={{ color: '#2c5f9e' }}>入金 {yen(r.kari)}</span><span style={{ color: '#b0426a' }}>出金 {yen(r.kashi)}</span></div>
                 </button>
               );
             })}
@@ -149,7 +149,7 @@ export function CashBalanceModal({ open, onClose, accent, entries, month, focus 
               {cur && <tfoot><tr><td colSpan={2} style={{ ...TD, fontWeight: 700, background: '#f6f8fa', borderTop: '1px solid #e2e8ee' }}>当月合計</td><td style={{ ...NUM, fontWeight: 700, background: '#f6f8fa', borderTop: '1px solid #e2e8ee', color: '#2c5f9e' }}>{yen(cur.kari)}</td><td style={{ ...NUM, fontWeight: 700, background: '#f6f8fa', borderTop: '1px solid #e2e8ee', color: '#b0426a' }}>{yen(cur.kashi)}</td><td style={{ ...NUM, fontWeight: 800, background: '#f6f8fa', borderTop: '1px solid #e2e8ee' }}>{yen(cur.balance)}</td></tr></tfoot>}
             </table>
           </div>
-          <div style={{ fontSize: 11.5, color: '#9aa5b1', marginTop: 8 }}>通帳残高との突合は「残高照合」で行います。ここは入力中の伝票を含めた帳簿上の残高です。</div>
+          <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 8 }}>通帳残高との突合は「残高照合」で行います。ここは入力中の伝票を含めた帳簿上の残高です。</div>
         </div>
         <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end' }}><button type="button" onClick={onClose} style={btn(accent, true)}>閉じる</button></div>
       </div>
@@ -200,11 +200,11 @@ export function CalendarModal({ open, onClose, accent, entries, month, day, onPi
       <div tabIndex={0} ref={(el) => { if (el && !el.dataset.f) { el.dataset.f = '1'; el.focus(); } }} onKeyDown={onKey} style={{ padding: compact ? '10px 14px 12px' : '12px 22px 18px', outline: 'none' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
           <button type="button" className="btn-outline" disabled={vi <= 0} onClick={() => setView(ORDER[vi - 1])} style={{ ...btn(), opacity: vi <= 0 ? 0.4 : 1 }}>‹ 前月</button>
-          <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: compact ? 14 : 17, flex: 1, textAlign: 'center' }}>令和{y - 2018}年 {m}月 {!compact && <span style={{ fontSize: 11.5, fontWeight: 500, color: '#7a8794' }}>（{y}年）</span>}</div>
+          <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: compact ? 14 : 17, flex: 1, textAlign: 'center' }}>令和{y - 2018}年 {m}月 {!compact && <span style={{ fontSize: 12, fontWeight: 500, color: '#7a8794' }}>（{y}年）</span>}</div>
           <button type="button" className="btn-outline" disabled={vi >= ORDER.length - 1} onClick={() => setView(ORDER[vi + 1])} style={{ ...btn(), opacity: vi >= ORDER.length - 1 ? 0.4 : 1 }}>翌月 ›</button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
-          {WEEK.map((w, i) => <div key={w} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: i === 0 ? '#c0392b' : i === 6 ? '#2c5f9e' : '#8290a0', padding: '4px 0' }}>{w}</div>)}
+          {WEEK.map((w, i) => <div key={w} style={{ textAlign: 'center', fontSize: 12, fontWeight: 700, color: i === 0 ? '#c0392b' : i === 6 ? '#2c5f9e' : '#8290a0', padding: '4px 0' }}>{w}</div>)}
           {cells.map((d, i) => {
             if (!d) return <div key={'e' + i} />;
             const dow = i % 7;
@@ -214,13 +214,13 @@ export function CalendarModal({ open, onClose, accent, entries, month, day, onPi
             const at = d === cursor;
             return (
               <button key={d} type="button" tabIndex={-1} aria-current={at ? 'date' : undefined} onClick={() => { onPick(view, String(d)); onClose(); }} title={compact ? `${m}/${d}` : `${m}/${d} を入力行の日付にする`} style={{ minHeight: compact ? 30 : 58, padding: compact ? '3px 2px' : '5px 6px', textAlign: compact ? 'center' : 'left', outline: at ? `3px solid ${accent}` : 'none', outlineOffset: 1, border: '1px solid ' + (on ? accent : '#e2e8ee'), background: on ? accent + '14' : hol || dow === 0 ? '#fff7f5' : dow === 6 ? '#f5f8fc' : '#fff', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontSize: 12.5, fontWeight: 700, color: hol || dow === 0 ? '#c0392b' : dow === 6 ? '#2c5f9e' : '#22303c' }}>{d}{hol && <span style={{ fontSize: 9.5, fontWeight: 600, marginLeft: 4 }}>祝</span>}</span>
-                {info && !compact && <><span style={{ fontSize: 10.5, color: accent, fontWeight: 700 }}>{info.n}件</span><span style={{ fontSize: 10, color: '#7a8794', fontVariantNumeric: 'tabular-nums' }}>{yen(info.amt)}</span></>}
+                <span style={{ fontSize: 14, fontWeight: 700, color: hol || dow === 0 ? '#c0392b' : dow === 6 ? '#2c5f9e' : '#22303c' }}>{d}{hol && <span style={{ fontSize: 12, fontWeight: 600, marginLeft: 4 }}>祝</span>}</span>
+                {info && !compact && <><span style={{ fontSize: 12, color: accent, fontWeight: 700 }}>{info.n}件</span><span style={{ fontSize: 12, color: '#7a8794', fontVariantNumeric: 'tabular-nums' }}>{yen(info.amt)}</span></>}
               </button>
             );
           })}
         </div>
-        {!compact && <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10, fontSize: 11.5, color: '#7a8794' }}>
+        {!compact && <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10, fontSize: 12, color: '#7a8794' }}>
           <span>当月 <b style={{ color: '#22303c' }}>{monthTotal.n}</b> 件　<b style={{ color: '#22303c', fontVariantNumeric: 'tabular-nums' }}>{yen(monthTotal.amt)}</b> 円</span>
           <span style={{ marginLeft: 'auto' }}>←→↑↓ で日を選び Enter で決定（PageUp／PageDown で月を移動）。クリックでも選べます</span>
         </div>}

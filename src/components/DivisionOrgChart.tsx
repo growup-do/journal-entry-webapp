@@ -13,9 +13,9 @@ export const kindOf = (n: DivisionNode) => (!!n.entry && !(n.children ?? []).som
 /** 凡例（入力区分／親区分） */
 export function OrgChartLegend() {
   return (
-    <span style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 11.5, fontWeight: 500, color: '#5b6773', flexWrap: 'wrap' }}>
-      <span><b style={{ padding: '1px 7px', borderRadius: 8, background: '#eaf5ef', color: '#1f7a52', fontSize: 10.5 }}>入力区分</b>　伝票を入力できる</span>
-      <span><b style={{ padding: '1px 7px', borderRadius: 8, background: '#eef2f6', color: '#5b6773', fontSize: 10.5 }}>親区分</b>　集計・参照用</span>
+    <span style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, fontWeight: 500, color: '#5b6773', flexWrap: 'wrap' }}>
+      <span><b style={{ padding: '1px 7px', borderRadius: 8, background: '#eaf5ef', color: '#1f7a52', fontSize: 12 }}>入力区分</b>　伝票を入力できる</span>
+      <span><b style={{ padding: '1px 7px', borderRadius: 8, background: '#eef2f6', color: '#5b6773', fontSize: 12 }}>親区分</b>　集計・参照用</span>
     </span>
   );
 }
@@ -62,10 +62,10 @@ export function DivisionOrgChart({ tree, accent, isSelected, onSelect, onConfirm
         >
           {n.color && n.use !== false && <span style={{ flex: 'none', width: 12, height: 12, borderRadius: 3, background: n.color, border: '1px solid ' + (on ? 'rgba(255,255,255,.7)' : '#c3ccd4') }} />}
           <span style={{ minWidth: 0, flex: 1 }}>
-            <span style={{ display: 'block', fontSize: 10.5, fontWeight: 700, color: on ? 'rgba(255,255,255,.85)' : '#8290a0', lineHeight: 1.3 }}>{n.kind}{n.code ? `　${n.code}` : ''}</span>
-            <span style={{ display: 'block', fontSize: tier === 'root' ? 14.5 : 13.5, fontWeight: 700, lineHeight: 1.35, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.name}</span>
+            <span style={{ display: 'block', fontSize: 12, fontWeight: 700, color: on ? 'rgba(255,255,255,.85)' : '#8290a0', lineHeight: 1.3 }}>{n.kind}{n.code ? `　${n.code}` : ''}</span>
+            <span style={{ display: 'block', fontSize: tier === 'root' ? 14.5 : 14, fontWeight: 700, lineHeight: 1.35, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.name}</span>
           </span>
-          <span style={{ flex: 'none', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: on ? 'rgba(255,255,255,.25)' : n.use === false ? '#eef2f6' : k === '入力区分' ? '#eaf5ef' : '#eef2f6', color: on ? '#fff' : n.use === false ? '#9aa5b1' : k === '入力区分' ? '#1f7a52' : '#5b6773' }}>{n.use === false ? '非使用' : k}</span>
+          <span style={{ flex: 'none', fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: on ? 'rgba(255,255,255,.25)' : n.use === false ? '#eef2f6' : k === '入力区分' ? '#eaf5ef' : '#eef2f6', color: on ? '#fff' : n.use === false ? '#9aa5b1' : k === '入力区分' ? '#1f7a52' : '#5b6773' }}>{n.use === false ? '非使用' : k}</span>
         </button>
         {act}
       </div>
@@ -99,7 +99,7 @@ export function DivisionOrgChart({ tree, accent, isSelected, onSelect, onConfirm
                 <span style={{ flex: 1, borderTop: i < heads.length - 1 ? `1.5px solid ${LINE}` : 'none' }} />
               </div>
               {card(h, 'head')}
-              {(h.children ?? []).length > 0 ? branch(h.children ?? []) : <div style={{ margin: '10px 0 0 24px', fontSize: 11.5, color: '#9aa5b1' }}>この事業区分には、まだ区分がありません。</div>}
+              {(h.children ?? []).length > 0 ? branch(h.children ?? []) : <div style={{ margin: '10px 0 0 24px', fontSize: 12, color: '#9aa5b1' }}>この事業区分には、まだ区分がありません。</div>}
             </div>
           ))}
         </div>

@@ -65,7 +65,7 @@ export function AssistField({
         >
           {value || placeholder}
         </span>
-        <span style={{ color: '#9aa5b1', fontSize: 9, flex: 'none' }}>▼</span>
+        <span style={{ color: '#9aa5b1', fontSize: 12, flex: 'none' }}>▼</span>
       </button>
       {open && (
         <AssistPanel

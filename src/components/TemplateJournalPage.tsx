@@ -81,7 +81,7 @@ export function TemplateJournalPage({ variant, accent }: { variant: 'form' | 'sh
               {s.templates.map((t) => (
                 <tr key={t.id}>
                   <td style={{ ...TD, fontWeight: 700 }}>{t.name}</td><td style={TD}>{t.form}</td>
-                  <td style={{ ...TD, fontSize: 12, color: '#5b6773' }}>{t.lines.map((l) => `${l.kari}／${l.kashi}${l.amount ? ` ${yen(Number(l.amount))}` : ''}`).join('、')}</td>
+                  <td style={{ ...TD, fontSize: 14, color: '#5b6773' }}>{t.lines.map((l) => `${l.kari}／${l.kashi}${l.amount ? ` ${yen(Number(l.amount))}` : ''}`).join('、')}</td>
                   <td style={NUM}>{t.lines.length}</td>
                   <td style={{ ...TD, textAlign: 'right' }}><div style={{ display: 'inline-flex', gap: 6 }}><button type="button" onClick={() => setWiz({ step: 2, t: JSON.parse(JSON.stringify(t)) })} style={btn('#5b6773', false, true)}>訂正</button><button type="button" onClick={() => { if (confirm(`「${t.name}」を削除しますか？`)) setSession({ templates: s.templates.filter((x) => x.id !== t.id) }); }} style={btn('#c0392b', false, true)}>削除</button></div></td>
                 </tr>
@@ -101,14 +101,14 @@ export function TemplateJournalPage({ variant, accent }: { variant: 'form' | 'sh
               {s.allocations.map((a) => (
                 <tr key={a.id}>
                   <td style={{ ...TD, fontWeight: 700 }}>{a.name}</td><td style={TD}>{a.form}</td>
-                  <td style={{ ...TD, fontSize: 12, color: '#5b6773' }}>{a.lines.map((l) => `${l.division}：${l.mode === '残り' ? '残り' : l.rate + '%'}（${l.kari}）`).join('　')}</td>
+                  <td style={{ ...TD, fontSize: 14, color: '#5b6773' }}>{a.lines.map((l) => `${l.division}：${l.mode === '残り' ? '残り' : l.rate + '%'}（${l.kari}）`).join('　')}</td>
                   <td style={TD}>{a.rounding}</td>
                   <td style={{ ...TD, textAlign: 'right' }}><div style={{ display: 'inline-flex', gap: 6 }}><button type="button" onClick={() => setAwiz({ step: 3, t: JSON.parse(JSON.stringify(a)) })} style={btn('#5b6773', false, true)}>訂正</button><button type="button" onClick={() => { if (confirm(`「${a.name}」を削除しますか？`)) setSession({ allocations: s.allocations.filter((x) => x.id !== a.id) }); }} style={btn('#c0392b', false, true)}>削除</button></div></td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 10, fontSize: 12.5, color: '#5b6773' }}>
+          <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: '#5b6773' }}>
             <span>計算例：</span><input className="field-input" value={yen(toInt(testAmount))} onChange={(e) => setTestAmount(e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" style={{ ...numInput, width: 120, padding: '5px 8px' }} /><span>円を「{s.allocations[0]?.name}」で按分 →</span>
             {s.allocations[0] && allocate(s.allocations[0], toInt(testAmount)).map((r, i) => <span key={i} style={{ padding: '3px 8px', background: '#eef2f6', borderRadius: 6 }}>{r.division.split(' ')[1]} {yen(r.amount)}</span>)}
           </div>
@@ -133,14 +133,14 @@ export function TemplateJournalPage({ variant, accent }: { variant: 'form' | 'sh
           <Notice>科目ごとに任意の区分間で金額を按分した額を、エクセル互換ファイル（CSV）として出力します（義務となる備付書類向け。摘要も出力）。</Notice>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
             <Field label="出力種類"><select style={input} value={aoKind} onChange={(e) => setAoKind(e.target.value)}>{ALLOC_OUT_KINDS.map((o) => <option key={o}>{o}</option>)}</select></Field>
-            <Field label="出力する列"><div style={{ display: 'flex', gap: 10, fontSize: 12.5, paddingTop: 8 }}>{ALLOC_OUT_COLS.map((o) => <label key={o} style={{ display: 'flex', gap: 4 }}><input type="checkbox" checked={aoCols.has(o)} onChange={() => setAoCols((c) => { const n = new Set(c); if (n.has(o)) n.delete(o); else n.add(o); return n; })} />{o}</label>)}</div></Field>
+            <Field label="出力する列"><div style={{ display: 'flex', gap: 10, fontSize: 14, paddingTop: 8 }}>{ALLOC_OUT_COLS.map((o) => <label key={o} style={{ display: 'flex', gap: 4 }}><input type="checkbox" checked={aoCols.has(o)} onChange={() => setAoCols((c) => { const n = new Set(c); if (n.has(o)) n.delete(o); else n.add(o); return n; })} />{o}</label>)}</div></Field>
             <Field label="端数の加算区分"><select style={input} value={aoRound} onChange={(e) => setAoRound(e.target.value)}>{aoServices.map((o) => <option key={o}>{o}</option>)}</select></Field>
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead><tr><th style={{ ...TH, width: 70 }}>費目</th><th style={{ ...TH, width: 110 }}>区分コード</th><th style={TH}>科目名</th>{aoServices.map((sv) => <th key={sv} style={{ ...TH, textAlign: 'right', width: 90 }}>{sv.split(' ')[1]}</th>)}<th style={{ ...TH, width: 160 }}>備考</th></tr></thead>
-            <tbody>{aoRows.map((r, ri) => <tr key={r.kubun}><td style={TD}>{r.himoku}</td><td style={{ ...TD, fontVariantNumeric: 'tabular-nums' }}>{r.kubun}</td><td style={TD}>{r.name}</td>{r.rates.map((rate, i) => <td key={i} style={{ ...NUM, color: r.rates.reduce((a, b) => a + b, 0) === 100 ? undefined : '#c0392b' }}><input className="field-input" value={String(rate)} onChange={(e) => setAoRows((rs) => rs.map((x, k) => (k === ri ? { ...x, rates: x.rates.map((v, j) => (j === i ? toInt(e.target.value) : v)) } : x)))} inputMode="numeric" style={{ ...numInput, width: 60, padding: '3px 6px', fontSize: 12 }} />%</td>)}<td style={TD}><input className="field-input" value={r.note} onChange={(e) => setAoRows((rs) => rs.map((x, k) => (k === ri ? { ...x, note: e.target.value } : x)))} placeholder="編集" style={{ ...input, padding: '3px 6px', fontSize: 12 }} /></td></tr>)}</tbody>
+            <tbody>{aoRows.map((r, ri) => <tr key={r.kubun}><td style={TD}>{r.himoku}</td><td style={{ ...TD, fontVariantNumeric: 'tabular-nums' }}>{r.kubun}</td><td style={TD}>{r.name}</td>{r.rates.map((rate, i) => <td key={i} style={{ ...NUM, color: r.rates.reduce((a, b) => a + b, 0) === 100 ? undefined : '#c0392b' }}><input className="field-input" value={String(rate)} onChange={(e) => setAoRows((rs) => rs.map((x, k) => (k === ri ? { ...x, rates: x.rates.map((v, j) => (j === i ? toInt(e.target.value) : v)) } : x)))} inputMode="numeric" style={{ ...numInput, width: 60, padding: '3px 6px', fontSize: 14 }} />%</td>)}<td style={TD}><input className="field-input" value={r.note} onChange={(e) => setAoRows((rs) => rs.map((x, k) => (k === ri ? { ...x, note: e.target.value } : x)))} placeholder="編集" style={{ ...input, padding: '3px 6px', fontSize: 14 }} /></td></tr>)}</tbody>
           </table>
-          <label style={{ fontSize: 12.5, display: 'flex', gap: 6 }}><input type="checkbox" checked={aoTotal} onChange={() => setAoTotal((v) => !v)} />合計値を印刷</label>
+          <label style={{ fontSize: 14, display: 'flex', gap: 6 }}><input type="checkbox" checked={aoTotal} onChange={() => setAoTotal((v) => !v)} />合計値を印刷</label>
           {aoRows.some((r) => r.rates.reduce((a, b) => a + b, 0) !== 100) && <Notice tone="warn">按分率の合計が100%になっていない科目があります（赤字）。出力時は入力した率のまま按分し、端数は「端数の加算区分」に加算します。</Notice>}
         </div>
       )}

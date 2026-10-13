@@ -47,7 +47,7 @@ export function GraphPage({ mode, variant, accent }: Props) {
     });
   const yMax = commonScale ? Math.max(1, ...charts.flatMap((c) => c.values)) : undefined;
 
-  const tabStyle = (on: boolean, color: string): CSSProperties => ({ padding: '6px 16px', borderRadius: 8, fontSize: 13, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', background: on ? color : '#fff3c4', color: on ? '#fff' : '#7a5b00', border: '1px solid ' + (on ? color : '#f0d98a') });
+  const tabStyle = (on: boolean, color: string): CSSProperties => ({ padding: '6px 16px', borderRadius: 8, fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', background: on ? color : '#fff3c4', color: on ? '#fff' : '#7a5b00', border: '1px solid ' + (on ? color : '#f0d98a') });
 
   return (
     <ReportShell
@@ -59,7 +59,7 @@ export function GraphPage({ mode, variant, accent }: Props) {
       tools={[{ label: '選択解除', onClick: () => setSelected([]) }]}
       period={
         <>
-          <span style={{ fontSize: 12.5, color: '#48565f' }}>{byMonth ? '当年度の月別（4月〜3月）' : `直近${ERA_YEARS.length}年度`}</span>
+          <span style={{ fontSize: 14, color: '#48565f' }}>{byMonth ? '当年度の月別（4月〜3月）' : `直近${ERA_YEARS.length}年度`}</span>
         </>
       }
       targetLabel={isYearly ? '指定科目' : '指定項目'}
@@ -67,13 +67,13 @@ export function GraphPage({ mode, variant, accent }: Props) {
         <>
           {charts.length === 0 && <span style={{ color: '#9aa5b1' }}>左の一覧でチェックした{isYearly ? '科目' : '項目'}をグラフにします。</span>}
           {charts.map((c) => (
-            <span key={c.key} data-picked-item={c.title} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 6px 3px 10px', borderRadius: 8, background: '#fff', border: '1px solid #cfd8e0', fontSize: 12, fontWeight: 700, color: '#22303c' }}>
+            <span key={c.key} data-picked-item={c.title} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 6px 3px 10px', borderRadius: 8, background: '#fff', border: '1px solid #cfd8e0', fontSize: 14, fontWeight: 700, color: '#22303c' }}>
               <span style={{ width: 8, height: 8, borderRadius: 2, background: c.color }} />
               {c.title}
-              <button type="button" aria-label={`${c.title} を外す`} onClick={() => toggle(c.key)} style={{ border: 'none', background: 'transparent', color: '#8290a0', fontSize: 13, cursor: 'pointer', padding: '0 2px', lineHeight: 1 }}>×</button>
+              <button type="button" aria-label={`${c.title} を外す`} onClick={() => toggle(c.key)} style={{ border: 'none', background: 'transparent', color: '#8290a0', fontSize: 14, cursor: 'pointer', padding: '0 2px', lineHeight: 1 }}>×</button>
             </span>
           ))}
-          {charts.length > 0 && <span style={{ fontSize: 11.5, color: '#9aa5b1' }}>{charts.length} 件</span>}
+          {charts.length > 0 && <span style={{ fontSize: 12, color: '#9aa5b1' }}>{charts.length} 件</span>}
         </>
       }
       listNote={<span>左：{isYearly ? '部タブと科目の一覧' : '分析項目の一覧'}　右：選んだ{isYearly ? '科目' : '項目'}ごとのグラフ</span>}
@@ -97,13 +97,13 @@ export function GraphPage({ mode, variant, accent }: Props) {
           )}
           <div style={{ padding: '8px 14px 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={LABEL}>{isYearly ? '科目' : '指標'}</span>
-            <span style={{ fontSize: 11, color: '#9aa5b1' }}>チェックした項目のグラフを右に表示</span>
+            <span style={{ fontSize: 12, color: '#9aa5b1' }}>チェックした項目のグラフを右に表示</span>
           </div>
           <div style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 360px)', padding: '0 8px 10px' }}>
             {items.map((it) => {
               const on = selected.includes(it.key);
               return (
-                <label key={it.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', paddingLeft: 8 + it.level * 16, borderRadius: 6, background: on ? '#eef2f6' : 'transparent', cursor: 'pointer', fontSize: 12.5, color: on ? accent : '#22303c', fontWeight: on ? 700 : it.level === 0 ? 600 : 400 }}>
+                <label key={it.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', paddingLeft: 8 + it.level * 16, borderRadius: 6, background: on ? '#eef2f6' : 'transparent', cursor: 'pointer', fontSize: 14, color: on ? accent : '#22303c', fontWeight: on ? 700 : it.level === 0 ? 600 : 400 }}>
                   <input type="checkbox" checked={on} onChange={() => toggle(it.key)} />
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.name}</span>
                 </label>
@@ -114,7 +114,7 @@ export function GraphPage({ mode, variant, accent }: Props) {
 
         {/* 右：グラフ */}
         <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 16, background: '#f6f8fa', overflowY: 'auto', maxHeight: 'calc(100vh - 300px)' }}>
-          {charts.length === 0 && <div style={{ padding: '60px 20px', textAlign: 'center', color: '#9aa5b1', fontSize: 13 }}>左の一覧から{isYearly ? '科目' : '指標'}をチェックしてください。</div>}
+          {charts.length === 0 && <div style={{ padding: '60px 20px', textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>左の一覧から{isYearly ? '科目' : '指標'}をチェックしてください。</div>}
           {charts.map((c) => (
             <BarChart key={c.key} title={c.title} unit={c.unit} labels={labels} values={c.values} color={c.color} line={c.line} yMax={yMax} fmt={(v) => (c.unit === '%' ? String(Math.round(v * 10) / 10) : v.toLocaleString('ja-JP'))} />
           ))}

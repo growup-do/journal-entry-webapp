@@ -50,22 +50,22 @@ export function FunctionFinderPage({ onNavigate, initialQuery = '' }: { accent: 
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '18px 22px 14px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
             <div>
               <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 21 }}>機能から探す</div>
-              <div style={{ color: '#7a8794', fontSize: 12, marginTop: 4 }}>すべての機能を分類ごとに並べています。画面名・旧メニュー名・キーワードで絞り込めます。</div>
+              <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>すべての機能を分類ごとに並べています。画面名・旧メニュー名・キーワードで絞り込めます。</div>
             </div>
-            <input autoFocus className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="例：試算表、年度更新、科目、元帳" autoComplete="off" style={{ marginLeft: 'auto', width: 320, padding: '9px 12px', border: '1px solid #cfd8e0', borderRadius: 9, fontSize: 13.5, fontFamily: 'inherit', outline: 'none' }} />
-            <span style={{ fontSize: 12, color: '#7a8794' }}><b style={{ color: '#22303c' }}>{total}</b> 件</span>
+            <input autoFocus className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="例：試算表、年度更新、科目、元帳" autoComplete="off" style={{ marginLeft: 'auto', width: 320, padding: '9px 12px', border: '1px solid #cfd8e0', borderRadius: 9, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
+            <span style={{ fontSize: 14, color: '#7a8794' }}><b style={{ color: '#22303c' }}>{total}</b> 件</span>
           </div>
           <div style={{ padding: '14px 18px 6px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 12 }}>
-            {groups.length === 0 && <div style={{ gridColumn: '1 / -1', padding: 30, textAlign: 'center', color: '#9aa5b1', fontSize: 13 }}>該当する機能がありません。別の言葉でお試しください。</div>}
+            {groups.length === 0 && <div style={{ gridColumn: '1 / -1', padding: 30, textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>該当する機能がありません。別の言葉でお試しください。</div>}
             {groups.map((g) => (
               <div key={g.key} style={{ border: '1px solid ' + (g.danger ? '#f2c9c2' : '#e2e8ee'), background: g.danger ? '#fdf5f3' : '#fbfcfd', borderRadius: 12, padding: '10px 12px' }}>
-                <div style={{ fontSize: 12.5, fontWeight: 800, color: g.danger ? '#c0392b' : '#3d4a56' }}>{g.label}</div>
-                {g.note && <div style={{ fontSize: 10.5, color: g.danger ? '#b5564a' : '#9aa5b1', marginTop: 1 }}>{g.note}</div>}
+                <div style={{ fontSize: 14, fontWeight: 800, color: g.danger ? '#c0392b' : '#3d4a56' }}>{g.label}</div>
+                {g.note && <div style={{ fontSize: 12, color: g.danger ? '#b5564a' : '#9aa5b1', marginTop: 1 }}>{g.note}</div>}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
                   {g.items.map((l) => {
                     const off = ['単一入力', '伝票入力', '振替入力', '振替単一'].includes(l) && kind !== '入力区分';
                     return (
-                      <button key={l} type="button" className="btn-outline" onClick={() => onNavigate(l)} title={off ? `${kind}で起動中は利用できません` : undefined} style={{ padding: '5px 10px', border: '1px solid ' + (g.danger ? '#f2c9c2' : '#cfd8e0'), borderRadius: 8, background: '#fff', color: off ? '#b3bcc5' : g.danger ? '#c0392b' : '#22303c', fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
+                      <button key={l} type="button" className="btn-outline" onClick={() => onNavigate(l)} title={off ? `${kind}で起動中は利用できません` : undefined} style={{ padding: '5px 10px', border: '1px solid ' + (g.danger ? '#f2c9c2' : '#cfd8e0'), borderRadius: 8, background: '#fff', color: off ? '#b3bcc5' : g.danger ? '#c0392b' : '#22303c', fontSize: 14, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
                         {displayName(l)}
                       </button>
                     );
@@ -111,14 +111,14 @@ export function FinderSearch({ accent, onNavigate, full }: { accent: string; onN
   };
   const results = open && q.trim() && (
     <div role="listbox" style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, background: '#fff', border: '1px solid #dde4ea', borderRadius: 10, boxShadow: '0 12px 32px rgba(24,42,62,.16)', padding: 6, zIndex: 80 }}>
-      {hits.length === 0 && <div style={{ padding: '10px 12px', fontSize: 12.5, color: '#9aa5b1' }}>該当する機能がありません</div>}
+      {hits.length === 0 && <div style={{ padding: '10px 12px', fontSize: 14, color: '#9aa5b1' }}>該当する機能がありません</div>}
       {hits.map((h, i) => (
-        <button key={h.key} type="button" onMouseEnter={() => setIdx(i)} onClick={() => go(h.key)} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', padding: '7px 10px', border: 'none', borderRadius: 7, background: i === idx ? '#eef2f6' : 'transparent', fontFamily: 'inherit', fontSize: 13, color: '#22303c', cursor: 'pointer' }}>
+        <button key={h.key} type="button" onMouseEnter={() => setIdx(i)} onClick={() => go(h.key)} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', padding: '7px 10px', border: 'none', borderRadius: 7, background: i === idx ? '#eef2f6' : 'transparent', fontFamily: 'inherit', fontSize: 14, color: '#22303c', cursor: 'pointer' }}>
           <span style={{ fontWeight: 600 }}>{displayName(h.key)}</span>
-          <span style={{ marginLeft: 'auto', fontSize: 11, color: '#9aa5b1' }}>{h.group}</span>
+          <span style={{ marginLeft: 'auto', fontSize: 12, color: '#9aa5b1' }}>{h.group}</span>
         </button>
       ))}
-      <div style={{ borderTop: '1px solid #eef2f5', marginTop: 4, padding: '6px 10px 2px', fontSize: 11, color: '#9aa5b1' }}>Enter で開く　／　<span onClick={() => onNavigate('機能から探す')} style={{ color: accent, cursor: 'pointer', fontWeight: 700 }}>すべての機能を見る ›</span></div>
+      <div style={{ borderTop: '1px solid #eef2f5', marginTop: 4, padding: '6px 10px 2px', fontSize: 12, color: '#9aa5b1' }}>Enter で開く　／　<span onClick={() => onNavigate('機能から探す')} style={{ color: accent, cursor: 'pointer', fontWeight: 700 }}>すべての機能を見る ›</span></div>
     </div>
   );
 
@@ -133,8 +133,8 @@ export function FinderSearch({ accent, onNavigate, full }: { accent: string; onN
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
           </span>
           <label htmlFor="finder-input" style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16, color: '#1c2a36' }}>機能から探す</label>
-          <span style={{ fontSize: 12, color: '#4d5b68' }}>画面の名前や、やりたいことを入力すると、その画面へ移動できます</span>
-          <button type="button" data-finder-all onClick={() => onNavigate('機能から探す')} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', color: accent, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', padding: 0 }}>すべての機能を一覧で見る ›</button>
+          <span style={{ fontSize: 14, color: '#4d5b68' }}>画面の名前や、やりたいことを入力すると、その画面へ移動できます</span>
+          <button type="button" data-finder-all onClick={() => onNavigate('機能から探す')} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', color: accent, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', padding: 0 }}>すべての機能を一覧で見る ›</button>
         </div>
         <div style={{ position: 'relative', marginTop: 12 }}>
           <div className="finder-bar" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 5px 5px 18px', border: '2px solid ' + accent, borderRadius: 999, background: '#fff' }}>
@@ -149,7 +149,7 @@ export function FinderSearch({ accent, onNavigate, full }: { accent: string; onN
               onKeyDown={onKey}
               placeholder="ここに入力して探す"
               autoComplete="off"
-              style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', fontSize: 15.5, fontFamily: 'inherit', background: 'transparent', color: '#22303c', padding: '8px 0' }}
+              style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', fontSize: 16, fontFamily: 'inherit', background: 'transparent', color: '#22303c', padding: '8px 0' }}
             />
             {q && <button type="button" aria-label="入力を消す" onClick={() => { setQ(''); inputRef.current?.focus(); }} style={{ flex: 'none', width: 26, height: 26, borderRadius: '50%', border: 'none', background: '#e6ecf0', color: '#5b6875', fontSize: 14, lineHeight: 1, cursor: 'pointer', fontFamily: 'inherit' }}>×</button>}
             <button type="button" data-finder-go onClick={() => { if (hits[idx]) go(hits[idx].key); else onNavigate('機能から探す'); }} style={{ flex: 'none', padding: '9px 24px', borderRadius: 999, border: 'none', background: accent, color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>探す</button>
@@ -157,9 +157,9 @@ export function FinderSearch({ accent, onNavigate, full }: { accent: string; onN
           {results}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
-          <span style={{ fontSize: 11.5, color: '#4d5b68', marginRight: 2 }}>入力の例：</span>
+          <span style={{ fontSize: 12, color: '#4d5b68', marginRight: 2 }}>入力の例：</span>
           {FINDER_EXAMPLES.map((w) => (
-            <button key={w} type="button" data-finder-example={w} onClick={() => tryWord(w)} style={{ padding: '4px 12px', borderRadius: 999, border: '1px solid ' + tint(34), background: 'rgba(255,255,255,.75)', color: '#22303c', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>{w}</button>
+            <button key={w} type="button" data-finder-example={w} onClick={() => tryWord(w)} style={{ padding: '4px 12px', borderRadius: 999, border: '1px solid ' + tint(34), background: 'rgba(255,255,255,.75)', color: '#22303c', fontSize: 14, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>{w}</button>
           ))}
         </div>
       </div>
@@ -179,9 +179,9 @@ export function FinderSearch({ accent, onNavigate, full }: { accent: string; onN
           onKeyDown={onKey}
           placeholder="機能から探す（例：試算表、年度更新、科目）"
           autoComplete="off"
-          style={{ flex: 1, border: 'none', outline: 'none', fontSize: 13, fontFamily: 'inherit', background: 'transparent', color: '#22303c' }}
+          style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, fontFamily: 'inherit', background: 'transparent', color: '#22303c' }}
         />
-        <button type="button" onClick={() => onNavigate('機能から探す')} title="すべての機能を分類ごとに見る" style={{ border: 'none', background: 'transparent', color: accent, fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>一覧 ›</button>
+        <button type="button" onClick={() => onNavigate('機能から探す')} title="すべての機能を分類ごとに見る" style={{ border: 'none', background: 'transparent', color: accent, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>一覧 ›</button>
       </div>
       {results}
     </div>

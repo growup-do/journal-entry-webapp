@@ -39,7 +39,7 @@ export function useDivisionTools(all: Voucher[], accent: string) {
   const nameTag = (r: Voucher): ReactNode => {
     if (!nameOn) return null;
     const d = divOf(codeOf(r));
-    return <span data-division-name style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 8, background: d?.color ?? '#f1f4f6', border: '1px solid #dde4ea', fontSize: 11, fontWeight: 700, color: '#48565f', whiteSpace: 'nowrap' }}><span style={{ fontVariantNumeric: 'tabular-nums', color: '#8290a0', fontWeight: 500 }}>{codeOf(r)}</span>{d?.name ?? r.service.replace(/^\d+ /, '')}</span>;
+    return <span data-division-name style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 8, background: d?.color ?? '#f1f4f6', border: '1px solid #dde4ea', fontSize: 12, fontWeight: 700, color: '#48565f', whiteSpace: 'nowrap' }}><span style={{ fontVariantNumeric: 'tabular-nums', color: '#8290a0', fontWeight: 500 }}>{codeOf(r)}</span>{d?.name ?? r.service.replace(/^\d+ /, '')}</span>;
   };
 
   /** 表示切替に並べるスイッチ（区分色・区分名） */
@@ -51,7 +51,7 @@ export function useDivisionTools(all: Voucher[], accent: string) {
   );
 
   const legend = colorOn ? (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 11.5, color: '#5b6773' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 12, color: '#5b6773' }}>
       <span style={LABEL}>区分色</span>
       {usedCodes.map((c) => { const d = divOf(c); return <span key={c} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 10px', borderRadius: 8, background: d?.color ?? '#f1f4f6', border: '1px solid #e2e8ee' }}><span style={{ fontVariantNumeric: 'tabular-nums', color: '#8290a0' }}>{c}</span>{d?.name ?? '（区分なし）'}</span>; })}
       <button type="button" className="btn-outline" onClick={() => setColorOpen(true)} style={btn(accent, false, true)}>区分色の設定</button>
@@ -61,10 +61,10 @@ export function useDivisionTools(all: Voucher[], accent: string) {
   const modal = (
     <Modal open={colorOpen} onClose={() => setColorOpen(false)} width={560} title="区分色の設定">
       <div style={{ padding: '12px 22px 18px' }}>
-        <div style={{ fontSize: 12.5, color: '#5b6773', marginBottom: 10 }}>伝票入力区分ごとに、日記帳・元帳で行の背景に使う色を設定します（「部門情報の変更」のカラーと共通）。</div>
+        <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 10 }}>伝票入力区分ごとに、日記帳・元帳で行の背景に使う色を設定します（「部門情報の変更」のカラーと共通）。</div>
         <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'hidden' }}>
           {entries.map((d) => (
-            <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderBottom: '1px solid #f1f4f6', fontSize: 13, opacity: d.use === false ? 0.5 : 1 }}>
+            <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderBottom: '1px solid #f1f4f6', fontSize: 14, opacity: d.use === false ? 0.5 : 1 }}>
               <span style={{ width: 22, height: 22, borderRadius: 6, background: d.color ?? '#f1f4f6', border: '1px solid #c3ccd4', flex: 'none' }} />
               <span style={{ fontVariantNumeric: 'tabular-nums', color: '#8290a0', width: 32 }}>{d.code}</span>
               <span style={{ fontWeight: 600, width: 120 }}>{d.name}</span>
@@ -92,11 +92,11 @@ export function ColorSwitch({ on, onChange, accent }: { on: boolean; onChange: (
 export function BizSwitch({ on, onChange, accent }: { on: boolean; onChange: (v: boolean) => void; accent: string }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 10px', border: '1px solid #e2e8ee', borderRadius: 20, background: '#fff' }}>
-      <span onClick={() => onChange(false)} style={{ fontSize: 12, fontWeight: on ? 500 : 800, color: on ? '#9aa5b1' : accent, cursor: 'pointer' }}>摘要</span>
+      <span onClick={() => onChange(false)} style={{ fontSize: 14, fontWeight: on ? 500 : 800, color: on ? '#9aa5b1' : accent, cursor: 'pointer' }}>摘要</span>
       <span role="switch" aria-checked={on} onClick={() => onChange(!on)} style={{ display: 'inline-block', width: 36, height: 20, borderRadius: 10, background: on ? accent : '#cfd8e0', position: 'relative', flex: 'none', cursor: 'pointer' }}>
         <span style={{ position: 'absolute', top: 2, left: on ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left .15s' }} />
       </span>
-      <span onClick={() => onChange(true)} style={{ fontSize: 12, fontWeight: on ? 800 : 500, color: on ? accent : '#9aa5b1', cursor: 'pointer' }}>業者</span>
+      <span onClick={() => onChange(true)} style={{ fontSize: 14, fontWeight: on ? 800 : 500, color: on ? accent : '#9aa5b1', cursor: 'pointer' }}>業者</span>
     </span>
   );
 }

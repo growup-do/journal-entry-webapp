@@ -68,7 +68,7 @@ function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
                 alignItems: 'center',
                 gap: 7,
                 padding: '8px 13px',
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: on ? 700 : 500,
                 fontFamily: 'inherit',
                 cursor: 'pointer',
@@ -117,7 +117,7 @@ function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
         data-menu="機能から探す"
         onClick={() => onSelect('機能から探す')}
         title="すべての機能を分類ごとに見る・キーワードで探す"
-        style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 13px', fontSize: 13, fontWeight: active === '機能から探す' ? 700 : 600, fontFamily: 'inherit', cursor: 'pointer', background: 'transparent', border: 'none', borderRadius: 8, borderBottom: '2px solid ' + (active === '機能から探す' ? accent : 'transparent'), color: active === '機能から探す' ? accent : '#3d4a56', whiteSpace: 'nowrap' }}
+        style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 13px', fontSize: 14, fontWeight: active === '機能から探す' ? 700 : 600, fontFamily: 'inherit', cursor: 'pointer', background: 'transparent', border: 'none', borderRadius: 8, borderBottom: '2px solid ' + (active === '機能から探す' ? accent : 'transparent'), color: active === '機能から探す' ? accent : '#3d4a56', whiteSpace: 'nowrap' }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none' }}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
         機能から探す
@@ -160,7 +160,7 @@ function VMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
                 width: '100%',
                 textAlign: 'left',
                 padding: '9px 10px',
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: 700,
                 fontFamily: 'inherit',
                 cursor: 'pointer',
@@ -205,7 +205,7 @@ function HomeButton({ active, accent, onClick, vertical }: { active: boolean; ac
         textAlign: 'left',
         padding: vertical ? '9px 10px' : '8px 13px',
         marginBottom: vertical ? 4 : 0,
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: 700,
         fontFamily: 'inherit',
         cursor: 'pointer',
@@ -232,7 +232,7 @@ function SubItem({ label, active, accent, indent, onClick, state = {} }: { label
     width: '100%',
     textAlign: 'left',
     padding: indent ? '7px 10px 7px 34px' : '8px 12px',
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: 'inherit',
     cursor: off ? 'not-allowed' : 'pointer',
     background: active ? '#eef2f6' : 'transparent',
@@ -246,8 +246,8 @@ function SubItem({ label, active, accent, indent, onClick, state = {} }: { label
   return (
     <button type="button" className="menu-sub" data-menu={label} onClick={off ? undefined : onClick} aria-disabled={off} title={state.disabled} style={style}>
       <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName(label)}</span>
-      {off && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 8, background: '#f1f4f6', color: '#9aa5b1', flex: 'none' }}>利用不可</span>}
-      {state.tag && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 8, background: '#fff7e6', color: '#b7791f', flex: 'none' }}>{state.tag}</span>}
+      {off && <span style={{ fontSize: 12, fontWeight: 700, padding: '1px 6px', borderRadius: 8, background: '#f1f4f6', color: '#9aa5b1', flex: 'none' }}>利用不可</span>}
+      {state.tag && <span style={{ fontSize: 12, fontWeight: 700, padding: '1px 6px', borderRadius: 8, background: '#fff7e6', color: '#b7791f', flex: 'none' }}>{state.tag}</span>}
     </button>
   );
 }

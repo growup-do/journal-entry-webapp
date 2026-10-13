@@ -40,7 +40,7 @@ export function FlagCell({ v, compact }: { v: Voucher; compact?: boolean }) {
   const s = useSession();
   const ok = canEdit(s);
   const why = ok ? '' : `（${editBlockReason(s)}）`;
-  const dot: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: compact ? 20 : 24, height: compact ? 20 : 24, borderRadius: 6, border: '1px solid #dde4ea', background: '#fff', cursor: ok ? 'pointer' : 'not-allowed', fontSize: 10.5, fontWeight: 800, opacity: ok ? 1 : 0.7 };
+  const dot: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: compact ? 20 : 24, height: compact ? 20 : 24, borderRadius: 6, border: '1px solid #dde4ea', background: '#fff', cursor: ok ? 'pointer' : 'not-allowed', fontSize: 12, fontWeight: 800, opacity: ok ? 1 : 0.7 };
   return (
     <div style={{ display: 'inline-flex', gap: 3 }} onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
       <span title={ok ? '証憑 有／無（クリックで切替）' : '証憑 ' + (v.shohyo ? '有' : '無') + why} onClick={() => ok && updateVoucher(v.id, { shohyo: !v.shohyo })} style={{ ...dot, background: v.shohyo ? '#eaf5ef' : '#fff', color: v.shohyo ? '#1f7a52' : '#b3bcc5' }}>{v.shohyo ? '有' : '無'}</span>
@@ -62,19 +62,19 @@ export function DeleteVoucherModal({ rows, onClose, onDeleted, multi }: { rows: 
       <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
           <span aria-hidden style={{ width: 40, height: 40, borderRadius: '50%', background: '#fdeee9', color: '#c0392b', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 900, flex: 'none' }}>!</span>
-          <div style={{ fontSize: 13.5, lineHeight: 1.8 }}>
+          <div style={{ fontSize: 14, lineHeight: 1.8 }}>
             {multi ? `選択した ${rows.length} 行の仕訳を削除します。` : '次の伝票を削除します。'}<b style={{ color: '#c0392b' }}>削除した{multi ? '仕訳' : '伝票'}は元に戻せません。</b><br />
             この伝票に付随する明細データ（決算附属明細書）や固定資産（減価償却）がある場合は、あわせて削除されます。
           </div>
         </div>
         <div style={{ border: '1px solid #f0cfc9', borderRadius: 10, overflow: 'hidden' }}>
-          <div style={{ padding: '8px 12px', background: '#fff5f3', fontSize: 12.5, fontWeight: 700, display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+          <div style={{ padding: '8px 12px', background: '#fff5f3', fontSize: 14, fontWeight: 700, display: 'flex', gap: 14, flexWrap: 'wrap' }}>
             {multi ? <><span>選択 {rows.length} 行</span><span>伝票 {new Set(rows.map((r) => r.no)).size} 枚</span><span>{rows[0].date} 〜 {rows[rows.length - 1].date}</span></> : <><span>伝票No {h.no}</span><span>令和8年 {h.date.replace('/', '月')}日</span><span>{KIND_FORMAT[h.kind]}</span></>}<span style={{ marginLeft: 'auto' }}>{rows.length} 行　合計 {yen(total)} 円</span>
           </div>
           <div style={{ maxHeight: 220, overflowY: 'auto' }}>
             {rows.map((r, i) => (
-              <div key={r.id} style={{ display: 'grid', gridTemplateColumns: multi ? '84px minmax(0,1fr)' : '28px minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr) 100px', gap: 8, padding: '7px 12px', borderTop: '1px solid #f6e3df', fontSize: 12.5, alignItems: 'center' }}>
-                <span style={{ color: '#9aa5b1', fontSize: multi ? 11 : 12.5 }}>{multi ? `${r.date} ${r.seq}` : i + 1}</span>
+              <div key={r.id} style={{ display: 'grid', gridTemplateColumns: multi ? '84px minmax(0,1fr)' : '28px minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr) 100px', gap: 8, padding: '7px 12px', borderTop: '1px solid #f6e3df', fontSize: 14, alignItems: 'center' }}>
+                <span style={{ color: '#9aa5b1', fontSize: multi ? 12 : 14 }}>{multi ? `${r.date} ${r.seq}` : i + 1}</span>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.kari}</span>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.kashi}</span>
                 <span style={{ color: '#7a8794', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.tekiyo}</span>
@@ -109,7 +109,7 @@ export function VoucherPickerModal({ open, mode, onClose, onPick, accent }: { op
   const cur = Math.min(hi, Math.max(0, groups.length - 1));
   const danger = mode === '削除';
   return (
-    <Modal open onClose={onClose} width={860} title={<>{danger ? '伝票削除' : '伝票訂正'} <span style={{ fontSize: 12, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>登録済みの伝票から選びます</span></>}>
+    <Modal open onClose={onClose} width={860} title={<>{danger ? '伝票削除' : '伝票訂正'} <span style={{ fontSize: 14, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>登録済みの伝票から選びます</span></>}>
       <div className="ef-scope" style={{ ...scopeStyle(danger ? '#c0392b' : accent), padding: '12px 22px 18px', display: 'grid', gap: 10 }}>
         <EntryStyles />
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -129,23 +129,23 @@ export function VoucherPickerModal({ open, mode, onClose, onPick, accent }: { op
             style={{ ...input, width: 300 }}
           />
           <FiscalMonthTabs current={month} accent={accent} onSelect={(m) => { setMonth(m); setHi(0); }} withAll />
-          <span style={{ marginLeft: 'auto', fontSize: 12, color: '#7a8794' }}><b style={{ color: '#22303c' }}>{groups.length}</b> 伝票</span>
+          <span style={{ marginLeft: 'auto', fontSize: 14, color: '#7a8794' }}><b style={{ color: '#22303c' }}>{groups.length}</b> 伝票</span>
         </div>
         <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '62px 76px 44px minmax(0,1fr) minmax(0,1fr) minmax(0,1.3fr) 110px', gap: 8, padding: '8px 12px', background: '#f6f8fa', fontSize: 10.5, fontWeight: 700, color: '#8290a0' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '62px 76px 44px minmax(0,1fr) minmax(0,1fr) minmax(0,1.3fr) 110px', gap: 8, padding: '8px 12px', background: '#f6f8fa', fontSize: 12, fontWeight: 700, color: '#8290a0' }}>
             <div>月日</div><div>伝票No</div><div>行数</div><div>借方科目</div><div>貸方科目</div><div>摘要</div><div style={{ textAlign: 'right' }}>合計金額</div>
           </div>
           <div style={{ maxHeight: 340, overflowY: 'auto' }}>
-            {groups.length === 0 && <div style={{ padding: 30, textAlign: 'center', color: '#9aa5b1', fontSize: 12.5 }}>該当する伝票がありません。</div>}
+            {groups.length === 0 && <div style={{ padding: 30, textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>該当する伝票がありません。</div>}
             {groups.map((g, i) => {
               const on = i === cur;
               const multi = g.rows.length > 1;
               const kari = new Set(g.rows.map((r) => r.kari)), kashi = new Set(g.rows.map((r) => r.kashi));
               return (
-                <div key={g.key} className="ef-pickrow" onMouseEnter={() => setHi(i)} onClick={() => onPick(g)} style={{ display: 'grid', gridTemplateColumns: '62px 76px 44px minmax(0,1fr) minmax(0,1fr) minmax(0,1.3fr) 110px', gap: 8, padding: '8px 12px', borderTop: '1px solid #f1f4f6', fontSize: 12.5, alignItems: 'center', background: on ? (danger ? '#fdeee9' : accent + '14') : 'transparent', boxShadow: on ? `inset 4px 0 0 ${danger ? '#c0392b' : accent}` : 'none' }}>
+                <div key={g.key} className="ef-pickrow" onMouseEnter={() => setHi(i)} onClick={() => onPick(g)} style={{ display: 'grid', gridTemplateColumns: '62px 76px 44px minmax(0,1fr) minmax(0,1fr) minmax(0,1.3fr) 110px', gap: 8, padding: '8px 12px', borderTop: '1px solid #f1f4f6', fontSize: 14, alignItems: 'center', background: on ? (danger ? '#fdeee9' : accent + '14') : 'transparent', boxShadow: on ? `inset 4px 0 0 ${danger ? '#c0392b' : accent}` : 'none' }}>
                   <div style={{ color: '#5b6773' }}>{g.head.date}</div>
                   <div style={{ fontVariantNumeric: 'tabular-nums' }}>{g.head.no}</div>
-                  <div><span style={{ fontSize: 10.5, fontWeight: 700, padding: '1px 7px', borderRadius: 8, background: multi ? '#e8f0fb' : '#f1f4f6', color: multi ? '#2c5f9e' : '#7a8794' }}>{g.rows.length}行</span></div>
+                  <div><span style={{ fontSize: 12, fontWeight: 700, padding: '1px 7px', borderRadius: 8, background: multi ? '#e8f0fb' : '#f1f4f6', color: multi ? '#2c5f9e' : '#7a8794' }}>{g.rows.length}行</span></div>
                   <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{g.head.kari}{kari.size > 1 ? ` ほか${kari.size - 1}` : ''}</div>
                   <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.head.kashi}{kashi.size > 1 ? ` ほか${kashi.size - 1}` : ''}</div>
                   <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#7a8794' }}>{g.rows.map((r) => r.tekiyo).filter(Boolean).join('／')}</div>
@@ -156,7 +156,7 @@ export function VoucherPickerModal({ open, mode, onClose, onPick, accent }: { op
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 11.5, color: '#7a8794' }}>↑↓ で選び Enter で{danger ? '削除の確認へ進みます（この時点では削除されません）' : '訂正画面を開きます'}。Esc で閉じます。</span>
+          <span style={{ fontSize: 12, color: '#7a8794' }}>↑↓ で選び Enter で{danger ? '削除の確認へ進みます（この時点では削除されません）' : '訂正画面を開きます'}。Esc で閉じます。</span>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
             <button type="button" className="ef-act" onClick={onClose} style={btn()}>閉じる</button>
             <button type="button" className="ef-act" disabled={!groups[cur]} onClick={() => groups[cur] && onPick(groups[cur])} style={{ ...btn(danger ? '#c0392b' : accent, true), opacity: groups[cur] ? 1 : 0.5 }}>{danger ? '選んだ伝票の削除確認へ' : '選んだ伝票を訂正'}</button>
@@ -326,22 +326,22 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { vouch
   const c = TORIHIKI_COLOR[j.kind];
   const ro = !editable;
   const viewOnly = isViewOnly(sess);
-  const cell: CSSProperties = { ...input, padding: '7px 9px', fontSize: 13 };
+  const cell: CSSProperties = { ...input, padding: '7px 9px', fontSize: 14 };
   const GRID = st.shared ? '34px minmax(0,1.5fr) minmax(0,1fr) 120px 84px 132px' : '34px minmax(0,1.1fr) minmax(0,1.1fr) minmax(0,1.2fr) minmax(0,.9fr) 112px 84px 132px';
   const afterHead = () => focusId(st.shared ? 'ed-kari' : firstField(0));
   const rowNext = (i: number) => (i + 1 < st.rows.length ? focusId(firstField(i + 1)) : focusId('ed-save'));
   const smallBtn: CSSProperties = { ...btn('#5b6773', false, true), padding: '3px 7px' };
   return (
-    <Modal open onClose={onClose} width={st.shared ? 920 : 1080} title={<>{ro ? '伝票の参照' : '伝票の訂正'} <span style={{ fontSize: 12, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>Seq {st.base.seq}　伝票No {st.base.no}</span><span style={{ marginLeft: 10, padding: '2px 9px', borderRadius: 8, background: accent, color: '#fff', fontSize: 11.5, fontWeight: 800 }}>{KIND_FORMAT[st.base.kind]}</span></>} strict>
+    <Modal open onClose={onClose} width={st.shared ? 920 : 1080} title={<>{ro ? '伝票の参照' : '伝票の訂正'} <span style={{ fontSize: 14, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>Seq {st.base.seq}　伝票No {st.base.no}</span><span style={{ marginLeft: 10, padding: '2px 9px', borderRadius: 8, background: accent, color: '#fff', fontSize: 12, fontWeight: 800 }}>{KIND_FORMAT[st.base.kind]}</span></>} strict>
       <div className="ef-scope" style={scopeStyle(accent)}>
         <EntryStyles />
         <ReadOnlyBanner reason={reason} />
         <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <span style={{ padding: '4px 10px', borderRadius: 8, background: c.bg, color: c.fg, fontSize: 12, fontWeight: 800 }}>{j.kind}{j.reason ? `（${j.reason}）` : ''}</span>
-            <span style={{ fontSize: 12, color: '#7a8794' }}>{st.multi ? `この伝票の ${st.rows.length} 行をまとめて編集します。` : '1伝票1行の形式です。'}</span>
+            <span style={{ padding: '4px 10px', borderRadius: 8, background: c.bg, color: c.fg, fontSize: 14, fontWeight: 800 }}>{j.kind}{j.reason ? `（${j.reason}）` : ''}</span>
+            <span style={{ fontSize: 14, color: '#7a8794' }}>{st.multi ? `この伝票の ${st.rows.length} 行をまとめて編集します。` : '1伝票1行の形式です。'}</span>
             <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 4, alignItems: 'center' }}>
-              <span style={{ fontSize: 11, color: '#8290a0', fontWeight: 700 }}>伝票の表示順（同じ日の中）</span>
+              <span style={{ fontSize: 12, color: '#8290a0', fontWeight: 700 }}>伝票の表示順（同じ日の中）</span>
               <button type="button" className="ef-act" disabled={!canReorder(sess)} title={canReorder(sess) ? '同じ日の伝票の中で、この伝票を1つ上へ' : reason} onClick={() => moveGroup(-1)} style={btn('#5b6773', false, true)}>▲ 上へ</button>
               <button type="button" className="ef-act" disabled={!canReorder(sess)} title={canReorder(sess) ? '同じ日の伝票の中で、この伝票を1つ下へ' : reason} onClick={() => moveGroup(1)} style={btn('#5b6773', false, true)}>▼ 下へ</button>
             </span>
@@ -351,7 +351,7 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { vouch
             <div className="ef-field"><FieldLabel>区分</FieldLabel><ComboField id="ed-service" kind="service" value={st.service} onChange={(v) => set({ service: v || st.service })} onCommit={() => focusId('ed-month')} disabled={ro} /></div>
             <div className="ef-field">
               <FieldLabel>年月日</FieldLabel>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#5b6773' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, color: '#5b6773' }}>
                 <span>令和8年</span>
                 <input id="ed-month" className="ef-input" disabled={ro} value={st.month} onChange={(e) => set({ month: e.target.value.replace(/[^0-9]/g, '').slice(0, 2) })} onKeyDown={onEnter(() => focusId('ed-day'))} inputMode="numeric" style={{ ...cell, width: 44, textAlign: 'center', padding: '7px 2px' }} />
                 <span>月</span>
@@ -386,8 +386,8 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { vouch
 
           <div style={{ border: '1px solid #e2e8ee', borderRadius: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', borderBottom: '1px solid #eef2f5', background: '#fbfcfd', borderRadius: '10px 10px 0 0', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 10.5, fontWeight: 800, color: '#8290a0', letterSpacing: '.05em' }}>行の操作</span>
-              <span style={{ fontSize: 11.5, fontWeight: 700, color: accent }}>対象：{act + 1}行目</span>
+              <span style={{ fontSize: 12, fontWeight: 800, color: '#8290a0', letterSpacing: '.05em' }}>行の操作</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: accent }}>対象：{act + 1}行目</span>
               {!viewOnly && <><ActButton label="行追加" k="N" accent={accent} disabled={!canRow} title={!editable ? reason : !st.multi ? '1伝票1行の形式のため行は追加できません' : '最後に1行追加'} onClick={() => addRow(st.rows.length)} />
               <ActButton label="行挿入" k="I" accent={accent} disabled={!canRow} title={!editable ? reason : !st.multi ? '1伝票1行の形式のため行は挿入できません' : `${act + 1}行目の上に1行挿入`} onClick={() => addRow(act)} />
               <ActButton label="行削除" k="D" accent={accent} disabled={!canRow} title={!editable ? reason : !st.multi ? '1伝票1行の形式のため行は削除できません' : `${act + 1}行目を削除`} onClick={() => delRow(act)} />
@@ -395,7 +395,7 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { vouch
               <ActButton label="付箋" k="F" accent={accent} disabled={ro} title={ro ? reason : '赤→青→黄→緑→なし'} active={!!st.rows[act]?.fusen} onClick={() => setRow(act, { fusen: FUSEN_CYCLE[(FUSEN_CYCLE.indexOf(st.rows[act].fusen) + 1) % FUSEN_CYCLE.length] })} />
               <ActButton label="証憑" k="V" accent={accent} disabled={ro} title={ro ? reason : '有／無'} active={st.rows[act]?.shohyo} onClick={() => setRow(act, { shohyo: !st.rows[act].shohyo })} /></>}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 8, padding: '7px 10px', background: '#f6f8fa', fontSize: 10.5, fontWeight: 700, color: '#8290a0' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 8, padding: '7px 10px', background: '#f6f8fa', fontSize: 12, fontWeight: 700, color: '#8290a0' }}>
               <div>行</div>
               {!st.shared && <div style={{ color: BLUE }}>借方科目</div>}
               {!st.shared && <div style={{ color: PINK }}>貸方科目</div>}
@@ -408,11 +408,11 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { vouch
                   {/* 入力画面と同じ：付箋を付けた行の右端に付箋 */}
                   <FusenTab color={r.fusen} offset={-2} />
                   <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 8, alignItems: 'center' }}>
-                    <div style={{ fontSize: 12, color: '#9aa5b1' }}><span className="ef-rowno">{i + 1}{r.id == null && <span style={{ color: accent, fontWeight: 700 }}> 新</span>}</span><span className="ef-rownow" style={{ fontSize: 9.5, fontWeight: 800, color: '#fff', background: accent, borderRadius: 6, padding: '1px 4px' }}>入力中</span></div>
-                    {!st.shared && <ComboField id={`ed-r${i}-kari`} kind="account" value={r.kari} onChange={(v) => setRow(i, { kari: v })} onCommit={() => focusId(`ed-r${i}-kashi`)} placeholder="借方科目" disabled={ro} invalid={fieldState(ri, 'kari', 'pair')} fontSize={13} padY={7} listWidth={380} />}
-                    {!st.shared && <ComboField id={`ed-r${i}-kashi`} kind="account" value={r.kashi} onChange={(v) => setRow(i, { kashi: v })} onCommit={() => focusId(`ed-r${i}-tekiyo`)} placeholder="貸方科目" disabled={ro} invalid={fieldState(ri, 'kashi', 'pair')} fontSize={13} padY={7} listWidth={380} />}
-                    <ComboField id={`ed-r${i}-tekiyo`} kind="summary" freeText value={r.tekiyo} onChange={(v) => setRow(i, { tekiyo: v })} onCommit={() => focusId(`ed-r${i}-gyosha`)} placeholder="摘要" disabled={ro} fontSize={13} padY={7} listWidth={340} />
-                    <ComboField id={`ed-r${i}-gyosha`} kind="vendor" value={r.gyosha} onChange={(v) => setRow(i, { gyosha: v })} onCommit={() => focusId(`ed-r${i}-amount`)} placeholder="業者" disabled={ro} fontSize={13} padY={7} listWidth={300} />
+                    <div style={{ fontSize: 14, color: '#9aa5b1' }}><span className="ef-rowno">{i + 1}{r.id == null && <span style={{ color: accent, fontWeight: 700 }}> 新</span>}</span><span className="ef-rownow" style={{ fontSize: 12, fontWeight: 800, color: '#fff', background: accent, borderRadius: 6, padding: '1px 4px' }}>入力中</span></div>
+                    {!st.shared && <ComboField id={`ed-r${i}-kari`} kind="account" value={r.kari} onChange={(v) => setRow(i, { kari: v })} onCommit={() => focusId(`ed-r${i}-kashi`)} placeholder="借方科目" disabled={ro} invalid={fieldState(ri, 'kari', 'pair')} fontSize={14} padY={7} listWidth={380} />}
+                    {!st.shared && <ComboField id={`ed-r${i}-kashi`} kind="account" value={r.kashi} onChange={(v) => setRow(i, { kashi: v })} onCommit={() => focusId(`ed-r${i}-tekiyo`)} placeholder="貸方科目" disabled={ro} invalid={fieldState(ri, 'kashi', 'pair')} fontSize={14} padY={7} listWidth={380} />}
+                    <ComboField id={`ed-r${i}-tekiyo`} kind="summary" freeText value={r.tekiyo} onChange={(v) => setRow(i, { tekiyo: v })} onCommit={() => focusId(`ed-r${i}-gyosha`)} placeholder="摘要" disabled={ro} fontSize={14} padY={7} listWidth={340} />
+                    <ComboField id={`ed-r${i}-gyosha`} kind="vendor" value={r.gyosha} onChange={(v) => setRow(i, { gyosha: v })} onCommit={() => focusId(`ed-r${i}-amount`)} placeholder="業者" disabled={ro} fontSize={14} padY={7} listWidth={300} />
                     <input id={`ed-r${i}-amount`} className="ef-input" disabled={ro} value={fmtNum(r.amount)} onChange={(e) => setRow(i, { amount: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => rowNext(i))} inputMode="numeric" placeholder="0" style={{ ...numInput, padding: '7px 9px', fontWeight: 700, fontSize: 14, borderColor: rowErr[r.key]?.startsWith('金額') ? '#c0392b' : '#cfd8e0' }} />
                     {viewOnly ? <FlagCell v={{ ...voucher!, check: r.check, fusen: r.fusen, shohyo: r.shohyo }} compact /> : <FlagButtons shohyo={r.shohyo} check={r.check} fusen={r.fusen} disabled={ro} onChange={(p) => setRow(i, p)} />}
                     {!viewOnly && <div style={{ display: 'flex', gap: 3 }}>
@@ -423,7 +423,7 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { vouch
                   </div>
                   {(rowErr[r.key] || ri.length > 0) && (
                     <div style={{ margin: '6px 0 2px 42px', display: 'grid', gap: 5 }}>
-                      {rowErr[r.key] && <div role="alert" style={{ fontSize: 12, fontWeight: 700, color: '#a5281b' }}>× {rowErr[r.key]}</div>}
+                      {rowErr[r.key] && <div role="alert" style={{ fontSize: 14, fontWeight: 700, color: '#a5281b' }}>× {rowErr[r.key]}</div>}
                       <IssueList issues={ri} compact />
                     </div>
                   )}
@@ -431,12 +431,12 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { vouch
               );
             })}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 12px', borderTop: '2px solid #e2e8ee', background: '#fbfcfd', borderRadius: '0 0 10px 10px' }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#8290a0' }}>合計（{st.rows.length} 行）</span>
-              <span style={{ marginLeft: 'auto', fontSize: 17, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{yen(total)} <span style={{ fontSize: 12, fontWeight: 600, color: '#7a8794' }}>円</span></span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>合計（{st.rows.length} 行）</span>
+              <span style={{ marginLeft: 'auto', fontSize: 17, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{yen(total)} <span style={{ fontSize: 14, fontWeight: 600, color: '#7a8794' }}>円</span></span>
             </div>
           </div>
           {!st.shared && hasWarn(allIssues) && !hasError(allIssues) && !ro && (
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button id="ed-confirm" type="button" className="ef-act" onClick={() => save(true)} style={{ padding: '6px 14px', borderRadius: 7, border: '1px solid #b07d00', background: '#d99a00', color: '#fff', fontSize: 12.5, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}>確認して登録</button></div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button id="ed-confirm" type="button" className="ef-act" onClick={() => save(true)} style={{ padding: '6px 14px', borderRadius: 7, border: '1px solid #b07d00', background: '#d99a00', color: '#fff', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}>確認して登録</button></div>
           )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
@@ -445,12 +445,12 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { vouch
             <Field label="予備入力2（業者予備）"><input className="ef-input" disabled={ro} value={st.spare2} onChange={(e) => set({ spare2: e.target.value })} style={cell} /></Field>
           </div>
 
-          {msg && <div role={msg.tone === 'error' ? 'alert' : 'status'} style={{ padding: '8px 12px', borderRadius: 9, fontSize: 12.5, fontWeight: 700, background: msg.tone === 'error' ? '#fdeee9' : '#eef4fb', color: msg.tone === 'error' ? '#a5281b' : '#2c5f9e', border: '1px solid ' + (msg.tone === 'error' ? '#f0b9ae' : '#c9dcf2') }}>{msg.text}</div>}
+          {msg && <div role={msg.tone === 'error' ? 'alert' : 'status'} style={{ padding: '8px 12px', borderRadius: 9, fontSize: 14, fontWeight: 700, background: msg.tone === 'error' ? '#fdeee9' : '#eef4fb', color: msg.tone === 'error' ? '#a5281b' : '#2c5f9e', border: '1px solid ' + (msg.tone === 'error' ? '#f0b9ae' : '#c9dcf2') }}>{msg.text}</div>}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             {!viewOnly && <ActButton label="伝票削除" k="X" tone="danger" disabled={ro} title={ro ? reason : 'この伝票（全行）を削除します。確認画面を表示します'} onClick={() => setDelOpen(true)} />}
             {!viewOnly && <ActDivider />}
-            <span style={{ fontSize: 11.5, color: '#9aa5b1' }}>{viewOnly ? '参照のみの権限のため、内容の表示だけができます。' : '削除は確認画面のあとに実行します。元に戻せません。'}</span>
+            <span style={{ fontSize: 12, color: '#9aa5b1' }}>{viewOnly ? '参照のみの権限のため、内容の表示だけができます。' : '削除は確認画面のあとに実行します。元に戻せません。'}</span>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
               <button type="button" className="ef-act" onClick={onClose} style={btn()}>戻る（{returnTo}へ）</button>
               {!viewOnly && <ActButton id="ed-save" label="伝票登録" k="S" tone="primary" accent={accent} disabled={ro} title={ro ? reason : '訂正した内容で、この伝票の全行を登録します'} onClick={() => save(false)} />}
@@ -496,27 +496,27 @@ export function AdvancedSearchModal({ open, onClose, cond, onApply, accent }: { 
   const [c, setC] = useState<SearchCond>(cond);
   const set = (p: Partial<SearchCond>) => setC({ ...c, ...p });
   const sel = (v: string, on: (x: string) => void, opts: string[], ph = '指定なし') => <select value={v} onChange={(e) => on(e.target.value)} style={input}><option value="">{ph}</option>{opts.map((o) => <option key={o}>{o}</option>)}</select>;
-  const tri = (v: string, on: (x: '両方' | '有' | '無') => void) => <div style={{ display: 'flex', gap: 10, paddingTop: 8, fontSize: 13 }}>{(['両方', '有', '無'] as const).map((o) => <label key={o} style={{ display: 'flex', gap: 4 }}><input type="radio" checked={v === o} onChange={() => on(o)} />{o}</label>)}</div>;
+  const tri = (v: string, on: (x: '両方' | '有' | '無') => void) => <div style={{ display: 'flex', gap: 10, paddingTop: 8, fontSize: 14 }}>{(['両方', '有', '無'] as const).map((o) => <label key={o} style={{ display: 'flex', gap: 4 }}><input type="radio" checked={v === o} onChange={() => on(o)} />{o}</label>)}</div>;
   return (
     <Modal open={open} onClose={onClose} width={760} title="検索条件">
       <EntryStyles />
       <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-          <Field label="借方科目"><ComboField id="search-kari" kind="account" value={c.kari} onChange={(v) => set({ kari: v })} placeholder="コード・名称・フリガナで絞り込み" listWidth={360} padY={7} fontSize={13} /></Field>
-          <Field label="貸方科目"><ComboField id="search-kashi" kind="account" value={c.kashi} onChange={(v) => set({ kashi: v })} placeholder="コード・名称・フリガナで絞り込み" listWidth={360} padY={7} fontSize={13} /></Field>
-          <Field label="金額（範囲）"><div style={{ display: 'flex', gap: 4, alignItems: 'center' }}><input className="field-input" value={c.amountMin} onChange={(e) => set({ amountMin: e.target.value.replace(/[^0-9]/g, '') })} placeholder="下限" inputMode="numeric" style={numInput} />〜<input className="field-input" value={c.amountMax} onChange={(e) => set({ amountMax: e.target.value.replace(/[^0-9]/g, '') })} placeholder="上限" inputMode="numeric" style={numInput} /></div><label style={{ fontSize: 11.5, display: 'flex', gap: 4, marginTop: 4 }}><input type="checkbox" checked={c.beforeAlloc} onChange={(e) => set({ beforeAlloc: e.target.checked })} />按分前の金額で検索する</label></Field>
+          <Field label="借方科目"><ComboField id="search-kari" kind="account" value={c.kari} onChange={(v) => set({ kari: v })} placeholder="コード・名称・フリガナで絞り込み" listWidth={360} padY={7} fontSize={14} /></Field>
+          <Field label="貸方科目"><ComboField id="search-kashi" kind="account" value={c.kashi} onChange={(v) => set({ kashi: v })} placeholder="コード・名称・フリガナで絞り込み" listWidth={360} padY={7} fontSize={14} /></Field>
+          <Field label="金額（範囲）"><div style={{ display: 'flex', gap: 4, alignItems: 'center' }}><input className="field-input" value={c.amountMin} onChange={(e) => set({ amountMin: e.target.value.replace(/[^0-9]/g, '') })} placeholder="下限" inputMode="numeric" style={numInput} />〜<input className="field-input" value={c.amountMax} onChange={(e) => set({ amountMax: e.target.value.replace(/[^0-9]/g, '') })} placeholder="上限" inputMode="numeric" style={numInput} /></div><label style={{ fontSize: 12, display: 'flex', gap: 4, marginTop: 4 }}><input type="checkbox" checked={c.beforeAlloc} onChange={(e) => set({ beforeAlloc: e.target.checked })} />按分前の金額で検索する</label></Field>
           <Field label="摘要コード"><input className="field-input" value={c.tekiyoCode} onChange={(e) => set({ tekiyoCode: e.target.value })} style={input} /></Field>
           <Field label="摘要文字（部分一致）"><input className="field-input ring" value={c.tekiyo} onChange={(e) => set({ tekiyo: e.target.value })} style={input} /></Field>
-          <Field label="業者"><ComboField id="search-gyosha" kind="vendor" value={c.gyosha} onChange={(v) => set({ gyosha: v === '（なし）' ? '' : v })} placeholder="コード・名称・フリガナで絞り込み" listWidth={300} padY={7} fontSize={13} /></Field>
+          <Field label="業者"><ComboField id="search-gyosha" kind="vendor" value={c.gyosha} onChange={(v) => set({ gyosha: v === '（なし）' ? '' : v })} placeholder="コード・名称・フリガナで絞り込み" listWidth={300} padY={7} fontSize={14} /></Field>
           <Field label="伝票No"><input className="field-input" value={c.no} onChange={(e) => set({ no: e.target.value })} style={input} /></Field>
           <Field label="小切手No"><input className="field-input" value={c.cheque} onChange={(e) => set({ cheque: e.target.value })} style={input} /></Field>
           <Field label="部門（親区分で起動時）">{sel(c.dept, (v) => set({ dept: v }), ['（親区分）チャイルド保育園', ...SERVICES])}</Field>
           <Field label="証憑">{tri(c.shohyo, (v) => set({ shohyo: v }))}</Field>
           <Field label="チェック">{tri(c.check, (v) => set({ check: v }))}</Field>
-          <Field label="伝票種別"><div style={{ display: 'flex', gap: 10, paddingTop: 8, fontSize: 13 }}><label style={{ display: 'flex', gap: 4 }}><input type="checkbox" checked={c.normal} onChange={(e) => set({ normal: e.target.checked })} />通常伝票</label><label style={{ display: 'flex', gap: 4 }}><input type="checkbox" checked={c.migrated} onChange={(e) => set({ migrated: e.target.checked })} />移行伝票</label></div></Field>
-          <Field label="付箋"><div style={{ display: 'flex', gap: 8, paddingTop: 8, fontSize: 13, flexWrap: 'wrap' }}>{FUSEN_CYCLE.map((f) => <label key={f || 'none'} style={{ display: 'flex', gap: 4, color: f ? FUSEN_COLORS[f] : '#5b6773' }}><input type="checkbox" checked={c.fusen.has(f)} onChange={(e) => { const n = new Set(c.fusen); if (e.target.checked) n.add(f); else n.delete(f); set({ fusen: n }); }} />{f ? fusenLabel(f) : '付箋なし'}</label>)}</div></Field>
-          <Field label="内部取引"><label style={{ display: 'flex', gap: 4, paddingTop: 8, fontSize: 13 }}><input type="checkbox" checked={c.internalOnly} onChange={(e) => set({ internalOnly: e.target.checked })} />内部取引伝票のみ</label></Field>
-          <Field label="特殊付箋"><label style={{ display: 'flex', gap: 4, paddingTop: 8, fontSize: 13 }}><input type="checkbox" checked={c.special} onChange={(e) => set({ special: e.target.checked })} />決算チェック（10万以上）</label></Field>
+          <Field label="伝票種別"><div style={{ display: 'flex', gap: 10, paddingTop: 8, fontSize: 14 }}><label style={{ display: 'flex', gap: 4 }}><input type="checkbox" checked={c.normal} onChange={(e) => set({ normal: e.target.checked })} />通常伝票</label><label style={{ display: 'flex', gap: 4 }}><input type="checkbox" checked={c.migrated} onChange={(e) => set({ migrated: e.target.checked })} />移行伝票</label></div></Field>
+          <Field label="付箋"><div style={{ display: 'flex', gap: 8, paddingTop: 8, fontSize: 14, flexWrap: 'wrap' }}>{FUSEN_CYCLE.map((f) => <label key={f || 'none'} style={{ display: 'flex', gap: 4, color: f ? FUSEN_COLORS[f] : '#5b6773' }}><input type="checkbox" checked={c.fusen.has(f)} onChange={(e) => { const n = new Set(c.fusen); if (e.target.checked) n.add(f); else n.delete(f); set({ fusen: n }); }} />{f ? fusenLabel(f) : '付箋なし'}</label>)}</div></Field>
+          <Field label="内部取引"><label style={{ display: 'flex', gap: 4, paddingTop: 8, fontSize: 14 }}><input type="checkbox" checked={c.internalOnly} onChange={(e) => set({ internalOnly: e.target.checked })} />内部取引伝票のみ</label></Field>
+          <Field label="特殊付箋"><label style={{ display: 'flex', gap: 4, paddingTop: 8, fontSize: 14 }}><input type="checkbox" checked={c.special} onChange={(e) => set({ special: e.target.checked })} />決算チェック（10万以上）</label></Field>
         </div>
         <Notice>複数の条件は AND で絞り込みます。「検索合計」が有効なとき、一致した金額の合計を画面右上に表示します。</Notice>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>

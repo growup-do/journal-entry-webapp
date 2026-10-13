@@ -26,7 +26,7 @@ export function MonthChips({ months, current, accent, onSelect }: Props) {
             onClick={() => onSelect(o.value)}
             style={{
               padding: '4px 12px',
-              fontSize: 11.5,
+              fontSize: 12,
               fontWeight: 600,
               borderRadius: 16,
               cursor: 'pointer',

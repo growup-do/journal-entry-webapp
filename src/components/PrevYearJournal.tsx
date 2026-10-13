@@ -19,22 +19,22 @@ export function PrevYearJournal({ accent, compact }: Props) {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
       <div style={{ padding: compact ? '12px 14px 10px' : '10px 22px', borderBottom: '1px solid #eef2f5', display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ padding: '2px 9px', borderRadius: 10, background: '#fff1b8', color: '#8a6d00', fontSize: 11, fontWeight: 700 }}>前年仕訳</span>
-          <span style={{ fontSize: 12, color: '#7a8794' }}>令和7年度・閲覧のみ</span>
-          <span style={{ marginLeft: 'auto', fontSize: 12, color: '#8895a3' }}>{rows.length} 件</span>
+          <span style={{ padding: '2px 9px', borderRadius: 10, background: '#fff1b8', color: '#8a6d00', fontSize: 12, fontWeight: 700 }}>前年仕訳</span>
+          <span style={{ fontSize: 14, color: '#7a8794' }}>令和7年度・閲覧のみ</span>
+          <span style={{ marginLeft: 'auto', fontSize: 14, color: '#8895a3' }}>{rows.length} 件</span>
         </div>
         <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} withAll />
       </div>
       <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
         {rows.length === 0 ? (
-          <div style={{ padding: '36px 14px', textAlign: 'center', color: '#9aa5b1', fontSize: 12.5 }}>この月の前年仕訳はありません（サンプルは決算仕訳のみ）。</div>
+          <div style={{ padding: '36px 14px', textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>この月の前年仕訳はありません（サンプルは決算仕訳のみ）。</div>
         ) : compact ? (
           rows.map((r) => (
-            <div key={r.seq} style={{ display: 'grid', gridTemplateColumns: '40px minmax(0,1fr) 84px', gap: 8, padding: '10px 14px', borderBottom: '1px solid #f1f4f6', fontSize: 12, alignItems: 'center' }}>
-              <div style={{ color: '#8895a3', fontSize: 11 }}>決算</div>
+            <div key={r.seq} style={{ display: 'grid', gridTemplateColumns: '40px minmax(0,1fr) 84px', gap: 8, padding: '10px 14px', borderBottom: '1px solid #f1f4f6', fontSize: 14, alignItems: 'center' }}>
+              <div style={{ color: '#8895a3', fontSize: 12 }}>決算</div>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.kari} <span style={{ color: '#9aa5b1' }}>／</span> {r.kashi}</div>
-                <div style={{ fontSize: 10.5, color: '#9aa5b1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.tekiyo}</div>
+                <div style={{ fontSize: 12, color: '#9aa5b1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.tekiyo}</div>
               </div>
               <div style={{ textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{yen(r.amount)}</div>
             </div>

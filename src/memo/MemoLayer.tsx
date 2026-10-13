@@ -15,7 +15,7 @@ const SYS = '#4f5fd9';
 const SYS_SOFT = '#eceefb';
 const isSys = (author: string) => author === SYSTEM_AUTHOR;
 const AuthorChip = ({ author }: { author: string }) => (
-  <span style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: isSys(author) ? SYS_SOFT : '#f1f4f6', color: isSys(author) ? SYS : '#3d4a56', whiteSpace: 'nowrap' }}>{isSys(author) ? '🤖 ' : ''}{author || '—'}</span>
+  <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: isSys(author) ? SYS_SOFT : '#f1f4f6', color: isSys(author) ? SYS : '#3d4a56', whiteSpace: 'nowrap' }}>{isSys(author) ? '🤖 ' : ''}{author || '—'}</span>
 );
 const AUTHORS = ['GROW UP', 'チャイルド社'];
 
@@ -161,7 +161,7 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
                 background: resolved ? '#9aa5b1' : isSys(m.author) ? SYS : AMBER,
                 color: '#fff',
                 fontWeight: 700,
-                fontSize: 12,
+                fontSize: 14,
                 fontFamily: 'inherit',
                 cursor: 'pointer',
                 boxShadow: active ? `0 0 0 4px rgba(217,119,6,.25), 0 4px 12px rgba(0,0,0,.25)` : '0 4px 12px rgba(0,0,0,.25)',
@@ -181,15 +181,15 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <span style={noBadge(openMemo.status === 'resolved')}>#{openMemo.no}</span>
               <AuthorChip author={openMemo.author} />
-              <span style={{ fontSize: 11, color: '#9aa5b1' }}>{fmtDate(openMemo.createdAt)}</span>
-              <span style={{ marginLeft: 'auto', fontSize: 10.5, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: openMemo.status === 'resolved' ? '#f1f4f6' : AMBER_SOFT, color: openMemo.status === 'resolved' ? '#7a8794' : AMBER }}>
+              <span style={{ fontSize: 12, color: '#9aa5b1' }}>{fmtDate(openMemo.createdAt)}</span>
+              <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: openMemo.status === 'resolved' ? '#f1f4f6' : AMBER_SOFT, color: openMemo.status === 'resolved' ? '#7a8794' : AMBER }}>
                 {openMemo.status === 'resolved' ? '解決済み' : '確認中'}
               </span>
             </div>
-            <div style={{ fontSize: 13.5, lineHeight: 1.65, whiteSpace: 'pre-wrap', color: '#22303c', marginBottom: 12 }}>{openMemo.text}</div>
+            <div style={{ fontSize: 14, lineHeight: 1.65, whiteSpace: 'pre-wrap', color: '#22303c', marginBottom: 12 }}>{openMemo.text}</div>
 
             <div style={{ borderTop: '1px solid #eef2f5', paddingTop: 10 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#8290a0', marginBottom: 5 }}>回答・コメント</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 5 }}>回答・コメント</div>
               <textarea
                 value={replyDraft}
                 onChange={(e) => setReplyDraft(e.target.value)}
@@ -242,8 +242,8 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
             />
             <div style={{ ...popoverPos(draft.x, draft.y), ...cardStyle }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 700 }}>確認メモを追加</span>
-                <select value={author} onChange={(e) => setAuthor(e.target.value)} style={{ marginLeft: 'auto', fontSize: 12, fontFamily: 'inherit', padding: '3px 6px', border: '1px solid #cfd8e0', borderRadius: 6, background: '#fff' }}>
+                <span style={{ fontSize: 14, fontWeight: 700 }}>確認メモを追加</span>
+                <select value={author} onChange={(e) => setAuthor(e.target.value)} style={{ marginLeft: 'auto', fontSize: 14, fontFamily: 'inherit', padding: '3px 6px', border: '1px solid #cfd8e0', borderRadius: 6, background: '#fff' }}>
                   {AUTHORS.map((a) => (
                     <option key={a} value={a}>
                       {a}
@@ -276,7 +276,7 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
       {/* 配置モードのオーバーレイ */}
       {placing && (
         <div onClick={onPlaceClick} style={{ position: 'fixed', inset: 0, zIndex: 290, cursor: 'crosshair', background: 'rgba(217,119,6,.06)' }}>
-          <div style={{ position: 'fixed', top: 14, left: '50%', transform: 'translateX(-50%)', background: '#22303c', color: '#fff', padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600, boxShadow: '0 6px 20px rgba(0,0,0,.25)' }}>
+          <div style={{ position: 'fixed', top: 14, left: '50%', transform: 'translateX(-50%)', background: '#22303c', color: '#fff', padding: '8px 16px', borderRadius: 10, fontSize: 14, fontWeight: 600, boxShadow: '0 6px 20px rgba(0,0,0,.25)' }}>
             メモを貼りたい場所をクリック（Esc で中止）
           </div>
         </div>
@@ -287,14 +287,14 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
         <div style={{ position: 'fixed', right: 18, bottom: 120, width: 350, maxHeight: '62vh', zIndex: 300, ...cardStyle, padding: 0, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderBottom: '1px solid #eef2f5' }}>
             <span style={{ fontWeight: 700, fontSize: 14 }}>確認メモ</span>
-            <span style={{ fontSize: 11.5, color: '#8290a0' }}>未解決 {openCount} 件</span>
-            <label style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: '#5b6773', cursor: 'pointer' }}>
+            <span style={{ fontSize: 12, color: '#8290a0' }}>未解決 {openCount} 件</span>
+            <label style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#5b6773', cursor: 'pointer' }}>
               <input type="checkbox" checked={showResolved} onChange={(e) => setShowResolved(e.target.checked)} />
               解決済みも表示
             </label>
           </div>
           <div style={{ overflowY: 'auto', flex: 1 }}>
-            {listed.length === 0 && <div style={{ padding: '28px 14px', textAlign: 'center', color: '#9aa5b1', fontSize: 12.5 }}>{showResolved ? 'メモはありません。' : '未解決のメモはありません。'}</div>}
+            {listed.length === 0 && <div style={{ padding: '28px 14px', textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>{showResolved ? 'メモはありません。' : '未解決のメモはありません。'}</div>}
             {listed.map((m) => {
               const resolved = m.status === 'resolved';
               return (
@@ -307,11 +307,11 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
                     <span style={noBadge(resolved)}>#{m.no}</span>
                     <AuthorChip author={m.author} />
-                    <span style={{ fontSize: 11, color: '#8290a0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{screenLabel(m.screen)}</span>
-                    {m.reply && <span style={{ marginLeft: 'auto', fontSize: 10.5, color: '#1f7a52', fontWeight: 700, flex: 'none' }}>回答あり</span>}
-                    {resolved && <span style={{ marginLeft: m.reply ? 6 : 'auto', fontSize: 10.5, color: '#7a8794', fontWeight: 700, flex: 'none' }}>解決済み</span>}
+                    <span style={{ fontSize: 12, color: '#8290a0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{screenLabel(m.screen)}</span>
+                    {m.reply && <span style={{ marginLeft: 'auto', fontSize: 12, color: '#1f7a52', fontWeight: 700, flex: 'none' }}>回答あり</span>}
+                    {resolved && <span style={{ marginLeft: m.reply ? 6 : 'auto', fontSize: 12, color: '#7a8794', fontWeight: 700, flex: 'none' }}>解決済み</span>}
                   </div>
-                  <div style={{ fontSize: 12.5, color: '#22303c', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{m.text}</div>
+                  <div style={{ fontSize: 14, color: '#22303c', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{m.text}</div>
                 </button>
               );
             })}
@@ -321,7 +321,7 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
 
       {/* エラー */}
       {error && (
-        <div style={{ position: 'fixed', right: 18, bottom: panelOpen ? 'calc(62vh + 130px)' : 120, zIndex: 301, background: '#fdeee9', border: '1px solid #e6cfc7', color: '#c0392b', padding: '8px 12px', borderRadius: 8, fontSize: 12, maxWidth: 350 }}>
+        <div style={{ position: 'fixed', right: 18, bottom: panelOpen ? 'calc(62vh + 130px)' : 120, zIndex: 301, background: '#fdeee9', border: '1px solid #e6cfc7', color: '#c0392b', padding: '8px 12px', borderRadius: 8, fontSize: 14, maxWidth: 350 }}>
           {error}
         </div>
       )}
@@ -333,7 +333,7 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
         </button>
         <button type="button" onClick={() => setPanelOpen((o) => !o)} style={{ ...toolBtn, background: panelOpen ? AMBER : '#fff', color: panelOpen ? '#fff' : '#22303c', border: `1px solid ${panelOpen ? AMBER : '#dde4ea'}` }}>
           確認メモ
-          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 20, height: 20, padding: '0 6px', borderRadius: 10, background: panelOpen ? '#fff' : AMBER, color: panelOpen ? AMBER : '#fff', fontSize: 11.5, fontWeight: 700 }}>{openCount}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 20, height: 20, padding: '0 6px', borderRadius: 10, background: panelOpen ? '#fff' : AMBER, color: panelOpen ? AMBER : '#fff', fontSize: 12, fontWeight: 700 }}>{openCount}</span>
         </button>
       </div>
     </>
@@ -355,7 +355,7 @@ const textareaStyle: CSSProperties = {
   padding: '8px 10px',
   border: '1px solid #cfd8e0',
   borderRadius: 8,
-  fontSize: 13,
+  fontSize: 14,
   fontFamily: 'inherit',
   lineHeight: 1.6,
   resize: 'vertical',
@@ -369,7 +369,7 @@ const toolBtn: CSSProperties = {
   height: 40,
   padding: '0 16px',
   borderRadius: 11,
-  fontSize: 13,
+  fontSize: 14,
   fontWeight: 700,
   fontFamily: 'inherit',
   cursor: 'pointer',
@@ -385,14 +385,14 @@ const noBadge = (resolved: boolean): CSSProperties => ({
   borderRadius: 10,
   background: resolved ? '#9aa5b1' : AMBER,
   color: '#fff',
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 700,
   flex: 'none',
 });
 const btn = (color: string, solid = false): CSSProperties => ({
   padding: '6px 11px',
   borderRadius: 7,
-  fontSize: 12,
+  fontSize: 14,
   fontWeight: 700,
   fontFamily: 'inherit',
   cursor: 'pointer',

@@ -92,8 +92,8 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
     toast.show(`${k.label} ${targets.length} 件を Excel 出力しました（プロトタイプ：ファイルは作成されません）`);
   };
 
-  const btn = (primary?: boolean): CSSProperties => ({ padding: '8px 16px', borderRadius: 8, border: primary ? 'none' : '1px solid #cfd8e0', background: primary ? accent : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
-  const input: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 7, fontSize: 13, fontFamily: 'inherit', outline: 'none' };
+  const btn = (primary?: boolean): CSSProperties => ({ padding: '8px 16px', borderRadius: 8, border: primary ? 'none' : '1px solid #cfd8e0', background: primary ? accent : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
+  const input: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 7, fontSize: 14, fontFamily: 'inherit', outline: 'none' };
   // 旧「オプション」バッジ：標準機能になったため表示しない（確認メモ #56）
   const badge = null;
 
@@ -113,7 +113,7 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
             <span aria-hidden style={{ position: 'absolute', top: 4, bottom: 4, left: 4, width: `calc((100% - 8px) / ${KINDS.length})`, borderRadius: 10, background: accent, boxShadow: '0 2px 8px rgba(30,50,70,.25)', transform: `translateX(${Math.max(0, KINDS.findIndex((x) => x.key === kind)) * 100}%)`, transition: 'transform .22s ease' }} />
             {KINDS.map((x) => {
               const on = kind === x.key;
-              return <button key={x.key} type="button" role="radio" aria-checked={on} data-kind={x.key} onClick={() => setKind(x.key)} style={{ position: 'relative', zIndex: 1, padding: '9px 6px', border: 'none', borderRadius: 10, background: 'transparent', color: on ? '#fff' : '#48565f', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'color .2s' }}>{x.label}</button>;
+              return <button key={x.key} type="button" role="radio" aria-checked={on} data-kind={x.key} onClick={() => setKind(x.key)} style={{ position: 'relative', zIndex: 1, padding: '9px 6px', border: 'none', borderRadius: 10, background: 'transparent', color: on ? '#fff' : '#48565f', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'color .2s' }}>{x.label}</button>;
             })}
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
@@ -121,7 +121,7 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
               <span style={LABEL}>会計月</span>
               <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} withAll range={range} onRange={setRange} />
             </div>
-            <div style={{ marginLeft: 'auto', padding: '8px 12px', background: '#fffbe6', border: '1px solid #f3e4a6', borderRadius: 8, fontSize: 12, color: '#0a7d6b', whiteSpace: 'pre-line', lineHeight: 1.5 }}>{k.rule}</div>
+            <div style={{ marginLeft: 'auto', padding: '8px 12px', background: '#fffbe6', border: '1px solid #f3e4a6', borderRadius: 8, fontSize: 14, color: '#0a7d6b', whiteSpace: 'pre-line', lineHeight: 1.5 }}>{k.rule}</div>
           </div>
         </>
       }
@@ -142,10 +142,10 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
               return (
                 <tr key={rowKey(r)} style={{ background: done ? '#f1f4f6' : on ? '#f0faf3' : 'transparent' }}>
                   <td style={{ ...TD, textAlign: 'center' }}><input type="checkbox" checked={on} onChange={() => toggle(r)} /></td>
-                  <td style={TD}><div style={{ fontWeight: 700 }}>{r.seq}</div><div style={{ fontSize: 11, color: done ? '#1f7a52' : '#9aa5b1', fontWeight: done ? 700 : 500 }}>{done ? '出力済' : '未出力'}</div></td>
-                  <td style={TD}><div style={{ fontSize: 11, color: '#9aa5b1' }}>{r.kind}</div><div>{r.date}</div></td>
+                  <td style={TD}><div style={{ fontWeight: 700 }}>{r.seq}</div><div style={{ fontSize: 12, color: done ? '#1f7a52' : '#9aa5b1', fontWeight: done ? 700 : 500 }}>{done ? '出力済' : '未出力'}</div></td>
+                  <td style={TD}><div style={{ fontSize: 12, color: '#9aa5b1' }}>{r.kind}</div><div>{r.date}</div></td>
                   <td style={TD}>{r.no}</td>
-                  <td style={TD}><div style={{ display: 'flex', gap: 12 }}><span style={{ fontWeight: 500, minWidth: 180 }}>{r.kari}</span><span style={{ color: '#48565f' }}>{r.kashi}</span></div><div style={{ fontSize: 11.5, color: '#7a8794' }}>{r.tekiyo}</div></td>
+                  <td style={TD}><div style={{ display: 'flex', gap: 12 }}><span style={{ fontWeight: 500, minWidth: 180 }}>{r.kari}</span><span style={{ color: '#48565f' }}>{r.kashi}</span></div><div style={{ fontSize: 12, color: '#7a8794' }}>{r.tekiyo}</div></td>
                   <td style={{ ...NUM, fontWeight: 700 }}>{yen(r.amount)}</td>
                 </tr>
               );
@@ -156,7 +156,7 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
       <div style={{ display: 'flex', gap: 8, padding: '10px 22px 16px', borderTop: '1px solid #eef2f5' }}>
         <button type="button" className="btn-outline" onClick={() => setAll(true)} style={btn()}>全てON</button>
         <button type="button" className="btn-outline" onClick={() => setAll(false)} style={btn()}>全てOFF</button>
-        <span style={{ marginLeft: 'auto', fontSize: 12.5, color: '#7a8794', alignSelf: 'center' }}>対象 <b style={{ color: '#22303c' }}>{rows.filter(isOn).length}</b> ／ {rows.length} 件</span>
+        <span style={{ marginLeft: 'auto', fontSize: 14, color: '#7a8794', alignSelf: 'center' }}>対象 <b style={{ color: '#22303c' }}>{rows.filter(isOn).length}</b> ／ {rows.length} 件</span>
       </div>
 
       {/* 詳細設定 */}
@@ -164,22 +164,22 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
         <div style={{ padding: '14px 22px 20px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
             <div>
-              <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 6 }}>支出伺（振替伝票）対象科目</div>
+              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>支出伺（振替伝票）対象科目</div>
               <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: 240, overflow: 'auto', padding: 6 }}>
                 {SUBJECT_TREE.map((s) => (
-                  <label key={s.name + s.level} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 6px', paddingLeft: 6 + s.level * 18, fontSize: 13, color: s.level === 0 ? '#7a8794' : '#22303c', cursor: 'pointer' }}>
+                  <label key={s.name + s.level} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 6px', paddingLeft: 6 + s.level * 18, fontSize: 14, color: s.level === 0 ? '#7a8794' : '#22303c', cursor: 'pointer' }}>
                     <input type="checkbox" checked={subjects.has(s.name)} onChange={() => setSubjects((set) => { const n = new Set(set); n.has(s.name) ? n.delete(s.name) : n.add(s.name); return n; })} />{s.name}
                   </label>
                 ))}
               </div>
             </div>
             <div>
-              <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 6 }}>決裁　名称と印影の指定</div>
+              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>決裁　名称と印影の指定</div>
               <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {['左', '中', '右'].map((pos, i) => (
                   <div key={pos} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ width: 20, fontSize: 13 }}>{pos}</span>
-                    <span style={{ width: 52, height: 52, border: '1px solid #cfd8e0', borderRadius: 6, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: '#c3ccd4', overflow: 'hidden', flex: 'none' }}>
+                    <span style={{ width: 20, fontSize: 14 }}>{pos}</span>
+                    <span style={{ width: 52, height: 52, border: '1px solid #cfd8e0', borderRadius: 6, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: '#c3ccd4', overflow: 'hidden', flex: 'none' }}>
                       {stamps[i] ? <img src={stamps[i] as string} alt="印影" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : '印影'}
                     </span>
                     <input className="field-input" value={signers[i]} onChange={(e) => setSigners(signers.map((s, k) => (k === i ? e.target.value : s)))} style={{ ...input, flex: 1 }} />
@@ -188,15 +188,15 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
                   </div>
                 ))}
                 <input ref={stampFile} type="file" accept="image/*" onChange={(e) => onStampFile(e.target.files?.[0])} style={{ display: 'none' }} />
-                <div style={{ fontSize: 11, color: '#9aa5b1' }}>PNG／JPEG（背景透過推奨）・1MBまで。印影は伺書の決裁欄に印刷されます。</div>
+                <div style={{ fontSize: 12, color: '#9aa5b1' }}>PNG／JPEG（背景透過推奨）・1MBまで。印影は伺書の決裁欄に印刷されます。</div>
               </div>
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 18 }}>
             {KINDS.map((x) => (
               <div key={x.key} style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: 10 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 6 }}>{x.label}</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '70px 1fr', gap: 6, alignItems: 'center', fontSize: 12 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>{x.label}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '70px 1fr', gap: 6, alignItems: 'center', fontSize: 14 }}>
                   <span>タイトル</span><input className="field-input" value={titles[x.key].title} onChange={(e) => setTitles({ ...titles, [x.key]: { ...titles[x.key], title: e.target.value } })} style={input} />
                   <span>メッセージ</span><input className="field-input" value={titles[x.key].msg} onChange={(e) => setTitles({ ...titles, [x.key]: { ...titles[x.key], msg: e.target.value } })} style={input} />
                 </div>

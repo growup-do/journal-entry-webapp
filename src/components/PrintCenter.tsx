@@ -66,7 +66,7 @@ const SCOPE_STYLE: Record<ScopeKind, { bg: string; fg: string; bd: string; hint:
 };
 export function ScopeBadge({ kind, label }: { kind: ScopeKind; label?: string }) {
   const c = SCOPE_STYLE[kind];
-  return <span title={c.hint} style={{ display: 'inline-block', fontSize: 10.5, fontWeight: 800, padding: '2px 8px', borderRadius: 8, background: c.bg, color: c.fg, border: '1px solid ' + c.bd, whiteSpace: 'nowrap', lineHeight: 1.5 }}>{label ?? kind}</span>;
+  return <span title={c.hint} style={{ display: 'inline-block', fontSize: 12, fontWeight: 800, padding: '2px 8px', borderRadius: 8, background: c.bg, color: c.fg, border: '1px solid ' + c.bd, whiteSpace: 'nowrap', lineHeight: 1.5 }}>{label ?? kind}</span>;
 }
 /** 影響範囲ごとのまとまり（見出しにバッジと説明を付けた枠） */
 export function ScopeBlock({ kind, title, desc, right, children, toggle }: { kind?: ScopeKind; title: string; desc?: ReactNode; right?: ReactNode; children: ReactNode; /** アコーディオン：見出し全体を押すと開閉。右端に「変更する ▾／閉じる ▴」を出す */ toggle?: { open: boolean; onToggle: () => void; openLabel?: string; closeLabel?: string } }) {
@@ -74,14 +74,14 @@ export function ScopeBlock({ kind, title, desc, right, children, toggle }: { kin
   const fg = kind ? SCOPE_STYLE[kind].fg : '#3d4a56';
   const head = (
     <>
-      {toggle && <span aria-hidden style={{ flex: 'none', width: 18, height: 18, borderRadius: 5, background: '#fff', border: '1px solid ' + c.bd, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: fg, transition: 'transform .18s', transform: toggle.open ? 'rotate(90deg)' : 'none' }}>▶</span>}
+      {toggle && <span aria-hidden style={{ flex: 'none', width: 18, height: 18, borderRadius: 5, background: '#fff', border: '1px solid ' + c.bd, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: fg, transition: 'transform .18s', transform: toggle.open ? 'rotate(90deg)' : 'none' }}>▶</span>}
       {kind && <ScopeBadge kind={kind} />}
-      <b style={{ fontSize: 13 }}>{title}</b>
-      {desc && <span style={{ fontSize: 11.5, color: '#5b6773' }}>{desc}</span>}
+      <b style={{ fontSize: 14 }}>{title}</b>
+      {desc && <span style={{ fontSize: 12, color: '#5b6773' }}>{desc}</span>}
       {(right || toggle) && (
         <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
           {right}
-          {toggle && <span data-scope-toggle aria-hidden style={{ ...btn(fg, !toggle.open, true), display: 'inline-flex', alignItems: 'center', gap: 4 }}>{toggle.open ? (toggle.closeLabel ?? '閉じる') : (toggle.openLabel ?? '変更する')}<span style={{ fontSize: 10 }}>{toggle.open ? '▴' : '▾'}</span></span>}
+          {toggle && <span data-scope-toggle aria-hidden style={{ ...btn(fg, !toggle.open, true), display: 'inline-flex', alignItems: 'center', gap: 4 }}>{toggle.open ? (toggle.closeLabel ?? '閉じる') : (toggle.openLabel ?? '変更する')}<span style={{ fontSize: 12 }}>{toggle.open ? '▴' : '▾'}</span></span>}
         </span>
       )}
     </>
@@ -95,8 +95,8 @@ export function ScopeBlock({ kind, title, desc, right, children, toggle }: { kin
       ) : (
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', background: c.bg, flexWrap: 'wrap' }}>
         {head}
-        <b style={{ fontSize: 13 }}>{title}</b>
-        {desc && <span style={{ fontSize: 11.5, color: '#5b6773' }}>{desc}</span>}
+        <b style={{ fontSize: 14 }}>{title}</b>
+        {desc && <span style={{ fontSize: 12, color: '#5b6773' }}>{desc}</span>}
       </div>
       )}
       <div style={{ padding: 12 }}>{children}</div>
@@ -251,8 +251,8 @@ export function PrintFlow({ report, accent, data, onPreview, onClose, lockReport
     setExp(spec);
   };
 
-  const chip = (on: boolean): CSSProperties => ({ minWidth: 30, height: 26, padding: '0 8px', borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', border: '1px solid ' + (on ? accent : '#d3dbe3') });
-  const radio = (on: boolean): CSSProperties => ({ display: 'flex', gap: 6, alignItems: 'center', padding: '5px 8px', borderRadius: 8, background: on ? '#eef2f6' : 'transparent', fontSize: 12.5, cursor: 'pointer' });
+  const chip = (on: boolean): CSSProperties => ({ minWidth: 30, height: 26, padding: '0 8px', borderRadius: 6, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', border: '1px solid ' + (on ? accent : '#d3dbe3') });
+  const radio = (on: boolean): CSSProperties => ({ display: 'flex', gap: 6, alignItems: 'center', padding: '5px 8px', borderRadius: 8, background: on ? '#eef2f6' : 'transparent', fontSize: 14, cursor: 'pointer' });
   const summary = [
     `${report.name}`,
     `${p.from}〜${p.to}`,
@@ -271,10 +271,10 @@ export function PrintFlow({ report, accent, data, onPreview, onClose, lockReport
           return (
             <button key={label} type="button" onClick={() => setStep(i)} aria-current={on ? 'step' : undefined} style={{ flex: '1 1 120px', minWidth: 0, textAlign: 'left', padding: '8px 10px 9px', border: 'none', borderBottom: '3px solid ' + (on ? accent : done ? '#b9c6d2' : '#e2e8ee'), background: on ? '#f6f8fa' : 'transparent', cursor: 'pointer', fontFamily: 'inherit' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 20, height: 20, borderRadius: '50%', background: on ? accent : done ? '#8a97a5' : '#e2e8ee', color: on || done ? '#fff' : '#8290a0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, flex: 'none' }}>{i + 1}</span>
-                <span style={{ fontSize: 12.5, fontWeight: 700, color: on ? '#22303c' : '#5b6773', whiteSpace: 'nowrap' }}>{label}</span>
+                <span style={{ width: 20, height: 20, borderRadius: '50%', background: on ? accent : done ? '#8a97a5' : '#e2e8ee', color: on || done ? '#fff' : '#8290a0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, flex: 'none' }}>{i + 1}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: on ? '#22303c' : '#5b6773', whiteSpace: 'nowrap' }}>{label}</span>
               </span>
-              <span style={{ display: 'block', fontSize: 10.5, color: '#8290a0', marginTop: 3, paddingLeft: 26, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minHeight: 15 }}>{summary[i]}</span>
+              <span style={{ display: 'block', fontSize: 12, color: '#8290a0', marginTop: 3, paddingLeft: 26, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minHeight: 15 }}>{summary[i]}</span>
             </button>
           );
         })}
@@ -285,8 +285,8 @@ export function PrintFlow({ report, accent, data, onPreview, onClose, lockReport
           lockReport || !onReportChange ? (
             <div style={{ display: 'grid', gap: 10 }}>
               <div style={{ ...card, padding: '12px 14px', borderColor: accent, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ minWidth: 0, flex: 1 }}><div style={{ fontSize: 14, fontWeight: 700 }}>{report.name}</div><div style={{ fontSize: 11.5, color: '#8290a0', marginTop: 2 }}>{report.cat}</div></div>
-                <span style={{ fontSize: 11.5, fontWeight: 700, color: accent }}>印刷する帳票</span>
+                <div style={{ minWidth: 0, flex: 1 }}><div style={{ fontSize: 14, fontWeight: 700 }}>{report.name}</div><div style={{ fontSize: 12, color: '#8290a0', marginTop: 2 }}>{report.cat}</div></div>
+                <span style={{ fontSize: 12, fontWeight: 700, color: accent }}>印刷する帳票</span>
               </div>
               <Notice>表示中の画面の帳票を印刷します。ほかの帳票は、それぞれの帳票の画面にある「印刷」から印刷します。</Notice>
             </div>
@@ -296,10 +296,10 @@ export function PrintFlow({ report, accent, data, onPreview, onClose, lockReport
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 6 }}>
                 {(REPORTS.some((r) => r.cat === report.cat) ? REPORTS.filter((r) => r.cat === report.cat) : [report]).map((r) => {
                   const on = r.id === report.id;
-                  return <label key={r.id} style={{ ...card, padding: '9px 12px', display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer', borderColor: on ? accent : '#e2e8ee', background: on ? '#f6f9fc' : '#fff' }}><input type="radio" checked={on} onChange={() => onReportChange(r)} style={{ marginTop: 3 }} /><span style={{ minWidth: 0 }}><span style={{ display: 'block', fontSize: 13, fontWeight: 700 }}>{r.name}</span>{r.note && <span style={{ display: 'block', fontSize: 11, color: '#8290a0' }}>{r.note}</span>}</span></label>;
+                  return <label key={r.id} style={{ ...card, padding: '9px 12px', display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer', borderColor: on ? accent : '#e2e8ee', background: on ? '#f6f9fc' : '#fff' }}><input type="radio" checked={on} onChange={() => onReportChange(r)} style={{ marginTop: 3 }} /><span style={{ minWidth: 0 }}><span style={{ display: 'block', fontSize: 14, fontWeight: 700 }}>{r.name}</span>{r.note && <span style={{ display: 'block', fontSize: 12, color: '#8290a0' }}>{r.note}</span>}</span></label>;
                 })}
               </div>
-              <div style={{ fontSize: 11.5, color: '#8290a0' }}>ほかの分類の帳票は「{displayName('印刷センター')}」の一覧、または各帳票の画面から選びます。</div>
+              <div style={{ fontSize: 12, color: '#8290a0' }}>ほかの分類の帳票は「{displayName('印刷センター')}」の一覧、または各帳票の画面から選びます。</div>
             </div>
           )
         )}
@@ -309,33 +309,33 @@ export function PrintFlow({ report, accent, data, onPreview, onClose, lockReport
             <div>
               <span style={lbl}>{report.annual ? '期間（年次の帳票のため、会計年度の期首〜期末）' : '期間（月のボタンでも指定できます。複数選ぶと最初の月〜最後の月）'}</span>
               {!report.annual && <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>{FISCAL_MONTHS.map((m) => <button key={m} type="button" onClick={() => toggleMonth(m)} style={chip(p.months.includes(m))}>{m}</button>)}</div>}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}><input className="field-input" value={p.from} onChange={(e) => set({ from: e.target.value })} style={{ ...input, width: 170 }} aria-label="開始日" /><span>〜</span><input className="field-input" value={p.to} onChange={(e) => set({ to: e.target.value })} style={{ ...input, width: 170 }} aria-label="終了日" /><span style={{ fontSize: 11.5, color: '#8290a0' }}>会計年度：{s.fiscalYear}</span></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}><input className="field-input" value={p.from} onChange={(e) => set({ from: e.target.value })} style={{ ...input, width: 170 }} aria-label="開始日" /><span>〜</span><input className="field-input" value={p.to} onChange={(e) => set({ to: e.target.value })} style={{ ...input, width: 170 }} aria-label="終了日" /><span style={{ fontSize: 12, color: '#8290a0' }}>会計年度：{s.fiscalYear}</span></div>
             </div>
             <div>
               <span style={lbl}>区分</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 13 }}>
-                <b>{s.division}</b><span style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#eef2f6', color: '#3d4a56' }}>{kind}で起動中</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 14 }}>
+                <b>{s.division}</b><span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#eef2f6', color: '#3d4a56' }}>{kind}で起動中</span>
                 {kind !== '入力区分' && <span style={{ display: 'flex', gap: 4 }}>{['起動中の区分', '構成する区分ごと'].map((o) => <label key={o} style={radio(p.target === o)}><input type="radio" checked={p.target === o} onChange={() => set({ target: o })} />{o === '起動中の区分' ? '合計で印刷' : '構成する区分ごとに印刷'}</label>)}</span>}
               </div>
-              <div style={{ fontSize: 11.5, color: '#8290a0', marginTop: 4 }}>印刷する区分を変える場合は、画面上部の区分の切替で区分を選び直します。</div>
+              <div style={{ fontSize: 12, color: '#8290a0', marginTop: 4 }}>印刷する区分を変える場合は、画面上部の区分の切替で区分を選び直します。</div>
             </div>
             {report.cat === '決算書' && (
               <div data-forms-in-use>
                 <span style={lbl}>印刷する様式（「共通の印刷設定 › 帳票選択」で使用にした様式）</span>
-                <div style={{ fontSize: 12.5, lineHeight: 1.8 }}>{FORM_GROUPS.flatMap((g) => g.items).filter((it) => formEnabled(s.print.forms, it.key, s.tree)).map((it) => it.name).join('／')}</div>
+                <div style={{ fontSize: 14, lineHeight: 1.8 }}>{FORM_GROUPS.flatMap((g) => g.items).filter((it) => formEnabled(s.print.forms, it.key, s.tree)).map((it) => it.name).join('／')}</div>
               </div>
             )}
             {(report.cat === '仕訳日記帳' || report.cat === '元帳') && (
               <div>
                 <span style={lbl}>チェック・付箋で絞り込む（選ばなければ全件）</span>
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', fontSize: 12.5 }}>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', fontSize: 14 }}>
                   <label style={{ display: 'flex', gap: 5, alignItems: 'center' }}><input type="checkbox" checked={p.checks.check} onChange={() => set({ checks: { ...p.checks, check: !p.checks.check } })} />チェック</label>
                   {([['red', '赤', '#c0392b'], ['blue', '青', '#2c5f9e'], ['yellow', '黄', '#b7791f'], ['green', '緑', '#1f7a52']] as const).map(([k, l, c]) => <label key={k} style={{ display: 'flex', gap: 5, alignItems: 'center', color: c }}><input type="checkbox" checked={p.checks[k]} onChange={() => set({ checks: { ...p.checks, [k]: !p.checks[k] } })} />付箋 {fusenLabel(l)}</label>)}
                 </div>
               </div>
             )}
             {report.scope && (
-              <div><span style={lbl}>科目の範囲</span><div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>{['全て', '科目指定'].map((o) => <label key={o} style={radio(p.scope === o)}><input type="radio" checked={p.scope === o} onChange={() => set({ scope: o })} />{o}</label>)}{p.scope === '科目指定' && <span style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12.5 }}><input className="field-input" placeholder="開始科目" style={{ ...input, width: 150 }} /><span>〜</span><input className="field-input" placeholder="終了科目" style={{ ...input, width: 150 }} /></span>}</div></div>
+              <div><span style={lbl}>科目の範囲</span><div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>{['全て', '科目指定'].map((o) => <label key={o} style={radio(p.scope === o)}><input type="radio" checked={p.scope === o} onChange={() => set({ scope: o })} />{o}</label>)}{p.scope === '科目指定' && <span style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 14 }}><input className="field-input" placeholder="開始科目" style={{ ...input, width: 150 }} /><span>〜</span><input className="field-input" placeholder="終了科目" style={{ ...input, width: 150 }} /></span>}</div></div>
             )}
             {usesDepth(report) && (
               <div><span style={lbl}>範囲指定の種類</span><div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>{['範囲指定の合計を印刷', '範囲指定の月を連続で印刷'].map((o) => <label key={o} style={radio(p.range === o)}><input type="radio" checked={p.range === o} onChange={() => set({ range: o })} />{o}</label>)}</div></div>
@@ -350,7 +350,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose, lockReport
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
                   <div style={{ display: 'grid', gap: 4, alignContent: 'start' }}>
                     <Toggle on={p.zeroHide} onChange={(v) => set({ zeroHide: v })} accent={accent} label="0データを表示しない" />
-                    <span style={{ fontSize: 11.5, color: '#8290a0', paddingLeft: 46 }}>金額がすべて 0 円の行を印刷・プレビューから省きます。</span>
+                    <span style={{ fontSize: 12, color: '#8290a0', paddingLeft: 46 }}>金額がすべて 0 円の行を印刷・プレビューから省きます。</span>
                   </div>
                   <Field label="タイトル（印刷様式）"><input className="field-input" value={p.title} onChange={(e) => set({ title: e.target.value })} style={input} /></Field>
                   {usesDepth(report) && (
@@ -368,16 +368,16 @@ export function PrintFlow({ report, accent, data, onPreview, onClose, lockReport
                   <div>
                     <span style={lbl}>この帳票の印刷項目</span>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '4px 12px' }}>
-                      {detailItems.map((d) => <label key={d} style={{ display: 'flex', gap: 6, alignItems: 'flex-start', fontSize: 12, cursor: 'pointer' }}><input type="checkbox" checked={!!p.detail[d]} onChange={() => set({ detail: { ...p.detail, [d]: !p.detail[d] } })} style={{ marginTop: 3 }} /><span>{d}</span></label>)}
+                      {detailItems.map((d) => <label key={d} style={{ display: 'flex', gap: 6, alignItems: 'flex-start', fontSize: 14, cursor: 'pointer' }}><input type="checkbox" checked={!!p.detail[d]} onChange={() => set({ detail: { ...p.detail, [d]: !p.detail[d] } })} style={{ marginTop: 3 }} /><span>{d}</span></label>)}
                     </div>
                   </div>
                 )}
                 {usesRemark(report) && (
                   <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: 10, display: 'grid', gap: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}><b style={{ fontSize: 12.5 }}>備考・摘要</b><span style={{ fontSize: 10.5, fontWeight: 800, padding: '2px 8px', borderRadius: 8, background: '#eef2f6', color: '#3d4a56' }}>単位ごとに保持</span><span style={{ fontSize: 11.5, color: '#8290a0' }}>法人・拠点・サービス区分で内容が異なる場合があるため、単位ごとに別々に保存します。</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}><b style={{ fontSize: 14 }}>備考・摘要</b><span style={{ fontSize: 12, fontWeight: 800, padding: '2px 8px', borderRadius: 8, background: '#eef2f6', color: '#3d4a56' }}>単位ごとに保持</span><span style={{ fontSize: 12, color: '#8290a0' }}>法人・拠点・サービス区分で内容が異なる場合があるため、単位ごとに別々に保存します。</span></div>
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>{REMARK_UNITS.map((u) => <button key={u} type="button" onClick={() => setUnit(u)} style={btn(unit === u ? accent : '#5b6773', unit === u, true)}>{u}{u === myUnit ? '（今回の印刷で使用）' : ''}</button>)}</div>
                     <textarea value={pr.unitRemarks[unit] ?? ''} onChange={(e) => setCommon({ unitRemarks: { ...pr.unitRemarks, [unit]: e.target.value } })} rows={3} placeholder={`${unit}の備考欄に印刷する文字`} style={{ ...input, resize: 'vertical', lineHeight: 1.7 }} />
-                    {unit !== myUnit && <div style={{ fontSize: 11.5, color: '#8a5a00' }}>起動中の区分（{s.division}）の印刷では「{myUnit}」の備考を使います。ここで編集した内容は「{unit}」を印刷するときに使われます。</div>}
+                    {unit !== myUnit && <div style={{ fontSize: 12, color: '#8a5a00' }}>起動中の区分（{s.division}）の印刷では「{myUnit}」の備考を使います。ここで編集した内容は「{unit}」を印刷するときに使われます。</div>}
                   </div>
                 )}
               </div>
@@ -385,7 +385,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose, lockReport
 
             <ScopeBlock kind="全帳票共通" title="全帳票共通の設定" desc={commonOpen ? 'すべての帳票の印刷に反映されます。' : '見出しを押すと開き、ここで変更できます。'} toggle={{ open: commonOpen, onToggle: () => setCommonOpen((o) => !o) }}>
               {!commonOpen ? (
-                <div style={{ display: 'flex', gap: '4px 16px', flexWrap: 'wrap', fontSize: 12, color: '#48565f' }}>
+                <div style={{ display: 'flex', gap: '4px 16px', flexWrap: 'wrap', fontSize: 14, color: '#48565f' }}>
                   <span>印刷位置：{pr.depth}</span><span>行の間隔：{pr.lineGap}{pr.lineGap === '空きなし' ? '' : `（${pr.gapSize}）`}</span><span>位置調整：横 {pr.offsetX}mm／縦 {pr.offsetY}mm</span><span>フォント：{pr.fontName}</span><span>捺印欄：{pr.items.stamp ? pr.stamps.filter(Boolean).join('・') || '（氏名なし）' : '印刷しない'}</span><span>ページ番号：{pr.items.page ? `印刷する（${pr.pageStart} から）` : '印刷しない'}</span>
                   {changed > 0 && <span style={{ color: '#6b3fa0', fontWeight: 700 }}>{changed} 項目を変更済み（全帳票に反映）</span>}
                 </div>
@@ -403,28 +403,28 @@ export function PrintFlow({ report, accent, data, onPreview, onClose, lockReport
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12, alignItems: 'start' }}>
                     <div style={{ display: 'grid', gap: 6 }}>
                       <Toggle on={!!pr.items.stamp} onChange={(v) => setCommon({ items: { ...pr.items, stamp: v } })} accent="#6b3fa0" label="捺印欄を印刷する" />
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4, opacity: pr.items.stamp ? 1 : 0.5 }}>{pr.stamps.map((v, i) => <input key={i} className="field-input" value={v} disabled={!pr.items.stamp} onChange={(e) => setCommon({ stamps: pr.stamps.map((x, k) => (k === i ? e.target.value : x)) })} placeholder={`捺印${i + 1}`} style={{ ...input, padding: '5px 8px', fontSize: 12 }} />)}</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4, opacity: pr.items.stamp ? 1 : 0.5 }}>{pr.stamps.map((v, i) => <input key={i} className="field-input" value={v} disabled={!pr.items.stamp} onChange={(e) => setCommon({ stamps: pr.stamps.map((x, k) => (k === i ? e.target.value : x)) })} placeholder={`捺印${i + 1}`} style={{ ...input, padding: '5px 8px', fontSize: 14 }} />)}</div>
                     </div>
                     <div style={{ display: 'grid', gap: 6 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}><Toggle on={!!pr.items.page} onChange={(v) => setCommon({ items: { ...pr.items, page: v } })} accent="#6b3fa0" label="ページ番号を印刷する" /><label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#5b6773' }}>開始番号<input className="field-input" value={String(pr.pageStart)} disabled={!pr.items.page} onChange={(e) => setCommon({ pageStart: parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 1 })} inputMode="numeric" style={{ ...numInput, width: 64, padding: '4px 8px' }} /></label></div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}><Toggle on={!!pr.items.page} onChange={(v) => setCommon({ items: { ...pr.items, page: v } })} accent="#6b3fa0" label="ページ番号を印刷する" /><label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: '#5b6773' }}>開始番号<input className="field-input" value={String(pr.pageStart)} disabled={!pr.items.page} onChange={(e) => setCommon({ pageStart: parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 1 })} inputMode="numeric" style={{ ...numInput, width: 64, padding: '4px 8px' }} /></label></div>
                       <Toggle on={!!pr.items.date} onChange={(v) => setCommon({ items: { ...pr.items, date: v } })} accent="#6b3fa0" label="印刷時の日付を印刷する" />
                     </div>
                   </div>
                   <div style={{ borderTop: '1px solid #e8e0f4', paddingTop: 10, display: 'grid', gap: 10 }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: '#6b3fa0', letterSpacing: '.04em' }}>印刷項目の切替え</div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: '#6b3fa0', letterSpacing: '.04em' }}>印刷項目の切替え</div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '6px 16px' }}>
                       {PRINT_ITEMS.filter(([k]) => !['stamp', 'page', 'date'].includes(k)).map(([k, label]) => <Toggle key={k} on={!!pr.items[k]} onChange={(v) => setCommon({ items: { ...pr.items, [k]: v } })} accent="#6b3fa0" label={k === 'zero' ? '0データを印刷しない（各帳票の初期値）' : label} />)}
                     </div>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: '#6b3fa0', letterSpacing: '.04em' }}>内訳表</div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: '#6b3fa0', letterSpacing: '.04em' }}>内訳表</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                       <Toggle on={pr.twoLineNames} onChange={(v) => setCommon({ twoLineNames: v })} accent="#6b3fa0" label="項目名を二行で印刷する" />
                       <Toggle on={pr.autoFontHeader} onChange={(v) => setCommon({ autoFontHeader: v })} accent="#6b3fa0" label="項目名のフォントサイズを自動調整" />
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#5b6773' }}>1ページの区分数<select value={String(pr.perPage)} onChange={(e) => setCommon({ perPage: Number(e.target.value) })} style={{ ...input, width: 70, padding: '4px 6px' }}>{[4, 5, 6, 7, 8].map((o) => <option key={o}>{o}</option>)}</select></label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: '#5b6773' }}>1ページの区分数<select value={String(pr.perPage)} onChange={(e) => setCommon({ perPage: Number(e.target.value) })} style={{ ...input, width: 70, padding: '4px 6px' }}>{[4, 5, 6, 7, 8].map((o) => <option key={o}>{o}</option>)}</select></label>
                     </div>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: '#6b3fa0', letterSpacing: '.04em' }}>帳票の色・印字 <span style={{ fontWeight: 500, color: '#8290a0', marginLeft: 6 }}>動作環境から移した項目</span></div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: '#6b3fa0', letterSpacing: '.04em' }}>帳票の色・印字 <span style={{ fontWeight: 500, color: '#8290a0', marginLeft: 6 }}>動作環境から移した項目</span></div>
                     <ReportStyleSettings accent="#6b3fa0" compact />
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 11.5, color: '#8290a0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 12, color: '#8290a0' }}>
                     <span>同じ内容は「共通の印刷設定」画面でも変更できます。</span>
                     {changed > 0 && <button type="button" onClick={() => setSession({ print: { ...snap, unitRemarks: pr.unitRemarks } })} style={{ ...btn('#5b6773', false, true), marginLeft: 'auto' }}>開いたときの設定に戻す（{changed} 項目）</button>}
                   </div>
@@ -444,10 +444,10 @@ export function PrintFlow({ report, accent, data, onPreview, onClose, lockReport
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
               {DESTS.map((d) => {
                 const on = p.output === d.out;
-                return <label key={d.out} style={{ ...card, padding: '12px 14px', cursor: 'pointer', borderColor: on ? accent : '#e2e8ee', background: on ? '#f6f9fc' : '#fff', display: 'flex', gap: 8, alignItems: 'flex-start' }}><input type="radio" name="print-dest" checked={on} onChange={() => set({ output: d.out })} style={{ marginTop: 3 }} /><span><span style={{ display: 'block', fontSize: 13.5, fontWeight: 700 }}>{d.label}</span><span style={{ display: 'block', fontSize: 11.5, color: '#8290a0', marginTop: 2 }}>{d.desc}</span></span></label>;
+                return <label key={d.out} style={{ ...card, padding: '12px 14px', cursor: 'pointer', borderColor: on ? accent : '#e2e8ee', background: on ? '#f6f9fc' : '#fff', display: 'flex', gap: 8, alignItems: 'flex-start' }}><input type="radio" name="print-dest" checked={on} onChange={() => set({ output: d.out })} style={{ marginTop: 3 }} /><span><span style={{ display: 'block', fontSize: 14, fontWeight: 700 }}>{d.label}</span><span style={{ display: 'block', fontSize: 12, color: '#8290a0', marginTop: 2 }}>{d.desc}</span></span></label>;
               })}
             </div>
-            <div style={{ fontSize: 11.5, color: '#8290a0' }}>印刷前に内容を確かめるときは、右下の「プレビュー」を使います（どの手順からでも開けます）。</div>
+            <div style={{ fontSize: 12, color: '#8290a0' }}>印刷前に内容を確かめるときは、右下の「プレビュー」を使います（どの手順からでも開けます）。</div>
           </div>
         )}
 
@@ -463,7 +463,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose, lockReport
                   ['全帳票共通の設定', `${pr.depth}・${pr.lineGap}・${pr.fontName}${changed ? `（今回 ${changed} 項目を変更）` : ''}`, 2],
                   ['出力先', dest.label, 3],
                 ] as [string, string, number][]).map(([k, v, to]) => (
-                  <tr key={k}><td style={{ ...TD, width: 170, fontSize: 12, fontWeight: 700, color: '#5b6773' }}>{k}</td><td style={TD}>{v}</td><td style={{ ...TD, width: 60, textAlign: 'right' }}><button type="button" onClick={() => setStep(to)} style={{ border: 'none', background: 'transparent', color: accent, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>変更</button></td></tr>
+                  <tr key={k}><td style={{ ...TD, width: 170, fontSize: 14, fontWeight: 700, color: '#5b6773' }}>{k}</td><td style={TD}>{v}</td><td style={{ ...TD, width: 60, textAlign: 'right' }}><button type="button" onClick={() => setStep(to)} style={{ border: 'none', background: 'transparent', color: accent, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>変更</button></td></tr>
                 ))}
               </tbody>
             </table>
@@ -492,14 +492,14 @@ export function ReportStyleSettings({ accent, compact }: { accent: string; compa
   const s = useSession();
   const e = s.env;
   const set = (patch: Partial<EnvSettings>) => setSession({ env: { ...e, ...patch } });
-  const colorLbl: CSSProperties = { fontSize: 12, display: 'flex', gap: 6, alignItems: 'center' };
+  const colorLbl: CSSProperties = { fontSize: 14, display: 'flex', gap: 6, alignItems: 'center' };
   return (
     <div data-report-style style={{ display: 'grid', gap: compact ? 8 : 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <Toggle on={e.colorReports} onChange={(v) => set({ colorReports: v })} accent={accent} label="カラー帳票を有効にする" />
         <label style={colorLbl}>罫線色<input type="color" value={e.lineColor} onChange={(ev) => set({ lineColor: ev.target.value })} disabled={!e.colorReports} /></label>
         <label style={colorLbl}>網掛け色<input type="color" value={e.shadeColor} onChange={(ev) => set({ shadeColor: ev.target.value })} disabled={!e.colorReports} /></label>
-        <span style={{ fontSize: 11.5, color: '#7a8794' }}>決算書・予算書・試算表・仕訳日記帳の罫線と網掛け。元帳・伝票は帳票ごとの固定色</span>
+        <span style={{ fontSize: 12, color: '#7a8794' }}>決算書・予算書・試算表・仕訳日記帳の罫線と網掛け。元帳・伝票は帳票ごとの固定色</span>
       </div>
       <Toggle on={e.printSpeed} onChange={(v) => set({ printSpeed: v })} accent={accent} label="帳票印刷の速度を重視する（大量ページの作成を優先）" />
       <Toggle on={e.onePageRow} onChange={(v) => set({ onePageRow: v })} accent={accent} label="1行のみの改ページを抑制する（1行だけが次ページに送られないようにする）" />
@@ -520,9 +520,9 @@ export function EnvPrintSummary({ env, division }: { env: EnvSettings; division:
   return (
     <div style={{ display: 'grid', gap: 8 }}>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <tbody>{rows.map(([k, v, scope]) => <tr key={k}><td style={{ ...TD, width: 150, fontSize: 12, fontWeight: 700, color: '#5b6773', padding: '6px 8px' }}>{k}</td><td style={{ ...TD, fontSize: 12.5, padding: '6px 8px' }}>{v}</td><td style={{ ...TD, width: 190, padding: '6px 8px', textAlign: 'right' }}><ScopeBadge kind={scope} label={scope === '区分ごと' ? `区分ごと（${division}）` : undefined} /></td></tr>)}</tbody>
+        <tbody>{rows.map(([k, v, scope]) => <tr key={k}><td style={{ ...TD, width: 150, fontSize: 14, fontWeight: 700, color: '#5b6773', padding: '6px 8px' }}>{k}</td><td style={{ ...TD, fontSize: 14, padding: '6px 8px' }}>{v}</td><td style={{ ...TD, width: 190, padding: '6px 8px', textAlign: 'right' }}><ScopeBadge kind={scope} label={scope === '区分ごと' ? `区分ごと（${division}）` : undefined} /></td></tr>)}</tbody>
       </table>
-      <div style={{ fontSize: 11.5, color: '#8290a0', lineHeight: 1.7 }}>変更は「各種設定 ＞ {displayName('環境設定')}」で行います。「全区分共通」はすべての区分の印刷に、「区分ごと」は起動中の区分の印刷だけに反映されます。</div>
+      <div style={{ fontSize: 12, color: '#8290a0', lineHeight: 1.7 }}>変更は「各種設定 ＞ {displayName('環境設定')}」で行います。「全区分共通」はすべての区分の印刷に、「区分ごと」は起動中の区分の印刷だけに反映されます。</div>
     </div>
   );
 }
@@ -534,7 +534,7 @@ export function PrintDialog({ open, onClose, report, accent, onPreview, data, ke
   const cur = picked ?? report;
   if (!cur) return null;
   return (
-    <Modal open={open} onClose={onClose} width={880} title={<>{cur.name} の印刷 <span style={{ fontSize: 11.5, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>{cur.cat}</span></>}>
+    <Modal open={open} onClose={onClose} width={880} title={<>{cur.name} の印刷 <span style={{ fontSize: 12, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>{cur.cat}</span></>}>
       <PrintFlow key={cur.id} report={cur} accent={accent} data={cur.id === report?.id ? data : undefined} onClose={onClose} lockReport={lockReport} onReportChange={setPicked} onPreview={(title, opts) => { onPreview(title, opts); if (!keepOpenOnPreview) onClose(); }} />
     </Modal>
   );
@@ -577,12 +577,12 @@ export function PreviewModal({ open, onClose, title, opts, pages = 3, accent, ch
     toast.show(runExport({ kind, title, meta: opts ? `（自）${opts.from}　（至）${opts.to}` : undefined, ...table }));
   };
   return (
-    <Modal open={open} onClose={onClose} width={900} title={<>印刷プレビュー <span style={{ fontSize: 12, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>{title}</span></>}>
+    <Modal open={open} onClose={onClose} width={900} title={<>印刷プレビュー <span style={{ fontSize: 14, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>{title}</span></>}>
       <ToastView msg={toast.msg} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderBottom: '1px solid #eef2f5', background: '#f8fafc', flexWrap: 'wrap' }}>
         <button type="button" onClick={() => out('print')} style={btn(accent, true, true)}>印刷</button>
         <button type="button" onClick={() => setPage((x) => Math.max(1, x - 1))} style={btn('#5b6773', false, true)}>前ページ</button>
-        <span style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>{Math.min(page, pageCount)} / {pageCount}</span>
+        <span style={{ fontSize: 14, fontVariantNumeric: 'tabular-nums' }}>{Math.min(page, pageCount)} / {pageCount}</span>
         <button type="button" onClick={() => setPage((x) => Math.min(pageCount, x + 1))} style={btn('#5b6773', false, true)}>次ページ</button>
         <button type="button" onClick={() => setZoom((z) => Math.min(1.6, z + 0.2))} style={btn('#5b6773', false, true)}>拡大</button>
         <button type="button" onClick={() => setZoom((z) => Math.max(0.6, z - 0.2))} style={btn('#5b6773', false, true)}>縮小</button>
@@ -593,19 +593,19 @@ export function PreviewModal({ open, onClose, title, opts, pages = 3, accent, ch
         </span>
       </div>
       <div style={{ background: '#5f6b77', padding: 20, maxHeight: '70vh', overflow: 'auto' }}>
-        <div style={{ width: 640 * zoom, minHeight: 880 * zoom, margin: '0 auto', background: '#fff', boxShadow: '0 10px 30px rgba(0,0,0,.35)', padding: 36 * zoom, fontSize: 11 * zoom, color: '#22303c', fontFamily: "'Noto Sans JP', serif", transformOrigin: 'top center' }}>
-          {s.print.items.corp && <div style={{ fontSize: 10 * zoom, color: '#5b6773' }}>{s.env.hideCorpName ? '' : '社会福祉法人 チャイルド保育園　'}{s.division}</div>}
-          <div style={{ textAlign: 'center', fontSize: 15 * zoom, fontWeight: 700, margin: `${8 * zoom}px 0 ${4 * zoom}px`, letterSpacing: '.1em' }}>{title}</div>
-          {opts && <div style={{ textAlign: 'center', fontSize: 10 * zoom, color: '#5b6773', marginBottom: 12 * zoom }}>（自）{opts.from}　（至）{opts.to}　　単位：円</div>}
+        <div style={{ width: 640 * zoom, minHeight: 880 * zoom, margin: '0 auto', background: '#fff', boxShadow: '0 10px 30px rgba(0,0,0,.35)', padding: 36 * zoom, fontSize: 12 * zoom, color: '#22303c', fontFamily: "'Noto Sans JP', serif", transformOrigin: 'top center' }}>
+          {s.print.items.corp && <div style={{ fontSize: 12 * zoom, color: '#5b6773' }}>{s.env.hideCorpName ? '' : '社会福祉法人 チャイルド保育園　'}{s.division}</div>}
+          <div style={{ textAlign: 'center', fontSize: 16 * zoom, fontWeight: 700, margin: `${8 * zoom}px 0 ${4 * zoom}px`, letterSpacing: '.1em' }}>{title}</div>
+          {opts && <div style={{ textAlign: 'center', fontSize: 12 * zoom, color: '#5b6773', marginBottom: 12 * zoom }}>（自）{opts.from}　（至）{opts.to}　　単位：円</div>}
           {children ?? (shown ? <DataPage zoom={zoom} data={shown.data} shade={shadeBg} line={line} env={s.env} /> : <DataPage zoom={zoom} data={{ header: SAMPLE_HEADER, rows: sampleShown }} shade={shadeBg} line={line} env={s.env} groupRows />)}
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 * zoom, fontSize: 9 * zoom, color: '#7a8794' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 * zoom, fontSize: 12 * zoom, color: '#7a8794' }}>
             <span>{s.print.items.date ? `印刷日 2026/09/10` : ''}</span>
             {s.print.items.stamp && <span style={{ display: 'flex', gap: 4 }}>{s.print.stamps.filter(Boolean).map((n) => <span key={n} style={{ width: 44 * zoom, height: 44 * zoom, border: '1px solid #9aa5b1', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{n}</span>)}</span>}
             <span>{s.print.items.page ? `- ${(s.print.pageStart || 1) + Math.min(page, pageCount) - 1} -` : ''}</span>
           </div>
         </div>
       </div>
-      <div style={{ padding: '8px 16px', fontSize: 11.5, color: '#9aa5b1', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+      <div style={{ padding: '8px 16px', fontSize: 12, color: '#9aa5b1', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         {!children && <span style={{ color: '#5b6773' }}>金額の書式：桁区切り {s.env.thousandsSep}・負数 {formatAmount(-1234, s.env)}（{s.env.negativeColor}）　／　0円の行：{zero ? `表示しない${dropped ? `（${dropped} 行を省略）` : ''}` : '表示する'}</span>}
         <span>レイアウトはサンプルです。</span>
       </div>
@@ -626,7 +626,7 @@ function samplePageRows(page: number): (string | number)[][] {
 /** 表データを帳票風に描画（金額は動作環境の書式、負数は指定色） */
 function DataPage({ zoom, data, shade, line, env, groupRows }: { zoom: number; data: TableData; shade: string; line: string; env: EnvSettings; groupRows?: boolean }) {
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 * zoom }}>
+    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 * zoom }}>
       <thead><tr>{data.header.map((h, i) => <th key={i} style={{ border: '1px solid ' + line, padding: 3 * zoom, background: shade, textAlign: typeof data.rows[0]?.[i] === 'number' ? 'right' : 'left', fontWeight: 700 }}>{h}</th>)}</tr></thead>
       <tbody>{data.rows.map((r, i) => {
         const group = groupRows && r[0] === '流動資産';
@@ -661,7 +661,7 @@ export function PrintCenterPage({ variant, accent }: { variant: 'form' | 'sheet'
     if (bOutput === OUTPUTS[1]) { setPreview({ title, batch: true, opts: { from: '令和8年8月1日', to: '令和8年8月31日', output: bOutput } }); return; }
     setExp({ kind: outputKind(bOutput) ?? 'print', title, fileName: `まとめて印刷_令和8年8月`, meta: `令和8年8月1日〜8月31日　対象：${picked.map((r) => r.name).join('、')}`, ...batchData() });
   };
-  const seg = (on: boolean): CSSProperties => ({ position: 'relative', zIndex: 1, padding: '8px 18px', border: 'none', borderRadius: 8, background: on ? accent : 'transparent', color: on ? '#fff' : '#3d4a56', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
+  const seg = (on: boolean): CSSProperties => ({ position: 'relative', zIndex: 1, padding: '8px 18px', border: 'none', borderRadius: 8, background: on ? accent : 'transparent', color: on ? '#fff' : '#3d4a56', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
   return (
     <SettingsShell variant={variant} title={displayName('印刷センター')} badge="印刷" draft={false} desc="帳票の一覧です。帳票を選ぶと「基本条件 → 詳細設定 → 出力先 → 印刷／プレビュー」を1つのダイアログで指定できます。複数の帳票は「まとめて印刷」に切り替えると、一度に出力できます。">
       <ToastView msg={toast.msg} />
@@ -673,15 +673,15 @@ export function PrintCenterPage({ variant, accent }: { variant: 'form' | 'sheet'
         </div>
         {batch ? (
           <>
-            <span style={{ fontSize: 12.5, color: '#3d4a56' }}>選択中 <b style={{ fontSize: 15, color: accent, fontVariantNumeric: 'tabular-nums' }}>{picked.length}</b> 帳票</span>
+            <span style={{ fontSize: 14, color: '#3d4a56' }}>選択中 <b style={{ fontSize: 16, color: accent, fontVariantNumeric: 'tabular-nums' }}>{picked.length}</b> 帳票</span>
             <button type="button" className="btn-outline" onClick={toggleAll} style={btn('#5b6773', false, true)}>{allOn ? '表示中の選択を解除' : '表示中をすべて選択'}</button>
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12, color: '#5b6773' }}>出力先</span>
+              <span style={{ fontSize: 14, color: '#5b6773' }}>出力先</span>
               <select value={bOutput} onChange={(e) => setBOutput(e.target.value)} style={{ ...input, width: 220 }}>{OUTPUTS.map((o) => <option key={o}>{o}</option>)}</select>
               <button type="button" className="submit-btn" data-print-batch-run disabled={!picked.length} onClick={runBatch} style={{ ...btn(accent, true), opacity: picked.length ? 1 : 0.5, cursor: picked.length ? 'pointer' : 'not-allowed' }}>選んだ {picked.length} 帳票を印刷</button>
             </div>
           </>
-        ) : <span style={{ fontSize: 12, color: '#7a8794' }}>帳票を押すと、その帳票の印刷条件を指定できます。</span>}
+        ) : <span style={{ fontSize: 14, color: '#7a8794' }}>帳票を押すと、その帳票の印刷条件を指定できます。</span>}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '200px minmax(0,1fr)', minHeight: 420 }}>
         <div style={{ borderRight: '1px solid #eef2f5', padding: 10 }}>
@@ -689,12 +689,12 @@ export function PrintCenterPage({ variant, accent }: { variant: 'form' | 'sheet'
             const n = c === 'すべて' ? REPORTS.length : REPORTS.filter((r) => r.cat === c).length;
             const sel = batch ? (c === 'すべて' ? picked.length : picked.filter((r) => r.cat === c).length) : 0;
             const on = cat === c;
-            return <button key={c} type="button" onClick={() => setCat(c)} style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', textAlign: 'left', padding: '9px 12px', border: 'none', borderRadius: 8, background: on ? accent : 'transparent', color: on ? '#fff' : '#22303c', fontSize: 13, fontWeight: on ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer' }}>{c}{sel > 0 && <span style={{ fontSize: 10.5, fontWeight: 800, padding: '0 6px', borderRadius: 8, background: on ? 'rgba(255,255,255,.25)' : '#e3f1ea', color: on ? '#fff' : accent }}>選択 {sel}</span>}<span style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.7 }}>{n}</span></button>;
+            return <button key={c} type="button" onClick={() => setCat(c)} style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', textAlign: 'left', padding: '9px 12px', border: 'none', borderRadius: 8, background: on ? accent : 'transparent', color: on ? '#fff' : '#22303c', fontSize: 14, fontWeight: on ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer' }}>{c}{sel > 0 && <span style={{ fontSize: 12, fontWeight: 800, padding: '0 6px', borderRadius: 8, background: on ? 'rgba(255,255,255,.25)' : '#e3f1ea', color: on ? '#fff' : accent }}>選択 {sel}</span>}<span style={{ marginLeft: 'auto', fontSize: 12, opacity: 0.7 }}>{n}</span></button>;
           })}
         </div>
         <div style={{ padding: 16 }}>
           {batch ? <div style={{ marginBottom: 10 }}><Notice>期間は「令和8年8月1日〜8月31日」（当月）で一括指定します。帳票ごとの詳細設定は、各帳票の設定値を使います。</Notice></div>
-            : <div style={{ marginBottom: 10, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: 12, color: '#5b6773' }}><span>設定の影響範囲：</span><ScopeBadge kind="帳票個別" /><span>その帳票だけ</span><ScopeBadge kind="全帳票共通" /><span>すべての帳票</span><ScopeBadge kind="全区分共通" /><ScopeBadge kind="区分ごと" /><span>動作環境から引き継ぎ</span></div>}
+            : <div style={{ marginBottom: 10, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: 14, color: '#5b6773' }}><span>設定の影響範囲：</span><ScopeBadge kind="帳票個別" /><span>その帳票だけ</span><ScopeBadge kind="全帳票共通" /><span>すべての帳票</span><ScopeBadge kind="全区分共通" /><ScopeBadge kind="区分ごと" /><span>動作環境から引き継ぎ</span></div>}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
             {list.map((r) => {
               const on = selected.has(r.id);
@@ -702,10 +702,10 @@ export function PrintCenterPage({ variant, accent }: { variant: 'form' | 'sheet'
                 <div key={r.id} data-report={r.id} onClick={() => (batch ? toggle(r.id) : setTarget(r))} style={{ ...card, padding: '12px 14px', cursor: 'pointer', borderColor: batch && on ? accent : '#e2e8ee', background: batch && on ? '#f4f9f6' : '#fff', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                   {batch && <input type="checkbox" checked={on} readOnly style={{ marginTop: 3 }} />}
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 700 }}>{r.name}</div>
-                    <div style={{ fontSize: 11, color: '#8290a0', marginTop: 2 }}>{r.cat}{r.note ? `　${r.note}` : ''}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>{r.name}</div>
+                    <div style={{ fontSize: 12, color: '#8290a0', marginTop: 2 }}>{r.cat}{r.note ? `　${r.note}` : ''}</div>
                   </div>
-                  {!batch && <span style={{ fontSize: 11.5, fontWeight: 700, color: accent, whiteSpace: 'nowrap' }}>印刷 →</span>}
+                  {!batch && <span style={{ fontSize: 12, fontWeight: 700, color: accent, whiteSpace: 'nowrap' }}>印刷 →</span>}
                 </div>
               );
             })}
@@ -731,21 +731,21 @@ function ZeroExcludeCard({ accent }: { accent: string }) {
   const toggle = (list: string[], set: (v: string[]) => void, x: string) => set(list.includes(x) ? list.filter((y) => y !== x) : [...list, x]);
   const col = (title: string, items: string[], list: string[], set: (v: string[]) => void) => (
     <div style={card}>
-      <div style={cardHead}>{title}<span style={{ fontSize: 11, fontWeight: 600, color: '#5b6773', marginLeft: 6 }}>{list.length} 科目</span><button type="button" onClick={() => set([])} style={{ ...btn('#5b6773', false, true), marginLeft: 'auto' }}>全て OFF</button></div>
-      <div style={{ maxHeight: 300, overflow: 'auto' }}>{items.map((x) => <label key={x} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '5px 12px', fontSize: 12.5, borderTop: '1px solid #f1f4f7', background: list.includes(x) ? '#fffbe6' : '#fff', cursor: 'pointer' }}><input type="checkbox" checked={list.includes(x)} onChange={() => toggle(list, set, x)} />{x}</label>)}</div>
+      <div style={cardHead}>{title}<span style={{ fontSize: 12, fontWeight: 600, color: '#5b6773', marginLeft: 6 }}>{list.length} 科目</span><button type="button" onClick={() => set([])} style={{ ...btn('#5b6773', false, true), marginLeft: 'auto' }}>全て OFF</button></div>
+      <div style={{ maxHeight: 300, overflow: 'auto' }}>{items.map((x) => <label key={x} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '5px 12px', fontSize: 14, borderTop: '1px solid #f1f4f7', background: list.includes(x) ? '#fffbe6' : '#fff', cursor: 'pointer' }}><input type="checkbox" checked={list.includes(x)} onChange={() => toggle(list, set, x)} />{x}</label>)}</div>
     </div>
   );
   return (
     <div style={card} data-zero-exclude>
       <ToastView msg={toast.msg} />
       <div style={cardHead}>「0データを印刷しない」の除外科目<ScopeBadge kind="全帳票共通" /></div>
-      <div style={{ padding: 14, display: 'grid', gap: 10, fontSize: 12.5 }}>
+      <div style={{ padding: 14, display: 'grid', gap: 10, fontSize: 14 }}>
         <div style={{ color: '#5b6773' }}>各帳票の詳細設定で「0データを表示しない」を有効にしていても、ここで指定した科目は 0 円のまま印刷します。法人内で共通の設定です。</div>
         <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
           <span>資金科目 <b>{fund.length}</b> 科目</span><span>貸借・事業科目 <b>{bs.length}</b> 科目</span>
           <button type="button" onClick={() => setOpen(true)} style={{ ...btn(accent, false, true), marginLeft: 'auto' }}>除外科目を指定する</button>
         </div>
-        {(fund.length > 0 || bs.length > 0) && <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{[...fund, ...bs].map((x) => <span key={x} style={{ fontSize: 11.5, padding: '2px 8px', borderRadius: 8, background: '#fff7cc', border: '1px solid #f3e3a0' }}>{x}</span>)}</div>}
+        {(fund.length > 0 || bs.length > 0) && <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{[...fund, ...bs].map((x) => <span key={x} style={{ fontSize: 12, padding: '2px 8px', borderRadius: 8, background: '#fff7cc', border: '1px solid #f3e3a0' }}>{x}</span>)}</div>}
       </div>
       <Modal open={open} onClose={() => setOpen(false)} width={760} title="「0データを印刷しない」の除外科目設定">
         <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
@@ -783,18 +783,18 @@ function FormSelectCard() {
   const set = (key: string, on: boolean) => setSession({ print: { ...s.print, forms: { ...s.print.forms, [key]: on } } });
   return (
     <div style={card} data-form-select>
-      <div style={cardHead}>帳票選択（決算書・準決算書で使う様式）<span style={{ fontWeight: 500, color: '#7a8794', marginLeft: 8, fontSize: 11.5 }}>旧 動作環境パネル「帳票選択」</span></div>
+      <div style={cardHead}>帳票選択（決算書・準決算書で使う様式）<span style={{ fontWeight: 500, color: '#7a8794', marginLeft: 8, fontSize: 12 }}>旧 動作環境パネル「帳票選択」</span></div>
       <div style={{ padding: 14, display: 'grid', gap: 12 }}>
-        <div style={{ fontSize: 12, color: '#5b6773', lineHeight: 1.7 }}>印刷メニューの決算書・準決算書に出す帳票を選びます。区分階層（事業区分・拠点区分の数）によって省略できる様式は、既定で省略しています。<br />現在の区分階層：事業区分 {can.事業区分 ? '1つ（第二様式を省略できます）' : '複数（第二様式が必要）'}／拠点区分 {can.拠点区分 ? '各1つ（第三様式を省略できます）' : '複数の事業区分あり（第三様式が必要）'}</div>
+        <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.7 }}>印刷メニューの決算書・準決算書に出す帳票を選びます。区分階層（事業区分・拠点区分の数）によって省略できる様式は、既定で省略しています。<br />現在の区分階層：事業区分 {can.事業区分 ? '1つ（第二様式を省略できます）' : '複数（第二様式が必要）'}／拠点区分 {can.拠点区分 ? '各1つ（第三様式を省略できます）' : '複数の事業区分あり（第三様式が必要）'}</div>
         {FORM_GROUPS.map((g) => (
           <div key={g.title}>
-            <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{g.title}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{g.title}</div>
             <div style={{ display: 'grid', gap: 4 }}>
               {g.items.map((it) => { const on = formEnabled(s.print.forms, it.key, s.tree); const omit = !!it.omit && can[it.omit]; return (
-                <label key={it.key} data-form={it.key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, padding: '4px 8px', borderRadius: 8, background: on ? 'transparent' : '#f6f8fa', color: on ? '#22303c' : '#8290a0' }}>
+                <label key={it.key} data-form={it.key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, padding: '4px 8px', borderRadius: 8, background: on ? 'transparent' : '#f6f8fa', color: on ? '#22303c' : '#8290a0' }}>
                   <input type="checkbox" checked={on} onChange={() => set(it.key, !on)} />{on ? '使用' : '省略'}：{it.name}
-                  {omit && <span style={{ fontSize: 10.5, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: '#eaf5ef', color: '#1f7a52' }}>省略できる様式</span>}
-                  {!omit && it.omit && <span style={{ fontSize: 10.5, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: '#fff7e6', color: '#8a5a00' }}>区分階層上は必要</span>}
+                  {omit && <span style={{ fontSize: 12, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: '#eaf5ef', color: '#1f7a52' }}>省略できる様式</span>}
+                  {!omit && it.omit && <span style={{ fontSize: 12, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: '#fff7e6', color: '#8a5a00' }}>区分階層上は必要</span>}
                 </label>
               ); })}
             </div>
@@ -846,7 +846,7 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
               <Field label="印刷位置調整（mm）">
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 34px)', gap: 4, alignItems: 'center' }}>
                   <span /><button type="button" onClick={() => set({ offsetY: p.offsetY - 1 })} style={btn('#5b6773', false, true)}>↑</button><span />
-                  <button type="button" onClick={() => set({ offsetX: p.offsetX - 1 })} style={btn('#5b6773', false, true)}>←</button><span style={{ fontSize: 11, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{p.offsetX},{p.offsetY}</span><button type="button" onClick={() => set({ offsetX: p.offsetX + 1 })} style={btn('#5b6773', false, true)}>→</button>
+                  <button type="button" onClick={() => set({ offsetX: p.offsetX - 1 })} style={btn('#5b6773', false, true)}>←</button><span style={{ fontSize: 12, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{p.offsetX},{p.offsetY}</span><button type="button" onClick={() => set({ offsetX: p.offsetX + 1 })} style={btn('#5b6773', false, true)}>→</button>
                   <span /><button type="button" onClick={() => set({ offsetY: p.offsetY + 1 })} style={btn('#5b6773', false, true)}>↓</button><span />
                 </div>
               </Field>
@@ -866,21 +866,21 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
               {PRINT_ITEMS.map(([k, label]) => (
                 <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                   <Toggle on={!!p.items[k]} onChange={(v) => set({ items: { ...p.items, [k]: v } })} accent={accent} label={k === 'zero' ? '0データを印刷しない（各帳票の初期値。帳票ごとに変更可）' : label} />
-                  {k === 'page' && <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#5b6773' }}>開始番号<input className="field-input" value={String(p.pageStart)} disabled={!p.items.page} onChange={(e) => set({ pageStart: parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 1 })} inputMode="numeric" style={{ ...numInput, width: 64, padding: '4px 8px' }} /></label>}
+                  {k === 'page' && <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: '#5b6773' }}>開始番号<input className="field-input" value={String(p.pageStart)} disabled={!p.items.page} onChange={(e) => set({ pageStart: parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 1 })} inputMode="numeric" style={{ ...numInput, width: 64, padding: '4px 8px' }} /></label>}
                 </div>
               ))}
             </div>
           </div>
           <div style={card}>
-            <div style={cardHead}>帳票の色・印字 <span style={{ fontSize: 11, fontWeight: 500, color: '#8290a0', marginLeft: 6 }}>動作環境から移した項目（5.5.1）</span></div>
+            <div style={cardHead}>帳票の色・印字 <span style={{ fontSize: 12, fontWeight: 500, color: '#8290a0', marginLeft: 6 }}>動作環境から移した項目（5.5.1）</span></div>
             <div style={{ padding: 14 }}><ReportStyleSettings accent={accent} /></div>
           </div>
           <div style={card}>
             <div style={cardHead}>捺印欄（最大4名）・脚注</div>
             <div style={{ padding: 14, display: 'grid', gap: 10 }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>{p.stamps.map((v, i) => <input key={i} className="field-input" value={v} onChange={(e) => set({ stamps: p.stamps.map((x, k) => (k === i ? e.target.value : x)) })} placeholder={`捺印${i + 1}`} style={input} />)}</div>
-              <div style={{ fontSize: 12, color: '#7a8794' }}>脚注（（注）予備費の充当額等）を帳票ごとに編集：</div>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}><tbody>{FOOT_REPORTS.map((r) => <tr key={r}><td style={{ ...TD, fontSize: 12.5 }}>{r}</td><td style={{ ...TD, fontSize: 11.5, color: '#7a8794' }}>{p.footnotes[r] ? p.footnotes[r].slice(0, 28) + (p.footnotes[r].length > 28 ? '…' : '') : '（未設定）'}</td><td style={{ ...TD, textAlign: 'right' }}><button type="button" onClick={() => { setFoot(r); setFootText(p.footnotes[r] ?? ''); }} style={btn('#5b6773', false, true)}>編集</button></td></tr>)}</tbody></table>
+              <div style={{ fontSize: 14, color: '#7a8794' }}>脚注（（注）予備費の充当額等）を帳票ごとに編集：</div>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}><tbody>{FOOT_REPORTS.map((r) => <tr key={r}><td style={{ ...TD, fontSize: 14 }}>{r}</td><td style={{ ...TD, fontSize: 12, color: '#7a8794' }}>{p.footnotes[r] ? p.footnotes[r].slice(0, 28) + (p.footnotes[r].length > 28 ? '…' : '') : '（未設定）'}</td><td style={{ ...TD, textAlign: 'right' }}><button type="button" onClick={() => { setFoot(r); setFootText(p.footnotes[r] ?? ''); }} style={btn('#5b6773', false, true)}>編集</button></td></tr>)}</tbody></table>
             </div>
           </div>
         </div>

@@ -22,7 +22,7 @@ function PickList({ title, items, value, onChange, height = 220, note }: { title
   const toggle = (c: string) => onChange(value.includes(c) ? value.filter((x) => x !== c) : [...value, c]);
   return (
     <div style={card}>
-      <div style={cardHead}>{title}<span style={{ fontSize: 11, fontWeight: 600, color: value.length ? '#5b6773' : '#c0392b', marginLeft: 6 }}>{value.length ? `${value.length} 科目` : '未設定'}</span>
+      <div style={cardHead}>{title}<span style={{ fontSize: 12, fontWeight: 600, color: value.length ? '#5b6773' : '#c0392b', marginLeft: 6 }}>{value.length ? `${value.length} 科目` : '未設定'}</span>
         <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
           <button type="button" onClick={() => onChange(items.map((i) => i.code))} style={btn('#5b6773', false, true)}>全て ON</button>
           <button type="button" onClick={() => onChange([])} style={btn('#5b6773', false, true)}>全て OFF</button>
@@ -30,14 +30,14 @@ function PickList({ title, items, value, onChange, height = 220, note }: { title
       </div>
       <div style={{ maxHeight: height, overflow: 'auto' }}>
         {items.map((i) => (
-          <label key={i.code} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px', fontSize: 12.5, borderTop: '1px solid #f1f4f7', background: value.includes(i.code) ? '#fffbe6' : '#fff', cursor: 'pointer' }}>
+          <label key={i.code} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px', fontSize: 14, borderTop: '1px solid #f1f4f7', background: value.includes(i.code) ? '#fffbe6' : '#fff', cursor: 'pointer' }}>
             <input type="checkbox" checked={value.includes(i.code)} onChange={() => toggle(i.code)} />
-            <span style={{ fontVariantNumeric: 'tabular-nums', color: '#7a8794', width: 48, fontSize: 11.5 }}>{i.code}</span>
+            <span style={{ fontVariantNumeric: 'tabular-nums', color: '#7a8794', width: 48, fontSize: 12 }}>{i.code}</span>
             <span>{i.name}</span>
           </label>
         ))}
       </div>
-      {note && <div style={{ padding: '8px 12px', fontSize: 11.5, color: '#5b6773', borderTop: '1px solid #eef2f5', background: '#fbfcfd' }}>{note}</div>}
+      {note && <div style={{ padding: '8px 12px', fontSize: 12, color: '#5b6773', borderTop: '1px solid #eef2f5', background: '#fbfcfd' }}>{note}</div>}
     </div>
   );
 }
@@ -48,7 +48,7 @@ const roundBy = (n: number, r: Rounding) => (r === '切り上げ' ? Math.ceil(n)
 function RoundingField({ label, value, onChange }: { label: string; value: Rounding; onChange: (r: Rounding) => void }) {
   return (
     <Field label={label}>
-      <div style={{ display: 'flex', gap: 14, fontSize: 12.5, paddingTop: 2 }}>{ROUNDINGS.map((r) => <label key={r} style={{ display: 'flex', gap: 4, alignItems: 'center' }}><input type="radio" checked={value === r} onChange={() => onChange(r)} />{r}</label>)}</div>
+      <div style={{ display: 'flex', gap: 14, fontSize: 14, paddingTop: 2 }}>{ROUNDINGS.map((r) => <label key={r} style={{ display: 'flex', gap: 4, alignItems: 'center' }}><input type="radio" checked={value === r} onChange={() => onChange(r)} />{r}</label>)}</div>
     </Field>
   );
 }
@@ -57,8 +57,8 @@ function RoundingField({ label, value, onChange }: { label: string; value: Round
 function Guide({ rows }: { rows: { label: string; value: ReactNode; strong?: boolean }[] }) {
   return (
     <div style={{ ...card, background: '#f7f9fb' }}>
-      <div style={cardHead}>判断の目安<span style={{ fontSize: 11, fontWeight: 500, color: '#7a8794', marginLeft: 6 }}>サンプルデータで計算</span></div>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}><tbody>
+      <div style={cardHead}>判断の目安<span style={{ fontSize: 12, fontWeight: 500, color: '#7a8794', marginLeft: 6 }}>サンプルデータで計算</span></div>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}><tbody>
         {rows.map((r) => <tr key={r.label}><td style={{ padding: '7px 12px', borderTop: '1px solid #eef2f5', color: '#5b6773' }}>{r.label}</td><td style={{ padding: '7px 12px', borderTop: '1px solid #eef2f5', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: r.strong ? 800 : 500 }}>{r.value}</td></tr>)}
       </tbody></table>
     </div>
@@ -121,7 +121,7 @@ export function CarryoverJudgmentPage({ variant, accent, onNavigate }: Maintenan
       <ToastView msg={toast.msg} />
       <Modal open={noticeOpen} onClose={() => setNoticeOpen(false)} width={640} title="通知文（関連資料）">
         <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
-          <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: 12.5, lineHeight: 1.8, color: '#22303c' }}>{NOTICE_TEXT}</pre>
+          <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: 14, lineHeight: 1.8, color: '#22303c' }}>{NOTICE_TEXT}</pre>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" onClick={() => setNoticeOpen(false)} style={btn(accent, true)}>OK</button></div>
         </div>
       </Modal>
@@ -154,7 +154,7 @@ export function CarryoverJudgmentPage({ variant, accent, onNavigate }: Maintenan
           <PickList title="「その他の積立金」の指定" items={RESERVE_ITEMS} value={otherReserve} onChange={setOtherReserve} note="当期末支払資金残高は、流動資産 − 流動負債 の計算によりシステムが自動集計します。" />
           <div style={{ display: 'grid', gap: 12 }}>
             <div style={card}><div style={cardHead}>収入決算額</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
-              <div style={{ display: 'flex', gap: 14, fontSize: 12.5 }}>{(['システムより集計する', '手入力する'] as const).map((o) => <label key={o} style={{ display: 'flex', gap: 4, alignItems: 'center' }}><input type="radio" checked={incomeSrc === o} onChange={() => setIncomeSrc(o)} />{o}</label>)}</div>
+              <div style={{ display: 'flex', gap: 14, fontSize: 14 }}>{(['システムより集計する', '手入力する'] as const).map((o) => <label key={o} style={{ display: 'flex', gap: 4, alignItems: 'center' }}><input type="radio" checked={incomeSrc === o} onChange={() => setIncomeSrc(o)} />{o}</label>)}</div>
               {incomeSrc === '手入力する' && <Field label="前年度の収入決算額"><input className="field-input" value={incomeManual.toLocaleString('ja-JP')} onChange={(e) => setIncomeManual(parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0)} style={{ ...input, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }} /></Field>}
             </div></div>
             {incomeSrc === 'システムより集計する' && <PickList title="収入決算額に集計する科目" items={INCOME_ITEMS} value={incomePrev} onChange={setIncomePrev} height={180} />}
@@ -267,7 +267,7 @@ export function DepreciationLinkPage({ variant, accent, onNavigate }: Maintenanc
           <div style={{ display: 'grid', gap: 12 }}>
             <div style={card}><div style={cardHead}>監視</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
               <Toggle on={watch} onChange={setWatch} accent={accent} label="伝票入力時に監視（機能を有効に）する" />
-              <div style={{ fontSize: 12, color: '#7a8794' }}>左の 2 つの科目を組み合わせた仕訳を登録すると、減価償却の「補助金」に償還補助金として記録するか確認します。</div>
+              <div style={{ fontSize: 14, color: '#7a8794' }}>左の 2 つの科目を組み合わせた仕訳を登録すると、減価償却の「補助金」に償還補助金として記録するか確認します。</div>
             </div></div>
             <Notice>借入金元金償還補助金は、国庫補助金等特別積立金の積立の対象になります。積立の仕訳を自動で起こす場合は、次のタブで設定します。</Notice>
           </div>
@@ -282,9 +282,9 @@ export function DepreciationLinkPage({ variant, accent, onNavigate }: Maintenanc
             <div style={card}><div style={cardHead}>自動積立</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
               <Toggle on={autoOn} onChange={setAutoOn} accent={accent} label="自動積立機能を有効とする" />
               <Field label="自動で起こす仕訳の摘要"><input className="field-input" value={tekiyo} onChange={(e) => setTekiyo(e.target.value)} disabled={!autoOn} style={{ ...input, background: autoOn ? '#fff' : '#eef2f5' }} /></Field>
-              <div style={{ fontSize: 12, color: '#7a8794' }}>有効にすると、補助金で取得した資産の登録時に「{RESERVE_IN_ITEMS.find((i) => autoIn.includes(i.code))?.name ?? '積立額の科目'} ／ {RESERVE_ACCT_ITEMS[0].name}」の仕訳を自動で作成します。</div>
+              <div style={{ fontSize: 14, color: '#7a8794' }}>有効にすると、補助金で取得した資産の登録時に「{RESERVE_IN_ITEMS.find((i) => autoIn.includes(i.code))?.name ?? '積立額の科目'} ／ {RESERVE_ACCT_ITEMS[0].name}」の仕訳を自動で作成します。</div>
             </div></div>
-            <div style={{ fontSize: 11.5, color: '#7a8794', padding: '0 4px' }}><span style={lbl}>補足</span>自動で作成した仕訳は日記帳に「自動」の印が付き、通常の仕訳と同じように訂正・削除できます。</div>
+            <div style={{ fontSize: 12, color: '#7a8794', padding: '0 4px' }}><span style={lbl}>補足</span>自動で作成した仕訳は日記帳に「自動」の印が付き、通常の仕訳と同じように訂正・削除できます。</div>
           </div>
         </div>
       )}

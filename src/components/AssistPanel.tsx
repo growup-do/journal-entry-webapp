@@ -53,7 +53,7 @@ export function AssistPanel({ groups, query, empty, onInput, onPick, style }: Pr
             padding: '8px 11px',
             border: '1px solid #d3dce4',
             borderRadius: 8,
-            fontSize: 13.5,
+            fontSize: 14,
             outline: 'none',
             fontFamily: 'inherit',
             background: '#ffffff',
@@ -68,7 +68,7 @@ export function AssistPanel({ groups, query, empty, onInput, onPick, style }: Pr
               <div
                 style={{
                   padding: '9px 13px 3px',
-                  fontSize: 10.5,
+                  fontSize: 12,
                   fontWeight: 700,
                   color: '#93a0ad',
                   letterSpacing: '.05em',
@@ -100,7 +100,7 @@ export function AssistPanel({ groups, query, empty, onInput, onPick, style }: Pr
           </div>
         ))}
         {empty && (
-          <div style={{ padding: '16px 15px', fontSize: 13, color: '#9aa5b1', textAlign: 'center' }}>
+          <div style={{ padding: '16px 15px', fontSize: 14, color: '#9aa5b1', textAlign: 'center' }}>
             該当する候補がありません
           </div>
         )}

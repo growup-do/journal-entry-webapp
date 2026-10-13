@@ -30,7 +30,7 @@ export function BarChart({ title, unit, labels, values, color, line, yMax, fmt =
     <div style={{ background: '#fff', border: '1px solid #dde4ea', borderRadius: 12, padding: '12px 14px 6px', boxShadow: '0 4px 16px rgba(30,50,70,.06)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '0 6px 4px' }}>
         <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 14.5 }}>{title}</div>
-        <div style={{ fontSize: 11.5, color: '#7a8794', fontWeight: 600 }}>単位：{unit}</div>
+        <div style={{ fontSize: 12, color: '#7a8794', fontWeight: 600 }}>単位：{unit}</div>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
         {ticks.map((t) => (

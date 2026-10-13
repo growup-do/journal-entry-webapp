@@ -96,7 +96,7 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
     setExp({ kind: out, title: `${title}　${target}`, fileName: range ? `${title}_${target}_令和8年${periodShort(range)}` : `${title}_${target}_令和8年${m}月`, meta: `${s.fiscalYear}　${s.division}　${periodStr}`, header, rows: body });
   };
 
-  const fieldBtn: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, width: 260, boxSizing: 'border-box', padding: '7px 10px', background: '#fff', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left', color: 'inherit' };
+  const fieldBtn: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, width: 260, boxSizing: 'border-box', padding: '7px 10px', background: '#fff', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left', color: 'inherit' };
   const stats: { label: string; value: ReactNode; hi?: boolean }[] = kind === 'account'
     ? [{ label: '実績', value: money(sumD - sumC) }]
     : [{ label: '予算', value: money(3_000_000) }, { label: '実績', value: money(sumD - sumC) }, { label: '残高', value: money(3_000_000 - (sumD - sumC)) }, { label: '達成率', value: ((sumD - sumC) / 3_000_000 * 100).toFixed(1) + '%', hi: true }];
@@ -116,13 +116,13 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
       period={
         <>
           <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} range={range} onRange={setRange} />
-          <span style={{ fontSize: 12.5, color: '#48565f' }}>{periodStr}</span>
+          <span style={{ fontSize: 14, color: '#48565f' }}>{periodStr}</span>
         </>
       }
       periodAside={stats.map((st) => (
         <div key={st.label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px', border: '1px solid #e2e8ee', borderRadius: 8, background: st.hi ? '#fff8d6' : '#fbfcfd' }}>
-          <span style={{ fontSize: 10.5, fontWeight: 700, color: '#8290a0' }}>{st.label}</span>
-          <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{st.value}</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>{st.label}</span>
+          <span style={{ fontSize: 14, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{st.value}</span>
         </div>
       ))}
       targetLabel={isVendor ? '指定業者' : '指定科目'}
@@ -207,12 +207,12 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
                 {dt.nameOn && <td style={TD}>{dt.nameTag(l.r)}</td>}
                 <td style={TD}>
                   <div style={{ fontWeight: 500 }}>{isVendor ? <><span style={{ color: colorDC ? '#2c5f9e' : undefined }}>{l.r.kari}</span> ― <span style={{ color: colorDC ? '#b0426a' : undefined }}>{l.r.kashi}</span></> : l.other}</div>
-                  <div style={{ fontSize: 11.5, color: '#7a8794' }}>
+                  <div style={{ fontSize: 12, color: '#7a8794' }}>
                     {!isVendor && showBiz ? (l.r.gyosha || '業者なし') : l.r.tekiyo}{!isVendor && !showBiz && l.r.gyosha ? `　／ ${l.r.gyosha}` : ''}
                     {!isVendor && opts.spare && (l.r.spare1 || l.r.spare2) ? <span style={{ marginLeft: 8, color: '#9aa5b1' }}>予備：{[l.r.spare1, l.r.spare2].filter(Boolean).join('／')}</span> : null}
                   </div>
                 </td>
-                {taxCols && <td style={TD}><span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 8, background: l.tax.startsWith('課税') ? '#e8f0fb' : l.tax === '非課税' ? '#eaf5ef' : '#f1f4f6', color: l.tax.startsWith('課税') ? '#2c5f9e' : l.tax === '非課税' ? '#1f7a52' : '#7a8794' }}>{l.tax}</span></td>}
+                {taxCols && <td style={TD}><span style={{ fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 8, background: l.tax.startsWith('課税') ? '#e8f0fb' : l.tax === '非課税' ? '#eaf5ef' : '#f1f4f6', color: l.tax.startsWith('課税') ? '#2c5f9e' : l.tax === '非課税' ? '#1f7a52' : '#7a8794' }}>{l.tax}</span></td>}
                 {taxCols && <td style={{ ...NUM, color: l.taxAmt ? undefined : '#b8c2cc' }}>{l.taxAmt ? money(l.taxAmt) : '—'}</td>}
                 <td style={{ ...NUM, color: colorDC ? '#2c5f9e' : undefined }}>{l.debit ? money(l.debit) : ''}</td>
                 {!isVendor && <td style={{ ...NUM, color: colorDC ? '#b0426a' : undefined }}>{l.credit ? money(l.credit) : ''}</td>}

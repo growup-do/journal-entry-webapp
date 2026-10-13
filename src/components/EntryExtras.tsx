@@ -30,8 +30,8 @@ export function InputSettingsModal({ open, onClose, accent }: { open: boolean; o
     <Modal open={open} onClose={onClose} width={560} title="入力の変更（詳細設定）">
       <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <Field label="伝票No"><div style={{ display: 'flex', gap: 10, fontSize: 13 }}>{(['自動', '手入力'] as const).map((o) => <label key={o} style={{ display: 'flex', gap: 5, alignItems: 'center' }}><input type="radio" checked={v.voucherNo === o} onChange={() => set({ voucherNo: o })} />{o === '自動' ? '自動伝票番号（月日ー連番）' : '伝票Noを手入力する'}</label>)}</div></Field>
-          <Field label="表示フォント"><div style={{ display: 'flex', gap: 10, fontSize: 13 }}>{(['大き目', '小さ目'] as const).map((o) => <label key={o} style={{ display: 'flex', gap: 5, alignItems: 'center' }}><input type="radio" checked={v.font === o} onChange={() => set({ font: o })} />{o}</label>)}</div></Field>
+          <Field label="伝票No"><div style={{ display: 'flex', gap: 10, fontSize: 14 }}>{(['自動', '手入力'] as const).map((o) => <label key={o} style={{ display: 'flex', gap: 5, alignItems: 'center' }}><input type="radio" checked={v.voucherNo === o} onChange={() => set({ voucherNo: o })} />{o === '自動' ? '自動伝票番号（月日ー連番）' : '伝票Noを手入力する'}</label>)}</div></Field>
+          <Field label="表示フォント"><div style={{ display: 'flex', gap: 10, fontSize: 14 }}>{(['大き目', '小さ目'] as const).map((o) => <label key={o} style={{ display: 'flex', gap: 5, alignItems: 'center' }}><input type="radio" checked={v.font === o} onChange={() => set({ font: o })} />{o}</label>)}</div></Field>
         </div>
         <div style={{ display: 'grid', gap: 8 }}>
           <Toggle on={v.shohyo} onChange={(x) => set({ shohyo: x })} accent={accent} label="証憑の入力をする（有／無）" />
@@ -55,7 +55,7 @@ export function TorihikiBadge({ kari, kashi, force, blocked, right }: { kari: st
   const text = blocked ? '登録できません' : j.kind === '要確認' ? `確認が必要${j.reason ? `（${j.reason}）` : ''}` : j.kind;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-      <span title={c.note} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, background: c.bg, color: c.fg, fontSize: 12.5, fontWeight: 800, border: '1px solid ' + c.fg + '33', whiteSpace: 'nowrap' }}>
+      <span title={c.note} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, background: c.bg, color: c.fg, fontSize: 14, fontWeight: 800, border: '1px solid ' + c.fg + '33', whiteSpace: 'nowrap' }}>
         <span style={{ width: 8, height: 8, borderRadius: '50%', background: c.fg }} />{text}
       </span>
       {right}
@@ -79,11 +79,11 @@ export function InternalSwitch({ on, onToggle, disabled, locked, title, id, onNe
   };
   return (
     <button id={id} type="button" role="switch" aria-checked={on} data-menu="内部取引" className="ef-act" disabled={disabled} aria-disabled={off || undefined} onKeyDown={onKey} onClick={() => { if (!off) onToggle(); }} data-tip={off ? (title ?? (locked ? '内部取引科目（区分間繰入金など）を使っているため自動でオンです。科目を変えるとオフにできます' : undefined)) : undefined} title={off ? undefined : (title ?? (on ? '内部取引をオフにします（相手区分の入力欄を閉じます）。Shift+Enter でも切替' : '内部取引としてあつかい、相手区分を入力できるようにします。Shift+Enter でも切替'))} style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 7, padding: '3px 4px', border: 'none', background: 'transparent', fontFamily: 'inherit', cursor: off ? 'not-allowed' : 'pointer', opacity: disabled ? 0.55 : 1 }}>
-      <span style={{ fontSize: 12, fontWeight: 700, color: on ? '#6b3fb5' : '#5b6773', whiteSpace: 'nowrap' }}>内部取引</span>
+      <span style={{ fontSize: 14, fontWeight: 700, color: on ? '#6b3fb5' : '#5b6773', whiteSpace: 'nowrap' }}>内部取引</span>
       <span aria-hidden style={{ position: 'relative', width: 38, height: 22, borderRadius: 11, background: on ? '#6b3fb5' : '#c3ccd4', transition: 'background .15s', flex: 'none' }}>
         <span style={{ position: 'absolute', top: 2, left: 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,.25)', transform: on ? 'translateX(16px)' : 'translateX(0)', transition: 'transform .15s' }} />
       </span>
-      <span style={{ fontSize: 11, fontWeight: 700, color: on ? '#6b3fb5' : '#8895a3', minWidth: 22, textAlign: 'left' }}>{on ? 'オン' : 'オフ'}</span>
+      <span style={{ fontSize: 12, fontWeight: 700, color: on ? '#6b3fb5' : '#8895a3', minWidth: 22, textAlign: 'left' }}>{on ? 'オン' : 'オフ'}</span>
     </button>
   );
 }
@@ -98,12 +98,12 @@ export function EntryConfirmModal({ open, kind, reason, onClose, onProceed, acce
         <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
           <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
             <span aria-hidden style={{ width: 40, height: 40, borderRadius: '50%', background: '#fff1c9', color: '#8a6200', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 900, flex: 'none' }}>!</span>
-            <div style={{ fontSize: 13.5, lineHeight: 1.8 }}>登録の前に、次の内容を確認してください。<br /><span style={{ color: '#7a8794', fontSize: 12.5 }}>登録できない仕訳（エラー）ではありません。内容に問題がなければ、このまま登録できます。</span></div>
+            <div style={{ fontSize: 14, lineHeight: 1.8 }}>登録の前に、次の内容を確認してください。<br /><span style={{ color: '#7a8794', fontSize: 14 }}>登録できない仕訳（エラー）ではありません。内容に問題がなければ、このまま登録できます。</span></div>
           </div>
-          <div style={{ border: '1px solid #ecd08a', borderLeft: '5px solid #7a5600', background: '#fff6dd', borderRadius: 9, padding: '9px 12px', color: '#7a5600', fontSize: 12.5, lineHeight: 1.7 }}>
+          <div style={{ border: '1px solid #ecd08a', borderLeft: '5px solid #7a5600', background: '#fff6dd', borderRadius: 9, padding: '9px 12px', color: '#7a5600', fontSize: 14, lineHeight: 1.7 }}>
             <ul style={{ margin: 0, paddingLeft: 20 }}>{issues.map((i) => <li key={i.code}><b>{i.title}</b>　<span style={{ fontWeight: 400 }}>{i.detail}</span></li>)}</ul>
           </div>
-          {canHide && <label style={{ fontSize: 12.5, display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={dont} onChange={(e) => setDont(e.target.checked)} />費用科目間・収益科目間の振替の確認を、今後は表示しない（動作環境で戻せます）</label>}
+          {canHide && <label style={{ fontSize: 14, display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={dont} onChange={(e) => setDont(e.target.checked)} />費用科目間・収益科目間の振替の確認を、今後は表示しない（動作環境で戻せます）</label>}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
             <button type="button" className="ef-act" onClick={onClose} style={btn()}>入力に戻る</button>
             <button type="button" className="ef-act" autoFocus onClick={() => onProceed(dont)} style={{ ...btn('#d99a00', true), borderColor: '#b07d00' }}>確認して登録</button>
@@ -120,9 +120,9 @@ export function EntryConfirmModal({ open, kind, reason, onClose, onProceed, acce
       <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
           <span style={{ width: 40, height: 40, borderRadius: '50%', background: '#fdeee9', color: '#c0392b', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 900, flex: 'none' }}>!</span>
-          <div style={{ fontSize: 13.5, lineHeight: 1.8 }}>{msg}<br />{blocked ? <b style={{ color: '#c0392b' }}>この伝票は登録できません。借方・貸方の科目を確認してください。</b> : '内容を確認のうえ、このまま登録する場合は「確認して登録」を押してください。'}</div>
+          <div style={{ fontSize: 14, lineHeight: 1.8 }}>{msg}<br />{blocked ? <b style={{ color: '#c0392b' }}>この伝票は登録できません。借方・貸方の科目を確認してください。</b> : '内容を確認のうえ、このまま登録する場合は「確認して登録」を押してください。'}</div>
         </div>
-        {!blocked && <label style={{ fontSize: 12.5, display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={dont} onChange={(e) => setDont(e.target.checked)} />今後、この画面を表示しない（環境設定で戻せます）</label>}
+        {!blocked && <label style={{ fontSize: 14, display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={dont} onChange={(e) => setDont(e.target.checked)} />今後、この画面を表示しない（環境設定で戻せます）</label>}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button type="button" onClick={onClose} style={btn()}>{blocked ? 'OK' : '戻る'}</button>
           {!blocked && <button type="button" className="submit-btn" onClick={() => onProceed(dont)} style={btn(accent, true)}>確認して登録</button>}
@@ -135,10 +135,10 @@ export function EntryConfirmModal({ open, kind, reason, onClose, onProceed, acce
 /* ---------------- 予算残・達成率（クリックで予算状況グラフ） ---------------- */
 export function BudgetHintLive({ account, threshold, onOpen }: { account: string; threshold: number; onOpen: () => void }) {
   const b = budgetSample(account);
-  if (!b) return <div style={{ display: 'flex', gap: 16, marginTop: 11, fontSize: 11, color: '#8290a0', padding: '5px 0' }}><span>予算残 <b style={{ color: '#7a8794', fontWeight: 600 }}>—</b></span><span>達成率 <b style={{ color: '#7a8794', fontWeight: 600 }}>—</b></span></div>;
+  if (!b) return <div style={{ display: 'flex', gap: 16, marginTop: 11, fontSize: 12, color: '#8290a0', padding: '5px 0' }}><span>予算残 <b style={{ color: '#7a8794', fontWeight: 600 }}>—</b></span><span>達成率 <b style={{ color: '#7a8794', fontWeight: 600 }}>—</b></span></div>;
   const over = b.rate * 100 >= threshold;
   return (
-    <button type="button" onClick={onOpen} title="クリックで予算状況グラフ" style={{ display: 'flex', gap: 16, marginTop: 11, fontSize: 11, color: '#7a8794', background: over ? '#fdeee9' : '#f8fafc', border: '1px dashed ' + (over ? '#f2c9c2' : '#dde4ea'), borderRadius: 8, padding: '5px 9px', cursor: 'pointer', fontFamily: 'inherit', width: '100%', textAlign: 'left' }}>
+    <button type="button" onClick={onOpen} title="クリックで予算状況グラフ" style={{ display: 'flex', gap: 16, marginTop: 11, fontSize: 12, color: '#7a8794', background: over ? '#fdeee9' : '#f8fafc', border: '1px dashed ' + (over ? '#f2c9c2' : '#dde4ea'), borderRadius: 8, padding: '5px 9px', cursor: 'pointer', fontFamily: 'inherit', width: '100%', textAlign: 'left' }}>
       <span>予算残 <b style={{ color: over ? '#c0392b' : '#22303c', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{yen(b.remain)}</b></span>
       <span>達成率 <b style={{ color: over ? '#c0392b' : '#22303c', fontWeight: 700 }}>{(b.rate * 100).toFixed(1)}%</b></span>
       {over && <span style={{ marginLeft: 'auto', color: '#c0392b', fontWeight: 700 }}>予算チェック：{threshold}%超</span>}
@@ -165,7 +165,7 @@ export function BudgetGraphModal({ open, onClose, account }: { open: boolean; on
   const y = (v: number) => T + (H - T - B) * (1 - v / max);
   const path = (arr: (number | null)[]) => arr.map((v, i) => (v == null ? '' : `${i === 0 || arr[i - 1] == null ? 'M' : 'L'}${x(i)},${y(v)}`)).join(' ');
   return (
-    <Modal open={open} onClose={onClose} width={720} title={<>予算状況グラフ <span style={{ fontSize: 12.5, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>{account}</span></>}>
+    <Modal open={open} onClose={onClose} width={720} title={<>予算状況グラフ <span style={{ fontSize: 14, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>{account}</span></>}>
       <div style={{ padding: '10px 22px 18px' }}>
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', fontFamily: 'inherit' }}>
           {[0, 0.25, 0.5, 0.75, 1].map((t) => <g key={t}><line x1={L} x2={W - R} y1={y(max * t)} y2={y(max * t)} stroke="#eef2f5" /><text x={L - 6} y={y(max * t) + 4} fontSize="10" textAnchor="end" fill="#8290a0">{yen(Math.round(max * t / 1000))}千</text></g>)}
@@ -176,14 +176,14 @@ export function BudgetGraphModal({ open, onClose, account }: { open: boolean; on
           <path d={path(series.remain)} fill="none" stroke="#1f7a52" strokeWidth="2" />
           {series.actual.map((v, i) => v != null && <circle key={i} cx={x(i)} cy={y(v)} r="3.5" fill="#c0392b" />)}
         </svg>
-        <div style={{ display: 'flex', gap: 16, fontSize: 12, color: '#5b6773', flexWrap: 'wrap', marginTop: 6 }}>
+        <div style={{ display: 'flex', gap: 16, fontSize: 14, color: '#5b6773', flexWrap: 'wrap', marginTop: 6 }}>
           <span><span style={{ display: 'inline-block', width: 18, height: 3, background: '#2c5f9e', verticalAlign: 'middle', marginRight: 5 }} />年間予算（累計）</span>
           <span><span style={{ display: 'inline-block', width: 18, height: 0, borderTop: '2px dashed #9aa5b1', verticalAlign: 'middle', marginRight: 5 }} />当初予算</span>
           <span><span style={{ display: 'inline-block', width: 18, height: 3, background: '#c0392b', verticalAlign: 'middle', marginRight: 5 }} />実績（累計・8月まで）</span>
           <span><span style={{ display: 'inline-block', width: 18, height: 3, background: '#1f7a52', verticalAlign: 'middle', marginRight: 5 }} />予算残高</span>
           <span style={{ marginLeft: 'auto' }}>予算 {yen(b.budget)}／実績 {yen(b.actual)}／残 {yen(b.remain)}（達成率 {(b.rate * 100).toFixed(1)}%）</span>
         </div>
-        <div style={{ fontSize: 11.5, color: '#9aa5b1', marginTop: 6 }}>登録中・訂正中の伝票の金額はグラフに反映しません（登録後に再表示）。年間予算と当初予算が同額の場合は年間予算の線のみ表示します。</div>
+        <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 6 }}>登録中・訂正中の伝票の金額はグラフに反映しません（登録後に再表示）。年間予算と当初予算が同額の場合は年間予算の線のみ表示します。</div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}><button type="button" onClick={onClose} style={btn()}>閉じる</button></div>
       </div>
     </Modal>
@@ -206,14 +206,14 @@ export function TemplatePickerModal({ open, onClose, accent, onPick, onNew, mode
         <div>
           <span style={lbl}>定型伝票一覧（↑↓ で選び Enter で呼出し）</span>
           <div tabIndex={0} role="listbox" aria-label="定型伝票一覧" ref={(el) => { if (el && open && !el.dataset.f) { el.dataset.f = '1'; el.focus(); } }} onKeyDown={(e) => { if (e.key === 'ArrowDown') { e.preventDefault(); move(1); } if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); } if (e.key === 'Enter' && t) { e.preventDefault(); onPick(t); } }} className="ef-input" style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'hidden', background: '#fff' }}>
-            {s.templates.map((x) => <div key={x.id} onClick={() => setSel(x.id)} onDoubleClick={() => onPick(x)} style={{ padding: '9px 12px', borderBottom: '1px solid #f1f4f6', cursor: 'pointer', background: sel === x.id ? accent : '#fff', color: sel === x.id ? '#fff' : '#22303c', fontSize: 13 }}><div style={{ fontWeight: 700 }}>{x.name}</div><div style={{ fontSize: 11, opacity: 0.8 }}>{x.form}・{x.lines.length}行</div></div>)}
-            {s.templates.length === 0 && <div style={{ padding: 20, color: '#9aa5b1', fontSize: 12.5 }}>定型仕訳がありません。「新規登録」または設定「仕訳辞書」で登録してください。</div>}
+            {s.templates.map((x) => <div key={x.id} onClick={() => setSel(x.id)} onDoubleClick={() => onPick(x)} style={{ padding: '9px 12px', borderBottom: '1px solid #f1f4f6', cursor: 'pointer', background: sel === x.id ? accent : '#fff', color: sel === x.id ? '#fff' : '#22303c', fontSize: 14 }}><div style={{ fontWeight: 700 }}>{x.name}</div><div style={{ fontSize: 12, opacity: 0.8 }}>{x.form}・{x.lines.length}行</div></div>)}
+            {s.templates.length === 0 && <div style={{ padding: 20, color: '#9aa5b1', fontSize: 14 }}>定型仕訳がありません。「新規登録」または設定「仕訳辞書」で登録してください。</div>}
           </div>
           {onNew && <button type="button" className="btn-outline" onClick={onNew} style={{ ...btn(accent, false, true), marginTop: 8, width: '100%' }}>＋ 新規登録（入力中の内容から定型を作る）</button>}
         </div>
         <div>
           <span style={lbl}>内容</span>
-          {!t ? <div style={{ color: '#9aa5b1', fontSize: 12.5, padding: 20, border: '1px dashed #dde4ea', borderRadius: 10 }}>左の一覧から定型仕訳を選ぶと内容を表示します。</div> : (
+          {!t ? <div style={{ color: '#9aa5b1', fontSize: 14, padding: 20, border: '1px dashed #dde4ea', borderRadius: 10 }}>左の一覧から定型仕訳を選ぶと内容を表示します。</div> : (
             <>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}><thead><tr><th style={TH}>借方</th><th style={TH}>貸方</th><th style={TH}>摘要／業者</th><th style={{ ...TH, textAlign: 'right' }}>金額</th></tr></thead><tbody>{t.lines.map((l, i) => <tr key={i}><td style={TD}>{l.kari}</td><td style={TD}>{l.kashi}</td><td style={TD}>{l.tekiyo}{l.gyosha ? `／${l.gyosha}` : ''}</td><td style={NUM}>{l.amount ? yen(Number(l.amount)) : <span style={{ color: '#9aa5b1' }}>入力</span>}</td></tr>)}</tbody></table>
               <div style={{ marginTop: 10 }}><Notice>{mode === '定型' ? '呼び出すと、入力中の伝票に科目・摘要・業者・金額が入ります。日付と金額を入力（または訂正）して登録してください。' : '呼び出すと、定型の1行目が入力欄に入ります。登録すると次の行を順に呼び出し、複数の伝票を続けて登録できます。'}</Notice></div>
@@ -268,16 +268,16 @@ export function AllocationRunModal({ open, onClose, accent, onRegister, onNew }:
           </>
         ) : (
           <>
-            <div style={{ fontSize: 12.5, color: '#5b6773' }}>作成された伝票の金額を確認してください（{idx + 1} ／ {rows.length} 枚目）</div>
+            <div style={{ fontSize: 14, color: '#5b6773' }}>作成された伝票の金額を確認してください（{idx + 1} ／ {rows.length} 枚目）</div>
             <div style={{ border: '1px solid #e2e8ee', borderRadius: 12, padding: 16, background: '#fbfcfd' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#8290a0', marginBottom: 8 }}><span>伝票入力区分：<b style={{ color: '#22303c' }}>{rows[idx]?.division}</b></span><span>令和8年 {date}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#8290a0', marginBottom: 8 }}><span>伝票入力区分：<b style={{ color: '#22303c' }}>{rows[idx]?.division}</b></span><span>令和8年 {date}</span></div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div style={{ border: '1px solid #cfe0f2', borderRadius: 10, padding: '10px 12px' }}><div style={{ fontSize: 11, color: '#2c5f9e', fontWeight: 700 }}>借方</div><div style={{ fontSize: 14.5, fontWeight: 600 }}>{rows[idx]?.kari}</div></div>
-                <div style={{ border: '1px solid #f2d0dc', borderRadius: 10, padding: '10px 12px' }}><div style={{ fontSize: 11, color: '#b0426a', fontWeight: 700 }}>貸方</div><div style={{ fontSize: 14.5, fontWeight: 600 }}>{rows[idx]?.kashi}</div></div>
+                <div style={{ border: '1px solid #cfe0f2', borderRadius: 10, padding: '10px 12px' }}><div style={{ fontSize: 12, color: '#2c5f9e', fontWeight: 700 }}>借方</div><div style={{ fontSize: 14.5, fontWeight: 600 }}>{rows[idx]?.kari}</div></div>
+                <div style={{ border: '1px solid #f2d0dc', borderRadius: 10, padding: '10px 12px' }}><div style={{ fontSize: 12, color: '#b0426a', fontWeight: 700 }}>貸方</div><div style={{ fontSize: 14.5, fontWeight: 600 }}>{rows[idx]?.kashi}</div></div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 10 }}><span style={{ fontSize: 12.5, color: '#5b6773' }}>摘要：{rows[idx]?.tekiyo}</span><span style={{ fontSize: 22, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>¥ {yen(rows[idx]?.amount ?? 0)}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 10 }}><span style={{ fontSize: 14, color: '#5b6773' }}>摘要：{rows[idx]?.tekiyo}</span><span style={{ fontSize: 22, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>¥ {yen(rows[idx]?.amount ?? 0)}</span></div>
             </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}><tbody>{rows.map((r, i) => <tr key={i} style={{ background: i === idx ? '#fff8d6' : 'transparent' }}><td style={{ ...TD, fontSize: 12 }}>{i + 1}</td><td style={{ ...TD, fontSize: 12 }}>{r.division}</td><td style={{ ...TD, fontSize: 12 }}>{r.kari}／{r.kashi}</td><td style={{ ...NUM, fontSize: 12 }}>{yen(r.amount)}</td></tr>)}<tr style={{ background: '#f3f6f9' }}><td style={{ ...TD, fontWeight: 700 }} colSpan={3}>合計</td><td style={{ ...NUM, fontWeight: 700 }}>{yen(rows.reduce((a, r) => a + r.amount, 0))}</td></tr></tbody></table>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}><tbody>{rows.map((r, i) => <tr key={i} style={{ background: i === idx ? '#fff8d6' : 'transparent' }}><td style={{ ...TD, fontSize: 14 }}>{i + 1}</td><td style={{ ...TD, fontSize: 14 }}>{r.division}</td><td style={{ ...TD, fontSize: 14 }}>{r.kari}／{r.kashi}</td><td style={{ ...NUM, fontSize: 14 }}>{yen(r.amount)}</td></tr>)}<tr style={{ background: '#f3f6f9' }}><td style={{ ...TD, fontWeight: 700 }} colSpan={3}>合計</td><td style={{ ...NUM, fontWeight: 700 }}>{yen(rows.reduce((a, r) => a + r.amount, 0))}</td></tr></tbody></table>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
               <button type="button" onClick={() => setStep(0)} style={btn()}>戻る</button>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -321,8 +321,8 @@ export function AttachedStatementModal({ open, statement, entry, onClose, onDone
     <Modal open={open} onClose={onClose} width={560} title={`${statement}への登録`} strict>
       <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
         <Notice>登録した伝票を{statement}へ追加しますか？（設定「決算附属明細書」で「伝票入力時に監視する」が有効のため表示しています）</Notice>
-        <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: 12, fontSize: 13 }}><b>{entry.kari}</b> ／ <b>{entry.kashi}</b>　{entry.tekiyo}　<span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>{yen(entry.amount)}</span> 円<div style={{ fontSize: 11.5, color: '#8290a0', marginTop: 4 }}>登録伝票仕訳数：1</div></div>
-        <div style={{ display: 'grid', gap: 6, fontSize: 13 }}>
+        <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: 12, fontSize: 14 }}><b>{entry.kari}</b> ／ <b>{entry.kashi}</b>　{entry.tekiyo}　<span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>{yen(entry.amount)}</span> 円<div style={{ fontSize: 12, color: '#8290a0', marginTop: 4 }}>登録伝票仕訳数：1</div></div>
+        <div style={{ display: 'grid', gap: 6, fontSize: 14 }}>
           <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="radio" checked={reg} onChange={() => setReg(true)} />この金額を、{statement}データに登録する</label>
           <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="radio" checked={!reg} onChange={() => setReg(false)} />この金額を、{statement}データに登録しない</label>
         </div>
@@ -333,7 +333,7 @@ export function AttachedStatementModal({ open, statement, entry, onClose, onDone
   );
 }
 
-export const chipStyle = (on: boolean, accent: string): CSSProperties => ({ padding: '6px 14px', fontSize: 12.5, fontWeight: 600, borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', border: '1px solid ' + (on ? accent : '#cfd8e0') });
+export const chipStyle = (on: boolean, accent: string): CSSProperties => ({ padding: '6px 14px', fontSize: 14, fontWeight: 600, borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', border: '1px solid ' + (on ? accent : '#cfd8e0') });
 
 /* ------------------------------------------------------------------ */
 /* 4形式共通：機能ボタン・ショートカット・付随ダイアログ                 */
@@ -475,7 +475,7 @@ export function useEntryTools(o: EntryToolsOptions) {
     <span role="radiogroup" aria-label="資金モード" data-fund-switch title={ro ? reason : FUND_MODE_NOTE[o.fundMode]} style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 2, padding: 2, border: '1px solid #cfd8e0', borderRadius: 8, background: '#eef2f5' }}>
       {FUND_MODES.map((m) => {
         const on = m === o.fundMode;
-        return <button key={m} type="button" role="radio" aria-checked={on} tabIndex={-1} className="ef-act" data-menu={'資金モード:' + m} disabled={ro} onClick={() => o.onFundMode(m)} title={ro ? reason : FUND_MODE_NOTE[m]} style={{ padding: '4px 9px', borderRadius: 6, border: 'none', background: on ? (m === '自動資金' ? o.accent : '#6b3fb5') : 'transparent', color: on ? '#fff' : '#48565f', fontSize: 12, fontWeight: on ? 800 : 600, fontFamily: 'inherit', cursor: ro ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>{m}</button>;
+        return <button key={m} type="button" role="radio" aria-checked={on} tabIndex={-1} className="ef-act" data-menu={'資金モード:' + m} disabled={ro} onClick={() => o.onFundMode(m)} title={ro ? reason : FUND_MODE_NOTE[m]} style={{ padding: '4px 9px', borderRadius: 6, border: 'none', background: on ? (m === '自動資金' ? o.accent : '#6b3fb5') : 'transparent', color: on ? '#fff' : '#48565f', fontSize: 14, fontWeight: on ? 800 : 600, fontFamily: 'inherit', cursor: ro ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>{m}</button>;
       })}
     </span>
   );

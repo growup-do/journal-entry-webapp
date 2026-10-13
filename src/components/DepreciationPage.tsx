@@ -112,7 +112,7 @@ const TABS: { key: Tab; label: string; hint: string }[] = [
   { key: 'closing', label: '決算処理', hint: '減価償却の仕訳伝票を作成' },
   { key: 'transfer', label: '移管取込', hint: '移管（元）ファイルの読込' },
 ];
-const statusStyle = (st: Asset['status']): CSSProperties => ({ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: st === '償却中' ? '#eaf5ef' : st === '対象外' ? '#f1f4f6' : '#fff1b8', color: st === '償却中' ? '#1f7a52' : st === '対象外' ? '#7a8794' : '#8a6d00', whiteSpace: 'nowrap' });
+const statusStyle = (st: Asset['status']): CSSProperties => ({ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: st === '償却中' ? '#eaf5ef' : st === '対象外' ? '#f1f4f6' : '#fff1b8', color: st === '償却中' ? '#1f7a52' : st === '対象外' ? '#7a8794' : '#8a6d00', whiteSpace: 'nowrap' });
 const annualOf = (a: Asset) => (a.life && a.method !== '非償却' ? Math.min(Math.floor((a.cost - 1) / a.life), Math.max(0, a.opening - 1)) : 0);
 const isNewThisYear = (a: Asset) => a.acquired.startsWith('令和8') || !!a.transferIn;
 
@@ -182,10 +182,10 @@ function buildReport(name: string, ctx: ReportCtx): ExportSpec {
 }
 
 /* ================= 共通の小さなダイアログ ================= */
-const IN: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 7, fontSize: 13, fontFamily: 'inherit', outline: 'none', background: '#fff', color: '#22303c' };
+const IN: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 7, fontSize: 14, fontFamily: 'inherit', outline: 'none', background: '#fff', color: '#22303c' };
 const IN_NUM: CSSProperties = { ...IN, textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
-const LBL: CSSProperties = { fontSize: 11, fontWeight: 700, color: '#8290a0', marginBottom: 4, display: 'block' };
-const BTN = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '7px 12px', borderRadius: 7, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
+const LBL: CSSProperties = { fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 4, display: 'block' };
+const BTN = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '7px 12px', borderRadius: 7, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
 const FOOT: CSSProperties = { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 };
 const noIme = (e: KeyboardEvent) => e.nativeEvent.isComposing || (e.nativeEvent as unknown as { keyCode: number }).keyCode === 229;
 
@@ -198,10 +198,10 @@ function PickerModal({ title, items, current, onPick, onClose, accent, matcher, 
       <div style={{ padding: '12px 22px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder={placeholder ?? '名称で検索'} autoComplete="off" autoFocus onKeyDown={(e) => { if (e.key === 'Enter' && !noIme(e) && allowFree && q.trim()) { onPick(q.trim()); onClose(); } }} style={IN} />
         <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: 320, overflow: 'auto' }}>
-          {list.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: '#9aa5b1', fontSize: 12.5 }}>該当する項目がありません。</div>}
-          {list.map((n) => { const on = n === current; return <button key={n} type="button" className="menu-sub" onClick={() => { onPick(n); onClose(); }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', border: 'none', borderBottom: '1px solid #f1f4f6', background: on ? '#eef2f6' : '#fff', color: on ? accent : '#22303c', fontSize: 12.5, fontWeight: on ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer' }}>{n}{on && <span style={{ marginLeft: 8, fontSize: 10.5 }}>（現在）</span>}</button>; })}
+          {list.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>該当する項目がありません。</div>}
+          {list.map((n) => { const on = n === current; return <button key={n} type="button" className="menu-sub" onClick={() => { onPick(n); onClose(); }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', border: 'none', borderBottom: '1px solid #f1f4f6', background: on ? '#eef2f6' : '#fff', color: on ? accent : '#22303c', fontSize: 14, fontWeight: on ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer' }}>{n}{on && <span style={{ marginLeft: 8, fontSize: 12 }}>（現在）</span>}</button>; })}
         </div>
-        {allowFree && <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, color: '#7a8794' }}><span>一覧にない場合は入力した文字をそのまま使えます</span><button type="button" className="btn-outline" disabled={!q.trim()} onClick={() => { onPick(q.trim()); onClose(); }} style={{ ...BTN(accent, true), marginLeft: 'auto', opacity: q.trim() ? 1 : 0.5 }}>「{q.trim() || '　'}」を使用</button></div>}
+        {allowFree && <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 14, color: '#7a8794' }}><span>一覧にない場合は入力した文字をそのまま使えます</span><button type="button" className="btn-outline" disabled={!q.trim()} onClick={() => { onPick(q.trim()); onClose(); }} style={{ ...BTN(accent, true), marginLeft: 'auto', opacity: q.trim() ? 1 : 0.5 }}>「{q.trim() || '　'}」を使用</button></div>}
       </div>
     </Modal>
   );
@@ -217,7 +217,7 @@ function HistoryModal({ open, title, rows, onClose }: { open: boolean; title: st
             <thead><tr><th style={TH}>日時</th><th style={TH}>ファイル名</th><th style={{ ...TH, textAlign: 'right' }}>件数</th><th style={TH}>担当者</th><th style={TH}>結果</th></tr></thead>
             <tbody>
               {rows.length === 0 && <tr><td colSpan={5} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 30 }}>履歴はありません。</td></tr>}
-              {[...rows].reverse().map((r, i) => <tr key={i}><td style={{ ...TD, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{r.time}</td><td style={{ ...TD, fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 12 }}>{r.file}</td><td style={NUM}>{r.count}</td><td style={TD}>{r.user}</td><td style={TD}><span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: r.result.startsWith('正常') ? '#eaf5ef' : '#fdeee9', color: r.result.startsWith('正常') ? '#1f7a52' : '#c0392b' }}>{r.result}</span></td></tr>)}
+              {[...rows].reverse().map((r, i) => <tr key={i}><td style={{ ...TD, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{r.time}</td><td style={{ ...TD, fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 14 }}>{r.file}</td><td style={NUM}>{r.count}</td><td style={TD}>{r.user}</td><td style={TD}><span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: r.result.startsWith('正常') ? '#eaf5ef' : '#fdeee9', color: r.result.startsWith('正常') ? '#1f7a52' : '#c0392b' }}>{r.result}</span></td></tr>)}
             </tbody>
           </table>
         </div>
@@ -244,9 +244,9 @@ function ImageModal({ open, title, src, onClose, onChange, accent, toast }: { op
       <div style={{ padding: '12px 22px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ''; }} />
         <div onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); pick(e.dataTransfer.files?.[0]); }} onClick={() => !src && fileRef.current?.click()} style={{ border: '2px dashed ' + (src ? '#e2e8ee' : '#cfd8e0'), borderRadius: 12, minHeight: 240, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafbfc', cursor: src ? 'default' : 'pointer', overflow: 'hidden' }}>
-          {src ? <img src={src} alt={title} style={{ maxWidth: '100%', maxHeight: 340, objectFit: 'contain' }} /> : <div style={{ textAlign: 'center', color: '#7a8794', fontSize: 12.5, lineHeight: 1.8 }}>ここに画像をドロップ、またはクリックして選択<br /><span style={{ fontSize: 11.5, color: '#9aa5b1' }}>JPEG／PNG／GIF　5MB まで</span></div>}
+          {src ? <img src={src} alt={title} style={{ maxWidth: '100%', maxHeight: 340, objectFit: 'contain' }} /> : <div style={{ textAlign: 'center', color: '#7a8794', fontSize: 14, lineHeight: 1.8 }}>ここに画像をドロップ、またはクリックして選択<br /><span style={{ fontSize: 12, color: '#9aa5b1' }}>JPEG／PNG／GIF　5MB まで</span></div>}
         </div>
-        {name && <div style={{ fontSize: 12, color: '#7a8794' }}>ファイル：{name}</div>}
+        {name && <div style={{ fontSize: 14, color: '#7a8794' }}>ファイル：{name}</div>}
         <Notice>画像はこの画面内でのみ保持します（本番ではサーバーに保存し、固定資産タックシール等に印字できます）。</Notice>
         <div style={FOOT}>
           {src && <button type="button" className="btn-outline" onClick={() => { if (confirm('添付した画像を削除しますか？')) { onChange(null); setName(''); toast('画像を削除しました'); } }} style={{ ...BTN('#c0392b'), marginRight: 'auto' }}>削除</button>}
@@ -274,8 +274,8 @@ function LifeDictModal({ onClose, onPick, accent }: { onClose: () => void; onPic
               {list.length === 0 && <tr><td colSpan={4} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 30 }}>該当する項目がありません。</td></tr>}
               {cats.map((c) => (
                 <Fragment key={c}>
-                  <tr><td colSpan={4} style={{ ...TD, fontWeight: 700, background: '#f8fafc', fontSize: 12 }}>{c}</td></tr>
-                  {list.filter((d) => d.cat === c).map((d) => <tr key={d.name} className="menu-sub" onClick={() => { onPick(d); onClose(); }} style={{ cursor: 'pointer' }}><td style={{ ...TD, paddingLeft: 24 }}>{d.name}</td><td style={{ ...TD, color: '#48565f' }}>{d.account}</td><td style={{ ...NUM, fontWeight: 700 }}>{d.life} 年</td><td style={{ ...TD, textAlign: 'right' }}><span style={{ ...BTN(accent, true), padding: '3px 10px', fontSize: 11 }}>選択</span></td></tr>)}
+                  <tr><td colSpan={4} style={{ ...TD, fontWeight: 700, background: '#f8fafc', fontSize: 14 }}>{c}</td></tr>
+                  {list.filter((d) => d.cat === c).map((d) => <tr key={d.name} className="menu-sub" onClick={() => { onPick(d); onClose(); }} style={{ cursor: 'pointer' }}><td style={{ ...TD, paddingLeft: 24 }}>{d.name}</td><td style={{ ...TD, color: '#48565f' }}>{d.account}</td><td style={{ ...NUM, fontWeight: 700 }}>{d.life} 年</td><td style={{ ...TD, textAlign: 'right' }}><span style={{ ...BTN(accent, true), padding: '3px 10px', fontSize: 12 }}>選択</span></td></tr>)}
                 </Fragment>
               ))}
             </tbody>
@@ -290,14 +290,14 @@ function LifeDictModal({ onClose, onPick, accent }: { onClose: () => void; onPic
 /** 端数処理設定 */
 function RoundingModal({ value, onClose, onSave, accent }: { value: Rounding; onClose: () => void; onSave: (r: Rounding) => void; accent: string }) {
   const [r, setR] = useState<Rounding>(value);
-  const radios = (key: 'dep' | 'sub' | 'prorate') => (['切捨て', '四捨五入', '切上げ'] as RoundMode[]).map((m) => <label key={m} style={{ display: 'inline-flex', gap: 5, alignItems: 'center', fontSize: 12.5, marginRight: 14 }}><input type="radio" name={'rnd-' + key} checked={r[key] === m} onChange={() => setR({ ...r, [key]: m })} />{m}</label>);
+  const radios = (key: 'dep' | 'sub' | 'prorate') => (['切捨て', '四捨五入', '切上げ'] as RoundMode[]).map((m) => <label key={m} style={{ display: 'inline-flex', gap: 5, alignItems: 'center', fontSize: 14, marginRight: 14 }}><input type="radio" name={'rnd-' + key} checked={r[key] === m} onChange={() => setR({ ...r, [key]: m })} />{m}</label>);
   return (
     <Modal open onClose={onClose} width={560} title="端数処理設定">
       <div style={{ padding: '12px 22px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div><span style={LBL}>当期減価償却額の端数</span>{radios('dep')}</div>
         <div><span style={LBL}>国庫補助金等取崩額の端数</span>{radios('sub')}</div>
         <div><span style={LBL}>月按分（除却・移管・期中取得）の端数</span>{radios('prorate')}</div>
-        <div><span style={LBL}>償却率の小数桁数</span>{(['3桁', '4桁'] as const).map((d) => <label key={d} style={{ display: 'inline-flex', gap: 5, alignItems: 'center', fontSize: 12.5, marginRight: 14 }}><input type="radio" name="rnd-digits" checked={r.digits === d} onChange={() => setR({ ...r, digits: d })} />{d}</label>)}</div>
+        <div><span style={LBL}>償却率の小数桁数</span>{(['3桁', '4桁'] as const).map((d) => <label key={d} style={{ display: 'inline-flex', gap: 5, alignItems: 'center', fontSize: 14, marginRight: 14 }}><input type="radio" name="rnd-digits" checked={r.digits === d} onChange={() => setR({ ...r, digits: d })} />{d}</label>)}</div>
         <Notice>この設定は選択中の固定資産にだけ適用されます。全体の既定は「環境設定 › 端数処理その他設定」で行います。</Notice>
         <div style={FOOT}><button type="button" onClick={onClose} style={BTN()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { onSave(r); onClose(); }} style={BTN(accent, true)}>設定</button></div>
       </div>
@@ -323,12 +323,12 @@ function SubsidyModal({ rows, cost, onClose, onSave, accent, toast }: { rows: Su
                 <td style={TD}><select value={r.kind} onChange={(e) => upd(i, { kind: e.target.value as SubsidyRow['kind'] })} style={IN}>{['国庫補助金等', '償還補助金', 'その他'].map((o) => <option key={o}>{o}</option>)}</select></td>
                 <td style={TD}><input className="field-input" value={r.amount ? yen(r.amount) : ''} onChange={(e) => upd(i, { amount: numOf(e.target.value) })} inputMode="numeric" placeholder="0" style={{ ...IN_NUM, width: 130 }} /></td>
                 <td style={TD}><input className="field-input" value={r.date} onChange={(e) => upd(i, { date: e.target.value })} style={{ ...IN, width: 140 }} /></td>
-                <td style={TD}><button type="button" className="btn-outline" onClick={() => setRs((a) => a.filter((_, k) => k !== i))} style={{ ...BTN('#c0392b'), padding: '4px 8px', fontSize: 11 }}>削除</button></td>
+                <td style={TD}><button type="button" className="btn-outline" onClick={() => setRs((a) => a.filter((_, k) => k !== i))} style={{ ...BTN('#c0392b'), padding: '4px 8px', fontSize: 12 }}>削除</button></td>
               </tr>)}
             </tbody>
           </table>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12.5 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14 }}>
           <button type="button" className="btn-outline" onClick={() => setRs((a) => [...a, { name: '', kind: '国庫補助金等', amount: 0, date: waToday() }])} style={BTN()}>＋ 行を追加</button>
           <span style={{ marginLeft: 'auto' }}>補助金総合計 <b style={{ fontSize: 14 }}>{yen(total)}</b>　（うち償還補助金 <b>{yen(redeem)}</b>）</span>
         </div>
@@ -355,7 +355,7 @@ function PartialModal({ qty, cost, book, value, onClose, onApply, accent, toast 
           <div><span style={LBL}>処分数量（登録数量 {qty}）</span><input className="field-input" value={p.qty || ''} onChange={(e) => setP({ ...p, qty: Math.min(qty, numOf(e.target.value)) })} inputMode="numeric" style={IN_NUM} /></div>
           <div><span style={LBL}>{p.proc === '売却' ? '売却額' : '処分額'}</span><input className="field-input" value={p.amount ? yen(p.amount) : ''} onChange={(e) => setP({ ...p, amount: numOf(e.target.value) })} inputMode="numeric" placeholder="0" style={IN_NUM} /></div>
         </div>
-        <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: 12, fontSize: 12.5, display: 'grid', gridTemplateColumns: '1fr auto', rowGap: 4 }}>
+        <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: 12, fontSize: 14, display: 'grid', gridTemplateColumns: '1fr auto', rowGap: 4 }}>
           <span style={{ color: '#7a8794' }}>処分割合</span><b>{(ratio * 100).toFixed(1)}%</b>
           <span style={{ color: '#7a8794' }}>処分する取得価額</span><b>{yen(partCost)}</b>
           <span style={{ color: '#7a8794' }}>当期減少額（帳簿価額ベース）</span><b>{yen(partBook)}</b>
@@ -411,12 +411,12 @@ function CapexModal({ rows, onClose, onSave, accent }: { rows: CapexRow[]; onClo
                 <td style={TD}><input className="field-input" value={r.name} onChange={(e) => upd(i, { name: e.target.value })} placeholder="例：屋根防水改修工事" style={IN} /></td>
                 <td style={TD}><input className="field-input" value={r.amount ? yen(r.amount) : ''} onChange={(e) => upd(i, { amount: numOf(e.target.value) })} inputMode="numeric" placeholder="0" style={{ ...IN_NUM, width: 130 }} /></td>
                 <td style={TD}><input className="field-input" value={r.subsidy ? yen(r.subsidy) : ''} onChange={(e) => upd(i, { subsidy: numOf(e.target.value) })} inputMode="numeric" placeholder="0" style={{ ...IN_NUM, width: 130 }} /></td>
-                <td style={TD}><button type="button" className="btn-outline" onClick={() => setRs((a) => a.filter((_, k) => k !== i))} style={{ ...BTN('#c0392b'), padding: '4px 8px', fontSize: 11 }}>削除</button></td>
+                <td style={TD}><button type="button" className="btn-outline" onClick={() => setRs((a) => a.filter((_, k) => k !== i))} style={{ ...BTN('#c0392b'), padding: '4px 8px', fontSize: 12 }}>削除</button></td>
               </tr>)}
             </tbody>
           </table>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12.5 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14 }}>
           <button type="button" className="btn-outline" onClick={() => setRs((a) => [...a, { date: waToday(), name: '', amount: 0, subsidy: 0 }])} style={BTN()}>＋ 行を追加</button>
           <span style={{ marginLeft: 'auto' }}>資本的支出 合計 <b style={{ fontSize: 14 }}>{yen(total)}</b>（当期増加額 B に加算）</span>
         </div>
@@ -432,7 +432,7 @@ const DEFAULT_DETAIL = (m: string): MethodDetail => ({ dep: '切捨て', sub: '�
 /** 償却方法ごとの詳細設定（動作環境設定） */
 function MethodDetailModal({ method, value, onClose, onSave, accent }: { method: string; value: MethodDetail; onClose: () => void; onSave: (v: MethodDetail) => void; accent: string }) {
   const [v, setV] = useState<MethodDetail>(value);
-  const radios = (key: 'dep' | 'sub') => (['切捨て', '四捨五入', '切上げ'] as RoundMode[]).map((m) => <label key={m} style={{ display: 'inline-flex', gap: 5, alignItems: 'center', fontSize: 12.5, marginRight: 14 }}><input type="radio" name={'md-' + key} checked={v[key] === m} onChange={() => setV({ ...v, [key]: m })} />{m}</label>);
+  const radios = (key: 'dep' | 'sub') => (['切捨て', '四捨五入', '切上げ'] as RoundMode[]).map((m) => <label key={m} style={{ display: 'inline-flex', gap: 5, alignItems: 'center', fontSize: 14, marginRight: 14 }}><input type="radio" name={'md-' + key} checked={v[key] === m} onChange={() => setV({ ...v, [key]: m })} />{m}</label>);
   const old = method.startsWith('旧定額法');
   return (
     <Modal open onClose={onClose} width={600} title={`${method} の詳細設定`}>
@@ -462,8 +462,8 @@ function SortMasterModal({ items, onClose, onSave, accent, toast }: { items: str
       <div style={{ padding: '12px 22px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', gap: 8 }}><input className="field-input ring" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !noIme(e)) add(); }} placeholder="項目名を入力して Enter で追加" style={IN} /><button type="button" onClick={add} style={BTN(accent, true)}>追加</button></div>
         <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: 320, overflow: 'auto' }}>
-          {list.map((it, i) => <div key={it} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderBottom: '1px solid #f1f4f6', fontSize: 12.5 }}><span style={{ width: 24, color: '#9aa5b1', fontVariantNumeric: 'tabular-nums' }}>{i + 1}</span><span style={{ flex: 1, fontWeight: 600 }}>{it}</span><button type="button" onClick={() => move(i, -1)} disabled={i === 0} style={{ ...BTN(), padding: '3px 8px', opacity: i === 0 ? 0.4 : 1 }}>↑</button><button type="button" onClick={() => move(i, 1)} disabled={i === list.length - 1} style={{ ...BTN(), padding: '3px 8px', opacity: i === list.length - 1 ? 0.4 : 1 }}>↓</button><button type="button" onClick={() => setList((l) => l.filter((x) => x !== it))} style={{ ...BTN('#c0392b'), padding: '3px 8px' }}>削除</button></div>)}
-          {list.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: '#9aa5b1', fontSize: 12.5 }}>項目がありません。</div>}
+          {list.map((it, i) => <div key={it} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderBottom: '1px solid #f1f4f6', fontSize: 14 }}><span style={{ width: 24, color: '#9aa5b1', fontVariantNumeric: 'tabular-nums' }}>{i + 1}</span><span style={{ flex: 1, fontWeight: 600 }}>{it}</span><button type="button" onClick={() => move(i, -1)} disabled={i === 0} style={{ ...BTN(), padding: '3px 8px', opacity: i === 0 ? 0.4 : 1 }}>↑</button><button type="button" onClick={() => move(i, 1)} disabled={i === list.length - 1} style={{ ...BTN(), padding: '3px 8px', opacity: i === list.length - 1 ? 0.4 : 1 }}>↓</button><button type="button" onClick={() => setList((l) => l.filter((x) => x !== it))} style={{ ...BTN('#c0392b'), padding: '3px 8px' }}>削除</button></div>)}
+          {list.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>項目がありません。</div>}
         </div>
         <Notice>固定資産・備品の「並び順項目」の選択肢になります。帳票はこの順序で並べて印刷します。</Notice>
         <div style={FOOT}><button type="button" onClick={onClose} style={BTN()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { onSave(list); onClose(); }} style={BTN(accent, true)}>登録</button></div>
@@ -496,7 +496,7 @@ export function DepreciationPage({ variant, accent }: Props) {
   const toast = useToast();
   const isSheet = variant === 'sheet';
 
-  const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '8px 14px', borderRadius: 8, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
+  const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '8px 14px', borderRadius: 8, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
   const card: CSSProperties = { background: '#fff', border: '1px solid #dde4ea', borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'hidden' };
 
   const addLog = (kind: LogRow['kind'], code: string, target: string, action: string) => setLogs((ls) => [...ls, { time: stamp(), kind, code, target, action, user: USER }]);
@@ -531,9 +531,9 @@ export function DepreciationPage({ variant, accent }: Props) {
   };
   const kpiTile = (label: string, value: string, sub?: string) => (
     <div key={label} style={{ padding: '10px 14px', border: '1px solid #e2e8ee', borderRadius: 10, background: '#fbfcfd', minWidth: 150 }}>
-      <div style={{ fontSize: 10.5, fontWeight: 700, color: '#8290a0' }}>{label}</div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>{label}</div>
       <div style={{ fontSize: 18, fontWeight: 800, fontVariantNumeric: 'tabular-nums', marginTop: 2 }}>{value}</div>
-      {sub && <div style={{ fontSize: 10.5, color: '#9aa5b1' }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 12, color: '#9aa5b1' }}>{sub}</div>}
     </div>
   );
 
@@ -553,9 +553,9 @@ export function DepreciationPage({ variant, accent }: Props) {
           <div style={{ minWidth: 0 }}>
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21 }}>
               減価償却
-              <span style={{ fontSize: 12.5, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>チャイルド保育園　令和8年度</span>
+              <span style={{ fontSize: 14, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>チャイルド保育園　令和8年度</span>
             </div>
-            <div style={{ color: '#7a8794', fontSize: 12, marginTop: 4 }}>固定資産・備品の台帳管理と、減価償却の決算処理。<span style={{ color: '#b7791f' }}>（値はサンプル）</span></div>
+            <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>固定資産・備品の台帳管理と、減価償却の決算処理。<span style={{ color: '#b7791f' }}>（値はサンプル）</span></div>
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             <button type="button" className="submit-btn" onClick={() => setAssetModal({ open: true, asset: null, manual: false })} style={btn(accent, true)}>＋ 固定資産を登録</button>
@@ -572,10 +572,10 @@ export function DepreciationPage({ variant, accent }: Props) {
           {TABS.map((t) => {
             const on = tab === t.key;
             return (
-              <button key={t.key} type="button" className="menu-item-h" data-tab={t.key} onClick={() => setTab(t.key)} title={t.hint} style={{ padding: '10px 14px', border: 'none', borderBottom: '2px solid ' + (on ? accent : 'transparent'), background: 'transparent', color: on ? accent : '#5b6773', fontSize: 13, fontWeight: on ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              <button key={t.key} type="button" className="menu-item-h" data-tab={t.key} onClick={() => setTab(t.key)} title={t.hint} style={{ padding: '10px 14px', border: 'none', borderBottom: '2px solid ' + (on ? accent : 'transparent'), background: 'transparent', color: on ? accent : '#5b6773', fontSize: 14, fontWeight: on ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                 {t.label}
-                {t.key === 'closing' && vouchers.length > 0 && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 800, color: '#fff', background: accent, borderRadius: 8, padding: '1px 6px' }}>{vouchers.length}</span>}
-                {t.key === 'disposal' && disposals.length > 0 && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 800, color: '#fff', background: '#8a6d00', borderRadius: 8, padding: '1px 6px' }}>{disposals.length}</span>}
+                {t.key === 'closing' && vouchers.length > 0 && <span style={{ marginLeft: 6, fontSize: 12, fontWeight: 800, color: '#fff', background: accent, borderRadius: 8, padding: '1px 6px' }}>{vouchers.length}</span>}
+                {t.key === 'disposal' && disposals.length > 0 && <span style={{ marginLeft: 6, fontSize: 12, fontWeight: 800, color: '#fff', background: '#8a6d00', borderRadius: 8, padding: '1px 6px' }}>{disposals.length}</span>}
               </button>
             );
           })}
@@ -592,8 +592,8 @@ export function DepreciationPage({ variant, accent }: Props) {
                 {kpiTile('当期償却額（見込）', yen(kpi.annual), '定額法・年額')}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 22px 10px', flexWrap: 'wrap' }}>
-                {(['すべて', '償却中', '償却終了', '対象外'] as const).map((st) => <button key={st} type="button" className="chip" onClick={() => setStatusFilter(st)} style={{ padding: '5px 12px', borderRadius: 14, border: '1px solid ' + (statusFilter === st ? accent : '#d3dbe3'), background: statusFilter === st ? accent : '#fff', color: statusFilter === st ? '#fff' : '#5b6773', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{st}</button>)}
-                <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="名称・コード・科目で検索" autoComplete="off" style={{ marginLeft: 'auto', width: 240, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 12.5, fontFamily: 'inherit', outline: 'none' }} />
+                {(['すべて', '償却中', '償却終了', '対象外'] as const).map((st) => <button key={st} type="button" className="chip" onClick={() => setStatusFilter(st)} style={{ padding: '5px 12px', borderRadius: 14, border: '1px solid ' + (statusFilter === st ? accent : '#d3dbe3'), background: statusFilter === st ? accent : '#fff', color: statusFilter === st ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{st}</button>)}
+                <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="名称・コード・科目で検索" autoComplete="off" style={{ marginLeft: 'auto', width: 240, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
               </div>
               <SelectionBar count={sel.size} unit="件" hint="行頭のチェックで追加・解除" style={{ padding: '8px 22px', borderTop: '1px solid #f3e3a0' }} onClear={() => setSel(new Set())} actions={<><button type="button" onClick={() => { setTab('disposal'); }} style={uiBtn('#5b6773', false, true)}>除却・売却・移管へ</button><button type="button" onClick={deleteSel} style={uiBtn('#c0392b', true, true)}>削除</button></>} />
               <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 470px)' }}>
@@ -609,7 +609,7 @@ export function DepreciationPage({ variant, accent }: Props) {
                           <td style={TD} onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={sel.has(a.code)} onChange={() => toggleSel(a.code)} /></td>
                           <td style={TD}><span style={statusStyle(a.status)}>{a.status}</span></td>
                           <td style={{ ...TD, fontVariantNumeric: 'tabular-nums', color: '#7a8794' }}>{a.code}</td>
-                          <td style={{ ...TD, fontWeight: 600 }}>{a.name}{a.transferIn && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: '#e8f0fb', color: '#2c5f9e' }}>移管(先)</span>}{images['A:' + a.code] && <span title="画像あり" style={{ marginLeft: 6, fontSize: 10.5 }}>📷</span>}</td>
+                          <td style={{ ...TD, fontWeight: 600 }}>{a.name}{a.transferIn && <span style={{ marginLeft: 6, fontSize: 12, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: '#e8f0fb', color: '#2c5f9e' }}>移管(先)</span>}{images['A:' + a.code] && <span title="画像あり" style={{ marginLeft: 6, fontSize: 12 }}>📷</span>}</td>
                           <td style={{ ...TD, color: '#48565f' }}>{a.account}</td>
                           <td style={{ ...TD, whiteSpace: 'nowrap' }}>{a.acquired}</td>
                           <td style={NUM}>{a.life || '—'}</td>
@@ -634,15 +634,15 @@ export function DepreciationPage({ variant, accent }: Props) {
         {tab === 'equips' && (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 22px 10px' }}>
-              <span style={{ fontSize: 12.5, color: '#7a8794' }}>{equips.length} 件　取得価額合計 <b style={{ color: '#22303c' }}>{yen(equips.reduce((s, e) => s + e.cost, 0))}</b></span>
-              <button type="button" className="btn-outline" onClick={() => openReport('備品一覧表（1）')} style={{ ...btn(), padding: '5px 10px', fontSize: 11.5 }}>備品一覧表(1)</button>
-              <button type="button" className="btn-outline" onClick={() => openReport('備品一覧表（2）')} style={{ ...btn(), padding: '5px 10px', fontSize: 11.5 }}>備品一覧表(2)</button>
-              <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="備品名で検索" autoComplete="off" style={{ marginLeft: 'auto', width: 240, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 12.5, fontFamily: 'inherit', outline: 'none' }} />
+              <span style={{ fontSize: 14, color: '#7a8794' }}>{equips.length} 件　取得価額合計 <b style={{ color: '#22303c' }}>{yen(equips.reduce((s, e) => s + e.cost, 0))}</b></span>
+              <button type="button" className="btn-outline" onClick={() => openReport('備品一覧表（1）')} style={{ ...btn(), padding: '5px 10px', fontSize: 12 }}>備品一覧表(1)</button>
+              <button type="button" className="btn-outline" onClick={() => openReport('備品一覧表（2）')} style={{ ...btn(), padding: '5px 10px', fontSize: 12 }}>備品一覧表(2)</button>
+              <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="備品名で検索" autoComplete="off" style={{ marginLeft: 'auto', width: 240, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead><tr><th style={TH}>備品コード</th><th style={TH}>備品名称</th><th style={TH}>科目</th><th style={TH}>取得年月日</th><th style={{ ...TH, textAlign: 'right' }}>取得価額</th><th style={{ ...TH, width: 200 }} /></tr></thead>
               <tbody>
-                {equips.filter((e) => !q || e.name.includes(q)).map((e) => <tr key={e.code}><td style={{ ...TD, color: '#7a8794' }}>{e.code}</td><td style={{ ...TD, fontWeight: 600 }}>{e.name}{images['E:' + e.code] && <span title="画像あり" style={{ marginLeft: 6, fontSize: 10.5 }}>📷</span>}</td><td style={{ ...TD, color: '#48565f' }}>{e.account ?? ''}</td><td style={TD}>{e.acquired}</td><td style={NUM}>{yen(e.cost)}</td><td style={{ ...TD, textAlign: 'right', whiteSpace: 'nowrap' }}><button type="button" className="btn-outline" onClick={() => setImgTarget({ key: 'E:' + e.code, title: `備品画像：${e.name}` })} style={{ ...btn(), padding: '4px 10px', fontSize: 11.5, marginRight: 4 }}>画像</button><button type="button" className="btn-outline" onClick={() => openLog('備品', e.code)} style={{ ...btn(), padding: '4px 10px', fontSize: 11.5, marginRight: 4 }}>ログ</button><button type="button" className="btn-outline" onClick={() => { if (confirm(`「${e.name}」を削除しますか？`)) { addLog('備品', e.code, `${Number(e.code)}:${e.name}`, '削除'); setEquips((es) => es.filter((x) => x.code !== e.code)); } }} style={{ ...btn('#c0392b'), padding: '4px 10px', fontSize: 11.5 }}>削除</button></td></tr>)}
+                {equips.filter((e) => !q || e.name.includes(q)).map((e) => <tr key={e.code}><td style={{ ...TD, color: '#7a8794' }}>{e.code}</td><td style={{ ...TD, fontWeight: 600 }}>{e.name}{images['E:' + e.code] && <span title="画像あり" style={{ marginLeft: 6, fontSize: 12 }}>📷</span>}</td><td style={{ ...TD, color: '#48565f' }}>{e.account ?? ''}</td><td style={TD}>{e.acquired}</td><td style={NUM}>{yen(e.cost)}</td><td style={{ ...TD, textAlign: 'right', whiteSpace: 'nowrap' }}><button type="button" className="btn-outline" onClick={() => setImgTarget({ key: 'E:' + e.code, title: `備品画像：${e.name}` })} style={{ ...btn(), padding: '4px 10px', fontSize: 12, marginRight: 4 }}>画像</button><button type="button" className="btn-outline" onClick={() => openLog('備品', e.code)} style={{ ...btn(), padding: '4px 10px', fontSize: 12, marginRight: 4 }}>ログ</button><button type="button" className="btn-outline" onClick={() => { if (confirm(`「${e.name}」を削除しますか？`)) { addLog('備品', e.code, `${Number(e.code)}:${e.name}`, '削除'); setEquips((es) => es.filter((x) => x.code !== e.code)); } }} style={{ ...btn('#c0392b'), padding: '4px 10px', fontSize: 12 }}>削除</button></td></tr>)}
                 {equips.length === 0 && <tr><td colSpan={6} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>備品は登録されていません。「＋ 備品を登録」から追加してください。</td></tr>}
               </tbody>
             </table>
@@ -655,7 +655,7 @@ export function DepreciationPage({ variant, accent }: Props) {
       </div>
 
       {/* 固定資産の登録／変更（モーダル） */}
-      <Modal open={assetModal.open} onClose={() => setAssetModal({ open: false, asset: null, manual: false })} width={1180} title={<>{assetModal.asset ? '固定資産の変更' : '固定資産の登録'}{assetModal.manual && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#fff1b8', color: '#8a6d00' }}>全項目手入力</span>}</>}>
+      <Modal open={assetModal.open} onClose={() => setAssetModal({ open: false, asset: null, manual: false })} width={1180} title={<>{assetModal.asset ? '固定資産の変更' : '固定資産の登録'}{assetModal.manual && <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#fff1b8', color: '#8a6d00' }}>全項目手入力</span>}</>}>
         {assetModal.open && <AssetForm accent={accent} asset={assetModal.asset} manual={assetModal.manual} sortItems={sortItems} nextCode={String(assets.reduce((m, a) => Math.max(m, Number(a.code) < 10000 ? Number(a.code) : 0), 0) + 1).padStart(5, '0')} imageSrc={images['A:' + (assetModal.asset?.code ?? '')]} onSave={saveAsset} onCancel={() => setAssetModal({ open: false, asset: null, manual: false })} onReport={openReport} onLog={(code) => openLog('資産', code)} onImage={(code, name) => setImgTarget({ key: 'A:' + code, title: `資産画像：${name || code}` })} toast={toast.show} />}
       </Modal>
       <Modal open={equipModal} onClose={() => setEquipModal(false)} width={1000} title="備品の登録">
@@ -671,17 +671,17 @@ export function DepreciationPage({ variant, accent }: Props) {
         <div style={{ padding: '12px 22px 18px', display: 'grid', gridTemplateColumns: logOpen.code ? 'minmax(0,1fr) 300px' : '1fr', gap: 16 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-              <span style={{ fontSize: 12.5 }}>年度</span>
-              <select style={{ padding: '6px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontFamily: 'inherit', fontSize: 12.5 }}><option>令和8年度（2026年）</option><option>令和7年度（2025年）</option></select>
-              {logOpen.code && <span style={{ fontSize: 12, color: '#7a8794' }}>対象：{logOpen.kind} {logOpen.code}</span>}
-              <span style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>{(['資産', '備品', 'システム'] as const).map((t) => <button key={t} type="button" onClick={() => setLogTab(t)} style={{ padding: '4px 12px', borderRadius: 7, border: 'none', background: logTab === t ? accent : '#f1f4f6', color: logTab === t ? '#fff' : '#5b6773', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{t}</button>)}</span>
+              <span style={{ fontSize: 14 }}>年度</span>
+              <select style={{ padding: '6px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontFamily: 'inherit', fontSize: 14 }}><option>令和8年度（2026年）</option><option>令和7年度（2025年）</option></select>
+              {logOpen.code && <span style={{ fontSize: 14, color: '#7a8794' }}>対象：{logOpen.kind} {logOpen.code}</span>}
+              <span style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>{(['資産', '備品', 'システム'] as const).map((t) => <button key={t} type="button" onClick={() => setLogTab(t)} style={{ padding: '4px 12px', borderRadius: 7, border: 'none', background: logTab === t ? accent : '#f1f4f6', color: logTab === t ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{t}</button>)}</span>
             </div>
             <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'auto', maxHeight: 380 }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead><tr><th style={TH}>日時</th><th style={TH}>対象</th><th style={TH}>操作</th><th style={TH}>担当者</th></tr></thead>
                 <tbody>
                   {logRows.length === 0 && <tr><td colSpan={4} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 30 }}>{logOpen.code ? 'この項目の操作履歴はまだありません（登録後に記録されます）。' : '操作履歴はありません。'}</td></tr>}
-                  {[...logRows].reverse().map((l, i) => <tr key={i}><td style={{ ...TD, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 12 }}>{l.time}</td><td style={TD}>{l.target}</td><td style={{ ...TD, fontWeight: 600 }}>{l.action}</td><td style={TD}>{l.user}</td></tr>)}
+                  {[...logRows].reverse().map((l, i) => <tr key={i}><td style={{ ...TD, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 14 }}>{l.time}</td><td style={TD}>{l.target}</td><td style={{ ...TD, fontWeight: 600 }}>{l.action}</td><td style={TD}>{l.user}</td></tr>)}
                 </tbody>
               </table>
             </div>
@@ -691,7 +691,7 @@ export function DepreciationPage({ variant, accent }: Props) {
             </div>
           </div>
           {logOpen.code && (
-            <div style={{ borderLeft: '1px solid #eef2f5', paddingLeft: 16, fontSize: 12.5 }}>
+            <div style={{ borderLeft: '1px solid #eef2f5', paddingLeft: 16, fontSize: 14 }}>
               <div style={{ fontWeight: 700, marginBottom: 6 }}>詳細情報</div>
               {logTargetAsset ? (
                 <>
@@ -735,8 +735,8 @@ export function DepreciationPage({ variant, accent }: Props) {
 /* ================= 固定資産 詳細（右パネル） ================= */
 function AssetDetail({ accent, asset, imageSrc, onClose, onEdit, onManual, onPrint, onDelete }: { accent: string; asset: Asset; imageSrc?: string; onClose: () => void; onEdit: () => void; onManual: () => void; onPrint: () => void; onDelete: () => void }) {
   const dep = annualOf(asset);
-  const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '7px 12px', borderRadius: 7, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
-  const row = (l: string, v: string) => <div key={l} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '6px 0', borderBottom: '1px solid #f1f4f6', fontSize: 12.5 }}><span style={{ color: '#7a8794' }}>{l}</span><span style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>{v}</span></div>;
+  const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '7px 12px', borderRadius: 7, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
+  const row = (l: string, v: string) => <div key={l} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '6px 0', borderBottom: '1px solid #f1f4f6', fontSize: 14 }}><span style={{ color: '#7a8794' }}>{l}</span><span style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>{v}</span></div>;
   const years: { y: number; open: number; dep: number }[] = [];
   let bal = asset.cost;
   for (let y = 1; y <= Math.min(asset.life || 0, 10); y++) { const d = Math.min(Math.floor((asset.cost - 1) / asset.life), Math.max(0, bal - 1)); years.push({ y, open: bal, dep: d }); bal -= d; }
@@ -745,9 +745,9 @@ function AssetDetail({ accent, asset, imageSrc, onClose, onEdit, onManual, onPri
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
         {imageSrc && <img src={imageSrc} alt="" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8ee', flex: 'none' }} />}
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 11, color: '#7a8794' }}>{asset.code}　<span style={statusStyle(asset.status)}>{asset.status}</span></div>
+          <div style={{ fontSize: 12, color: '#7a8794' }}>{asset.code}　<span style={statusStyle(asset.status)}>{asset.status}</span></div>
           <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16, marginTop: 4 }}>{asset.name}</div>
-          <div style={{ fontSize: 12, color: '#48565f' }}>{asset.account}</div>
+          <div style={{ fontSize: 14, color: '#48565f' }}>{asset.account}</div>
         </div>
         <button type="button" onClick={onClose} title="閉じる" style={{ marginLeft: 'auto', border: 'none', background: 'transparent', fontSize: 20, color: '#8290a0', cursor: 'pointer', lineHeight: 1 }}>×</button>
       </div>
@@ -768,8 +768,8 @@ function AssetDetail({ accent, asset, imageSrc, onClose, onEdit, onManual, onPri
         {asset.place && row('場所・物量等', asset.place)}
       </div>
       <div>
-        <div style={{ fontSize: 11.5, fontWeight: 700, color: '#8290a0', marginBottom: 6 }}>経年表示（取得からの推移・定額法）</div>
-        {years.length === 0 ? <div style={{ fontSize: 12, color: '#9aa5b1' }}>非償却資産のため推移はありません。</div> : (
+        <div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 6 }}>経年表示（取得からの推移・定額法）</div>
+        {years.length === 0 ? <div style={{ fontSize: 14, color: '#9aa5b1' }}>非償却資産のため推移はありません。</div> : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead><tr><th style={TH}>年目</th><th style={{ ...TH, textAlign: 'right' }}>期首</th><th style={{ ...TH, textAlign: 'right' }}>償却額</th><th style={{ ...TH, textAlign: 'right' }}>期末</th></tr></thead>
             <tbody>{years.map((r) => <tr key={r.y}><td style={{ ...TD, padding: '5px 10px' }}>{r.y}</td><td style={{ ...NUM, padding: '5px 10px' }}>{yen(r.open)}</td><td style={{ ...NUM, padding: '5px 10px' }}>{yen(r.dep)}</td><td style={{ ...NUM, padding: '5px 10px', fontWeight: 700 }}>{yen(r.open - r.dep)}</td></tr>)}</tbody>
@@ -837,13 +837,13 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
   const subOf = (v: number) => (totalCost ? roundBy((v * sub) / totalCost, rounding.sub) : 0);
   const redeemOf = (v: number) => (totalCost ? roundBy((v * redeem) / totalCost, rounding.sub) : 0);
 
-  const input: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '6px 9px', border: '1px solid #cfd8e0', borderRadius: 7, fontSize: 13, fontFamily: 'inherit', outline: 'none', background: '#fff' };
+  const input: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '6px 9px', border: '1px solid #cfd8e0', borderRadius: 7, fontSize: 14, fontFamily: 'inherit', outline: 'none', background: '#fff' };
   const numIn: CSSProperties = { ...input, textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
-  const lbl: CSSProperties = { fontSize: 11, fontWeight: 700, color: '#8290a0', marginBottom: 4, display: 'block' };
-  const sec: CSSProperties = { fontSize: 11.5, fontWeight: 800, color: '#b7791f', background: '#fff7dc', display: 'inline-block', padding: '2px 8px', borderRadius: 6, marginBottom: 8 };
+  const lbl: CSSProperties = { fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 4, display: 'block' };
+  const sec: CSSProperties = { fontSize: 12, fontWeight: 800, color: '#b7791f', background: '#fff7dc', display: 'inline-block', padding: '2px 8px', borderRadius: 6, marginBottom: 8 };
   const box: CSSProperties = { border: '1px solid #f0c8cc', background: '#fff5f6', borderRadius: 10, padding: 12 };
-  const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '7px 12px', borderRadius: 7, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
-  const tag = (t: string) => <span style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 7px', borderRadius: 6, background: '#e8f0fb', color: '#2c5f9e', whiteSpace: 'nowrap' }}>{t}</span>;
+  const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '7px 12px', borderRadius: 7, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
+  const tag = (t: string) => <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 6, background: '#e8f0fb', color: '#2c5f9e', whiteSpace: 'nowrap' }}>{t}</span>;
   const current = (): Asset => ({ code: f.code, name: f.name.trim() || '（未入力）', account: f.account, acquired: f.acquired, life, cost: totalCost, status: f.method === '非償却' || !life ? '対象外' : E <= num(f.memo) ? '償却終了' : '償却中', opening: E, subsidy: sub, method: f.method, qty, place: f.place, purpose: f.purpose, transferIn: asset?.transferIn || f.transferNew });
   const save = () => {
     if (!f.name.trim()) return toast('資産名称を入力してください');
@@ -858,7 +858,7 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.5fr) minmax(300px,1fr)', gap: 0 }}>
       <div style={{ padding: 18, borderRight: '1px solid #eef2f5', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {manual && <div style={{ padding: '8px 12px', background: '#fff1b8', borderRadius: 8, fontSize: 12.5, color: '#8a6d00', fontWeight: 700 }}>全項目手入力：自動計算を行わず、期首帳簿価額・当期増加額・当期減価償却額・当期減少額を直接入力します。</div>}
+        {manual && <div style={{ padding: '8px 12px', background: '#fff1b8', borderRadius: 8, fontSize: 14, color: '#8a6d00', fontWeight: 700 }}>全項目手入力：自動計算を行わず、期首帳簿価額・当期増加額・当期減価償却額・当期減少額を直接入力します。</div>}
         <div style={box}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
             <div><span style={lbl}>資産コード</span><input className="field-input" value={f.code} onChange={(e) => set('code', e.target.value)} style={{ ...input, background: '#fff9c4', fontWeight: 700 }} /></div>
@@ -866,17 +866,17 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
             <div><span style={lbl}>科目</span><select value={f.account} onChange={(e) => set('account', e.target.value)} style={input}>{FA_ACCOUNTS.map((o) => <option key={o}>{o}</option>)}</select></div>
             <div style={{ gridColumn: 'span 2' }}><span style={lbl}>資産名称</span><input className="field-input ring" value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="例：調理室エアコン" style={input} /></div>
             <div><span style={lbl}>取得年月日</span><input className="field-input" value={f.acquired} onChange={(e) => set('acquired', e.target.value)} style={input} /></div>
-            <div style={{ gridColumn: 'span 3', display: 'flex', alignItems: 'center', gap: 14, fontSize: 12.5 }}>
+            <div style={{ gridColumn: 'span 3', display: 'flex', alignItems: 'center', gap: 14, fontSize: 14 }}>
               <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={f.useStart} onChange={() => set('useStart', !f.useStart)} />償却開始年月日を使用する</label>
               <span style={{ color: '#9aa5b1' }}>（償却開始年月日：{f.useStart ? '入力可' : '取得年月日と同じ'}）</span>
             </div>
-            <div><span style={lbl}>耐用年数</span><div style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input className="field-input" value={f.life} onChange={(e) => set('life', e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" style={{ ...numIn, width: 70 }} /><span style={{ fontSize: 12 }}>年</span><button type="button" className="btn-outline" onClick={() => setDlg('life')} style={btn()}>辞書</button></div></div>
+            <div><span style={lbl}>耐用年数</span><div style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input className="field-input" value={f.life} onChange={(e) => set('life', e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" style={{ ...numIn, width: 70 }} /><span style={{ fontSize: 14 }}>年</span><button type="button" className="btn-outline" onClick={() => setDlg('life')} style={btn()}>辞書</button></div></div>
             <div><span style={lbl}>償却方法</span><select value={f.method} onChange={(e) => set('method', e.target.value)} style={input}>{['定額法', '旧定額法', 'リース定額法', '非償却'].map((o) => <option key={o}>{o}</option>)}</select></div>
             <div><span style={lbl}>償却率</span><div style={{ ...input, background: '#f5f7f9', textAlign: 'right' }}>{f.method} {life}年　<b>{rate}</b></div></div>
-            <div style={{ gridColumn: 'span 3', display: 'flex', alignItems: 'center', gap: 14, fontSize: 12.5, flexWrap: 'wrap' }}>
+            <div style={{ gridColumn: 'span 3', display: 'flex', alignItems: 'center', gap: 14, fontSize: 14, flexWrap: 'wrap' }}>
               <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={f.afterLife} onChange={() => set('afterLife', !f.afterLife)} />耐用年数経過後も償却する</label>
               <button type="button" className="btn-outline" onClick={() => setDlg('round')} style={btn()}>端数処理設定</button>
-              <span style={{ fontSize: 11.5, color: '#7a8794' }}>償却額：{rounding.dep}／取崩額：{rounding.sub}／償却率 {rounding.digits}</span>
+              <span style={{ fontSize: 12, color: '#7a8794' }}>償却額：{rounding.dep}／取崩額：{rounding.sub}／償却率 {rounding.digits}</span>
               <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={f.transferNew} onChange={() => set('transferNew', !f.transferNew)} />移管先固定資産として新規登録</label>
             </div>
             <div style={{ gridColumn: 'span 2' }}><span style={lbl}>場所・物量等</span><input className="field-input" value={f.place} onChange={(e) => set('place', e.target.value)} style={input} /></div>
@@ -893,7 +893,7 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
               <div><span style={lbl}>単価</span><input className="field-input ring" value={f.unit ? yen(num(f.unit)) : ''} onChange={(e) => set('unit', e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" placeholder="0" style={numIn} /></div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginTop: 8 }}>
-              <div><span style={lbl}>取得価額合計</span><div style={{ ...numIn, background: '#f5f7f9' }}>{yen(cost)}{capexSum > 0 && <span style={{ fontSize: 10.5, color: '#2c5f9e' }}>　+{yen(capexSum)}</span>}</div></div>
+              <div><span style={lbl}>取得価額合計</span><div style={{ ...numIn, background: '#f5f7f9' }}>{yen(cost)}{capexSum > 0 && <span style={{ fontSize: 12, color: '#2c5f9e' }}>　+{yen(capexSum)}</span>}</div></div>
               <div><span style={lbl}>備忘価額</span><input className="field-input" value={f.memo} onChange={(e) => set('memo', e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" style={numIn} /></div>
               <div><span style={lbl}>残存価額</span><input className="field-input" value={f.residual} onChange={(e) => set('residual', e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" style={numIn} /></div>
             </div>
@@ -911,7 +911,7 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
                 <input className="field-input" value={f.disposalDate} onChange={(e) => set('disposalDate', e.target.value)} placeholder="令和　年　月　日" disabled={f.disposal === '設定なし'} style={{ ...input, ...disabledBg(f.disposal !== '設定なし') }} />
                 <button type="button" className="btn-outline" onClick={() => { if (!cost) return toast('先に取得価額を入力してください'); if (f.disposal !== '設定なし') return toast('全数量の処分が設定されています。一部処分は「設定なし」に戻してから行ってください'); setDlg('partial'); }} style={btn()}>一部 除却／売却／移管(元)</button>
               </div>
-              {partial && <div style={{ marginTop: 6, display: 'flex', gap: 6, alignItems: 'center', fontSize: 11.5, color: '#48565f' }}>{tag(`一部${partial.proc}`)}{partial.qty}／{qty} 個・{partial.date}・当期減少額 {yen(D)}</div>}
+              {partial && <div style={{ marginTop: 6, display: 'flex', gap: 6, alignItems: 'center', fontSize: 12, color: '#48565f' }}>{tag(`一部${partial.proc}`)}{partial.qty}／{qty} 個・{partial.date}・当期減少額 {yen(D)}</div>}
             </div>
             <div style={box}>
               <span style={sec}>計算変更等</span>
@@ -921,7 +921,7 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
                 <button type="button" className="btn-outline" onClick={() => onLog(f.code)} style={btn()}>操作ログ・詳細情報</button>
                 <button type="button" className="btn-outline" onClick={() => onImage(f.code, f.name)} style={{ ...btn(), display: 'inline-flex', alignItems: 'center', gap: 6 }}>{imageSrc && <img src={imageSrc} alt="" style={{ width: 18, height: 18, objectFit: 'cover', borderRadius: 3 }} />}資産画像</button>
               </div>
-              {calcChange && <div style={{ marginTop: 6, fontSize: 11.5, color: '#48565f' }}>{tag('計算変更')} {calcChange.reason}（{calcChange.date}）{calcChange.note && `：${calcChange.note}`}</div>}
+              {calcChange && <div style={{ marginTop: 6, fontSize: 12, color: '#48565f' }}>{tag('計算変更')} {calcChange.reason}（{calcChange.date}）{calcChange.note && `：${calcChange.note}`}</div>}
             </div>
           </div>
         </div>
@@ -945,16 +945,16 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
           <span style={sec}>帳票</span>
           {['個別固定資産管理台帳', '別紙３(⑧)', '固定資産管理台帳'].map((r) => <button key={r} type="button" className="btn-outline" onClick={() => { if (r !== '固定資産管理台帳' && !cost) return toast('取得価額を入力すると帳票を出力できます'); onReport(r, r === '固定資産管理台帳' ? undefined : current()); }} style={btn()}>{r}</button>)}
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-            <button type="button" className="submit-btn" onClick={save} style={{ ...btn(accent, true), padding: '9px 26px', fontSize: 13.5 }}>登録</button>
-            <button type="button" onClick={onCancel} style={{ ...btn(), padding: '9px 20px', fontSize: 13.5 }}>キャンセル</button>
+            <button type="button" className="submit-btn" onClick={save} style={{ ...btn(accent, true), padding: '9px 26px', fontSize: 14 }}>登録</button>
+            <button type="button" onClick={onCancel} style={{ ...btn(), padding: '9px 20px', fontSize: 14 }}>キャンセル</button>
           </div>
         </div>
       </div>
 
       {/* 右：経年表示 */}
       <div style={{ padding: 16 }}>
-        <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>選択中の固定資産　経年表示</div>
-        <div style={{ display: 'flex', gap: 10, fontSize: 12, marginBottom: 8 }}>{['数量／減価償却', '国庫補助金', '償還補助金'].map((t, i) => <label key={t} style={{ display: 'flex', gap: 4, alignItems: 'center' }}><input type="radio" name="yr" defaultChecked={i === 0} />{t}</label>)}</div>
+        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>選択中の固定資産　経年表示</div>
+        <div style={{ display: 'flex', gap: 10, fontSize: 14, marginBottom: 8 }}>{['数量／減価償却', '国庫補助金', '償還補助金'].map((t, i) => <label key={t} style={{ display: 'flex', gap: 4, alignItems: 'center' }}><input type="radio" name="yr" defaultChecked={i === 0} />{t}</label>)}</div>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead><tr><th style={TH}>年度</th><th style={TH}>状態</th><th style={{ ...TH, textAlign: 'right' }}>期首帳簿価額</th><th style={{ ...TH, textAlign: 'right' }}>当期減価償却額</th><th style={{ ...TH, textAlign: 'right' }}>期末帳簿価額</th></tr></thead>
           <tbody>
@@ -964,7 +964,7 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
               let bal = totalCost;
               for (let y = 0; y < Math.min(life, 12); y++) {
                 const dep = Math.max(0, Math.min(annual, bal - num(f.memo)));
-                rows.push(<tr key={y}><td style={TD}>{y + 1}年目</td><td style={TD}><span style={{ fontSize: 10.5, color: '#1f7a52', fontWeight: 700 }}>償却中</span></td><td style={NUM}>{yen(bal)}</td><td style={NUM}>{yen(dep)}</td><td style={NUM}>{yen(bal - dep)}</td></tr>);
+                rows.push(<tr key={y}><td style={TD}>{y + 1}年目</td><td style={TD}><span style={{ fontSize: 12, color: '#1f7a52', fontWeight: 700 }}>償却中</span></td><td style={NUM}>{yen(bal)}</td><td style={NUM}>{yen(dep)}</td><td style={NUM}>{yen(bal - dep)}</td></tr>);
                 bal -= dep;
               }
               return rows;
@@ -990,9 +990,9 @@ function EquipForm({ accent, equips, sortItems, imageSrc, onSave, onCancel, onRe
   const [subOpen, setSubOpen] = useState(false);
   const num = numOf;
   const total = num(f.qty) * num(f.unit);
-  const input: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '6px 9px', border: '1px solid #cfd8e0', borderRadius: 7, fontSize: 13, fontFamily: 'inherit', outline: 'none', background: '#fff' };
-  const lbl: CSSProperties = { fontSize: 11, fontWeight: 700, color: '#8290a0', marginBottom: 4, display: 'block' };
-  const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '7px 12px', borderRadius: 7, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
+  const input: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '6px 9px', border: '1px solid #cfd8e0', borderRadius: 7, fontSize: 14, fontFamily: 'inherit', outline: 'none', background: '#fff' };
+  const lbl: CSSProperties = { fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 4, display: 'block' };
+  const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '7px 12px', borderRadius: 7, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
   const img = imageSrc['E:' + f.code];
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.3fr) minmax(300px,1fr)' }}>
@@ -1008,7 +1008,7 @@ function EquipForm({ accent, equips, sortItems, imageSrc, onSave, onCancel, onRe
           <div><span style={lbl}>処分年月日</span><input className="field-input" value={f.disposalDate} onChange={(e) => setF({ ...f, disposalDate: e.target.value })} disabled={f.disposal === '設定なし'} placeholder="令和　年　月　日" style={{ ...input, background: f.disposal === '設定なし' ? '#f5f7f9' : '#fff' }} /></div>
         </div>
         <div style={{ border: '1px solid #f0c8cc', background: '#fff5f6', borderRadius: 10, padding: 12 }}>
-          <div style={{ fontSize: 11.5, fontWeight: 800, color: '#b7791f', background: '#fff7dc', display: 'inline-block', padding: '2px 8px', borderRadius: 6, marginBottom: 8 }}>取得価額</div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: '#b7791f', background: '#fff7dc', display: 'inline-block', padding: '2px 8px', borderRadius: 6, marginBottom: 8 }}>取得価額</div>
           <div style={{ display: 'grid', gridTemplateColumns: '70px 20px 160px 40px 160px 1fr', gap: 6, alignItems: 'end' }}>
             <div><span style={lbl}>数量</span><input className="field-input" value={f.qty} onChange={(e) => setF({ ...f, qty: e.target.value.replace(/[^0-9]/g, '') })} inputMode="numeric" style={{ ...input, textAlign: 'right' }} /></div>
             <div style={{ textAlign: 'center', paddingBottom: 8 }}>×</div>
@@ -1019,18 +1019,18 @@ function EquipForm({ accent, equips, sortItems, imageSrc, onSave, onCancel, onRe
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 11.5, fontWeight: 800, color: '#b7791f', background: '#fff7dc', padding: '2px 8px', borderRadius: 6 }}>帳票</span>
+          <span style={{ fontSize: 12, fontWeight: 800, color: '#b7791f', background: '#fff7dc', padding: '2px 8px', borderRadius: 6 }}>帳票</span>
           {['備品一覧表(1)', '備品一覧表(2)'].map((r) => <button key={r} type="button" className="btn-outline" onClick={() => onReport(r)} style={btn()}>{r}</button>)}
           <button type="button" className="btn-outline" onClick={() => onLog(f.code)} style={btn()}>操作ログ・詳細情報</button>
           <button type="button" className="btn-outline" onClick={() => onImage(f.code, f.name)} style={{ ...btn(), display: 'inline-flex', alignItems: 'center', gap: 6 }}>{img && <img src={img} alt="" style={{ width: 18, height: 18, objectFit: 'cover', borderRadius: 3 }} />}備品画像</button>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-            <button type="button" className="submit-btn" onClick={() => { if (!f.name.trim()) return toast('備品名称を入力してください'); if (!total) return toast('取得価額を入力してください'); onSave({ code: f.code, name: f.name.trim(), acquired: f.acquired, cost: total, account: f.account || undefined, qty: num(f.qty), subsidy: num(f.subsidy) }); setF({ ...f, code: String(num(f.code) + 1).padStart(5, '0'), name: '', unit: '', subsidy: '0' }); setSubsidies([]); }} style={{ ...btn(accent, true), padding: '9px 26px', fontSize: 13.5 }}>登録</button>
-            <button type="button" onClick={onCancel} style={{ ...btn(), padding: '9px 20px', fontSize: 13.5 }}>キャンセル</button>
+            <button type="button" className="submit-btn" onClick={() => { if (!f.name.trim()) return toast('備品名称を入力してください'); if (!total) return toast('取得価額を入力してください'); onSave({ code: f.code, name: f.name.trim(), acquired: f.acquired, cost: total, account: f.account || undefined, qty: num(f.qty), subsidy: num(f.subsidy) }); setF({ ...f, code: String(num(f.code) + 1).padStart(5, '0'), name: '', unit: '', subsidy: '0' }); setSubsidies([]); }} style={{ ...btn(accent, true), padding: '9px 26px', fontSize: 14 }}>登録</button>
+            <button type="button" onClick={onCancel} style={{ ...btn(), padding: '9px 20px', fontSize: 14 }}>キャンセル</button>
           </div>
         </div>
       </div>
       <div style={{ padding: 16 }}>
-        <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>備品一覧</div>
+        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>備品一覧</div>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead><tr><th style={TH}>備品コード</th><th style={TH}>備品名称</th><th style={TH}>取得年月日</th><th style={{ ...TH, textAlign: 'right' }}>取得価額</th></tr></thead>
           <tbody>{equips.map((e) => <tr key={e.code}><td style={TD}>{e.code}</td><td style={TD}>{e.name}</td><td style={TD}>{e.acquired}</td><td style={NUM}>{yen(e.cost)}</td></tr>)}</tbody>
@@ -1051,8 +1051,8 @@ function BatchView({ accent, assets, preselected, disposals, onExport, onDone, t
   const [history, setHistory] = useState<HistoryRow[]>([{ time: '2026/03/31 17:20:11', file: 'ikan_moto_20260331.csv', count: 1, user: USER, result: '正常終了' }]);
   const [histOpen, setHistOpen] = useState(false);
   const num = numOf;
-  const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '8px 14px', borderRadius: 8, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
-  const input: CSSProperties = { padding: '5px 8px', border: '1px solid #cfd8e0', borderRadius: 6, fontSize: 12.5, fontFamily: 'inherit', outline: 'none', background: '#fff' };
+  const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '8px 14px', borderRadius: 8, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
+  const input: CSSProperties = { padding: '5px 8px', border: '1px solid #cfd8e0', borderRadius: 6, fontSize: 14, fontFamily: 'inherit', outline: 'none', background: '#fff' };
   const applyBulk = () => { if (sel.size === 0) return toast('固定資産を選択してください'); setProc((p) => { const n = { ...p }; sel.forEach((c) => (n[c] = bulk)); return n; }); toast(`${sel.size} 件に「${bulk}」をセットしました`); };
   const targets = assets.filter((a) => (proc[a.code] ?? '設定なし') !== '設定なし');
   const done = new Map(disposals.map((d) => [d.code, d]));
@@ -1074,16 +1074,16 @@ function BatchView({ accent, assets, preselected, disposals, onExport, onDone, t
   return (
     <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr 1fr', gap: 12 }}>
-        <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: 12, fontSize: 12.5, lineHeight: 1.8 }}><b>処理の手順</b><br />①固定資産の選択<br />②一括セット<br />③固定資産ごとの調整<br />④登録で完了</div>
+        <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: 12, fontSize: 14, lineHeight: 1.8 }}><b>処理の手順</b><br />①固定資産の選択<br />②一括セット<br />③固定資産ごとの調整<br />④登録で完了</div>
         <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: 12 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>登録前の一括セット</div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: 12.5 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>登録前の一括セット</div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: 14 }}>
             処理の選択 <select value={bulk} onChange={(e) => setBulk(e.target.value)} style={input}>{['設定なし', '除却', '売却', '移管(元)'].map((o) => <option key={o}>{o}</option>)}</select>
             処分年月日 <input className="field-input" value={date} onChange={(e) => setDate(e.target.value)} placeholder="令和8年 9月30日" style={{ ...input, width: 140 }} />
             <button type="button" className="btn-outline" onClick={applyBulk} style={btn(accent, true)}>一括セット</button>
           </div>
         </div>
-        <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: 12, fontSize: 12.5, lineHeight: 1.7 }}>
+        <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: 12, fontSize: 14, lineHeight: 1.7 }}>
           <div><b>除却・売却・移管 固定資産当期減価償却額の設定状態</b></div>
           <div>除却月／移管月まで（月按分する）</div>
           <div style={{ marginTop: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -1103,7 +1103,7 @@ function BatchView({ accent, assets, preselected, disposals, onExport, onDone, t
               return (
                 <tr key={a.code} style={{ background: p !== '設定なし' ? '#fff8c4' : dn ? '#f5f7f9' : 'transparent', opacity: dn && p === '設定なし' ? 0.7 : 1 }}>
                   <td style={TD}><input type="checkbox" checked={sel.has(a.code)} onChange={() => setSel((s) => { const n = new Set(s); n.has(a.code) ? n.delete(a.code) : n.add(a.code); return n; })} /></td>
-                  <td style={TD}>{dn && p === '設定なし' ? <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#fff1b8', color: '#8a6d00' }}>{dn.proc} 登録済</span> : <select value={p} onChange={(e) => setProc({ ...proc, [a.code]: e.target.value })} style={input}>{['設定なし', '除却', '売却', '移管(元)'].map((o) => <option key={o}>{o}</option>)}</select>}</td>
+                  <td style={TD}>{dn && p === '設定なし' ? <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#fff1b8', color: '#8a6d00' }}>{dn.proc} 登録済</span> : <select value={p} onChange={(e) => setProc({ ...proc, [a.code]: e.target.value })} style={input}>{['設定なし', '除却', '売却', '移管(元)'].map((o) => <option key={o}>{o}</option>)}</select>}</td>
                   <td style={TD}>{a.code}</td><td style={{ ...TD, fontWeight: 500 }}>{a.name}</td><td style={NUM}>{yen(a.cost)}</td><td style={NUM}>{a.life}</td>
                   <td style={TD}>{p !== '設定なし' ? date || '（未入力）' : dn?.date ?? ''}</td>
                   <td style={NUM}>{yen(a.opening)}</td><td style={NUM}>{yen(a.subsidy)}</td>
@@ -1115,7 +1115,7 @@ function BatchView({ accent, assets, preselected, disposals, onExport, onDone, t
         </table>
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-        <span style={{ fontSize: 12.5, color: '#7a8794', alignSelf: 'center' }}>処理対象 {targets.length} 件{disposals.length > 0 && `　／　登録済 ${disposals.length} 件`}</span>
+        <span style={{ fontSize: 14, color: '#7a8794', alignSelf: 'center' }}>処理対象 {targets.length} 件{disposals.length > 0 && `　／　登録済 ${disposals.length} 件`}</span>
         <button type="button" className="submit-btn" onClick={register} style={btn(accent, true)}>登録</button>
       </div>
       <HistoryModal open={histOpen} title="移管(元)ファイル 出力履歴" rows={history} onClose={() => setHistOpen(false)} />
@@ -1132,8 +1132,8 @@ function ClosingView({ accent, vouchers, setVouchers, onCreated, toast }: { acce
   const [kashi, setKashi] = useState<Record<string, string>>({});
   const [summ, setSumm] = useState<Record<string, string>>({});
   const [pick, setPick] = useState<{ col: 'kari' | 'kashi' | 'summ'; name: string } | null>(null);
-  const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '9px 22px', borderRadius: 8, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#eef0fa', color: solid ? '#fff' : '#22303c', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
-  const input: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 7, fontSize: 13, fontFamily: 'inherit', outline: 'none', background: '#fff' };
+  const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '9px 22px', borderRadius: 8, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#eef0fa', color: solid ? '#fff' : '#22303c', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
+  const input: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 7, fontSize: 14, fontFamily: 'inherit', outline: 'none', background: '#fff' };
   const ROWS: { g?: string; name: string; account: string; A: number; As: number; B: number; Bs: number; C: number; Cs: number }[] = [
     { g: '基本財産', name: '土地', account: '土地　－基本財産－', A: 5803427, As: 0, B: 0, Bs: 0, C: 0, Cs: 0 },
     { name: '建物', account: '建物　－基本財産－', A: 4349772, As: 2934626, B: 0, Bs: 0, C: 546084, Cs: 391018 },
@@ -1155,40 +1155,40 @@ function ClosingView({ accent, vouchers, setVouchers, onCreated, toast }: { acce
     setStep(1);
     setV({ ...v, name: '' });
   };
-  const cellBtn = (label: string, changed: boolean, onClick: () => void) => <button type="button" className="btn-outline" onClick={onClick} title="クリックして選択" style={{ ...btn(), padding: '4px 10px', fontSize: 11.5, background: changed ? '#fff7dc' : '#eef0fa', borderColor: changed ? '#e6c76a' : '#cfd8e0' }}>{label}</button>;
+  const cellBtn = (label: string, changed: boolean, onClick: () => void) => <button type="button" className="btn-outline" onClick={onClick} title="クリックして選択" style={{ ...btn(), padding: '4px 10px', fontSize: 12, background: changed ? '#fff7dc' : '#eef0fa', borderColor: changed ? '#e6c76a' : '#cfd8e0' }}>{label}</button>;
   if (step === 1) return (
     <div style={{ padding: 18 }}>
-      <div style={{ fontSize: 13, fontWeight: 700 }}>作成済みの決算伝票</div>
+      <div style={{ fontSize: 14, fontWeight: 700 }}>作成済みの決算伝票</div>
       <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, marginTop: 8, minHeight: 220 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead><tr><th style={TH}>伝票の名称</th><th style={TH}>伝票年月日</th><th style={TH}>伝票形式</th><th style={TH}>決算処理</th><th style={{ ...TH, width: 80 }}>削除</th></tr></thead>
           <tbody>
             {vouchers.length === 0 && <tr><td colSpan={5} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>登録済みの決算伝票はありません。「新しい伝票を作成」から作成してください。</td></tr>}
-            {vouchers.map((x, i) => <tr key={i}><td style={{ ...TD, fontWeight: 600 }}>{x.name}</td><td style={TD}>{x.date}</td><td style={TD}>{x.format}</td><td style={TD}>{x.proc}</td><td style={TD}><button type="button" className="btn-outline" onClick={() => setVouchers((vs) => vs.filter((_, k) => k !== i))} style={{ ...btn('#c0392b'), padding: '4px 10px', fontSize: 11.5, background: '#fff' }}>削除</button></td></tr>)}
+            {vouchers.map((x, i) => <tr key={i}><td style={{ ...TD, fontWeight: 600 }}>{x.name}</td><td style={TD}>{x.date}</td><td style={TD}>{x.format}</td><td style={TD}>{x.proc}</td><td style={TD}><button type="button" className="btn-outline" onClick={() => setVouchers((vs) => vs.filter((_, k) => k !== i))} style={{ ...btn('#c0392b'), padding: '4px 10px', fontSize: 12, background: '#fff' }}>削除</button></td></tr>)}
           </tbody>
         </table>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 14 }}>
         <button type="button" className="submit-btn" onClick={() => setStep(2)} style={btn(accent, true)}>＋ 新しい伝票を作成</button>
-        <label style={{ fontSize: 12.5, display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" />集計期間設定</label>
-        <div style={{ marginLeft: 'auto', fontSize: 12, color: '#7a8794' }}>作成した伝票は「入力 › 伝票入力」の仕訳帳に登録されます（プロトタイプでは一覧への追加のみ）</div>
+        <label style={{ fontSize: 14, display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" />集計期間設定</label>
+        <div style={{ marginLeft: 'auto', fontSize: 14, color: '#7a8794' }}>作成した伝票は「入力 › 伝票入力」の仕訳帳に登録されます（プロトタイプでは一覧への追加のみ）</div>
       </div>
     </div>
   );
   if (step === 2) return (
     <div style={{ padding: 18 }}>
-      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>【決算処理】伝票の登録編集</div>
+      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 10 }}>【決算処理】伝票の登録編集</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div><div style={{ fontSize: 11.5, fontWeight: 700, color: '#8290a0', marginBottom: 4 }}>伝票の名称</div><input className="field-input ring" value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} placeholder="例：令和8年度 減価償却" style={input} /></div>
-          <div><div style={{ fontSize: 11.5, fontWeight: 700, color: '#8290a0', marginBottom: 4 }}>【伝票形式】</div><select value={v.format} onChange={(e) => setV({ ...v, format: e.target.value })} style={input}><option>仕訳伝票形式</option><option>振替伝票形式</option></select></div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>伝票年月日 <input className="field-input" value={v.date} onChange={(e) => setV({ ...v, date: e.target.value })} style={{ ...input, width: 180 }} /></div>
+          <div><div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 4 }}>伝票の名称</div><input className="field-input ring" value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} placeholder="例：令和8年度 減価償却" style={input} /></div>
+          <div><div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 4 }}>【伝票形式】</div><select value={v.format} onChange={(e) => setV({ ...v, format: e.target.value })} style={input}><option>仕訳伝票形式</option><option>振替伝票形式</option></select></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>伝票年月日 <input className="field-input" value={v.date} onChange={(e) => setV({ ...v, date: e.target.value })} style={{ ...input, width: 180 }} /></div>
         </div>
         <div>
-          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#8290a0', marginBottom: 4 }}>【処理選択】</div>
-          {['減価償却', '国庫補助金取崩', '処分(除却・売却・移管元)', '売却損益'].map((p) => <label key={p} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '5px 0', fontSize: 13.5, cursor: 'pointer' }}><input type="radio" name="proc" checked={v.proc === p} onChange={() => { setV({ ...v, proc: p }); setKari({}); setKashi({}); setSumm({}); }} />{p}</label>)}
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '5px 0', fontSize: 13 }}><input type="checkbox" checked={v.acc} onChange={() => setV({ ...v, acc: !v.acc })} />減価償却累計額を出力</label>
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '5px 0', fontSize: 13 }}><input type="checkbox" checked={v.one} onChange={() => setV({ ...v, one: !v.one })} />一枚伝票に登録</label>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 4 }}>【処理選択】</div>
+          {['減価償却', '国庫補助金取崩', '処分(除却・売却・移管元)', '売却損益'].map((p) => <label key={p} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '5px 0', fontSize: 14, cursor: 'pointer' }}><input type="radio" name="proc" checked={v.proc === p} onChange={() => { setV({ ...v, proc: p }); setKari({}); setKashi({}); setSumm({}); }} />{p}</label>)}
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '5px 0', fontSize: 14 }}><input type="checkbox" checked={v.acc} onChange={() => setV({ ...v, acc: !v.acc })} />減価償却累計額を出力</label>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '5px 0', fontSize: 14 }}><input type="checkbox" checked={v.one} onChange={() => setV({ ...v, one: !v.one })} />一枚伝票に登録</label>
         </div>
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
@@ -1199,7 +1199,7 @@ function ClosingView({ accent, vouchers, setVouchers, onCreated, toast }: { acce
   );
   return (
     <div style={{ padding: 18 }}>
-      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>【決算処理】{v.name}　—　{v.proc}</div>
+      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 10 }}>【決算処理】{v.name}　—　{v.proc}</div>
       <div style={{ overflow: 'auto', border: '1px solid #e2e8ee', borderRadius: 10 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1100 }}>
           <thead><tr><th style={TH}>資産の種類または名称</th><th style={{ ...TH, textAlign: 'center' }}>伝票へ追加</th><th style={TH}>借方科目の設定</th><th style={TH}>貸方科目の設定</th><th style={TH}>摘要</th><th style={{ ...TH, textAlign: 'right' }}>期首帳簿価額 (A)</th><th style={{ ...TH, textAlign: 'right' }}>うち国庫補助金等</th><th style={{ ...TH, textAlign: 'right' }}>当期増加額 (B)</th><th style={{ ...TH, textAlign: 'right' }}>うち国庫補助金等</th><th style={{ ...TH, textAlign: 'right' }}>当期減価償却額 (C)</th><th style={{ ...TH, textAlign: 'right' }}>うち国庫補助金等</th></tr></thead>
@@ -1223,7 +1223,7 @@ function ClosingView({ accent, vouchers, setVouchers, onCreated, toast }: { acce
           </tbody>
         </table>
       </div>
-      <div style={{ fontSize: 11.5, color: '#7a8794', marginTop: 6 }}>借方・貸方・摘要はクリックで変更できます（黄色は既定から変更した項目）。</div>
+      <div style={{ fontSize: 12, color: '#7a8794', marginTop: 6 }}>借方・貸方・摘要はクリックで変更できます（黄色は既定から変更した項目）。</div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
         <button type="button" onClick={() => setStep(2)} style={btn()}>戻る</button>
         <button type="button" className="submit-btn" onClick={finish} style={btn(accent, true)}>伝票を作成する</button>
@@ -1240,7 +1240,7 @@ function TransferView({ accent, onRegister, toast }: { accent: string; onRegiste
   const [rows, setRows] = useState<TransferRow[]>([]);
   const [history, setHistory] = useState<HistoryRow[]>([{ time: '2026/04/02 10:05:33', file: 'ikan_moto_20260331.csv', count: 1, user: USER, result: '正常終了' }, { time: '2026/04/02 10:01:12', file: 'ikan_moto_20260331.csv', count: 0, user: USER, result: 'エラー（形式不正）' }]);
   const [histOpen, setHistOpen] = useState(false);
-  const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '8px 16px', borderRadius: 8, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#eef0fa', color: solid ? '#fff' : '#22303c', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
+  const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '8px 16px', borderRadius: 8, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#eef0fa', color: solid ? '#fff' : '#22303c', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
   const load = () => {
     const file = 'ikan_moto_20260401.csv';
     setRows([{ code: '', from: 'ひまわり保育園', name: '遊具（複合滑り台）', date: '令和8年 4月 1日', qty: 1, inQty: 1, unit: 1250000, cost: 1250000, subsidy: 600000 }, { code: '', from: 'ひまわり保育園', name: '業務用冷蔵庫', date: '令和8年 4月 1日', qty: 1, inQty: 1, unit: 380000, cost: 380000, subsidy: 0 }]);
@@ -1280,62 +1280,62 @@ function EnvSettings({ accent, sortItems, onSortItems, onClose, onSaved, toast }
   const [sortOpen, setSortOpen] = useState(false);
   const shadeRef = useRef<HTMLInputElement>(null);
   const lineRef = useRef<HTMLInputElement>(null);
-  const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '7px 12px', borderRadius: 7, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#eef0fa', color: solid ? '#fff' : '#22303c', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
+  const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '7px 12px', borderRadius: 7, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#eef0fa', color: solid ? '#fff' : '#22303c', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
   const box: CSSProperties = { border: '1px solid #e2e8ee', borderRadius: 10, padding: 12 };
-  const radio = (name: string, opts: string[], val: string, set: (v: string) => void) => opts.map((o) => <label key={o} style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12.5, padding: '2px 0' }}><input type="radio" name={name} checked={val === o} onChange={() => set(o)} />{o}</label>);
+  const radio = (name: string, opts: string[], val: string, set: (v: string) => void) => opts.map((o) => <label key={o} style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 14, padding: '2px 0' }}><input type="radio" name={name} checked={val === o} onChange={() => set(o)} />{o}</label>);
   return (
     <div style={{ padding: '14px 22px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={box}>
-        <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>主とする計算</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12.5, marginBottom: 8 }}>①償却方法 <select value={s.method} onChange={(e) => setS({ ...s, method: e.target.value })} style={{ padding: '6px 10px', border: '1px solid #cfd8e0', borderRadius: 7, fontFamily: 'inherit', fontSize: 12.5, width: 260 }}>{['定額法', '旧定額法', 'リース定額法'].map((o) => <option key={o}>{o}</option>)}</select></div>
-        <div style={{ fontSize: 12.5, marginBottom: 6 }}>②端数処理その他設定</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12.5 }}>
-          {METHODS.map((m) => { const d = details[m]; return <div key={m} style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ flex: 1 }}>{m}<span style={{ display: 'block', fontSize: 10.5, color: '#7a8794' }}>償却額 {d.dep}／取崩額 {d.sub}／備忘価額 {d.memo}円{d.residualRate ? `／残存 ${d.residualRate}%` : ''}／{d.prorate}</span></span><button type="button" className="btn-outline" onClick={() => setDetailFor(m)} style={btn()}>詳細設定</button></div>; })}
+        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>主とする計算</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, marginBottom: 8 }}>①償却方法 <select value={s.method} onChange={(e) => setS({ ...s, method: e.target.value })} style={{ padding: '6px 10px', border: '1px solid #cfd8e0', borderRadius: 7, fontFamily: 'inherit', fontSize: 14, width: 260 }}>{['定額法', '旧定額法', 'リース定額法'].map((o) => <option key={o}>{o}</option>)}</select></div>
+        <div style={{ fontSize: 14, marginBottom: 6 }}>②端数処理その他設定</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 14 }}>
+          {METHODS.map((m) => { const d = details[m]; return <div key={m} style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ flex: 1 }}>{m}<span style={{ display: 'block', fontSize: 12, color: '#7a8794' }}>償却額 {d.dep}／取崩額 {d.sub}／備忘価額 {d.memo}円{d.residualRate ? `／残存 ${d.residualRate}%` : ''}／{d.prorate}</span></span><button type="button" className="btn-outline" onClick={() => setDetailFor(m)} style={btn()}>詳細設定</button></div>; })}
         </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>
         <div style={box}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 6 }}>定額法の計算方法</div>
-          <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12.5, marginBottom: 8 }}><input type="checkbox" checked={s.byDate} onChange={() => setS({ ...s, byDate: !s.byDate })} />取得年月日で指定する <button type="button" className="btn-outline" disabled={!s.byDate} onClick={() => toast('平成19年4月1日以降に取得した資産は「償却率を乗ずる方法」、それ以前は「旧償却率を乗ずる方法」で計算します')} style={{ ...btn(), opacity: s.byDate ? 1 : 0.4 }}>取得年月日指定</button></label>
+          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>定額法の計算方法</div>
+          <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 14, marginBottom: 8 }}><input type="checkbox" checked={s.byDate} onChange={() => setS({ ...s, byDate: !s.byDate })} />取得年月日で指定する <button type="button" className="btn-outline" disabled={!s.byDate} onClick={() => toast('平成19年4月1日以降に取得した資産は「償却率を乗ずる方法」、それ以前は「旧償却率を乗ずる方法」で計算します')} style={{ ...btn(), opacity: s.byDate ? 1 : 0.4 }}>取得年月日指定</button></label>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <div><div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>減価償却費</div>{radio('dep', ['旧償却率を乗ずる方法', '耐用年数で除算する方法', '償却率を乗ずる方法'], s.dep, (v) => setS({ ...s, dep: v }))}</div>
-            <div><div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>国庫補助金等取崩</div>{radio('sub', ['旧償却率を乗ずる方法', '耐用年数で除算する方法', '償却率を乗ずる方法'], s.sub, (v) => setS({ ...s, sub: v }))}</div>
+            <div><div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>減価償却費</div>{radio('dep', ['旧償却率を乗ずる方法', '耐用年数で除算する方法', '償却率を乗ずる方法'], s.dep, (v) => setS({ ...s, dep: v }))}</div>
+            <div><div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>国庫補助金等取崩</div>{radio('sub', ['旧償却率を乗ずる方法', '耐用年数で除算する方法', '償却率を乗ずる方法'], s.sub, (v) => setS({ ...s, sub: v }))}</div>
           </div>
         </div>
         <div style={box}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>諸設定</div>
+          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>諸設定</div>
           <button type="button" className="btn-outline" onClick={() => setSortOpen(true)} style={btn()}>並び順項目マスタ</button>
-          <div style={{ fontSize: 11, color: '#7a8794', marginTop: 6, lineHeight: 1.6 }}>{sortItems.length} 項目：{sortItems.join('、')}</div>
+          <div style={{ fontSize: 12, color: '#7a8794', marginTop: 6, lineHeight: 1.6 }}>{sortItems.length} 項目：{sortItems.join('、')}</div>
         </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div style={box}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 6 }}>除却物件および移管物件の当期減価償却額</div>
+          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>除却物件および移管物件の当期減価償却額</div>
           {radio('disp', ['計算しない（期首価額を除却損／移管損とする）', '除却月／移管月まで（月按分する）'], s.disposal, (v) => setS({ ...s, disposal: v }))}
-          <label style={{ display: 'flex', gap: 6, alignItems: 'flex-start', fontSize: 12.5, marginTop: 8, borderTop: '1px solid #eef2f5', paddingTop: 8 }}><input type="checkbox" checked={s.zero} onChange={() => setS({ ...s, zero: !s.zero })} />除却及び、移管（元）固定資産の当期減価償却累計額を「０」円にする</label>
+          <label style={{ display: 'flex', gap: 6, alignItems: 'flex-start', fontSize: 14, marginTop: 8, borderTop: '1px solid #eef2f5', paddingTop: 8 }}><input type="checkbox" checked={s.zero} onChange={() => setS({ ...s, zero: !s.zero })} />除却及び、移管（元）固定資産の当期減価償却累計額を「０」円にする</label>
         </div>
         <div style={box}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 6 }}>印刷関係</div>
-          <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12.5 }}><input type="checkbox" checked={s.gengo} onChange={() => setS({ ...s, gengo: !s.gengo })} />和暦の１年を元年と表記する</label>
+          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>印刷関係</div>
+          <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 14 }}><input type="checkbox" checked={s.gengo} onChange={() => setS({ ...s, gengo: !s.gengo })} />和暦の１年を元年と表記する</label>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
             <input ref={shadeRef} type="color" value={s.shade} onChange={(e) => setS({ ...s, shade: e.target.value })} style={{ width: 0, height: 0, opacity: 0, position: 'absolute' }} />
             <input ref={lineRef} type="color" value={s.line} onChange={(e) => setS({ ...s, line: e.target.value })} style={{ width: 0, height: 0, opacity: 0, position: 'absolute' }} />
             <span onClick={() => shadeRef.current?.click()} title={s.shade} style={{ width: 36, height: 20, background: s.shade, border: '1px solid #cfd8e0', cursor: 'pointer' }} /><button type="button" className="btn-outline" onClick={() => shadeRef.current?.click()} style={btn()}>帳票の網掛色</button>
             <span onClick={() => lineRef.current?.click()} title={s.line} style={{ width: 36, height: 20, background: s.line, border: '1px solid #cfd8e0', cursor: 'pointer' }} /><button type="button" className="btn-outline" onClick={() => lineRef.current?.click()} style={btn()}>帳票の罫線色</button>
-            <button type="button" className="btn-outline" onClick={() => setS({ ...s, shade: '#eef9fb', line: '#ff7a00' })} style={{ ...btn(), padding: '4px 8px', fontSize: 11 }}>標準に戻す</button>
+            <button type="button" className="btn-outline" onClick={() => setS({ ...s, shade: '#eef9fb', line: '#ff7a00' })} style={{ ...btn(), padding: '4px 8px', fontSize: 12 }}>標準に戻す</button>
           </div>
-          <div style={{ marginTop: 8, border: `1px solid ${s.line}`, borderRadius: 6, overflow: 'hidden', fontSize: 11 }}>
+          <div style={{ marginTop: 8, border: `1px solid ${s.line}`, borderRadius: 6, overflow: 'hidden', fontSize: 12 }}>
             <div style={{ background: s.shade, padding: '3px 8px', borderBottom: `1px solid ${s.line}`, fontWeight: 700 }}>見出し行（網掛け）のプレビュー</div>
             <div style={{ padding: '3px 8px', borderBottom: `1px solid ${s.line}` }}>明細行</div>
             <div style={{ padding: '3px 8px' }}>明細行</div>
           </div>
-          <div style={{ fontSize: 12.5, fontWeight: 700, margin: '10px 0 4px' }}>画面サイズ</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><input type="range" min={80} max={150} value={s.size} onChange={(e) => setS({ ...s, size: Number(e.target.value) })} style={{ flex: 1 }} /><span style={{ fontSize: 12.5, width: 44 }}>{s.size}%</span><button type="button" className="btn-outline" onClick={() => setS({ ...s, size: 100 })} style={btn()}>100%に戻す</button></div>
+          <div style={{ fontSize: 14, fontWeight: 700, margin: '10px 0 4px' }}>画面サイズ</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><input type="range" min={80} max={150} value={s.size} onChange={(e) => setS({ ...s, size: Number(e.target.value) })} style={{ flex: 1 }} /><span style={{ fontSize: 14, width: 44 }}>{s.size}%</span><button type="button" className="btn-outline" onClick={() => setS({ ...s, size: 100 })} style={btn()}>100%に戻す</button></div>
         </div>
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-        <button type="button" className="submit-btn" onClick={() => { onSaved(`償却方法：${s.method}／${s.disposal}`); onClose(); toast('動作環境設定を登録しました'); }} style={{ ...btn(accent, true), padding: '9px 26px', fontSize: 13 }}>登録</button>
-        <button type="button" onClick={onClose} style={{ ...btn(), padding: '9px 20px', fontSize: 13 }}>キャンセル</button>
+        <button type="button" className="submit-btn" onClick={() => { onSaved(`償却方法：${s.method}／${s.disposal}`); onClose(); toast('動作環境設定を登録しました'); }} style={{ ...btn(accent, true), padding: '9px 26px', fontSize: 14 }}>登録</button>
+        <button type="button" onClick={onClose} style={{ ...btn(), padding: '9px 20px', fontSize: 14 }}>キャンセル</button>
       </div>
       {detailFor && <MethodDetailModal accent={accent} method={detailFor} value={details[detailFor]} onClose={() => setDetailFor(null)} onSave={(v) => { setDetails((d) => ({ ...d, [detailFor]: v })); toast(`${detailFor} の詳細設定を保存しました`); }} />}
       {sortOpen && <SortMasterModal accent={accent} items={sortItems} toast={toast} onClose={() => setSortOpen(false)} onSave={(items) => { onSortItems(items); toast('並び順項目マスタを登録しました'); }} />}

@@ -88,13 +88,13 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
   const input: CSSProperties = { width: 180, textAlign: 'right', padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', outline: 'none', fontVariantNumeric: 'tabular-nums', background: '#fff' };
   const row = (label: string, value: number, set: (n: number) => void, odd: boolean, sub?: boolean) => (
     <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 18px', paddingLeft: sub ? 34 : 18, background: odd ? '#fffbea' : '#f2fbfd' }}>
-      <span style={{ flex: 1, fontSize: 13.5 }}>{label}</span>
+      <span style={{ flex: 1, fontSize: 14 }}>{label}</span>
       <input className="field-input ring" value={yen(value)} onChange={(e) => set(num(e.target.value))} inputMode="numeric" style={input} />
-      <span style={{ fontSize: 12.5, color: '#5b6773', width: 16 }}>円</span>
+      <span style={{ fontSize: 14, color: '#5b6773', width: 16 }}>円</span>
     </div>
   );
-  const btn = (primary?: boolean): CSSProperties => ({ padding: '9px 20px', borderRadius: 8, border: primary ? 'none' : '1px solid #cfd8e0', background: primary ? accent : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
-  const section = (t: string): CSSProperties => ({ background: '#d8cfe6', padding: '10px 18px', fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 15, color: '#3b2f52', ...(t ? {} : {}) });
+  const btn = (primary?: boolean): CSSProperties => ({ padding: '9px 20px', borderRadius: 8, border: primary ? 'none' : '1px solid #cfd8e0', background: primary ? accent : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
+  const section = (t: string): CSSProperties => ({ background: '#d8cfe6', padding: '10px 18px', fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16, color: '#3b2f52', ...(t ? {} : {}) });
 
   return (
     <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
@@ -126,7 +126,7 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
                 <input type="radio" name="method" checked={method === m.key} onChange={() => setMethod(m.key)} style={{ marginTop: 4 }} />
                 <span>
                   <div style={{ fontSize: 14.5, fontWeight: 600 }}>{m.label}</div>
-                  <div style={{ fontSize: 12, color: '#7a8794' }}>{m.hint}</div>
+                  <div style={{ fontSize: 14, color: '#7a8794' }}>{m.hint}</div>
                 </span>
               </label>
             ))}
@@ -146,7 +146,7 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '18px 22px 14px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
           <div>
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21 }}>簡易充実残額シミュレーター</div>
-            <div style={{ color: '#7a8794', fontSize: 12, marginTop: 4 }}>
+            <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>
               入力方式：<b style={{ color: '#22303c' }}>{METHODS.find((m) => m.key === method)?.label.split('（')[0] ?? '未選択'}</b>　金額を編集すると予想額が再計算されます。<span style={{ color: '#b7791f' }}>（値はサンプルです）</span>
             </div>
           </div>
@@ -169,24 +169,24 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
             {row('国庫補助金等特別積立金(d)', d, setDd, false)}
             <div style={section('2')}>
               2．「社会福祉法に基づく事業に活用している不動産等」
-              <div style={{ fontSize: 12, fontWeight: 500, marginTop: 6 }}>（１）財産目録における貸借対照表価額</div>
-              <div style={{ fontSize: 12, fontWeight: 500, marginTop: 4 }}>控除対象資産</div>
+              <div style={{ fontSize: 14, fontWeight: 500, marginTop: 6 }}>（１）財産目録における貸借対照表価額</div>
+              <div style={{ fontSize: 14, fontWeight: 500, marginTop: 4 }}>控除対象資産</div>
             </div>
             {D.deduct.map((x, i) => row(x.name, deduct[i], (n) => setDeduct((ds) => ds.map((v, k) => (k === i ? n : v))), i % 2 === 0, true))}
           </div>
 
           <div style={{ padding: 22, display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ border: '2px solid #22303c', borderRadius: 12, padding: '18px 16px', textAlign: 'center' }}>
-              <div style={{ fontSize: 13.5 }}>特例計算による <b>令和8年度</b> の充実残額の簡易予想額は</div>
+              <div style={{ fontSize: 14 }}>特例計算による <b>令和8年度</b> の充実残額の簡易予想額は</div>
               <div style={{ margin: '10px 0', padding: '8px 12px', background: '#eef3f8', borderRadius: 8, fontSize: 30, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: result < 0 ? '#c0392b' : '#1f7a52' }}>
                 {result < 0 ? '-' : ''}{yen(Math.abs(result))}
               </div>
               <div style={{ fontSize: 14 }}>円です</div>
-              <div style={{ fontSize: 11, color: '#c0392b', marginTop: 10, lineHeight: 1.6, textAlign: 'left' }}>
+              <div style={{ fontSize: 12, color: '#c0392b', marginTop: 10, lineHeight: 1.6, textAlign: 'left' }}>
                 ※ 結果は特例計算を用いた予想額です。<br />※ マイナスで表示された場合には充実残額は生じていないと思われます。
               </div>
             </div>
-            <div style={{ fontSize: 12, color: '#5b6773', lineHeight: 1.9, background: '#f8fafc', borderRadius: 10, padding: '10px 14px' }}>
+            <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.9, background: '#f8fafc', borderRadius: 10, padding: '10px 14px' }}>
               <div>活用可能な財産（a－b－c－d）：<b style={{ fontVariantNumeric: 'tabular-nums' }}>{yen(usable)}</b> 円</div>
               <div>控除対象資産の合計：<b style={{ fontVariantNumeric: 'tabular-nums' }}>{yen(deductSum)}</b> 円</div>
             </div>
@@ -213,32 +213,32 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
       {/* 科目設定 */}
       <Modal open={mapOpen} onClose={() => setMapOpen(false)} width={760} title="科目設定 ― 各行に集計する勘定科目">
         <div style={{ padding: '12px 22px 18px' }}>
-          <div style={{ fontSize: 12.5, color: '#5b6773', marginBottom: 10, lineHeight: 1.7 }}>シミュレーターの各行に、どの勘定科目の残高を集計するかを設定します（実績額方式・追加額方式で使用）。<span style={{ color: '#b7791f' }}>設定内容は保存されません。</span></div>
+          <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 10, lineHeight: 1.7 }}>シミュレーターの各行に、どの勘定科目の残高を集計するかを設定します（実績額方式・追加額方式で使用）。<span style={{ color: '#b7791f' }}>設定内容は保存されません。</span></div>
           <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: '52vh', overflow: 'auto' }}>
             {LINE_KEYS.map((k, i) => {
               const sel = mapDraft[k];
               const rest = ACCOUNT_META.filter((m) => !sel.includes(m.name));
               return (
                 <div key={k} style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 10, padding: '8px 12px', borderBottom: '1px solid #f1f4f6', background: i % 2 ? '#fbfcfd' : '#fff', alignItems: 'start' }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, paddingTop: 6, paddingLeft: i >= 4 ? 14 : 0, color: i >= 4 ? '#48565f' : '#22303c' }}>{i >= 4 ? '控除：' : ''}{k}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, paddingTop: 6, paddingLeft: i >= 4 ? 14 : 0, color: i >= 4 ? '#48565f' : '#22303c' }}>{i >= 4 ? '控除：' : ''}{k}</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
                     {sel.map((n) => (
-                      <span key={n} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 12, background: '#eef3f8', fontSize: 12 }}>
-                        <span style={{ color: '#9aa5b1', fontSize: 10.5 }}>{ACCOUNT_META.find((m) => m.name === n)?.code}</span>{n}
-                        <button type="button" onClick={() => setMapDraft({ ...mapDraft, [k]: sel.filter((x) => x !== n) })} title="外す" style={{ border: 'none', background: 'transparent', color: '#8290a0', cursor: 'pointer', fontSize: 13, lineHeight: 1, padding: 0 }}>×</button>
+                      <span key={n} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 12, background: '#eef3f8', fontSize: 14 }}>
+                        <span style={{ color: '#9aa5b1', fontSize: 12 }}>{ACCOUNT_META.find((m) => m.name === n)?.code}</span>{n}
+                        <button type="button" onClick={() => setMapDraft({ ...mapDraft, [k]: sel.filter((x) => x !== n) })} title="外す" style={{ border: 'none', background: 'transparent', color: '#8290a0', cursor: 'pointer', fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
                       </span>
                     ))}
-                    <select value="" onChange={(e) => { if (e.target.value) setMapDraft({ ...mapDraft, [k]: [...sel, e.target.value] }); }} style={{ padding: '4px 8px', border: '1px solid #cfd8e0', borderRadius: 7, fontSize: 12, fontFamily: 'inherit', background: '#fff', color: '#5b6773' }}>
+                    <select value="" onChange={(e) => { if (e.target.value) setMapDraft({ ...mapDraft, [k]: [...sel, e.target.value] }); }} style={{ padding: '4px 8px', border: '1px solid #cfd8e0', borderRadius: 7, fontSize: 14, fontFamily: 'inherit', background: '#fff', color: '#5b6773' }}>
                       <option value="">＋ 科目を追加…</option>
                       {rest.map((m) => <option key={m.name} value={m.name}>{m.code}　{m.name}</option>)}
                     </select>
-                    {sel.length === 0 && <span style={{ fontSize: 11.5, color: '#9aa5b1' }}>（未設定：直接入力の金額を使用）</span>}
+                    {sel.length === 0 && <span style={{ fontSize: 12, color: '#9aa5b1' }}>（未設定：直接入力の金額を使用）</span>}
                   </div>
                 </div>
               );
             })}
           </div>
-          <div style={{ fontSize: 11, color: '#9aa5b1', marginTop: 8 }}>※ プロトタイプの科目マスタはサンプル（現預金・未収金・事業費・人件費・事業収益）のため、負債・基本金・固定資産の科目は未登録です。本番では法人の勘定科目マスタから選択します。</div>
+          <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 8 }}>※ プロトタイプの科目マスタはサンプル（現預金・未収金・事業費・人件費・事業収益）のため、負債・基本金・固定資産の科目は未登録です。本番では法人の勘定科目マスタから選択します。</div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
             <button type="button" className="btn-outline" onClick={() => setMapDraft(DEFAULT_MAP)} style={{ ...btn(), marginRight: 'auto' }}>初期値に戻す</button>
             <button type="button" onClick={() => setMapOpen(false)} style={btn()}>キャンセル</button>
@@ -269,7 +269,7 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
                 {ticks.map((t) => (
                   <g key={t}>
                     <line x1={padL} x2={W - padR} y1={y(t)} y2={y(t)} stroke={t === 0 ? '#9aa5b1' : '#eef2f5'} strokeWidth={1} />
-                    <text x={padL - 8} y={y(t) + 4} textAnchor="end" fontSize={10.5} fill="#8290a0">{fmt(t)}</text>
+                    <text x={padL - 8} y={y(t) + 4} textAnchor="end" fontSize={12} fill="#8290a0">{fmt(t)}</text>
                   </g>
                 ))}
                 {history.map((h, i) => {
@@ -281,24 +281,24 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
                   return (
                     <g key={h.y}>
                       <rect x={cx - barW / 2} y={Math.min(yv, zero)} width={barW} height={Math.max(2, Math.abs(zero - yv))} rx={4} fill={fill} />
-                      <text x={cx} y={(h.result < 0 ? yv + 14 : yv - 7)} textAnchor="middle" fontSize={11} fontWeight={700} fill="#22303c" style={{ fontVariantNumeric: 'tabular-nums' }}>{yen(h.result)}</text>
-                      <text x={cx} y={H - padB + 18} textAnchor="middle" fontSize={11.5} fontWeight={isCur ? 800 : 500} fill={isCur ? '#22303c' : '#5b6773'}>{h.y}{isCur ? '（予想）' : ''}</text>
+                      <text x={cx} y={(h.result < 0 ? yv + 14 : yv - 7)} textAnchor="middle" fontSize={12} fontWeight={700} fill="#22303c" style={{ fontVariantNumeric: 'tabular-nums' }}>{yen(h.result)}</text>
+                      <text x={cx} y={H - padB + 18} textAnchor="middle" fontSize={12} fontWeight={isCur ? 800 : 500} fill={isCur ? '#22303c' : '#5b6773'}>{h.y}{isCur ? '（予想）' : ''}</text>
                     </g>
                   );
                 })}
               </svg>
             );
           })()}
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 10, fontSize: 12.5 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 10, fontSize: 14 }}>
             <thead>
-              <tr>{['年度', '活用可能な財産', '控除対象資産', '充実残額'].map((h, i) => <th key={h} style={{ padding: '6px 10px', background: '#f6f8fa', textAlign: i ? 'right' : 'left', fontSize: 11.5, color: '#5b6773', borderBottom: '1px solid #e2e8ee' }}>{h}</th>)}</tr>
+              <tr>{['年度', '活用可能な財産', '控除対象資産', '充実残額'].map((h, i) => <th key={h} style={{ padding: '6px 10px', background: '#f6f8fa', textAlign: i ? 'right' : 'left', fontSize: 12, color: '#5b6773', borderBottom: '1px solid #e2e8ee' }}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {history.map((h, i) => {
                 const cur = i === history.length - 1;
                 return (
                   <tr key={h.y} style={{ background: cur ? '#fffbea' : 'transparent', fontWeight: cur ? 700 : 500 }}>
-                    <td style={{ padding: '6px 10px', borderBottom: '1px solid #f1f4f6' }}>{h.y}{cur && <span style={{ fontSize: 10.5, color: '#b7791f', marginLeft: 6 }}>今回のシミュレーション</span>}</td>
+                    <td style={{ padding: '6px 10px', borderBottom: '1px solid #f1f4f6' }}>{h.y}{cur && <span style={{ fontSize: 12, color: '#b7791f', marginLeft: 6 }}>今回のシミュレーション</span>}</td>
                     <td style={{ padding: '6px 10px', borderBottom: '1px solid #f1f4f6', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{yen(h.usable)}</td>
                     <td style={{ padding: '6px 10px', borderBottom: '1px solid #f1f4f6', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{yen(h.deduct)}</td>
                     <td style={{ padding: '6px 10px', borderBottom: '1px solid #f1f4f6', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: h.result < 0 ? '#c0392b' : '#1f7a52' }}>{h.result < 0 ? '-' : ''}{yen(Math.abs(h.result))}</td>
@@ -307,7 +307,7 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
               })}
             </tbody>
           </table>
-          <div style={{ fontSize: 11, color: '#9aa5b1', marginTop: 8 }}>※ 過去年度の値はサンプルです。本番では各年度の決算データ（財産目録）から算出した値を表示します。</div>
+          <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 8 }}>※ 過去年度の値はサンプルです。本番では各年度の決算データ（財産目録）から算出した値を表示します。</div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}><button type="button" onClick={() => setHistOpen(false)} style={btn()}>閉じる</button></div>
         </div>
       </Modal>

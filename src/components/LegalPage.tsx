@@ -29,22 +29,22 @@ export function LegalPage() {
       <header style={{ position: 'sticky', top: 0, zIndex: 10, background: '#fff', borderBottom: '1px solid #dde4ea', padding: '12px 28px', display: 'flex', alignItems: 'center', gap: 14 }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, background: '#1f7a52', color: '#fff', borderRadius: 8, fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700 }}>会</span>
         <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 17 }}>会計基準システム　{doc.title}</div>
-        <button type="button" onClick={backToApp} style={{ marginLeft: 'auto', padding: '7px 14px', borderRadius: 8, border: '1px solid #cfd8e0', background: '#fff', color: '#22303c', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>← システムに戻る</button>
+        <button type="button" onClick={backToApp} style={{ marginLeft: 'auto', padding: '7px 14px', borderRadius: 8, border: '1px solid #cfd8e0', background: '#fff', color: '#22303c', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>← システムに戻る</button>
       </header>
       <div style={{ maxWidth: 820, margin: '0 auto', padding: '28px 28px 60px', width: '100%', boxSizing: 'border-box' }}>
         <div style={{ background: '#fff', border: '1px solid #dde4ea', borderRadius: 12, padding: '28px 32px' }}>
-          <div style={{ display: 'inline-block', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#fff1b8', color: '#8a6d00', marginBottom: 12 }}>叩き台（正式な文言は差し替え）</div>
+          <div style={{ display: 'inline-block', fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#fff1b8', color: '#8a6d00', marginBottom: 12 }}>叩き台（正式な文言は差し替え）</div>
           <h1 style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontSize: 22, margin: '0 0 12px' }}>{doc.title}</h1>
-          <p style={{ fontSize: 13.5, lineHeight: 1.8, color: '#4a5865', margin: '0 0 22px' }}>{doc.lead}</p>
+          <p style={{ fontSize: 14, lineHeight: 1.8, color: '#4a5865', margin: '0 0 22px' }}>{doc.lead}</p>
           {doc.sections.map((s) => (
             <section key={s.title} style={{ marginBottom: 20 }}>
               <h2 style={{ fontSize: 14.5, margin: '0 0 6px', fontFamily: "'Zen Kaku Gothic New', sans-serif" }}>{s.title}</h2>
-              <ol style={{ margin: 0, paddingLeft: 22, fontSize: 13, lineHeight: 1.8, color: '#4a5865' }}>
+              <ol style={{ margin: 0, paddingLeft: 22, fontSize: 14, lineHeight: 1.8, color: '#4a5865' }}>
                 {s.body.map((b) => <li key={b}>{b}</li>)}
               </ol>
             </section>
           ))}
-          <div style={{ fontSize: 12, color: '#8290a0', marginTop: 24 }}>制定日：2026年4月1日</div>
+          <div style={{ fontSize: 14, color: '#8290a0', marginTop: 24 }}>制定日：2026年4月1日</div>
         </div>
       </div>
     </div>

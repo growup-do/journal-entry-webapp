@@ -116,13 +116,13 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
       <div style={embedded ? { width: '100%', background: '#fff', display: 'flex', flexDirection: 'column' } : { width: '100%', maxWidth: isSheet ? 'none' : 1280, background: '#fff', border: '1px solid #dde4ea', borderRadius: isSheet ? 14 : 16, boxShadow: '0 6px 26px rgba(30,50,70,.07)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {returnTo && (
           <div data-return-bar style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 22px', background: '#f3f6f9', borderBottom: '1px solid #e2e8ee', flexWrap: 'wrap' }}>
-            <button type="button" className="btn-outline" onClick={returnTo.onBack} style={{ padding: '6px 14px', border: '1px solid ' + accent, borderRadius: 8, background: '#fff', color: accent, fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            <button type="button" className="btn-outline" onClick={returnTo.onBack} style={{ padding: '6px 14px', border: '1px solid ' + accent, borderRadius: 8, background: '#fff', color: accent, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
               ← {displayName(returnTo.from)}に戻る
             </button>
-            <span style={{ fontSize: 12, color: '#7a8794' }}>
+            <span style={{ fontSize: 14, color: '#7a8794' }}>
               {displayName(returnTo.from)} <span style={{ margin: '0 4px' }}>›</span> <b style={{ color: '#22303c' }}>{title}</b>{returnTo.here ? `（${returnTo.here}）` : ''}
             </span>
-            <span style={{ marginLeft: 'auto', fontSize: 11.5, color: '#9aa5b1' }}>{returnTo.hint ?? '戻ると、開く前と同じ表示条件（月・部・表示階層など）で表示します'}</span>
+            <span style={{ marginLeft: 'auto', fontSize: 12, color: '#9aa5b1' }}>{returnTo.hint ?? '戻ると、開く前と同じ表示条件（月・部・表示階層など）で表示します'}</span>
           </div>
         )}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '18px 22px 14px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
@@ -130,18 +130,18 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21 }}>
               {title} {badge}
               {org != null ? (
-                <span style={{ fontSize: 12.5, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>{org}</span>
+                <span style={{ fontSize: 14, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>{org}</span>
               ) : (
-                <span data-org style={{ fontSize: 12.5, fontWeight: 500, color: '#7a8794', marginLeft: 8, whiteSpace: 'nowrap' }}>
+                <span data-org style={{ fontSize: 14, fontWeight: 500, color: '#7a8794', marginLeft: 8, whiteSpace: 'nowrap' }}>
                   <span style={{ fontWeight: 700, color: pastYear ? '#b7791f' : '#48565f' }}>{s.fiscalYear}</span>
-                  {pastYear && <span style={{ marginLeft: 4, padding: '1px 6px', borderRadius: 6, background: '#fff7e6', border: '1px solid #f3d9b0', color: '#8a5a00', fontSize: 10.5, fontWeight: 700 }}>過去年度を参照中</span>}
+                  {pastYear && <span style={{ marginLeft: 4, padding: '1px 6px', borderRadius: 6, background: '#fff7e6', border: '1px solid #f3d9b0', color: '#8a5a00', fontSize: 12, fontWeight: 700 }}>過去年度を参照中</span>}
                   <span style={{ margin: '0 6px' }}>／</span>
                   <span style={{ fontWeight: 700, color: '#48565f' }}>{s.division}</span>
-                  <span style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 6, background: '#eef2f6', color: '#5b6773', fontSize: 10.5, fontWeight: 700 }}>{kind}</span>
+                  <span style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 6, background: '#eef2f6', color: '#5b6773', fontSize: 12, fontWeight: 700 }}>{kind}</span>
                 </span>
               )}
             </div>
-            {subtitle && <div style={{ color: '#7a8794', fontSize: 12, marginTop: 4 }}>{subtitle}</div>}
+            {subtitle && <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>{subtitle}</div>}
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {extraTools}
@@ -171,12 +171,12 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
                             const on = parts.current === i;
                             const color = PART_COLORS[i] ?? '#d9a400';
                             return (
-                              <button key={p} type="button" role="tab" aria-selected={on} className="chip" data-part={p} onClick={() => parts.onChange(i)} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: '1px solid ' + (on ? color : '#e2c86a'), background: on ? color : '#fff3c4', color: on ? '#fff' : '#7a5600' }}>
+                              <button key={p} type="button" role="tab" aria-selected={on} className="chip" data-part={p} onClick={() => parts.onChange(i)} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: '1px solid ' + (on ? color : '#e2c86a'), background: on ? color : '#fff3c4', color: on ? '#fff' : '#7a5600' }}>
                                 {p}
                               </button>
                             );
                           })}
-                          <span style={{ fontSize: 10.5, color: '#9aa5b1', whiteSpace: 'nowrap' }}>← → キーでも切替</span>
+                          <span style={{ fontSize: 12, color: '#9aa5b1', whiteSpace: 'nowrap' }}>← → キーでも切替</span>
                         </div>
                       )}
                     </div>
@@ -187,7 +187,7 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
             {target && (
               <>
                 <span style={SECTION_TAG} data-section="指定科目">{targetLabel}</span>
-                <div style={{ ...row, fontSize: 12.5, color: '#48565f' }}>{target}</div>
+                <div style={{ ...row, fontSize: 14, color: '#48565f' }}>{target}</div>
               </>
             )}
             {switches && (
@@ -204,8 +204,8 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
             )}
           </div>
         )}
-        {notice && <div style={{ padding: '8px 22px', borderBottom: '1px solid #eef2f5', background: '#fffaf0', fontSize: 12, color: '#8a5a00', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>{notice}</div>}
-        <div data-list-head style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '7px 22px', background: '#f8fafc', borderBottom: '1px solid #eef2f5', fontSize: 12, color: '#48565f' }}>
+        {notice && <div style={{ padding: '8px 22px', borderBottom: '1px solid #eef2f5', background: '#fffaf0', fontSize: 14, color: '#8a5a00', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>{notice}</div>}
+        <div data-list-head style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '7px 22px', background: '#f8fafc', borderBottom: '1px solid #eef2f5', fontSize: 14, color: '#48565f' }}>
           <span style={SECTION_TAG} data-section="一覧表">一覧表</span>
           {listNote}
         </div>
@@ -222,7 +222,7 @@ function toolStyle(bg?: string): CSSProperties {
     borderRadius: 8,
     background: bg ?? '#fff',
     color: bg ? '#fff' : '#5b6773',
-    fontSize: 12.5,
+    fontSize: 14,
     fontWeight: 700,
     fontFamily: 'inherit',
     cursor: 'pointer',
@@ -241,7 +241,7 @@ export function Segmented<T extends string>({ label, items, value, onChange, acc
         {items.map((it, i) => {
           const on = it === value;
           return (
-            <button key={it} type="button" role="radio" aria-checked={on} disabled={disabled} data-seg={it} onClick={() => onChange(it)} style={{ padding: '5px 11px', border: 'none', borderLeft: i ? '1px solid #e2e8ee' : 'none', background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: disabled ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
+            <button key={it} type="button" role="radio" aria-checked={on} disabled={disabled} data-seg={it} onClick={() => onChange(it)} style={{ padding: '5px 11px', border: 'none', borderLeft: i ? '1px solid #e2e8ee' : 'none', background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: disabled ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
               {it}
             </button>
           );
@@ -256,7 +256,7 @@ export function SwitchPill({ label, on, onChange, accent, disabled, title }: { l
   const act = () => { if (!disabled) onChange(!on); };
   return (
     <span title={disabled ? undefined : title} data-tip={disabled ? title : undefined} data-switch={label} aria-disabled={disabled} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 10px', border: '1px solid #e2e8ee', borderRadius: 20, background: disabled ? '#f5f7f9' : '#fff', opacity: disabled ? 0.6 : 1, cursor: disabled ? 'not-allowed' : 'pointer' }}>
-      <span onClick={act} style={{ fontSize: 12, fontWeight: on && !disabled ? 800 : 500, color: on && !disabled ? accent : '#9aa5b1' }}>{label}</span>
+      <span onClick={act} style={{ fontSize: 14, fontWeight: on && !disabled ? 800 : 500, color: on && !disabled ? accent : '#9aa5b1' }}>{label}</span>
       <span role="switch" aria-checked={on && !disabled} onClick={act} style={{ display: 'inline-block', width: 36, height: 20, borderRadius: 10, background: on && !disabled ? accent : '#cfd8e0', position: 'relative', flex: 'none' }}>
         <span style={{ position: 'absolute', top: 2, left: on && !disabled ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left .15s' }} />
       </span>
@@ -309,12 +309,12 @@ export function useMoney(): (n: number) => ReactNode {
 }
 
 /* ---- 表の共通スタイル ---- */
-export const TH: CSSProperties = { padding: '9px 12px', background: '#f6f8fa', fontSize: 10.5, fontWeight: 700, color: '#8290a0', borderBottom: '1px solid #eef2f5', textAlign: 'left', whiteSpace: 'nowrap' };
-export const TD: CSSProperties = { padding: '8px 12px', fontSize: 12.5, borderBottom: '1px solid #f1f4f6', verticalAlign: 'middle' };
+export const TH: CSSProperties = { padding: '9px 12px', background: '#f6f8fa', fontSize: 14, fontWeight: 700, color: '#8290a0', borderBottom: '1px solid #eef2f5', textAlign: 'left', whiteSpace: 'nowrap' };
+export const TD: CSSProperties = { padding: '8px 12px', fontSize: 14, borderBottom: '1px solid #f1f4f6', verticalAlign: 'middle' };
 export const NUM: CSSProperties = { ...TD, textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
 export const yen = (n: number) => (n < 0 ? '△' + Math.abs(n).toLocaleString('ja-JP') : n.toLocaleString('ja-JP'));
 export const pct = (n: number) => (isFinite(n) ? (n * 100).toFixed(1) + '%' : '');
-export const LABEL: CSSProperties = { fontSize: 11, fontWeight: 700, color: '#8290a0', flex: 'none' };
+export const LABEL: CSSProperties = { fontSize: 14, fontWeight: 700, color: '#8290a0', flex: 'none' };
 /** 問合せ画面の共通構成の見出し（集計期間／指定科目／表示切替／一覧表） */
-const SECTION_TAG: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', alignSelf: 'start', minWidth: 72, padding: '4px 10px', borderRadius: 7, background: '#e9eef3', color: '#3d4a56', fontSize: 11, fontWeight: 800, letterSpacing: '.04em', whiteSpace: 'nowrap' };
-export const CHECK: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#5b6773', cursor: 'pointer' };
+const SECTION_TAG: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', alignSelf: 'start', minWidth: 72, padding: '4px 10px', borderRadius: 7, background: '#e9eef3', color: '#3d4a56', fontSize: 12, fontWeight: 800, letterSpacing: '.04em', whiteSpace: 'nowrap' };
+export const CHECK: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 14, color: '#5b6773', cursor: 'pointer' };

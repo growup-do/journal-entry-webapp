@@ -87,9 +87,9 @@ export function LedgerInquiryPage({ slot, variant, accent, accentRgb, onNavigate
   const sumC = lines.reduce((a, l) => a + l.c, 0);
   const isFiltered = applied.other || applied.sub || applied.tax || applied.tekiyo;
   const dirty = JSON.stringify(cond) !== JSON.stringify(applied);
-  const fieldBtn: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, width: 240, boxSizing: 'border-box', padding: '7px 10px', background: '#fff', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left', color: 'inherit' };
-  const input: CSSProperties = { padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', outline: 'none', background: '#fff', color: '#22303c', boxSizing: 'border-box' };
-  const btn = (primary?: boolean): CSSProperties => ({ padding: '7px 14px', border: '1px solid ' + (primary ? accent : '#cfd8e0'), borderRadius: 8, background: primary ? accent : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
+  const fieldBtn: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, width: 240, boxSizing: 'border-box', padding: '7px 10px', background: '#fff', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left', color: 'inherit' };
+  const input: CSSProperties = { padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none', background: '#fff', color: '#22303c', boxSizing: 'border-box' };
+  const btn = (primary?: boolean): CSSProperties => ({ padding: '7px 14px', border: '1px solid ' + (primary ? accent : '#cfd8e0'), borderRadius: 8, background: primary ? accent : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
   const field = (label: string, node: React.ReactNode) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <span style={LABEL}>{label}</span>
@@ -131,20 +131,20 @@ export function LedgerInquiryPage({ slot, variant, accent, accentRgb, onNavigate
       }
       periodAside={[['借方計', yen(sumD)], ['貸方計', yen(sumC)], ...(account ? [['残高', yen(bal)]] : [])].map(([l, v]) => (
         <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px', border: '1px solid #e2e8ee', borderRadius: 8, background: '#fbfcfd' }}>
-          <span style={{ fontSize: 10.5, fontWeight: 700, color: '#8290a0' }}>{l}</span>
-          <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{v}</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>{l}</span>
+          <span style={{ fontSize: 14, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{v}</span>
         </div>
       ))}
       target={
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
           {field('科目', assistField('acc', account, '<<科目未選択>>', setAccount))}
-          <span style={{ fontSize: 12, color: '#7a8794', paddingBottom: 9 }}>未選択の場合は全科目の仕訳を一覧します（残高は計算しません）。</span>
+          <span style={{ fontSize: 14, color: '#7a8794', paddingBottom: 9 }}>未選択の場合は全科目の仕訳を一覧します（残高は計算しません）。</span>
         </div>
       }
       notice={
         <span data-reference-note style={{ color: '#48565f' }}>
           {title}は参照用の画面です。伝票入力の横の「参照パネル」にも表示でき、入力しながら残高を確認できます。印刷・Excel 出力や伝票の訂正は
-          <button type="button" onClick={() => onNavigate('勘定元帳')} style={{ margin: '0 4px', padding: '1px 8px', borderRadius: 6, border: '1px solid ' + accent, background: '#fff', color: accent, fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{displayName('勘定元帳')}</button>
+          <button type="button" onClick={() => onNavigate('勘定元帳')} style={{ margin: '0 4px', padding: '1px 8px', borderRadius: 6, border: '1px solid ' + accent, background: '#fff', color: accent, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{displayName('勘定元帳')}</button>
           で行います。
         </span>
       }
@@ -178,7 +178,7 @@ export function LedgerInquiryPage({ slot, variant, accent, accentRgb, onNavigate
             ))}
             <button type="button" className="btn-outline" data-menu="元帳検索" onClick={() => setApplied({ ...cond })} style={{ ...btn(true), opacity: dirty ? 1 : 0.85 }}>検索</button>
             <button type="button" className="btn-outline" data-menu="元帳クリア" onClick={() => { setCond(EMPTY); setApplied(EMPTY); }} style={btn()}>クリア</button>
-            {isFiltered && <span style={{ fontSize: 12, color: accent, fontWeight: 700, paddingBottom: 9 }}>絞り込み中：{lines.length} 件</span>}
+            {isFiltered && <span style={{ fontSize: 14, color: accent, fontWeight: 700, paddingBottom: 9 }}>絞り込み中：{lines.length} 件</span>}
           </div>
         </>
       }
@@ -212,10 +212,10 @@ export function LedgerInquiryPage({ slot, variant, accent, accentRgb, onNavigate
                 <td style={TD}>{l.r.seq}</td>
                 <td style={TD}>
                   <div style={{ fontWeight: 500 }}>{l.other}</div>
-                  <div style={{ fontSize: 11.5, color: '#7a8794' }}>{l.r.tekiyo}</div>
+                  <div style={{ fontSize: 12, color: '#7a8794' }}>{l.r.tekiyo}</div>
                 </td>
                 <td style={{ ...TD, color: l.sub ? '#22303c' : '#b8c2cc' }}>{l.sub || '—'}</td>
-                <td style={TD}><span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 8, background: l.tax.startsWith('課税') ? '#e8f0fb' : l.tax === '非課税' ? '#eaf5ef' : '#f1f4f6', color: l.tax.startsWith('課税') ? '#2c5f9e' : l.tax === '非課税' ? '#1f7a52' : '#7a8794' }}>{l.tax}</span></td>
+                <td style={TD}><span style={{ fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 8, background: l.tax.startsWith('課税') ? '#e8f0fb' : l.tax === '非課税' ? '#eaf5ef' : '#f1f4f6', color: l.tax.startsWith('課税') ? '#2c5f9e' : l.tax === '非課税' ? '#1f7a52' : '#7a8794' }}>{l.tax}</span></td>
                 <td style={NUM}>{l.d ? yen(l.d) : ''}</td>
                 <td style={NUM}>{l.c ? yen(l.c) : ''}</td>
                 {account && <td style={{ ...NUM, fontWeight: 700 }}>{yen(l.bal)}</td>}
@@ -264,13 +264,13 @@ export function BalanceCheckPage({ variant, accent }: { variant: 'form' | 'sheet
       extraTools={<ScreenPrintMenu accent={accent} actions={[{ items: [{ name: '現預金残高推移表（残高照合）', onClick: openExport }] }]} />}
       period={
         <>
-          <span style={{ fontSize: 12.5 }}>令和8年 8月31日 時点</span>
+          <span style={{ fontSize: 14 }}>令和8年 8月31日 時点</span>
         </>
       }
       target={<span>現預金科目 <b style={{ color: '#22303c' }}>{BALANCE_ACCOUNTS.length} 科目</b>（科目設定で現預金に分類した科目をすべて突合します。個別の指定はありません）</span>}
       switches={<SwitchPill label="不一致（NG）のみ表示" on={ngOnly} onChange={setNgOnly} accent={accent} title="通帳残高とシステム残高が合わない科目だけを表示します" />}
       listNote={<span>{ngOnly ? `不一致 ${ngCount} 件を表示` : `${BALANCE_ACCOUNTS.length} 科目`}</span>}
-      periodAside={<span style={{ fontSize: 12.5, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: ngCount ? '#fdeee9' : '#eaf5ef', color: ngCount ? '#c0392b' : '#1f7a52' }}>{ngCount ? `不一致 ${ngCount} 件` : 'すべて一致'}</span>}
+      periodAside={<span style={{ fontSize: 14, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: ngCount ? '#fdeee9' : '#eaf5ef', color: ngCount ? '#c0392b' : '#1f7a52' }}>{ngCount ? `不一致 ${ngCount} 件` : 'すべて一致'}</span>}
     >
       <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -291,10 +291,10 @@ export function BalanceCheckPage({ variant, accent }: { variant: 'form' | 'sheet
             return (
               <tr key={a.name} style={{ background: ok ? 'transparent' : '#fff7f5' }}>
                 <td style={{ ...TD, fontWeight: 500 }}>{a.name}</td>
-                <td style={TD}><span style={{ fontSize: 10.5, fontWeight: 800, padding: '2px 7px', borderRadius: 6, background: ok ? '#e8f0fb' : '#c0392b', color: ok ? '#2c5f9e' : '#fff' }}>{ok ? 'OK' : 'NG'}</span></td>
+                <td style={TD}><span style={{ fontSize: 12, fontWeight: 800, padding: '2px 7px', borderRadius: 6, background: ok ? '#e8f0fb' : '#c0392b', color: ok ? '#2c5f9e' : '#fff' }}>{ok ? 'OK' : 'NG'}</span></td>
                 <td style={NUM}>
                   {editing ? (
-                    <input className="field-input" value={yen(book[i])} onChange={(e) => set(i, e.target.value)} inputMode="numeric" style={{ width: 150, boxSizing: 'border-box', textAlign: 'right', padding: '5px 8px', border: '1px solid #cfd8e0', borderRadius: 6, fontSize: 12.5, fontFamily: 'inherit', outline: 'none', fontVariantNumeric: 'tabular-nums' }} />
+                    <input className="field-input" value={yen(book[i])} onChange={(e) => set(i, e.target.value)} inputMode="numeric" style={{ width: 150, boxSizing: 'border-box', textAlign: 'right', padding: '5px 8px', border: '1px solid #cfd8e0', borderRadius: 6, fontSize: 14, fontFamily: 'inherit', outline: 'none', fontVariantNumeric: 'tabular-nums' }} />
                   ) : (
                     yen(book[i])
                   )}
@@ -314,7 +314,7 @@ export function BalanceCheckPage({ variant, accent }: { variant: 'form' | 'sheet
           </tr>
         </tfoot>
       </table>
-      <div style={{ padding: '12px 22px', fontSize: 11.5, color: '#9aa5b1', lineHeight: 1.6, borderTop: '1px solid #eef2f5' }}>「通帳残高の設定」で通帳の残高を入力すると、システム残高と突合して OK／NG と差額を表示します。</div>
+      <div style={{ padding: '12px 22px', fontSize: 12, color: '#9aa5b1', lineHeight: 1.6, borderTop: '1px solid #eef2f5' }}>「通帳残高の設定」で通帳の残高を入力すると、システム残高と突合して OK／NG と差額を表示します。</div>
     </ReportShell>
   );
 }

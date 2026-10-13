@@ -80,24 +80,24 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
   /** 項目の現在の状態（設定で無効の項目は、調査前でもスキップ扱い） */
   const stateOf = (no: number): Status => status[no] ?? (enabled(no) ? '未調査' : 'スキップ');
   const badge = (st: Status): CSSProperties => ({
-    display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'center', minWidth: 72, height: 22, padding: '0 6px', borderRadius: 6, fontSize: 11, fontWeight: 700, flex: 'none', boxSizing: 'border-box',
+    display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'center', minWidth: 72, height: 22, padding: '0 6px', borderRadius: 6, fontSize: 12, fontWeight: 700, flex: 'none', boxSizing: 'border-box',
     background: STATE_STYLE[st].bg, color: STATE_STYLE[st].fg, border: '1px solid ' + STATE_STYLE[st].bd,
   });
   const StateBadge = ({ st }: { st: Status }) => <span data-state={st} style={badge(st)}><span aria-hidden style={{ fontWeight: 800 }}>{STATE_STYLE[st].icon}</span>{st}</span>;
-  const btn = (primary?: boolean): CSSProperties => ({ padding: '10px 22px', borderRadius: 9, border: primary ? 'none' : '1px solid #cfd8e0', background: primary ? '#1f7a52' : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 13.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
+  const btn = (primary?: boolean): CSSProperties => ({ padding: '10px 22px', borderRadius: 9, border: primary ? 'none' : '1px solid #cfd8e0', background: primary ? '#1f7a52' : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
   const counts = STATES.reduce<Record<Status, number>>((acc, st) => ({ ...acc, [st]: AUDIT_ITEMS.filter((it) => stateOf(it.no) === st).length }), { 未調査: 0, 調査中: 0, OK: 0, 要調査: 0, スキップ: 0 });
   const shown = AUDIT_ITEMS.filter((it) => !onlyNg || stateOf(it.no) === '要調査');
   const half = onlyNg ? shown.length : 20;
-  const rowBtn = (color: string, solid?: boolean): CSSProperties => ({ flex: 'none', padding: '3px 9px', borderRadius: 6, border: '1px solid ' + color, background: solid ? color : '#fff', color: solid ? '#fff' : color, fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
+  const rowBtn = (color: string, solid?: boolean): CSSProperties => ({ flex: 'none', padding: '3px 9px', borderRadius: 6, border: '1px solid ' + color, background: solid ? color : '#fff', color: solid ? '#fff' : color, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
 
   const Item = ({ no, name }: { no: number; name: string }) => {
     const st = stateOf(no);
     const ng = st === '要調査';
     return (
       <div data-audit-item={no} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderBottom: '1px solid #f1f4f6', background: ng ? '#fdf3f1' : 'transparent', borderLeft: '3px solid ' + (ng ? '#c0392b' : 'transparent'), opacity: st === 'スキップ' ? 0.6 : 1 }}>
-        <span style={{ width: 26, fontSize: 13, fontWeight: 800, color: '#22303c', fontVariantNumeric: 'tabular-nums', flex: 'none' }}>{String(no).padStart(2, '0')}</span>
+        <span style={{ width: 26, fontSize: 14, fontWeight: 800, color: '#22303c', fontVariantNumeric: 'tabular-nums', flex: 'none' }}>{String(no).padStart(2, '0')}</span>
         <StateBadge st={st} />
-        <span title={name} style={{ flex: 1, fontSize: 13, color: '#22303c', fontWeight: ng ? 700 : 400, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}{OPTION_ITEMS.has(no) && <span title="別売オプションと連動する項目" style={{ marginLeft: 6, fontSize: 9.5, fontWeight: 700, color: '#b45309', background: '#fbe9d0', padding: '1px 5px', borderRadius: 4 }}>オプション</span>}</span>
+        <span title={name} style={{ flex: 1, fontSize: 14, color: '#22303c', fontWeight: ng ? 700 : 400, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}{OPTION_ITEMS.has(no) && <span title="別売オプションと連動する項目" style={{ marginLeft: 6, fontSize: 12, fontWeight: 700, color: '#b45309', background: '#fbe9d0', padding: '1px 5px', borderRadius: 4 }}>オプション</span>}</span>
         {ng && <button type="button" className="btn-outline" data-action="結果詳細" onClick={() => setTrace(no)} style={rowBtn('#c0392b', true)}>結果詳細</button>}
         <button type="button" className="btn-outline" data-action="説明" onClick={() => setExplain(no)} style={rowBtn(ng ? '#c0392b' : '#8290a0')}>説明</button>
       </div>
@@ -133,9 +133,9 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
       title={
         <span style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <span>{displayName('決算調査')}</span>
-          <span style={{ fontSize: 12, fontWeight: 500, color: '#7a8794' }}>{s.fiscalYear}　4月1日 〜 3月31日　{corpTab === '法人' ? '法人全体' : s.division}</span>
+          <span style={{ fontSize: 14, fontWeight: 500, color: '#7a8794' }}>{s.fiscalYear}　4月1日 〜 3月31日　{corpTab === '法人' ? '法人全体' : s.division}</span>
           {explain == null && (
-            <button type="button" className="btn-outline" data-action="決算チェック設定" onClick={() => setSettings(true)} title="チェックする項目と、項目ごとの条件（勘定科目）を設定します" style={{ marginLeft: 'auto', padding: '6px 14px', borderRadius: 8, border: '1px solid #1f7a52', background: '#fff', color: '#1f7a52', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            <button type="button" className="btn-outline" data-action="決算チェック設定" onClick={() => setSettings(true)} title="チェックする項目と、項目ごとの条件（勘定科目）を設定します" style={{ marginLeft: 'auto', padding: '6px 14px', borderRadius: 8, border: '1px solid #1f7a52', background: '#fff', color: '#1f7a52', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
               決算チェック設定
             </button>
           )}
@@ -147,20 +147,20 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
         <div style={{ padding: '12px 22px 20px' }}>
           {/* 状態ごとの件数（凡例を兼ねる）＋ 要調査のみ */}
           <div data-audit-summary style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '8px 12px', marginBottom: 10, background: '#f8fafc', border: '1px solid #e8edf2', borderRadius: 10 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#8290a0' }}>状態</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>状態</span>
             {STATES.map((st) => (
-              <span key={st} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}>
+              <span key={st} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14 }}>
                 <StateBadge st={st} />
                 <b style={{ fontVariantNumeric: 'tabular-nums', color: st === '要調査' && counts[st] > 0 ? '#c0392b' : '#22303c' }}>{counts[st]}</b>
               </span>
             ))}
-            <label style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 20, border: '1px solid ' + (onlyNg ? '#c0392b' : '#dde4ea'), background: onlyNg ? '#fdeee9' : '#fff', color: onlyNg ? '#c0392b' : '#5b6773', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>
+            <label style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 20, border: '1px solid ' + (onlyNg ? '#c0392b' : '#dde4ea'), background: onlyNg ? '#fdeee9' : '#fff', color: onlyNg ? '#c0392b' : '#5b6773', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
               <input type="checkbox" checked={onlyNg} onChange={(e) => setOnlyNg(e.target.checked)} />
               要調査のみ
             </label>
           </div>
           {onlyNg && shown.length === 0 && (
-            <div style={{ padding: '28px 12px', textAlign: 'center', color: '#9aa5b1', fontSize: 13 }}>{done ? '要調査の項目はありません。' : '要調査の項目はまだありません（「調査開始」で調査します）。'}</div>
+            <div style={{ padding: '28px 12px', textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>{done ? '要調査の項目はありません。' : '要調査の項目はまだありません（「調査開始」で調査します）。'}</div>
           )}
           <div style={{ display: 'grid', gridTemplateColumns: onlyNg ? '1fr' : '1fr 1fr', gap: '0 24px' }}>
             <div>{shown.slice(0, half).map((a) => <Item key={a.no} {...a} />)}</div>
@@ -169,15 +169,15 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
                 {shown.slice(half).map((a) => <Item key={a.no} {...a} />)}
                 {[29, 30].map((n) => (
                   <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderBottom: '1px solid #f1f4f6', opacity: 0.45 }}>
-                    <span style={{ width: 26, fontSize: 13, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{n}</span>
-                    <span style={{ fontSize: 12, color: '#9aa5b1' }}>（予備）</span>
+                    <span style={{ width: 26, fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{n}</span>
+                    <span style={{ fontSize: 14, color: '#9aa5b1' }}>（予備）</span>
                   </div>
                 ))}
               </div>
             )}
           </div>
           <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <div style={{ fontSize: 12, color: '#7a8794', minHeight: 18 }}>
+            <div style={{ fontSize: 14, color: '#7a8794', minHeight: 18 }}>
               {running ? '調査中…' : done ? (counts.要調査 > 0 ? <>要調査が <b style={{ color: '#c0392b' }}>{counts.要調査} 件</b> あります。行の「結果詳細」「説明」で内容を確認してください。</> : 'すべての項目が OK です。') : '「調査開始」で全項目を調査します（決算チェック設定で無効にした項目はスキップ）'}
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -200,19 +200,19 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
               <>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 22, marginBottom: 22 }}>
                   <div style={{ textAlign: 'left' }}>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: '#1f5a3a', marginBottom: 3 }}>BS</div>
-                    <div style={{ border: '1.5px solid #4c6b57', borderRadius: 10, padding: '14px 18px', fontSize: 13, textAlign: 'center', whiteSpace: 'pre-line', lineHeight: 1.6, background: '#fff' }}>{ex.left}</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: '#1f5a3a', marginBottom: 3 }}>BS</div>
+                    <div style={{ border: '1.5px solid #4c6b57', borderRadius: 10, padding: '14px 18px', fontSize: 14, textAlign: 'center', whiteSpace: 'pre-line', lineHeight: 1.6, background: '#fff' }}>{ex.left}</div>
                   </div>
                   <div style={{ fontSize: 26, color: '#c0392b', fontWeight: 700 }}>＝</div>
                   <div style={{ textAlign: 'left' }}>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: '#1f5a3a', marginBottom: 3 }}>PL</div>
-                    <div style={{ border: '1.5px solid #4c6b57', borderRadius: 10, padding: '14px 18px', fontSize: 13, textAlign: 'center', whiteSpace: 'pre-line', lineHeight: 1.6, background: '#fff' }}>{ex.right}</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: '#1f5a3a', marginBottom: 3 }}>PL</div>
+                    <div style={{ border: '1.5px solid #4c6b57', borderRadius: 10, padding: '14px 18px', fontSize: 14, textAlign: 'center', whiteSpace: 'pre-line', lineHeight: 1.6, background: '#fff' }}>{ex.right}</div>
                   </div>
                 </div>
                 <p style={{ fontSize: 14, lineHeight: 1.9, color: '#22303c', margin: 0, textIndent: '1em' }}>{ex.text}</p>
               </>
             ) : (
-              <p style={{ fontSize: 13.5, lineHeight: 1.9, color: '#7a8794', margin: 0, textAlign: 'center' }}>
+              <p style={{ fontSize: 14, lineHeight: 1.9, color: '#7a8794', margin: 0, textAlign: 'center' }}>
                 この項目の説明文は、既存システムの画面をご提供いただき次第転記します。
                 <br />
                 （現在は「04. 次期繰越活動増減差額」のみ転記済み）
@@ -232,13 +232,13 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
     <Modal open={settings} onClose={() => setSettings(false)} width={760} title="決算チェック設定">
       <div style={{ padding: '12px 22px 18px' }}>
         <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>{(['区分', '法人'] as const).map((t) => <button key={t} type="button" onClick={() => setCorpTab(t)} style={uiBtn(corpTab === t ? '#1f7a52' : '#5b6773', corpTab === t, true)}>{t === '区分' ? '決算チェック設定（表示中の区分）' : '法人決算チェック設定（法人全体）'}</button>)}</div>
-        <div style={{ fontSize: 12, color: '#7a8794', marginBottom: 8 }}>チェックする項目を有効／無効に切り替え、項目名をクリックすると診断用条件式を構成する勘定科目を選択できます。</div>
+        <div style={{ fontSize: 14, color: '#7a8794', marginBottom: 8 }}>チェックする項目を有効／無効に切り替え、項目名をクリックすると診断用条件式を構成する勘定科目を選択できます。</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px', maxHeight: 400, overflow: 'auto' }}>
           {AUDIT_ITEMS.map((it) => (
             <div key={it.no} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid #f1f4f6' }}>
-              <span style={{ width: 24, fontSize: 12.5, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{String(it.no).padStart(2, '0')}</span>
+              <span style={{ width: 24, fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{String(it.no).padStart(2, '0')}</span>
               <input type="checkbox" checked={enabled(it.no)} onChange={(e) => setSession({ auditEnabled: { ...s.auditEnabled, [it.no]: e.target.checked } })} />
-              <button type="button" onClick={() => setItemCfg(it.no)} style={{ flex: 1, textAlign: 'left', border: '1px solid #e2e8ee', background: '#fff', borderRadius: 7, padding: '5px 10px', fontSize: 12.5, fontFamily: 'inherit', cursor: 'pointer', color: enabled(it.no) ? '#22303c' : '#9aa5b1' }}>{it.name}</button>
+              <button type="button" onClick={() => setItemCfg(it.no)} style={{ flex: 1, textAlign: 'left', border: '1px solid #e2e8ee', background: '#fff', borderRadius: 7, padding: '5px 10px', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', color: enabled(it.no) ? '#22303c' : '#9aa5b1' }}>{it.name}</button>
             </div>
           ))}
         </div>
@@ -252,9 +252,9 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
     {/* 項目ごとの勘定科目選択 */}
     <Modal open={itemCfg != null} onClose={() => setItemCfg(null)} width={620} title={`決算チェック設定 - ${itemCfg != null ? String(itemCfg).padStart(2, '0') + '. ' + (AUDIT_ITEMS.find((a) => a.no === itemCfg)?.name ?? '') : ''}`}>
       <div style={{ padding: '12px 22px 18px' }}>
-        <div style={{ fontSize: 12.5, color: '#5b6773', marginBottom: 8 }}>診断用条件式の各要素を構成する勘定科目を、チェックにより有効／無効に切り替えます。</div>
+        <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 8 }}>診断用条件式の各要素を構成する勘定科目を、チェックにより有効／無効に切り替えます。</div>
         <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: 320, overflow: 'auto' }}>
-          {ACCOUNT_META.map((m, i) => <label key={m.name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderBottom: '1px solid #f1f4f6', fontSize: 12.5 }}><input type="checkbox" defaultChecked={m.kind === 'BS' || i % 3 === 0} /><span style={{ width: 120, color: '#8290a0', fontVariantNumeric: 'tabular-nums' }}>{m.code.slice(0, 3)}-{m.code.slice(3)}-00-00-00</span><span>{m.name}</span></label>)}
+          {ACCOUNT_META.map((m, i) => <label key={m.name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderBottom: '1px solid #f1f4f6', fontSize: 14 }}><input type="checkbox" defaultChecked={m.kind === 'BS' || i % 3 === 0} /><span style={{ width: 120, color: '#8290a0', fontVariantNumeric: 'tabular-nums' }}>{m.code.slice(0, 3)}-{m.code.slice(3)}-00-00-00</span><span>{m.name}</span></label>)}
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}><button type="button" onClick={() => setItemCfg(null)} style={uiBtn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => setItemCfg(null)} style={uiBtn('#1f7a52', true)}>OK</button></div>
       </div>
@@ -263,8 +263,8 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
     {/* 結果詳細（トレース情報） */}
     <Modal open={trace != null} onClose={() => setTrace(null)} width={760} title={traceItem ? `結果詳細 - ${String(traceItem.no).padStart(2, '0')}. ${traceItem.name}` : '結果詳細（決算チェックトレース情報）'}>
       <div style={{ padding: '12px 22px 18px' }}>
-        {traceItem && <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, fontSize: 12.5 }}><StateBadge st={stateOf(traceItem.no)} /><span style={{ color: '#5b6773' }}>対象の金額・伝票を確認してください。</span></div>}
-        <pre style={{ margin: 0, padding: 14, background: '#1e2630', color: '#d7dee6', borderRadius: 10, fontSize: 12, lineHeight: 1.7, whiteSpace: 'pre-wrap', maxHeight: 420, overflow: 'auto', fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace" }}>{traceText}</pre>
+        {traceItem && <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, fontSize: 14 }}><StateBadge st={stateOf(traceItem.no)} /><span style={{ color: '#5b6773' }}>対象の金額・伝票を確認してください。</span></div>}
+        <pre style={{ margin: 0, padding: 14, background: '#1e2630', color: '#d7dee6', borderRadius: 10, fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap', maxHeight: 420, overflow: 'auto', fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace" }}>{traceText}</pre>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
           <button type="button" onClick={() => navigator.clipboard?.writeText(traceText).then(() => toast.show('テキストとしてコピーしました（メモ帳やExcelに貼り付けできます）')).catch(() => toast.show('コピーできませんでした'))} style={uiBtn()}>コピー</button>
           {traceItem && <button type="button" onClick={() => { const no = traceItem.no; setTrace(null); setExplain(no); }} style={uiBtn()}>この項目の説明</button>}
@@ -276,7 +276,7 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
 
     {/* 結果印刷 */}
     <PreviewModal open={print} onClose={() => setPrint(false)} title="決算チェック結果" opts={{ from: `${s.fiscalYear} 4月1日`, to: '3月31日', output: '画面へプレビューする' }} pages={1} accent="#1f7a52">
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
         <thead><tr>{['No', '項目', '結果', '内容'].map((h) => <th key={h} style={{ border: '1px solid #9aa5b1', padding: 3, textAlign: 'left', background: '#eef2f6' }}>{h}</th>)}</tr></thead>
         <tbody>{AUDIT_ITEMS.map((it) => <tr key={it.no}><td style={{ border: '1px solid #c3ccd4', padding: 3 }}>{String(it.no).padStart(2, '0')}</td><td style={{ border: '1px solid #c3ccd4', padding: 3 }}>{it.name}</td><td style={{ border: '1px solid #c3ccd4', padding: 3, fontWeight: 700, color: stateOf(it.no) === '要調査' ? '#c0392b' : '#22303c' }}>{STATE_STYLE[stateOf(it.no)].icon} {stateOf(it.no)}</td><td style={{ border: '1px solid #c3ccd4', padding: 3, color: '#5b6773' }}>{stateOf(it.no) === '要調査' ? '要調査（結果詳細を参照）' : stateOf(it.no) === 'OK' ? '一致' : ''}</td></tr>)}</tbody>
       </table>

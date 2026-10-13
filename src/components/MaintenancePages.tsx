@@ -23,15 +23,15 @@ export type Scope = '全区分共通' | 'この区分のみ';
 export function ScopeBadge({ scope, note }: { scope: Scope; note?: string }) {
   const c = scope === '全区分共通' ? { bg: '#e8f0fb', fg: '#2c5f9e', bd: '#c5d8f2', mark: '◎' } : { bg: '#fff1d6', fg: '#8a5a00', bd: '#f0d9a8', mark: '●' };
   return (
-    <span title={scope === '全区分共通' ? '法人内のすべての区分に同じ内容が適用されます' : '起動中の区分だけに適用されます（他の区分には影響しません）'} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 800, padding: '2px 9px', borderRadius: 10, background: c.bg, color: c.fg, border: '1px solid ' + c.bd, whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
-      <span aria-hidden style={{ fontSize: 9 }}>{c.mark}</span>{scope}{note && <span style={{ fontWeight: 600 }}>（{note}）</span>}
+    <span title={scope === '全区分共通' ? '法人内のすべての区分に同じ内容が適用されます' : '起動中の区分だけに適用されます（他の区分には影響しません）'} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 800, padding: '2px 9px', borderRadius: 10, background: c.bg, color: c.fg, border: '1px solid ' + c.bd, whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
+      <span aria-hidden style={{ fontSize: 12 }}>{c.mark}</span>{scope}{note && <span style={{ fontWeight: 600 }}>（{note}）</span>}
     </span>
   );
 }
 /** 見出し直下の「適用範囲」帯 */
 export function ScopeBar({ scope, note, children, right }: { scope: Scope; note?: string; children: ReactNode; right?: ReactNode }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 22px', background: '#fafbfc', borderBottom: '1px solid #eef2f5', fontSize: 12.5, color: '#48565f', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 22px', background: '#fafbfc', borderBottom: '1px solid #eef2f5', fontSize: 14, color: '#48565f', flexWrap: 'wrap' }}>
       <ScopeBadge scope={scope} note={note} />
       <span style={{ lineHeight: 1.6 }}>{children}</span>
       {right && <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>{right}</span>}
@@ -70,14 +70,14 @@ function Stepper({ value, onChange, unit, label }: { value: number; onChange: (n
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
       <button type="button" aria-label={`${label}を1減らす`} onClick={() => onChange(Math.max(0, value - 1))} style={sb}>−</button>
-      <input className="field-input ring" aria-label={label} inputMode="numeric" value={String(value)} onChange={(e) => onChange(Math.min(9999, parseInt(digits(e.target.value) || '0', 10)))} style={{ ...numInput, width: 84, fontSize: 15, fontWeight: 700 }} />
+      <input className="field-input ring" aria-label={label} inputMode="numeric" value={String(value)} onChange={(e) => onChange(Math.min(9999, parseInt(digits(e.target.value) || '0', 10)))} style={{ ...numInput, width: 84, fontSize: 16, fontWeight: 700 }} />
       <button type="button" aria-label={`${label}を1増やす`} onClick={() => onChange(Math.min(9999, value + 1))} style={sb}>＋</button>
-      <span style={{ fontSize: 12.5, color: '#7a8794' }}>{unit}</span>
+      <span style={{ fontSize: 14, color: '#7a8794' }}>{unit}</span>
     </div>
   );
 }
-const radioRow = (on: boolean, accent: string): CSSProperties => ({ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', border: '1px solid ' + (on ? accent : '#dde4ea'), borderRadius: 10, background: on ? '#f7fbf9' : '#fff', cursor: 'pointer', fontSize: 13, lineHeight: 1.6 });
-const sub: CSSProperties = { fontSize: 11.5, color: '#7a8794' };
+const radioRow = (on: boolean, accent: string): CSSProperties => ({ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', border: '1px solid ' + (on ? accent : '#dde4ea'), borderRadius: 10, background: on ? '#f7fbf9' : '#fff', cursor: 'pointer', fontSize: 14, lineHeight: 1.6 });
+const sub: CSSProperties = { fontSize: 12, color: '#7a8794' };
 
 /* ======================================================================
  * 財務分析設定（マニュアル 8.1）：財務分析科目設定／人数設定
@@ -153,15 +153,15 @@ export function FinancialAnalysisSettingsPage({ variant, accent, onNavigate }: M
             <div style={{ borderRight: '1px solid #eef2f5', padding: '12px 0', overflow: 'auto', maxHeight: 'calc(100vh - 300px)' }}>
               {FA_CATS.map((c) => (
                 <div key={c.cat} style={{ marginBottom: 10 }}>
-                  <div style={{ padding: '6px 18px', fontSize: 12, fontWeight: 800, color: '#48565f' }}>{c.cat}<span style={{ fontWeight: 500, color: '#9aa5b1', marginLeft: 8, fontSize: 11 }}>{c.note}</span></div>
+                  <div style={{ padding: '6px 18px', fontSize: 14, fontWeight: 800, color: '#48565f' }}>{c.cat}<span style={{ fontWeight: 500, color: '#9aa5b1', marginLeft: 8, fontSize: 12 }}>{c.note}</span></div>
                   {FA_DEFS.filter((d) => d.cat === c.cat).map((d) => {
                     const on = d.name === cur;
                     const n = d.parts.reduce((a, _, i) => a + (picked[faKey(d.name, i)]?.length ?? 0), 0);
                     return (
-                      <button key={d.name} type="button" onClick={() => { setCur(d.name); setQ(''); }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '9px 18px', border: 'none', borderLeft: '4px solid ' + (on ? accent : 'transparent'), background: on ? '#eef2f6' : 'transparent', fontFamily: 'inherit', fontSize: 13.5, fontWeight: on ? 700 : 500, color: '#22303c', cursor: 'pointer' }}>
+                      <button key={d.name} type="button" onClick={() => { setCur(d.name); setQ(''); }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '9px 18px', border: 'none', borderLeft: '4px solid ' + (on ? accent : 'transparent'), background: on ? '#eef2f6' : 'transparent', fontFamily: 'inherit', fontSize: 14, fontWeight: on ? 700 : 500, color: '#22303c', cursor: 'pointer' }}>
                         <span style={{ flex: 1 }}>{d.name}</span>
-                        {dirty(d) && <span style={{ fontSize: 10.5, fontWeight: 800, padding: '1px 6px', borderRadius: 6, background: '#fff1b8', color: '#8a6d00' }}>未保存</span>}
-                        <span style={{ fontSize: 11, color: n ? '#7a8794' : '#c0392b', whiteSpace: 'nowrap' }}>{n ? `${n} 科目` : '未設定'}</span>
+                        {dirty(d) && <span style={{ fontSize: 12, fontWeight: 800, padding: '1px 6px', borderRadius: 6, background: '#fff1b8', color: '#8a6d00' }}>未保存</span>}
+                        <span style={{ fontSize: 12, color: n ? '#7a8794' : '#c0392b', whiteSpace: 'nowrap' }}>{n ? `${n} 科目` : '未設定'}</span>
                       </button>
                     );
                   })}
@@ -172,7 +172,7 @@ export function FinancialAnalysisSettingsPage({ variant, accent, onNavigate }: M
             {/* 指標の詳細：算式・科目選択・ガイド */}
             <div style={{ padding: 20, display: 'grid', gap: 14, alignContent: 'start' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 11, fontWeight: 800, padding: '2px 9px', borderRadius: 10, background: '#eef2f6', color: '#3d4a56' }}>{def.cat}</span>
+                <span style={{ fontSize: 12, fontWeight: 800, padding: '2px 9px', borderRadius: 10, background: '#eef2f6', color: '#3d4a56' }}>{def.cat}</span>
                 <span style={{ fontSize: 17, fontWeight: 700, fontFamily: "'Zen Kaku Gothic New', sans-serif" }}>{def.name}</span>
                 <button type="button" className="btn-outline" onClick={() => setGuide(true)} style={{ ...btn('#5b6773', false, true), marginLeft: 'auto' }}>ガイドを表示</button>
               </div>
@@ -181,7 +181,7 @@ export function FinancialAnalysisSettingsPage({ variant, accent, onNavigate }: M
                 <div style={{ padding: '12px 14px', border: '1px solid #dde4ea', borderRadius: 10, background: '#f6f8fa', fontSize: 14.5, fontWeight: 600, lineHeight: 1.8 }}>{def.formula}</div>
               </div>
               {def.head && (
-                <Notice>この指標は「人数設定」の{def.head === '職員' ? `専任職員数（現在 ${staff} 人）` : `園児数の合計（現在 ${kidsTotal} 人）`}を使います。<button type="button" onClick={() => setTab('人数設定')} style={{ border: 'none', background: 'transparent', color: accent, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, textDecoration: 'underline' }}>人数設定を開く</button></Notice>
+                <Notice>この指標は「人数設定」の{def.head === '職員' ? `専任職員数（現在 ${staff} 人）` : `園児数の合計（現在 ${kidsTotal} 人）`}を使います。<button type="button" onClick={() => setTab('人数設定')} style={{ border: 'none', background: 'transparent', color: accent, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, textDecoration: 'underline' }}>人数設定を開く</button></Notice>
               )}
               <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="科目名・コードで絞り込み" aria-label="科目の絞り込み" style={{ ...input, maxWidth: 300 }} />
               <div style={{ display: 'grid', gridTemplateColumns: def.parts.length > 1 ? 'repeat(auto-fit, minmax(300px, 1fr))' : '1fr', gap: 14 }}>
@@ -191,17 +191,17 @@ export function FinancialAnalysisSettingsPage({ variant, accent, onNavigate }: M
                   const list = FA_ACCOUNTS.filter((a) => !q.trim() || a.name.includes(q.trim()) || a.code.startsWith(q.trim()));
                   return (
                     <div key={k} style={card}>
-                      <div style={cardHead}>{p.label}<span style={{ marginLeft: 'auto', fontSize: 11.5, fontWeight: 600, color: '#7a8794' }}>{sel.size} 科目を選択中</span></div>
+                      <div style={cardHead}>{p.label}<span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 600, color: '#7a8794' }}>{sel.size} 科目を選択中</span></div>
                       <div style={{ maxHeight: 300, overflow: 'auto' }}>
                         {list.map((a) => (
-                          <label key={a.name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 14px', borderBottom: '1px solid #f1f4f6', fontSize: 13.5, cursor: 'pointer', background: sel.has(a.name) ? '#f7fbf9' : '#fff' }}>
+                          <label key={a.name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 14px', borderBottom: '1px solid #f1f4f6', fontSize: 14, cursor: 'pointer', background: sel.has(a.name) ? '#f7fbf9' : '#fff' }}>
                             <input type="checkbox" checked={sel.has(a.name)} onChange={() => toggle(k, a.name)} style={{ width: 16, height: 16 }} />
-                            <span style={{ width: 46, color: '#8290a0', fontVariantNumeric: 'tabular-nums', fontSize: 12 }}>{a.code}</span>
+                            <span style={{ width: 46, color: '#8290a0', fontVariantNumeric: 'tabular-nums', fontSize: 14 }}>{a.code}</span>
                             <span style={{ flex: 1, fontWeight: sel.has(a.name) ? 700 : 400 }}>{a.name}</span>
-                            <span style={{ fontSize: 11, color: '#9aa5b1' }}>{a.cls}</span>
+                            <span style={{ fontSize: 12, color: '#9aa5b1' }}>{a.cls}</span>
                           </label>
                         ))}
-                        {!list.length && <div style={{ padding: 16, color: '#9aa5b1', fontSize: 12.5 }}>該当する科目がありません。</div>}
+                        {!list.length && <div style={{ padding: 16, color: '#9aa5b1', fontSize: 14 }}>該当する科目がありません。</div>}
                       </div>
                       <div style={{ display: 'flex', gap: 6, padding: '8px 12px', background: '#fafbfc' }}>
                         <button type="button" onClick={() => setPicked((x) => ({ ...x, [k]: FA_ACCOUNTS.filter(p.pick).map((a) => a.name) }))} style={btn('#5b6773', false, true)}>標準の科目に戻す</button>
@@ -212,7 +212,7 @@ export function FinancialAnalysisSettingsPage({ variant, accent, onNavigate }: M
                 })}
               </div>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
-                {dirty(def) && <span style={{ fontSize: 12, color: '#8a6d00', marginRight: 'auto' }}>変更があります。保存すると全区分のグラフ・帳票に反映されます。</span>}
+                {dirty(def) && <span style={{ fontSize: 14, color: '#8a6d00', marginRight: 'auto' }}>変更があります。保存すると全区分のグラフ・帳票に反映されます。</span>}
                 <button type="button" onClick={() => setPicked((x) => ({ ...x, ...Object.fromEntries(def.parts.map((_, i) => [faKey(def.name, i), saved[faKey(def.name, i)] ?? []])) }))} disabled={!dirty(def)} style={{ ...btn(), opacity: dirty(def) ? 1 : 0.5 }}>変更を取り消す</button>
                 <button type="button" className="submit-btn" onClick={() => { setSaved(picked); toast.show(`「${def.name}」の対象科目を保存しました（全区分共通）`); }} style={btn(accent, true)}>保存</button>
               </div>
@@ -235,7 +235,7 @@ export function FinancialAnalysisSettingsPage({ variant, accent, onNavigate }: M
               </div>
             </div>
             <div style={card}>
-              <div style={cardHead}>年齢ごとの児童数<span style={{ marginLeft: 'auto', fontSize: 12.5 }}>合計 <b style={{ fontSize: 15, fontVariantNumeric: 'tabular-nums' }}>{kidsTotal}</b> 人</span></div>
+              <div style={cardHead}>年齢ごとの児童数<span style={{ marginLeft: 'auto', fontSize: 14 }}>合計 <b style={{ fontSize: 16, fontVariantNumeric: 'tabular-nums' }}>{kidsTotal}</b> 人</span></div>
               <div style={{ padding: 16, display: 'grid', gap: 10 }}>
                 {AGES.map((a, i) => (
                   <div key={a} style={{ display: 'flex', alignItems: 'center', gap: 12 }}><span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{a}</span><Stepper value={kids[i]} onChange={(n) => setKids((k) => k.map((v, j) => (j === i ? n : v)))} unit="人" label={`${a}の児童数`} /></div>
@@ -300,7 +300,7 @@ export function AuditSettingsPage({ variant, accent, onNavigate }: MaintenancePa
   };
   const onCount = AUDIT_ITEMS.filter((a) => isOn(a.no)).length;
   const dlgItem = dlg ? AUDIT_ITEMS.find((a) => a.no === dlg.no) : undefined;
-  const seg = (on: boolean): CSSProperties => ({ padding: '8px 16px', border: '1px solid ' + (on ? accent : '#cfd8e0'), background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
+  const seg = (on: boolean): CSSProperties => ({ padding: '8px 16px', border: '1px solid ' + (on ? accent : '#cfd8e0'), background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
 
   return (
     <SettingsShell variant={variant} title="決算チェック設定" badge="保守・運用" draft={false} desc="決算チェック（決算調査）の 28 項目について、チェックする項目の有効／無効と、項目ごとの条件（対象科目など）を設定します。" actions={<>
@@ -313,7 +313,7 @@ export function AuditSettingsPage({ variant, accent, onNavigate }: MaintenancePa
           <button type="button" role="tab" aria-selected={mode === '区分'} onClick={() => setMode('区分')} style={{ ...seg(mode === '区分'), borderRadius: '8px 0 0 8px' }}>決算チェック設定（この区分）</button>
           <button type="button" role="tab" aria-selected={mode === '法人'} onClick={() => setMode('法人')} style={{ ...seg(mode === '法人'), borderRadius: '0 8px 8px 0', borderLeft: 'none' }}>法人決算チェック設定（法人全体）</button>
         </div>
-        <span style={{ fontSize: 12.5, color: '#5b6773' }}>有効 <b style={{ fontSize: 15, fontVariantNumeric: 'tabular-nums' }}>{onCount}</b> ／ 28 項目</span>
+        <span style={{ fontSize: 14, color: '#5b6773' }}>有効 <b style={{ fontSize: 16, fontVariantNumeric: 'tabular-nums' }}>{onCount}</b> ／ 28 項目</span>
         <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
           <button type="button" onClick={() => setAll(true)} style={btn('#5b6773', false, true)}>すべて有効</button>
           <button type="button" onClick={() => setAll(false)} style={btn('#5b6773', false, true)}>すべて無効</button>
@@ -328,7 +328,7 @@ export function AuditSettingsPage({ variant, accent, onNavigate }: MaintenancePa
       <div style={{ padding: '16px 22px 22px', display: 'grid', gap: 16 }}>
         {AUDIT_GROUPS.map((g) => (
           <div key={g.label} style={card}>
-            <div style={cardHead}>{g.label}<span style={{ fontSize: 11.5, fontWeight: 500, color: '#8290a0' }}>{g.note}</span></div>
+            <div style={cardHead}>{g.label}<span style={{ fontSize: 12, fontWeight: 500, color: '#8290a0' }}>{g.note}</span></div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(430px, 1fr))' }}>
               {g.nos.map((no) => {
                 const it = AUDIT_ITEMS.find((a) => a.no === no);
@@ -338,7 +338,7 @@ export function AuditSettingsPage({ variant, accent, onNavigate }: MaintenancePa
                 return (
                   <div key={no} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderBottom: '1px solid #f1f4f6', borderRight: '1px solid #f1f4f6', background: on ? '#fff' : '#fafbfc' }}>
                     <span style={{ width: 26, fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: on ? '#22303c' : '#9aa5b1' }}>{no2(no)}</span>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: on ? accent : '#9aa5b1', fontWeight: 700, cursor: 'pointer', width: 62, flex: 'none' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: on ? accent : '#9aa5b1', fontWeight: 700, cursor: 'pointer', width: 62, flex: 'none' }}>
                       <input type="checkbox" checked={on} onChange={(e) => setOn(no, e.target.checked)} aria-label={`${no2(no)} ${it.name} を有効にする`} style={{ width: 17, height: 17 }} />{on ? '有効' : '無効'}
                     </label>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -358,7 +358,7 @@ export function AuditSettingsPage({ variant, accent, onNavigate }: MaintenancePa
       <Modal open={!!dlg} onClose={() => setDlg(null)} width={640} title={dlg ? `${no2(dlg.no)}. ${dlgItem?.name ?? ''} の設定` : ''}>
         {dlg && (
           <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 12.5, color: '#5b6773' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 14, color: '#5b6773' }}>
               <ScopeBadge scope={mode === '区分' ? 'この区分のみ' : '全区分共通'} note={mode === '区分' ? s.division : '法人全体'} />
               診断の条件式を構成する勘定科目を、チェックで有効／無効に切り替えます。
             </div>
@@ -366,13 +366,13 @@ export function AuditSettingsPage({ variant, accent, onNavigate }: MaintenancePa
               <Field label={AUDIT_PARAMS[dlg.no].label}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <input className="field-input ring" inputMode="numeric" value={dlg.param ? parseInt(dlg.param, 10).toLocaleString('ja-JP') : ''} onChange={(e) => setDlg({ ...dlg, param: digits(e.target.value).slice(0, 10) })} onKeyDown={onEnter(saveDlg)} style={{ ...numInput, width: 160 }} />
-                  <span style={{ fontSize: 12.5, color: '#7a8794' }}>{AUDIT_PARAMS[dlg.no].unit}</span>
+                  <span style={{ fontSize: 14, color: '#7a8794' }}>{AUDIT_PARAMS[dlg.no].unit}</span>
                 </div>
               </Field>
             )}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <input className="search-input" value={dlg.q} onChange={(e) => setDlg({ ...dlg, q: e.target.value })} placeholder="科目名・コードで絞り込み" aria-label="科目の絞り込み" style={{ ...input, width: 240 }} />
-              <span style={{ fontSize: 12, color: '#7a8794' }}>{dlg.picked.length} 科目を選択中</span>
+              <span style={{ fontSize: 14, color: '#7a8794' }}>{dlg.picked.length} 科目を選択中</span>
               <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
                 <button type="button" onClick={() => setDlg({ ...dlg, picked: auditDefaultAccts(dlg.no) })} style={btn('#5b6773', false, true)}>標準に戻す</button>
                 <button type="button" onClick={() => setDlg({ ...dlg, picked: [] })} style={btn('#5b6773', false, true)}>すべて外す</button>
@@ -382,11 +382,11 @@ export function AuditSettingsPage({ variant, accent, onNavigate }: MaintenancePa
               {ACCOUNT_META.filter((m) => !dlg.q.trim() || m.name.includes(dlg.q.trim()) || m.code.startsWith(dlg.q.trim())).map((m) => {
                 const on = dlg.picked.includes(m.name);
                 return (
-                  <label key={m.name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 14px', borderBottom: '1px solid #f1f4f6', fontSize: 13.5, cursor: 'pointer', background: on ? '#f7fbf9' : '#fff' }}>
+                  <label key={m.name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 14px', borderBottom: '1px solid #f1f4f6', fontSize: 14, cursor: 'pointer', background: on ? '#f7fbf9' : '#fff' }}>
                     <input type="checkbox" checked={on} onChange={() => setDlg({ ...dlg, picked: on ? dlg.picked.filter((n) => n !== m.name) : [...dlg.picked, m.name] })} style={{ width: 16, height: 16 }} />
-                    <span style={{ width: 46, color: '#8290a0', fontVariantNumeric: 'tabular-nums', fontSize: 12 }}>{m.code}</span>
+                    <span style={{ width: 46, color: '#8290a0', fontVariantNumeric: 'tabular-nums', fontSize: 14 }}>{m.code}</span>
                     <span style={{ flex: 1, fontWeight: on ? 700 : 400 }}>{m.name}</span>
-                    <span style={{ fontSize: 11, color: '#9aa5b1' }}>{m.cls}</span>
+                    <span style={{ fontSize: 12, color: '#9aa5b1' }}>{m.cls}</span>
                   </label>
                 );
               })}
@@ -437,7 +437,7 @@ export function JournalRefreshPage({ variant, accent, onNavigate }: MaintenanceP
     prog.start(target === 'この区分' ? 3200 : 5600, () => { setStep(3); setLast({ at: warekiNow(), by: '鈴木', count: total }); toast.show(`仕訳更新が完了しました（${total.toLocaleString('ja-JP')} 件）`); });
   };
   const reset = () => { setStep(0); setAgree(false); };
-  const row: CSSProperties = { display: 'grid', gridTemplateColumns: '150px 1fr', gap: 10, padding: '9px 0', borderBottom: '1px solid #f1f4f6', fontSize: 13.5 };
+  const row: CSSProperties = { display: 'grid', gridTemplateColumns: '150px 1fr', gap: 10, padding: '9px 0', borderBottom: '1px solid #f1f4f6', fontSize: 14 };
 
   return (
     <SettingsShell variant={variant} title="仕訳更新" badge="保守・運用" draft={false} desc="勘定科目と資金科目の連動を変更したあとに、登録済みの伝票を整理し直して、集計データを作り直します。">
@@ -471,7 +471,7 @@ export function JournalRefreshPage({ variant, accent, onNavigate }: MaintenanceP
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', border: '1px solid #dde4ea', borderRadius: 10, background: '#f6f8fa' }}>
-              <span style={{ fontSize: 13 }}>対象の伝票</span><b style={{ fontSize: 20, fontVariantNumeric: 'tabular-nums' }}>{total.toLocaleString('ja-JP')}</b><span style={{ fontSize: 13 }}>件</span>
+              <span style={{ fontSize: 14 }}>対象の伝票</span><b style={{ fontSize: 20, fontVariantNumeric: 'tabular-nums' }}>{total.toLocaleString('ja-JP')}</b><span style={{ fontSize: 14 }}>件</span>
               <span style={sub}>目安の時間：{total > 600 ? '2〜3 分' : '1 分以内'}</span>
               <button type="button" className="submit-btn" onClick={() => setStep(1)} style={{ ...btn(accent, true), marginLeft: 'auto' }}>確認へ進む</button>
             </div>
@@ -489,7 +489,7 @@ export function JournalRefreshPage({ variant, accent, onNavigate }: MaintenanceP
               </div>
             </div>
             <Notice tone="warn">開始すると、すべての伝票の整理が終わるまで途中で中断できません。処理中は、対象の区分で伝票の入力・訂正ができません。ほかの利用者が入力中でないことを確認してから開始してください。</Notice>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}><input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} style={{ width: 17, height: 17 }} />途中で中断できないことを確認しました</label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}><input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} style={{ width: 17, height: 17 }} />途中で中断できないことを確認しました</label>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button type="button" onClick={() => setStep(0)} style={btn()}>← 対象範囲に戻る</button>
               <button type="button" className="submit-btn" disabled={!agree} onClick={run} style={{ ...btn('#b7791f', true), opacity: agree ? 1 : 0.45, cursor: agree ? 'pointer' : 'not-allowed' }}>仕訳更新を開始</button>
@@ -498,11 +498,11 @@ export function JournalRefreshPage({ variant, accent, onNavigate }: MaintenanceP
         )}
         {step === 2 && (
           <div style={{ display: 'grid', gap: 14 }} aria-live="polite">
-            <div style={{ fontSize: 15, fontWeight: 700 }}>仕訳を更新しています…</div>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>仕訳を更新しています…</div>
             <ProgressBar value={prog.p ?? 100} accent={accent} height={16} />
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, fontVariantNumeric: 'tabular-nums' }}>
               <b style={{ fontSize: 22 }}>{prog.p ?? 100}%</b>
-              <span style={{ fontSize: 13, color: '#5b6773' }}>{Math.round((total * (prog.p ?? 100)) / 100).toLocaleString('ja-JP')} ／ {total.toLocaleString('ja-JP')} 件</span>
+              <span style={{ fontSize: 14, color: '#5b6773' }}>{Math.round((total * (prog.p ?? 100)) / 100).toLocaleString('ja-JP')} ／ {total.toLocaleString('ja-JP')} 件</span>
               <span style={{ ...sub, marginLeft: 'auto' }}>{targetLabel}　{rangeLabel}</span>
             </div>
             <Notice tone="warn">処理中は中断できません。この画面を閉じずにお待ちください。</Notice>
@@ -596,9 +596,9 @@ export function BackupPage({ variant, accent }: MaintenancePageProps) {
       toast.show('復元（ピックアップ）が完了しました');
     });
   };
-  const th: CSSProperties = { padding: '9px 12px', background: '#f6f8fa', fontSize: 11, fontWeight: 700, color: '#8290a0', borderBottom: '1px solid #eef2f5', textAlign: 'left', whiteSpace: 'nowrap' };
-  const td: CSSProperties = { padding: '10px 12px', fontSize: 13, borderBottom: '1px solid #f1f4f6', verticalAlign: 'middle' };
-  const kindChip = (k: BackupGen['kind']): CSSProperties => ({ fontSize: 10.5, fontWeight: 800, padding: '2px 8px', borderRadius: 8, background: k === '手動' ? '#e8f0fb' : '#f1f4f6', color: k === '手動' ? '#2c5f9e' : '#5b6773', whiteSpace: 'nowrap' });
+  const th: CSSProperties = { padding: '9px 12px', background: '#f6f8fa', fontSize: 12, fontWeight: 700, color: '#8290a0', borderBottom: '1px solid #eef2f5', textAlign: 'left', whiteSpace: 'nowrap' };
+  const td: CSSProperties = { padding: '10px 12px', fontSize: 14, borderBottom: '1px solid #f1f4f6', verticalAlign: 'middle' };
+  const kindChip = (k: BackupGen['kind']): CSSProperties => ({ fontSize: 12, fontWeight: 800, padding: '2px 8px', borderRadius: 8, background: k === '手動' ? '#e8f0fb' : '#f1f4f6', color: k === '手動' ? '#2c5f9e' : '#5b6773', whiteSpace: 'nowrap' });
 
   return (
     <SettingsShell variant={variant} title="データのバックアップ" badge="保守・運用" draft={false} desc="データのバックアップをすぐに実行できます。年度ごとの自動バックアップ、保存したバックアップの一覧、バックアップからの復元（ピックアップ）もここで確認・実行します。">
@@ -607,12 +607,12 @@ export function BackupPage({ variant, accent }: MaintenancePageProps) {
         {/* 今すぐバックアップ：1回押すだけで実行 */}
         <div data-backup-now style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '16px 20px', border: '1.5px solid ' + accent, borderRadius: 12, background: accent + '0d', flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 260 }}>
-            <div style={{ fontSize: 15.5, fontWeight: 700 }}>今すぐバックアップ</div>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>今すぐバックアップ</div>
             {prog.running
-              ? <div style={{ display: 'grid', gap: 6, marginTop: 8 }} aria-live="polite"><div style={{ fontSize: 13, fontWeight: 600 }}>バックアップを作成しています…　{prog.p}%</div><ProgressBar value={prog.p ?? 0} accent={accent} /></div>
-              : <div style={{ fontSize: 12.5, color: '#5b6773', marginTop: 4, lineHeight: 1.7 }}>{here} のデータを、いまの保存先（{destLabel(prefs)}）へ保存します。<br />最新のバックアップ：<b style={{ color: '#22303c' }}>{gens[0]?.at ?? 'なし'}</b>{gens[0] ? `（${gens[0].kind}）` : ''}</div>}
+              ? <div style={{ display: 'grid', gap: 6, marginTop: 8 }} aria-live="polite"><div style={{ fontSize: 14, fontWeight: 600 }}>バックアップを作成しています…　{prog.p}%</div><ProgressBar value={prog.p ?? 0} accent={accent} /></div>
+              : <div style={{ fontSize: 14, color: '#5b6773', marginTop: 4, lineHeight: 1.7 }}>{here} のデータを、いまの保存先（{destLabel(prefs)}）へ保存します。<br />最新のバックアップ：<b style={{ color: '#22303c' }}>{gens[0]?.at ?? 'なし'}</b>{gens[0] ? `（${gens[0].kind}）` : ''}</div>}
           </div>
-          <button type="button" className="submit-btn" onClick={runQuick} disabled={prog.running} style={{ ...btn(accent, true), padding: '13px 28px', fontSize: 15, opacity: prog.running ? 0.5 : 1, cursor: prog.running ? 'not-allowed' : 'pointer' }}>今すぐバックアップ</button>
+          <button type="button" className="submit-btn" onClick={runQuick} disabled={prog.running} style={{ ...btn(accent, true), padding: '13px 28px', fontSize: 16, opacity: prog.running ? 0.5 : 1, cursor: prog.running ? 'not-allowed' : 'pointer' }}>今すぐバックアップ</button>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 18, alignItems: 'start' }}>
@@ -640,10 +640,10 @@ export function BackupPage({ variant, accent }: MaintenancePageProps) {
 
           {/* 自動バックアップ（年度ごと） */}
           <div style={card} data-backup-auto>
-            <div style={cardHead}>自動バックアップ（年度ごと） <ScopeBadge scope="全区分共通" /><span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 800, padding: '2px 9px', borderRadius: 10, background: '#eaf5ef', color: '#1f7a52' }}>有効</span></div>
+            <div style={cardHead}>自動バックアップ（年度ごと） <ScopeBadge scope="全区分共通" /><span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 800, padding: '2px 9px', borderRadius: 10, background: '#eaf5ef', color: '#1f7a52' }}>有効</span></div>
             <div style={{ padding: 16, display: 'grid', gap: 10 }}>
-              <div style={{ fontSize: 12.5, color: '#5b6773', lineHeight: 1.8 }}>会計年度（単年度）ごとに、データを自動でバックアップします。操作は不要で、下の一覧に「自動」として保存されます。</div>
-              <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, fontSize: 13 }}>
+              <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.8 }}>会計年度（単年度）ごとに、データを自動でバックアップします。操作は不要で、下の一覧に「自動」として保存されます。</div>
+              <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, fontSize: 14 }}>
                 <div style={{ display: 'flex', gap: 12, padding: '9px 12px', borderBottom: '1px solid #f1f4f6' }}><span style={{ width: 150, color: '#7a8794' }}>バックアップの単位</span><b>区分ごと・会計年度ごと</b></div>
                 <div style={{ display: 'flex', gap: 12, padding: '9px 12px', borderBottom: '1px solid #f1f4f6' }}><span style={{ width: 150, color: '#7a8794' }}>前回の自動バックアップ</span><span style={{ fontVariantNumeric: 'tabular-nums' }}>{lastAuto ? `${lastAuto.at}（${lastAuto.target}）` : 'まだありません'}</span></div>
                 <div data-backup-auto-dest style={{ display: 'flex', gap: 12, padding: '9px 12px', alignItems: 'center' }}><span style={{ width: 150, color: '#7a8794', flex: 'none' }}>保存先フォルダ</span><span style={{ wordBreak: 'break-all', flex: 1, minWidth: 0 }}>{prefs.autoPath}</span><button type="button" onClick={() => setPathEdit({ kind: 'auto', value: prefs.autoPath })} style={btn('#5b6773', false, true)}>フォルダを変更</button></div>
@@ -655,13 +655,13 @@ export function BackupPage({ variant, accent }: MaintenancePageProps) {
 
         {/* 世代一覧 */}
         <div style={card}>
-          <div style={cardHead}>保存したバックアップ<span style={{ fontSize: 11.5, fontWeight: 500, color: '#8290a0' }}>{gens.length} 件（新しい順）</span></div>
+          <div style={cardHead}>保存したバックアップ<span style={{ fontSize: 12, fontWeight: 500, color: '#8290a0' }}>{gens.length} 件（新しい順）</span></div>
           <div style={{ overflow: 'auto', maxHeight: 320 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead><tr><th style={th}>作成日時</th><th style={th}>種類</th><th style={th}>範囲</th><th style={th}>保存先</th><th style={{ ...th, textAlign: 'right' }}>サイズ</th><th style={th}>実行者</th></tr></thead>
               <tbody>{gens.map((g, i) => (
                 <tr key={g.id}>
-                  <td style={{ ...td, fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{g.at}{i === 0 && <span style={{ fontSize: 10.5, fontWeight: 800, color: accent, marginLeft: 8 }}>最新</span>}</td>
+                  <td style={{ ...td, fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{g.at}{i === 0 && <span style={{ fontSize: 12, fontWeight: 800, color: accent, marginLeft: 8 }}>最新</span>}</td>
                   <td style={td}><span style={kindChip(g.kind)}>{g.kind}</span></td>
                   <td style={td}>{g.target}</td>
                   <td style={td}>{g.dest}</td>
@@ -677,11 +677,11 @@ export function BackupPage({ variant, accent }: MaintenancePageProps) {
         <div style={{ marginTop: 18, paddingTop: 22, borderTop: '2px dashed #e6c9c3' }}>
           <div style={{ border: '1px solid #efc2b9', borderRadius: 12, background: '#fff8f6', overflow: 'hidden' }}>
             <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid #f3d5ce', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 10.5, fontWeight: 800, padding: '2px 9px', borderRadius: 10, background: DANGER, color: '#fff' }}>取り消せない操作</span>
+              <span style={{ fontSize: 12, fontWeight: 800, padding: '2px 9px', borderRadius: 10, background: DANGER, color: '#fff' }}>取り消せない操作</span>
               <span style={{ fontSize: 14.5, fontWeight: 700, color: '#8a2a1e' }}>バックアップからの復元（ピックアップ）</span>
             </div>
             <div style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-              <div style={{ flex: 1, minWidth: 280, fontSize: 13, lineHeight: 1.8, color: '#5b3a34' }}>保存したバックアップを読み込み、現在のデータに上書きします。<b>一度実行すると元には戻せません。</b>復元するバックアップと項目を選び、内容を確認してから実行します。</div>
+              <div style={{ flex: 1, minWidth: 280, fontSize: 14, lineHeight: 1.8, color: '#5b3a34' }}>保存したバックアップを読み込み、現在のデータに上書きします。<b>一度実行すると元には戻せません。</b>復元するバックアップと項目を選び、内容を確認してから実行します。</div>
               <button type="button" onClick={() => openRestore()} disabled={!gens.length} style={{ ...btn(DANGER), borderColor: DANGER, padding: '10px 18px' }}>復元の手順を始める…</button>
             </div>
           </div>
@@ -719,10 +719,10 @@ export function BackupPage({ variant, accent }: MaintenancePageProps) {
             <div style={{ padding: '16px 22px 20px', display: 'grid', gap: 14 }}>
               {restore.step === 0 && (
                 <>
-                  <div style={{ fontSize: 13, color: '#5b6773' }}>復元するバックアップを 1 つ選んでください。</div>
+                  <div style={{ fontSize: 14, color: '#5b6773' }}>復元するバックアップを 1 つ選んでください。</div>
                   <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: 300, overflow: 'auto' }}>
                     {gens.map((g) => (
-                      <label key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderBottom: '1px solid #f1f4f6', cursor: 'pointer', background: restore.genId === g.id ? '#fff4f1' : '#fff', fontSize: 13 }}>
+                      <label key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderBottom: '1px solid #f1f4f6', cursor: 'pointer', background: restore.genId === g.id ? '#fff4f1' : '#fff', fontSize: 14 }}>
                         <input type="radio" name="rs-gen" checked={restore.genId === g.id} onChange={() => setRestore({ ...restore, genId: g.id })} />
                         <span style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', width: 170 }}>{g.at}</span>
                         <span style={kindChip(g.kind)}>{g.kind}</span>
@@ -736,10 +736,10 @@ export function BackupPage({ variant, accent }: MaintenancePageProps) {
               )}
               {restore.step === 1 && (
                 <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={{ fontSize: 13, color: '#5b6773' }}>復元する項目にチェックを入れてください。チェックを外した項目は、現在のデータのまま残ります。</span><button type="button" onClick={() => setItemHelp(true)} style={{ ...btn('#5b6773', false, true), marginLeft: 'auto' }}>説明</button></div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={{ fontSize: 14, color: '#5b6773' }}>復元する項目にチェックを入れてください。チェックを外した項目は、現在のデータのまま残ります。</span><button type="button" onClick={() => setItemHelp(true)} style={{ ...btn('#5b6773', false, true), marginLeft: 'auto' }}>説明</button></div>
                   <div style={{ border: '1px solid #e2e8ee', borderRadius: 10 }}>
                     {RESTORE_ITEMS.map((it) => (
-                      <label key={it.key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderBottom: '1px solid #f1f4f6', cursor: 'pointer', fontSize: 13.5 }}>
+                      <label key={it.key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderBottom: '1px solid #f1f4f6', cursor: 'pointer', fontSize: 14 }}>
                         <input type="checkbox" checked={!!restore.items[it.key]} onChange={(e) => setRestore({ ...restore, items: { ...restore.items, [it.key]: e.target.checked } })} style={{ width: 17, height: 17 }} />
                         <b style={{ width: 170 }}>{it.label}</b><span style={sub}>{it.note}</span>
                       </label>
@@ -749,14 +749,14 @@ export function BackupPage({ variant, accent }: MaintenancePageProps) {
               )}
               {restore.step === 2 && rGen && (
                 <>
-                  <div style={{ padding: '12px 14px', border: '1px solid #efc2b9', background: '#fff4f1', borderRadius: 10, fontSize: 13.5, lineHeight: 1.8, color: '#8a2a1e' }}><b>現在のデータに上書きします。一度実行すると元には戻せません。</b><br />バックアップを作成した日時より後に登録・変更した内容は失われます。</div>
+                  <div style={{ padding: '12px 14px', border: '1px solid #efc2b9', background: '#fff4f1', borderRadius: 10, fontSize: 14, lineHeight: 1.8, color: '#8a2a1e' }}><b>現在のデータに上書きします。一度実行すると元には戻せません。</b><br />バックアップを作成した日時より後に登録・変更した内容は失われます。</div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 40px 1fr', alignItems: 'stretch', gap: 8 }}>
                     <div style={{ ...card, padding: 12 }}><span style={lbl}>読み込むバックアップ</span><div style={{ fontSize: 14, fontWeight: 700 }}>{rGen.at}</div><div style={sub}>{rGen.target}・{rGen.size}</div></div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: DANGER }}>→</div>
                     <div style={{ ...card, padding: 12, borderColor: '#efc2b9' }}><span style={lbl}>上書きされるデータ</span><div style={{ fontSize: 14, fontWeight: 700 }}>{rGen.method === '法人全体' ? '法人全体（全年度・全区分）' : here}</div><div style={sub}>{rItems.map((i) => i.label).join('、')}</div></div>
                   </div>
                   <Toggle on={restore.autoBackup} onChange={(v) => setRestore({ ...restore, autoBackup: v })} accent={accent} label="復元の前に、現在のデータを自動でバックアップする（おすすめ）" />
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}><input type="checkbox" checked={restore.agree} onChange={(e) => setRestore({ ...restore, agree: e.target.checked })} style={{ width: 17, height: 17 }} />現在のデータが上書きされ、元に戻せないことを確認しました</label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}><input type="checkbox" checked={restore.agree} onChange={(e) => setRestore({ ...restore, agree: e.target.checked })} style={{ width: 17, height: 17 }} />現在のデータが上書きされ、元に戻せないことを確認しました</label>
                 </>
               )}
               {restore.step === 3 && (

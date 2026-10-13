@@ -103,9 +103,9 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
   };
 
   const cell = (code: string, v: number, editable: boolean) => (
-    <td style={NUM}>{editable ? <input className="field-input ring" value={yen(v)} onChange={(e) => setCell(code, toInt(e.target.value))} inputMode="numeric" style={{ ...numInput, padding: '4px 8px', fontSize: 12.5, background: '#fffbe6' }} /> : <span style={{ color: '#5b6773' }}>{yen(v)}</span>}</td>
+    <td style={NUM}>{editable ? <input className="field-input ring" value={yen(v)} onChange={(e) => setCell(code, toInt(e.target.value))} inputMode="numeric" style={{ ...numInput, padding: '4px 8px', fontSize: 14, background: '#fffbe6' }} /> : <span style={{ color: '#5b6773' }}>{yen(v)}</span>}</td>
   );
-  const chip = (on: boolean): CSSProperties => ({ minWidth: 30, height: 26, padding: '0 8px', borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', border: '1px solid ' + (on ? accent : '#d3dbe3') });
+  const chip = (on: boolean): CSSProperties => ({ minWidth: 30, height: 26, padding: '0 8px', borderRadius: 6, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', border: '1px solid ' + (on ? accent : '#d3dbe3') });
 
   return (
     <SettingsShell variant={variant} title={displayName('予算')} desc="資金収支計算書の予算（前年度／当初／補正／次年度）と業者別予算を入力します。補正予算は月ごとに入力でき、収支差額と期末支払資金残高を確認しながら設定できます。" badge="予算" actions={<>
@@ -135,7 +135,7 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
               {Object.entries(vendor).map(([v, arr]) => (
                 <tr key={v}>
                   <td style={{ ...TD, fontWeight: 600 }}>{v}</td>
-                  {arr.map((x, i) => <td key={i} style={NUM}><input className="field-input ring" value={yen(x)} onChange={(e) => setVendor((s) => ({ ...s, [v]: s[v].map((y, k) => (k === i ? toInt(e.target.value) : y)) }))} inputMode="numeric" style={{ ...numInput, padding: '4px 8px', fontSize: 12.5, background: '#fffbe6' }} /></td>)}
+                  {arr.map((x, i) => <td key={i} style={NUM}><input className="field-input ring" value={yen(x)} onChange={(e) => setVendor((s) => ({ ...s, [v]: s[v].map((y, k) => (k === i ? toInt(e.target.value) : y)) }))} inputMode="numeric" style={{ ...numInput, padding: '4px 8px', fontSize: 14, background: '#fffbe6' }} /></td>)}
                   <td style={{ ...NUM, color: '#5b6773' }}>{yen(Math.round(arr[1] * 0.42))}</td>
                 </tr>
               ))}
@@ -146,11 +146,11 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
         <>
           {(tab === '補正予算' || (tab === '当初予算' && month !== '初')) && (
             <div style={{ margin: '14px 22px 4px', padding: '12px 14px', border: '1px solid ' + accent, borderRadius: 12, background: '#fbfcfd', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><b style={{ fontSize: 13 }}>補正予算の入力方法</b><ScopeBadge kind="区分ごと" label={`区分ごと（${session.division}）`} /></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><b style={{ fontSize: 14 }}>補正予算の入力方法</b><ScopeBadge kind="区分ごと" label={`区分ごと（${session.division}）`} /></div>
               <div role="radiogroup" aria-label="補正予算の入力方法" style={{ display: 'inline-flex', border: '1px solid ' + accent, borderRadius: 9, overflow: 'hidden' }}>
-                {(['補正額', '補正後予算額'] as const).map((m) => <button key={m} type="button" role="radio" aria-checked={mode === m} onClick={() => { if (mode !== m) setMode(m); }} style={{ padding: '8px 18px', border: 'none', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: mode === m ? accent : '#fff', color: mode === m ? '#fff' : accent }}>{m}で入力</button>)}
+                {(['補正額', '補正後予算額'] as const).map((m) => <button key={m} type="button" role="radio" aria-checked={mode === m} onClick={() => { if (mode !== m) setMode(m); }} style={{ padding: '8px 18px', border: 'none', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: mode === m ? accent : '#fff', color: mode === m ? '#fff' : accent }}>{m}で入力</button>)}
               </div>
-              <div style={{ fontSize: 12, color: '#5b6773', lineHeight: 1.7, flex: '1 1 320px' }}>
+              <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.7, flex: '1 1 320px' }}>
                 {mode === '補正額' ? '補正額で入力：その月に増減させる金額（＋／−）を入力します。' : '補正後予算額で入力：補正した後の予算額（累計）を入力します。差額が補正額になります。'}
                 {month === '初' && <>　予算月で 4月〜3月・決算 を選ぶと入力欄に反映されます。</>}
                 <br /><span style={{ color: '#8290a0' }}>※ 以前は「{displayName('環境設定')}」にあった設定です。この画面で切り替えられるようにしました。</span>
@@ -160,14 +160,14 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 22px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
             {(tab === '当初予算' || tab === '補正予算') && (
               <>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#8290a0' }}>予算月</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>予算月</span>
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>{MONTHS.map((m) => <button key={m} type="button" className="chip" onClick={() => setMonth(m)} style={chip(month === m)}>{m}</button>)}</div>
               </>
             )}
             {(tab === '前年度予算' || tab === '次年度予算' || (tab === '当初予算' && month === '初')) && (
-              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}><span style={{ fontSize: 11, fontWeight: 700, color: '#8290a0', marginRight: 4 }}>対比する予算</span>{(['当初予算', '確定予算'] as const).map((r) => <button key={r} type="button" onClick={() => setRef(r)} style={btn(ref === r ? accent : '#5b6773', ref === r, true)}>{r}</button>)}</div>
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}><span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginRight: 4 }}>対比する予算</span>{(['当初予算', '確定予算'] as const).map((r) => <button key={r} type="button" onClick={() => setRef(r)} style={btn(ref === r ? accent : '#5b6773', ref === r, true)}>{r}</button>)}</div>
             )}
-            <span style={{ marginLeft: 'auto', fontSize: 12, color: '#7a8794' }}>黄色のセルが入力できます。ピンク＝設定不可（集計項目）</span>
+            <span style={{ marginLeft: 'auto', fontSize: 14, color: '#7a8794' }}>黄色のセルが入力できます。ピンク＝設定不可（集計項目）</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 300px', alignItems: 'start' }}>
             <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 400px)' }}>
@@ -185,7 +185,7 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
                         {editable ? cell(it.code, curVal(it.code), true) : <td style={{ ...NUM, fontWeight: 600 }}>{yen(c)}</td>}
                         <td style={{ ...NUM, fontWeight: 600 }}>{yen(a)}</td>
                         <td style={{ ...NUM, color: '#5b6773' }}>{yen(Math.round(rollup(it, (x) => totalOf(cur, x, 13)) * 0.42))}</td>
-                        <td style={TD}>{editable && <input className="field-input" placeholder="摘要" style={{ ...input, padding: '4px 8px', fontSize: 12 }} />}</td>
+                        <td style={TD}>{editable && <input className="field-input" placeholder="摘要" style={{ ...input, padding: '4px 8px', fontSize: 14 }} />}</td>
                       </tr>
                     );
                   })}
@@ -194,11 +194,11 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
             </div>
             <div style={{ padding: 16, borderLeft: '1px solid #eef2f5', display: 'flex', flexDirection: 'column', gap: 10, position: 'sticky', top: 0 }}>
               {[['資金収入合計', inSum], ['資金支出合計', outSum], ['当期資金収支差額合計', diff]].map(([l, v]) => (
-                <div key={l as string} style={{ padding: '10px 12px', border: '1px solid #e2e8ee', borderRadius: 10, background: '#fbfcfd' }}><div style={{ fontSize: 10.5, fontWeight: 700, color: '#8290a0' }}>{l}</div><div style={{ fontSize: 17, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: (v as number) < 0 ? '#c0392b' : '#22303c' }}>{yen(v as number)}</div></div>
+                <div key={l as string} style={{ padding: '10px 12px', border: '1px solid #e2e8ee', borderRadius: 10, background: '#fbfcfd' }}><div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>{l}</div><div style={{ fontSize: 17, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: (v as number) < 0 ? '#c0392b' : '#22303c' }}>{yen(v as number)}</div></div>
               ))}
               <div style={{ padding: '10px 12px', border: '1px solid #e2e8ee', borderRadius: 10 }}>
-                <div style={{ fontSize: 10.5, fontWeight: 700, color: '#8290a0' }}>前期末支払資金残高</div><div style={{ fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{yen(PREV_END_FUND)}</div>
-                <div style={{ fontSize: 10.5, fontWeight: 700, color: '#8290a0', marginTop: 8 }}>当期末支払資金残高（予算）</div><div style={{ fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{yen(PREV_END_FUND + diff)}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>前期末支払資金残高</div><div style={{ fontSize: 16, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{yen(PREV_END_FUND)}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginTop: 8 }}>当期末支払資金残高（予算）</div><div style={{ fontSize: 16, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{yen(PREV_END_FUND + diff)}</div>
               </div>
               <button type="button" className="btn-outline" onClick={() => toast.show('前期末支払資金残高＝貸借対照表の繰越残高から「流動資産－流動負債」を計算した額です')} style={btn()}>前期末支払資金残高に関して</button>
             </div>
@@ -210,10 +210,10 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
         <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
           <Notice tone="warn">既に次年度の予算を入力している場合、その金額は上書きされて消えます。</Notice>
           <Field label="次年度予算の作成方法">
-            {['当年度予算をそのまま', '当年度予算×倍率', '当年度（8月まで）実績より倍率して作る'].map((m) => <label key={m} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', fontSize: 13 }}><input type="radio" checked={wMethod === m} onChange={() => setWMethod(m)} />{m}</label>)}
+            {['当年度予算をそのまま', '当年度予算×倍率', '当年度（8月まで）実績より倍率して作る'].map((m) => <label key={m} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', fontSize: 14 }}><input type="radio" checked={wMethod === m} onChange={() => setWMethod(m)} />{m}</label>)}
           </Field>
           {wMethod !== '当年度予算をそのまま' && <Field label="倍率（%）"><input className="field-input ring" value={wRate} onChange={(e) => setWRate(e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" style={{ ...numInput, width: 120 }} /></Field>}
-          <Field label="自動設定の予算金額単位">{['1円単位', '千円単位'].map((u) => <label key={u} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginRight: 16, fontSize: 13 }}><input type="radio" checked={wUnit === u} onChange={() => setWUnit(u)} />{u}で予算を設定する</label>)}</Field>
+          <Field label="自動設定の予算金額単位">{['1円単位', '千円単位'].map((u) => <label key={u} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginRight: 16, fontSize: 14 }}><input type="radio" checked={wUnit === u} onChange={() => setWUnit(u)} />{u}で予算を設定する</label>)}</Field>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setWizard(false)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={runWizard} style={btn(accent, true)}>OK</button></div>
         </div>
       </Modal>

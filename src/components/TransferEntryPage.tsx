@@ -295,17 +295,17 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
     padding: '8px 10px',
     border: '1px solid transparent',
     borderRadius: 4,
-    fontSize: 13.5,
+    fontSize: 14,
     fontFamily: 'inherit',
     outline: 'none',
     color: '#22303c',
     background: 'transparent',
     minWidth: 0,
   };
-  const amt: CSSProperties = { ...input, textAlign: 'right', fontWeight: 700, fontSize: 15, fontVariantNumeric: 'tabular-nums' };
+  const amt: CSSProperties = { ...input, textAlign: 'right', fontWeight: 700, fontSize: 16, fontVariantNumeric: 'tabular-nums' };
   /** 用紙の列：金額／率／予算残 ｜ 借方科目 ｜ 貸方科目 ｜ 金額／率／予算残 ｜ 証憑・印／行の操作 */
   const GRID = '158px minmax(0,1fr) minmax(0,1fr) 158px 118px';
-  const rowBtn: CSSProperties = { padding: '3px 7px', borderRadius: 6, border: '1px solid #cfd8e0', background: '#fff', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', color: '#5b6773' };
+  const rowBtn: CSSProperties = { padding: '3px 7px', borderRadius: 6, border: '1px solid #cfd8e0', background: '#fff', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', color: '#5b6773' };
   /** 行ごとのボタン用：i 行目の上に挿入／i 行目を削除 */
   const insertAt = (i: number) => { setRows((rs) => [...rs.slice(0, i), emptyRow(), ...rs.slice(i)]); setActive(i); focusId(fid(i, 'ka')); };
   const deleteAt = (i: number) => {
@@ -350,13 +350,13 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
           <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
             <span style={{ flex: 'none', width: 40, height: 40, borderRadius: '50%', background: '#fff3cd', color: '#b7791f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700 }}>!</span>
             <div>
-              <div style={{ fontSize: 12, color: '#8290a0', fontWeight: 700, marginBottom: 4 }}>振替式の内部取引伝票入力についてのご確認</div>
-              <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.6 }}>振替伝票は複数行にわたる内部取引の仕訳に対応しておりません</div>
-              <div style={{ fontSize: 13, color: '#48565f', lineHeight: 1.7, marginTop: 8 }}>振替式単一、もしくは振替式で１行の伝票入力であれば登録が可能です。</div>
+              <div style={{ fontSize: 14, color: '#8290a0', fontWeight: 700, marginBottom: 4 }}>振替式の内部取引伝票入力についてのご確認</div>
+              <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.6 }}>振替伝票は複数行にわたる内部取引の仕訳に対応しておりません</div>
+              <div style={{ fontSize: 14, color: '#48565f', lineHeight: 1.7, marginTop: 8 }}>振替式単一、もしくは振替式で１行の伝票入力であれば登録が可能です。</div>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 22, gap: 12 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#5b6773', cursor: 'pointer' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: '#5b6773', cursor: 'pointer' }}>
               <input type="checkbox" checked={dontShow} onChange={(e) => setDontShow(e.target.checked)} />
               今後、このメッセージを表示しない
             </label>
@@ -383,7 +383,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
               <PaperTitle
                 title={title}
                 division={`${divisionName} 拠点区分`}
-                badge={<span style={{ fontSize: 11.5, fontWeight: 700, color: accent, whiteSpace: 'nowrap' }}>{single ? '振替単一形式（1行）' : '振替伝票形式（複数行）'}　<span style={{ color: '#7a8794', fontWeight: 500 }}>借方合計と貸方合計が一致すると登録できます</span></span>}
+                badge={<span style={{ fontSize: 12, fontWeight: 700, color: accent, whiteSpace: 'nowrap' }}>{single ? '振替単一形式（1行）' : '振替伝票形式（複数行）'}　<span style={{ color: '#7a8794', fontWeight: 500 }}>借方合計と貸方合計が一致すると登録できます</span></span>}
                 right={tools.templateButton}
               />
 
@@ -393,7 +393,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                   <PaperBox label="サービス区分" grow>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', minWidth: 0 }}>
                       <ComboField id={`${pre}-service`} kind="service" value={service} onChange={setService} onCommit={() => focusId(`${pre}-month`)} placeholder="コード・名称で指定" disabled={ro} padY={6} />
-                      <button type="button" className="ef-act" onClick={() => setDivOpen(true)} title="区分の階層から伝票入力区分を選びます" style={{ flex: 'none', padding: '6px 9px', border: '1px solid #cfd8e0', borderRadius: 7, background: '#fff', color: '#5b6773', fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                      <button type="button" className="ef-act" onClick={() => setDivOpen(true)} title="区分の階層から伝票入力区分を選びます" style={{ flex: 'none', padding: '6px 9px', border: '1px solid #cfd8e0', borderRadius: 7, background: '#fff', color: '#5b6773', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                         区分選択
                       </button>
                     </div>
@@ -434,8 +434,8 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
               <div className="pp-table" style={{ gridTemplateColumns: '1fr' }}>
                 <div className="pp-row" style={{ gridTemplateColumns: GRID }}>
                   <div className="pp-lab" style={{ color: BLUE }}><span>借方 金額<span className="pp-sub">率／予算残</span></span></div>
-                  <div className="pp-lab pp-left" style={{ color: BLUE, fontSize: 12 }}><span>借方科目<span className="pp-sub">資金科目（自動）／摘要</span></span></div>
-                  <div className="pp-lab pp-left" style={{ color: PINK, fontSize: 12 }}><span>貸方科目<span className="pp-sub">資金科目（自動）</span></span></div>
+                  <div className="pp-lab pp-left" style={{ color: BLUE, fontSize: 14 }}><span>借方科目<span className="pp-sub">資金科目（自動）／摘要</span></span></div>
+                  <div className="pp-lab pp-left" style={{ color: PINK, fontSize: 14 }}><span>貸方科目<span className="pp-sub">資金科目（自動）</span></span></div>
                   <div className="pp-lab" style={{ color: PINK }}><span>貸方 金額<span className="pp-sub">率／予算残</span></span></div>
                   <div className="pp-lab"><span>証憑・印<span className="pp-sub">{single ? '証憑・チェック・付箋' : '挿入／削除'}</span></span></div>
                 </div>
@@ -461,9 +461,9 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                       <div className="pp-cell pp-center" style={{ ...cell, padding: '6px 4px', gap: 6, background: bg, position: 'relative' }}>
                         <FusenTab color={r.fusen} />
                         {!single && (
-                          <span style={{ fontSize: 12, color: '#9aa5b1', flex: 'none' }}>
+                          <span style={{ fontSize: 14, color: '#9aa5b1', flex: 'none' }}>
                             <span className="ef-rowno pp-num" style={{ fontWeight: on ? 800 : 500, color: on ? accent : '#9aa5b1' }}>{i + 1}</span>
-                            <span className="ef-rownow" style={{ padding: '1px 5px', borderRadius: 7, background: accent, color: '#fff', fontSize: 9.5, fontWeight: 800, whiteSpace: 'nowrap' }}>入力中</span>
+                            <span className="ef-rownow" style={{ padding: '1px 5px', borderRadius: 7, background: accent, color: '#fff', fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap' }}>入力中</span>
                           </span>
                         )}
                         {!tools.viewOnly && <FlagButtons shohyo={r.shohyo} check={r.check} fusen={r.fusen} disabled={ro} onChange={(p) => setRow(i, p)} />}
@@ -473,11 +473,11 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                         <div style={{ marginTop: -8 }}><BudgetHintLive account={r.kari} threshold={budgetTh} onOpen={() => setGraphAcct(r.kari)} /></div>
                       </div>
                       <div className="pp-cell pp-auto" style={{ ...bandCell, gap: 8 }}>
-                        <span style={{ flex: 'none', fontSize: 11, fontWeight: 700, color: PAPER.ink, marginTop: 5 }}>資金</span>
+                        <span style={{ flex: 'none', fontSize: 12, fontWeight: 700, color: PAPER.ink, marginTop: 5 }}>資金</span>
                         <div style={{ flex: 1, minWidth: 0 }}><FundAccountLine name={r.kari} other={r.kashi} mode={fundMode} /></div>
                       </div>
                       <div className="pp-cell pp-auto" style={{ ...bandCell, gap: 8 }}>
-                        <span style={{ flex: 'none', fontSize: 11, fontWeight: 700, color: PAPER.ink, marginTop: 5 }}>資金</span>
+                        <span style={{ flex: 'none', fontSize: 12, fontWeight: 700, color: PAPER.ink, marginTop: 5 }}>資金</span>
                         <div style={{ flex: 1, minWidth: 0 }}><FundAccountLine name={r.kashi} other={r.kari} mode={fundMode} /></div>
                       </div>
                       <div className="pp-cell pp-auto pp-col" style={bandCell}>
@@ -493,17 +493,17 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                       </div>
                       {/* 3行目：摘要 */}
                       <div className="pp-cell pp-right" style={{ ...cell, padding: '4px 8px', background: bg }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: PAPER.ink }}>摘要</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: PAPER.ink }}>摘要</span>
                       </div>
                       <div className="pp-cell" style={{ ...cell, padding: '4px 8px', gridColumn: 'span 2', background: bg }} onKeyDownCapture={(e) => { if (e.key === 'Enter' && e.shiftKey && !isIme(e)) { e.preventDefault(); e.stopPropagation(); rowAddAfter(i); } }}>
-                        <ComboField id={fid(i, 't')} kind="summary" freeText value={r.tekiyo} onChange={(x) => setRow(i, { tekiyo: x })} onCommit={() => afterTekiyo()} placeholder="摘要（任意）" listWidth={320} fontSize={12.5} padY={5} disabled={ro} />
+                        <ComboField id={fid(i, 't')} kind="summary" freeText value={r.tekiyo} onChange={(x) => setRow(i, { tekiyo: x })} onCommit={() => afterTekiyo()} placeholder="摘要（任意）" listWidth={320} fontSize={14} padY={5} disabled={ro} />
                       </div>
                       {/* 消費税対応の法人のみ：税区分・税額（依頼書 2.4。税区分の画面「消費税対応」で切替） */}
                       <div className="pp-cell" style={{ ...cell, padding: '4px 8px', background: bg, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {sess.taxEntry && <><span style={{ fontSize: 11, fontWeight: 700, color: PAPER.ink, flex: 'none' }}>税区分</span><select data-tax-kind aria-label={`${i + 1}行目 税区分`} disabled={ro} value={r.tax || taxDefault(r)} onChange={(e) => setRow(i, { tax: e.target.value })} className="ef-input pp-input" style={{ fontSize: 12, padding: '3px 4px', minWidth: 0, flex: 1 }}>{TAX_OPTS.map((o) => <option key={o}>{o}</option>)}</select></>}
+                        {sess.taxEntry && <><span style={{ fontSize: 12, fontWeight: 700, color: PAPER.ink, flex: 'none' }}>税区分</span><select data-tax-kind aria-label={`${i + 1}行目 税区分`} disabled={ro} value={r.tax || taxDefault(r)} onChange={(e) => setRow(i, { tax: e.target.value })} className="ef-input pp-input" style={{ fontSize: 14, padding: '3px 4px', minWidth: 0, flex: 1 }}>{TAX_OPTS.map((o) => <option key={o}>{o}</option>)}</select></>}
                       </div>
                       <div className="pp-cell pp-num" style={{ ...cell, padding: '4px 8px', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
-                        {sess.taxEntry && <><span style={{ fontSize: 11, fontWeight: 700, color: PAPER.ink }}>税額</span><input data-tax-amount aria-label={`${i + 1}行目 税額`} disabled={ro} className="ef-input pp-input" inputMode="numeric" value={fmtNum(r.taxAmt ?? String(taxAmountOf(r.tax || taxDefault(r), Math.max(toNum(r.kariAmt), toNum(r.kashiAmt)))))} onChange={(e) => setRow(i, { taxAmt: e.target.value.replace(/[^0-9]/g, '') })} onBlur={() => { if (r.taxAmt === '') setRow(i, { taxAmt: undefined }); }} title="金額 × 税率 ÷（100 ＋ 税率）の切り捨てで自動計算。端数の調整は手入力で変更できます（空にすると自動計算に戻ります）" style={{ width: 90, textAlign: 'right', fontSize: 12.5, padding: '3px 6px', color: r.taxAmt != null ? '#22303c' : '#48565f' }} /></>}
+                        {sess.taxEntry && <><span style={{ fontSize: 12, fontWeight: 700, color: PAPER.ink }}>税額</span><input data-tax-amount aria-label={`${i + 1}行目 税額`} disabled={ro} className="ef-input pp-input" inputMode="numeric" value={fmtNum(r.taxAmt ?? String(taxAmountOf(r.tax || taxDefault(r), Math.max(toNum(r.kariAmt), toNum(r.kashiAmt)))))} onChange={(e) => setRow(i, { taxAmt: e.target.value.replace(/[^0-9]/g, '') })} onBlur={() => { if (r.taxAmt === '') setRow(i, { taxAmt: undefined }); }} title="金額 × 税率 ÷（100 ＋ 税率）の切り捨てで自動計算。端数の調整は手入力で変更できます（空にすると自動計算に戻ります）" style={{ width: 90, textAlign: 'right', fontSize: 14, padding: '3px 6px', color: r.taxAmt != null ? '#22303c' : '#48565f' }} /></>}
                       </div>
                     </div>
                   );
@@ -515,10 +515,10 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                     <div className="pp-cell pp-empty" style={{ minHeight: 42 }} />
                     <div className="pp-cell pp-empty" style={{ minHeight: 42 }} />
                     <div className="pp-cell pp-empty" style={{ minHeight: 42 }} />
-                    <div className="pp-cell pp-empty pp-center pp-num" style={{ minHeight: 42, color: '#c9d4ce', fontSize: 12 }}>{rows.length + k + 1}</div>
-                    <div className="pp-cell pp-band" style={{ minHeight: 28, color: '#b7c9bd', fontSize: 11 }}>資金</div>
-                    <div className="pp-cell pp-band" style={{ minHeight: 28, color: '#b7c9bd', fontSize: 11 }}>資金</div>
-                    <div className="pp-cell pp-band" style={{ minHeight: 28, color: '#b7c9bd', fontSize: 11 }}>資金</div>
+                    <div className="pp-cell pp-empty pp-center pp-num" style={{ minHeight: 42, color: '#c9d4ce', fontSize: 14 }}>{rows.length + k + 1}</div>
+                    <div className="pp-cell pp-band" style={{ minHeight: 28, color: '#b7c9bd', fontSize: 12 }}>資金</div>
+                    <div className="pp-cell pp-band" style={{ minHeight: 28, color: '#b7c9bd', fontSize: 12 }}>資金</div>
+                    <div className="pp-cell pp-band" style={{ minHeight: 28, color: '#b7c9bd', fontSize: 12 }}>資金</div>
                     <div className="pp-cell pp-band" style={{ minHeight: 28 }} />
                     <div className="pp-cell pp-band" style={{ minHeight: 28 }} />
                   </div>
@@ -528,7 +528,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                 <div className="pp-row" style={{ gridTemplateColumns: GRID }}>
                   <div className="pp-cell" style={{ padding: 0 }}>
                     <div className="pp-foot" style={{ width: '100%' }}>
-                      <span className="pp-lab" style={{ fontSize: 12, color: BLUE }}>合計</span>
+                      <span className="pp-lab" style={{ fontSize: 14, color: BLUE }}>合計</span>
                       <span className="pp-val pp-grow pp-num"><span className="pp-ro pp-ro-fill" style={{ justifyContent: 'flex-end', fontSize: 17, fontWeight: 800, color: BLUE }}>{kariTotal.toLocaleString('ja-JP')}</span></span>
                     </div>
                   </div>
@@ -542,27 +542,27 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                   </div>
                   <div className="pp-cell" style={{ padding: 0 }}>
                     <div className="pp-foot" style={{ width: '100%' }}>
-                      <span className="pp-lab" style={{ fontSize: 12, color: PINK }}>合計</span>
+                      <span className="pp-lab" style={{ fontSize: 14, color: PINK }}>合計</span>
                       <span className="pp-val pp-grow pp-num"><span className="pp-ro pp-ro-fill" style={{ justifyContent: 'flex-end', fontSize: 17, fontWeight: 800, color: PINK }}>{kashiTotal.toLocaleString('ja-JP')}</span></span>
                     </div>
                   </div>
                   <div className="pp-cell pp-center" style={{ padding: '4px 6px' }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 10, background: balanced ? '#eaf5ef' : '#fdeee9', color: balanced ? '#1f7a52' : '#c0392b', whiteSpace: 'nowrap' }}>{balanced ? '貸借一致' : `差額 ${Math.abs(kariTotal - kashiTotal).toLocaleString('ja-JP')}`}</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, padding: '3px 10px', borderRadius: 10, background: balanced ? '#eaf5ef' : '#fdeee9', color: balanced ? '#1f7a52' : '#c0392b', whiteSpace: 'nowrap' }}>{balanced ? '貸借一致' : `差額 ${Math.abs(kariTotal - kashiTotal).toLocaleString('ja-JP')}`}</span>
                   </div>
                 </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
-                {!single && !tools.viewOnly && <button type="button" className="ef-act" tabIndex={-1} disabled={ro} onClick={() => { const n = rows.length; setRows((rs) => [...rs, emptyRow()]); setActive(n); focusId(fid(n, 'ka')); }} title={ro ? tools.reason : '最後に1行追加します'} style={{ ...rowBtn, padding: '4px 11px', borderStyle: 'dashed', borderColor: '#b9c4cf', fontSize: 12 }}>＋ 行追加</button>}
-                <span style={{ fontSize: 11.5, color: '#8290a0' }}>{rows.length} 行　{single ? '摘要で Enter → 登録' : '摘要で Enter → 登録／Shift+Enter → 行追加'}</span>
-                {err && <span role="alert" style={{ color: '#c0392b', fontSize: 12.5, fontWeight: 600 }}>{err}</span>}
+                {!single && !tools.viewOnly && <button type="button" className="ef-act" tabIndex={-1} disabled={ro} onClick={() => { const n = rows.length; setRows((rs) => [...rs, emptyRow()]); setActive(n); focusId(fid(n, 'ka')); }} title={ro ? tools.reason : '最後に1行追加します'} style={{ ...rowBtn, padding: '4px 11px', borderStyle: 'dashed', borderColor: '#b9c4cf', fontSize: 14 }}>＋ 行追加</button>}
+                <span style={{ fontSize: 12, color: '#8290a0' }}>{rows.length} 行　{single ? '摘要で Enter → 登録' : '摘要で Enter → 登録／Shift+Enter → 行追加'}</span>
+                {err && <span role="alert" style={{ color: '#c0392b', fontSize: 14, fontWeight: 600 }}>{err}</span>}
                 <span style={{ marginLeft: 'auto' }}>{tools.submitButton}</span>
               </div>
             </div>
 
             {/* 伝票全体のエラー（行の入力欄には出せないもの）。確認が必要な内容は登録時にモーダルで表示 */}
             {voucherIssues.length > 0 && (
-              <div role="alert" style={{ marginTop: 12, padding: '9px 12px', borderRadius: 9, border: '1px solid #f0b9ae', borderLeft: '5px solid #a5281b', background: '#fdeee9', color: '#a5281b', fontSize: 12.5, lineHeight: 1.6 }}>
+              <div role="alert" style={{ marginTop: 12, padding: '9px 12px', borderRadius: 9, border: '1px solid #f0b9ae', borderLeft: '5px solid #a5281b', background: '#fdeee9', color: '#a5281b', fontSize: 14, lineHeight: 1.6 }}>
                 {voucherIssues.map((i) => <div key={i.code}><b>{i.title}</b>　<span style={{ fontWeight: 400 }}>{i.detail}</span></div>)}
               </div>
             )}
@@ -575,11 +575,11 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
         {/* 当年仕訳一覧 */}
         <div style={{ background: '#fff', border: '1px solid #dde4ea', borderRadius: radius, boxShadow: '0 6px 26px rgba(30,50,70,.07)', overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 22px', borderBottom: '1px solid #eef2f5' }}>
-            <span style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 15 }}>当年仕訳</span>
+            <span style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16 }}>当年仕訳</span>
             <FiscalMonthTabs current={monthFilter} accent={accent} onSelect={setMonthFilter} withAll />
-            <span style={{ marginLeft: 'auto', fontSize: 12, color: '#8895a3' }}><b style={{ color: '#22303c' }}>{list.length}</b> 件</span>
+            <span style={{ marginLeft: 'auto', fontSize: 14, color: '#8895a3' }}><b style={{ color: '#22303c' }}>{list.length}</b> 件</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '60px minmax(0,1.1fr) minmax(0,1.1fr) minmax(0,1.4fr) 120px', gap: 14, padding: '8px 22px', background: PAPER.fill, fontSize: 10.5, fontWeight: 700, color: PAPER.ink, borderBottom: `1px solid ${PAPER.lineSoft}`, letterSpacing: '.06em' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '60px minmax(0,1.1fr) minmax(0,1.1fr) minmax(0,1.4fr) 120px', gap: 14, padding: '8px 22px', background: PAPER.fill, fontSize: 12, fontWeight: 700, color: PAPER.ink, borderBottom: `1px solid ${PAPER.lineSoft}`, letterSpacing: '.06em' }}>
             <div>月日</div>
             <div>借方科目</div>
             <div>貸方科目</div>
@@ -587,12 +587,12 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
             <div style={{ textAlign: 'right' }}>金額</div>
           </div>
           <div id="journal-scroll" style={{ overflowY: 'auto', maxHeight: 320 }}>
-            {list.length === 0 && <div style={{ padding: '32px 22px', textAlign: 'center', color: '#9aa5b1', fontSize: 13 }}>この月の仕訳はありません。</div>}
+            {list.length === 0 && <div style={{ padding: '32px 22px', textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>この月の仕訳はありません。</div>}
             {list.map((e) => {
               const isNew = lastIds.includes(e.id);
               return (
-                <div key={e.id} style={{ display: 'grid', gridTemplateColumns: '60px minmax(0,1.1fr) minmax(0,1.1fr) minmax(0,1.4fr) 120px', gap: 14, padding: '9px 22px', borderBottom: `1px solid ${PAPER.lineSoft}`, fontSize: 12.5, alignItems: 'center', background: isNew ? '#fff2c9' : 'transparent', animation: isNew ? 'rowin 1.8s ease' : 'none' }}>
-                  <div style={{ color: '#8895a3', fontSize: 12 }}>{e.date}</div>
+                <div key={e.id} style={{ display: 'grid', gridTemplateColumns: '60px minmax(0,1.1fr) minmax(0,1.1fr) minmax(0,1.4fr) 120px', gap: 14, padding: '9px 22px', borderBottom: `1px solid ${PAPER.lineSoft}`, fontSize: 14, alignItems: 'center', background: isNew ? '#fff2c9' : 'transparent', animation: isNew ? 'rowin 1.8s ease' : 'none' }}>
+                  <div style={{ color: '#8895a3', fontSize: 14 }}>{e.date}</div>
                   <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.kari}</div>
                   <div style={{ color: '#48565f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.kashi}</div>
                   <div style={{ color: '#7a8794', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.tekiyo}</div>

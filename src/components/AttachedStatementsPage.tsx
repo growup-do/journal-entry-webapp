@@ -76,19 +76,19 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
       <Tabs items={TABS} current={tab} onChange={setTab} accent={accent} />
 
       <div style={{ padding: 22, display: 'grid', gap: 14 }}>
-        <div style={{ fontSize: 12.5, color: '#48565f', lineHeight: 1.8 }}>{TAB_DESC[ti]}</div>
+        <div style={{ fontSize: 14, color: '#48565f', lineHeight: 1.8 }}>{TAB_DESC[ti]}</div>
 
         {/* 設定2・3：収入に合わせる／支出に合わせる（これまで動作環境にあった切替） */}
         {ti >= 1 && (
           <div style={{ border: '1px solid #bfdcd9', borderRadius: 12, overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#e4f1f0', flexWrap: 'wrap' }}>
               <ScopeBadge kind="全区分共通" />
-              <b style={{ fontSize: 13 }}>科目の合わせ方（設定2・設定3 共通）</b>
+              <b style={{ fontSize: 14 }}>科目の合わせ方（設定2・設定3 共通）</b>
               <div role="radiogroup" aria-label="科目の合わせ方" style={{ display: 'inline-flex', border: '1px solid #1f6f6b', borderRadius: 9, overflow: 'hidden', marginLeft: 'auto' }}>
-                {(['収入', '支出'] as const).map((v) => <button key={v} type="button" role="radio" aria-checked={side === v} onClick={() => side !== v && setSide(v)} style={{ padding: '8px 18px', border: 'none', background: side === v ? '#1f6f6b' : '#fff', color: side === v ? '#fff' : '#1f6f6b', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{v}に合わせる</button>)}
+                {(['収入', '支出'] as const).map((v) => <button key={v} type="button" role="radio" aria-checked={side === v} onClick={() => side !== v && setSide(v)} style={{ padding: '8px 18px', border: 'none', background: side === v ? '#1f6f6b' : '#fff', color: side === v ? '#fff' : '#1f6f6b', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{v}に合わせる</button>)}
               </div>
             </div>
-            <div style={{ padding: '10px 14px', fontSize: 12, color: '#48565f', lineHeight: 1.8 }}>
+            <div style={{ padding: '10px 14px', fontSize: 14, color: '#48565f', lineHeight: 1.8 }}>
               繰入金・貸付金（借入金）の明細書で、監視・集計する科目を<b>{side === '収入' ? '収入側（繰入金収益・貸付金）' : '支出側（繰入金費用・借入金）'}</b>に合わせています。切り替えると、下の「使用する科目」が{side === '収入' ? '支出' : '収入'}側の科目に変わります（科目の設定は、合わせ方ごとに別々に保存されます）。
               <span style={{ color: '#8290a0' }}>　※ これまで「{displayName('環境設定')}」にあった切替です。すべての区分に共通で反映されます。</span>
             </div>
@@ -102,16 +102,16 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
           <tbody>{WATCH.filter((w) => w.tab === ti).map((w) => (
             <tr key={w.key}>
               <td style={{ ...TD, fontWeight: 600, lineHeight: 1.6 }}>{w.label}</td>
-              <td style={TD}><div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>{listOf(w).map((a) => <span key={a} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 4px 2px 8px', background: '#eef2f6', borderRadius: 6, fontSize: 11.5 }}>{a}<button type="button" title={`${a} を外す`} onClick={() => setAccts((x) => ({ ...x, [acctKey(w, side)]: (x[acctKey(w, side)] ?? []).filter((n) => n !== a) }))} style={{ border: 'none', background: 'transparent', color: '#9aa5b1', cursor: 'pointer', fontSize: 12, lineHeight: 1, padding: '0 2px', fontFamily: 'inherit' }}>×</button></span>)}<button type="button" onClick={() => openPick(w)} title="科目を追加" style={{ ...btn('#5b6773', false, true), padding: '1px 8px' }}>＋ 科目</button></div></td>
-              <td style={TD}>{w.watch !== undefined ? <Toggle on={!!watch[w.key]} onChange={(v) => setWatch({ ...watch, [w.key]: v })} accent={accent} label={watch[w.key] ? '監視する' : '監視しない'} /> : <span style={{ fontSize: 12, color: '#9aa5b1' }}>—（監視の対象外）</span>}</td>
-              <td style={{ ...TD, fontSize: 12 }}>{w.key === 'hojo' ? <div style={{ display: 'grid', gap: 6 }}><label style={{ display: 'flex', gap: 5 }}><input type="checkbox" checked={fromAcct} onChange={(e) => setFromAcct(e.target.checked)} />科目から明細を作成する</label><label style={{ display: 'flex', gap: 5, alignItems: 'center', whiteSpace: 'nowrap' }}>「○○事業」を<input className="field-input" value={hojoReplace} onChange={(e) => setHojoReplace(e.target.value)} placeholder="例：保育事業" style={{ ...input, padding: '3px 8px', fontSize: 12, width: 120 }} />に置き換える</label></div> : w.extra ? <div style={{ display: 'grid', gap: 4 }}><button type="button" onClick={() => openExtra(w.key)} style={btn('#5b6773', false, true)}>{w.extra}</button><span style={{ fontSize: 11, color: '#9aa5b1' }}>{w.key === 'kokko' ? kokkoTitles.join('／') : oneYear.apply ? `1年基準を適用（${oneYear.long}／${oneYear.short}）` : '1年基準を適用しない'}</span></div> : <span style={{ color: '#9aa5b1' }}>—</span>}</td>
+              <td style={TD}><div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>{listOf(w).map((a) => <span key={a} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 4px 2px 8px', background: '#eef2f6', borderRadius: 6, fontSize: 12 }}>{a}<button type="button" title={`${a} を外す`} onClick={() => setAccts((x) => ({ ...x, [acctKey(w, side)]: (x[acctKey(w, side)] ?? []).filter((n) => n !== a) }))} style={{ border: 'none', background: 'transparent', color: '#9aa5b1', cursor: 'pointer', fontSize: 14, lineHeight: 1, padding: '0 2px', fontFamily: 'inherit' }}>×</button></span>)}<button type="button" onClick={() => openPick(w)} title="科目を追加" style={{ ...btn('#5b6773', false, true), padding: '1px 8px' }}>＋ 科目</button></div></td>
+              <td style={TD}>{w.watch !== undefined ? <Toggle on={!!watch[w.key]} onChange={(v) => setWatch({ ...watch, [w.key]: v })} accent={accent} label={watch[w.key] ? '監視する' : '監視しない'} /> : <span style={{ fontSize: 14, color: '#9aa5b1' }}>—（監視の対象外）</span>}</td>
+              <td style={{ ...TD, fontSize: 14 }}>{w.key === 'hojo' ? <div style={{ display: 'grid', gap: 6 }}><label style={{ display: 'flex', gap: 5 }}><input type="checkbox" checked={fromAcct} onChange={(e) => setFromAcct(e.target.checked)} />科目から明細を作成する</label><label style={{ display: 'flex', gap: 5, alignItems: 'center', whiteSpace: 'nowrap' }}>「○○事業」を<input className="field-input" value={hojoReplace} onChange={(e) => setHojoReplace(e.target.value)} placeholder="例：保育事業" style={{ ...input, padding: '3px 8px', fontSize: 14, width: 120 }} />に置き換える</label></div> : w.extra ? <div style={{ display: 'grid', gap: 4 }}><button type="button" onClick={() => openExtra(w.key)} style={btn('#5b6773', false, true)}>{w.extra}</button><span style={{ fontSize: 12, color: '#9aa5b1' }}>{w.key === 'kokko' ? kokkoTitles.join('／') : oneYear.apply ? `1年基準を適用（${oneYear.long}／${oneYear.short}）` : '1年基準を適用しない'}</span></div> : <span style={{ color: '#9aa5b1' }}>—</span>}</td>
             </tr>
           ))}</tbody>
         </table>
         <div><button type="button" onClick={resetTab} style={btn('#5b6773', false, true)}>このタブの科目を既定の内容に戻す</button></div>
       </div>
 
-      <div style={{ borderTop: '1px solid #eef2f5', padding: '12px 22px 16px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 12, color: '#5b6773' }}>
+      <div style={{ borderTop: '1px solid #eef2f5', padding: '12px 22px 16px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 14, color: '#5b6773' }}>
         <span style={{ fontWeight: 700, color: '#8290a0' }}>移動した機能</span>
         {MOVED.map((m) => <span key={m} style={{ padding: '2px 8px', borderRadius: 8, background: '#f3f6f9', border: '1px solid #dde4ea' }}>{m}</span>)}
         <span>は、印刷の準備として「帳票・印刷 ＞ 別紙」にまとめました。</span>
@@ -125,13 +125,13 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
             <input className="search-input" autoFocus value={pickQ} onChange={(e) => setPickQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229 && pickList.length === 1) { const n = new Set(pickSel); n.add(pickList[0]); setPickSel(n); setPickQ(''); } }} placeholder="科目名・コード・フリガナで検索（Enter で候補が1件なら選択）" style={input} />
             <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: 320, overflow: 'auto' }}>
               {pickList.map((n) => { const m = ACCOUNT_META.find((x) => x.name === n); const on = pickSel.has(n); return (
-                <label key={n} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 12px', borderBottom: '1px solid #f1f4f6', fontSize: 13, background: on ? '#eef2f6' : '#fff', cursor: 'pointer' }}>
+                <label key={n} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 12px', borderBottom: '1px solid #f1f4f6', fontSize: 14, background: on ? '#eef2f6' : '#fff', cursor: 'pointer' }}>
                   <input type="checkbox" checked={on} onChange={(e) => { const s2 = new Set(pickSel); if (e.target.checked) s2.add(n); else s2.delete(n); setPickSel(s2); }} />
-                  <span style={{ width: 52, color: '#8290a0', fontVariantNumeric: 'tabular-nums', fontSize: 12 }}>{m?.code ?? '—'}</span><span style={{ flex: 1 }}>{n}</span><span style={{ fontSize: 11, color: '#9aa5b1' }}>{m ? `${m.kind}・${m.cls}` : '明細書用'}</span>
+                  <span style={{ width: 52, color: '#8290a0', fontVariantNumeric: 'tabular-nums', fontSize: 14 }}>{m?.code ?? '—'}</span><span style={{ flex: 1 }}>{n}</span><span style={{ fontSize: 12, color: '#9aa5b1' }}>{m ? `${m.kind}・${m.cls}` : '明細書用'}</span>
                 </label>); })}
-              {pickList.length === 0 && <div style={{ padding: 18, textAlign: 'center', color: '#9aa5b1', fontSize: 12.5 }}>該当する科目がありません</div>}
+              {pickList.length === 0 && <div style={{ padding: 18, textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>該当する科目がありません</div>}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ fontSize: 12, color: '#7a8794' }}>{pickSel.size} 科目を選択中</span><span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}><button type="button" onClick={() => setPickFor(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={applyPick} disabled={!pickSel.size} style={{ ...btn(accent, true), opacity: pickSel.size ? 1 : 0.5 }}>追加</button></span></div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ fontSize: 14, color: '#7a8794' }}>{pickSel.size} 科目を選択中</span><span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}><button type="button" onClick={() => setPickFor(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={applyPick} disabled={!pickSel.size} style={{ ...btn(accent, true), opacity: pickSel.size ? 1 : 0.5 }}>追加</button></span></div>
           </div>
         )}
       </Modal>
@@ -141,7 +141,7 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
         <div style={{ padding: '12px 22px 18px', display: 'grid', gap: 10 }}>
           <Notice>明細書に出力する国庫補助金等のグループ名（積立合計行のタイトル）を設定します。グループごとに積立額・取崩額の合計行が印刷されます。</Notice>
           {kokkoDraft.map((t, i) => (
-            <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center' }}><span style={{ width: 24, fontSize: 12, color: '#8290a0' }}>{i + 1}</span><input className="field-input" value={t} onChange={(e) => setKokkoDraft(kokkoDraft.map((x, k) => (k === i ? e.target.value : x)))} placeholder="例：国庫補助金" style={input} /><button type="button" title="この行を削除" onClick={() => setKokkoDraft(kokkoDraft.filter((_, k) => k !== i))} style={btn('#c0392b', false, true)}>×</button></div>
+            <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center' }}><span style={{ width: 24, fontSize: 14, color: '#8290a0' }}>{i + 1}</span><input className="field-input" value={t} onChange={(e) => setKokkoDraft(kokkoDraft.map((x, k) => (k === i ? e.target.value : x)))} placeholder="例：国庫補助金" style={input} /><button type="button" title="この行を削除" onClick={() => setKokkoDraft(kokkoDraft.filter((_, k) => k !== i))} style={btn('#c0392b', false, true)}>×</button></div>
           ))}
           <div><button type="button" onClick={() => setKokkoDraft([...kokkoDraft, ''])} style={btn(accent, false, true)}>＋ 行を追加</button></div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setExtraFor(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={applyExtra} style={btn(accent, true)}>OK</button></div>

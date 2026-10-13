@@ -31,7 +31,7 @@ export function Footer({ compact, vertical }: { compact?: boolean; vertical?: bo
   // 縦型：スプレッドシート型の左サイドバー最下部用（リンクを縦に並べ、最後にコピーライト）
   if (vertical) {
     return (
-      <footer style={{ padding: '10px 12px 12px', borderTop: '1px solid #eef2f5', fontSize: 11, color: '#8290a0' }}>
+      <footer style={{ padding: '10px 12px 12px', borderTop: '1px solid #eef2f5', fontSize: 12, color: '#8290a0' }}>
         <nav style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, marginBottom: 6 }}>
           {LINKS.map((l) => (
             <button
@@ -39,7 +39,7 @@ export function Footer({ compact, vertical }: { compact?: boolean; vertical?: bo
               type="button"
               data-footer={l.label}
               onClick={() => follow(l)}
-              style={{ border: 'none', background: 'transparent', padding: '3px 6px', font: 'inherit', fontFamily: 'inherit', fontSize: 11.5, color: '#5b6b7b', cursor: 'pointer', borderRadius: 6 }}
+              style={{ border: 'none', background: 'transparent', padding: '3px 6px', font: 'inherit', fontFamily: 'inherit', fontSize: 12, color: '#5b6b7b', cursor: 'pointer', borderRadius: 6 }}
               onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; e.currentTarget.style.color = '#22303c'; }}
               onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; e.currentTarget.style.color = '#5b6b7b'; }}
             >
@@ -63,7 +63,7 @@ export function Footer({ compact, vertical }: { compact?: boolean; vertical?: bo
         justifyContent: 'space-between',
         flexWrap: 'wrap',
         gap: 10,
-        fontSize: 11.5,
+        fontSize: 12,
         color: '#8290a0',
       }}
     >

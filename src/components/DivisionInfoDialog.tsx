@@ -11,8 +11,8 @@ import { CATEGORIES, COLORS, DivisionTreeEditor, mapTree } from './DivisionTreeE
 import { divisionLabel, flattenDivisions, getSession, setSession, useSession, type DivisionNode } from '../store/session';
 
 const TABS = ['集計区分の設定', '法人情報の設定', '伝票入力区分の設定'];
-const TH = { padding: '8px 10px', fontSize: 11, fontWeight: 700, color: '#8290a0', background: '#f6f8fa', borderBottom: '1px solid #e2e8ee', textAlign: 'left' as const, whiteSpace: 'nowrap' as const };
-const TD = { padding: '6px 8px', fontSize: 12.5, borderBottom: '1px solid #f1f4f6', verticalAlign: 'middle' as const };
+const TH = { padding: '8px 10px', fontSize: 12, fontWeight: 700, color: '#8290a0', background: '#f6f8fa', borderBottom: '1px solid #e2e8ee', textAlign: 'left' as const, whiteSpace: 'nowrap' as const };
+const TD = { padding: '6px 8px', fontSize: 14, borderBottom: '1px solid #f1f4f6', verticalAlign: 'middle' as const };
 
 export function DivisionInfoDialog({ open, onClose, accent }: { open: boolean; onClose: () => void; accent: string }) {
   const s = useSession();
@@ -73,7 +73,7 @@ export function DivisionInfoDialog({ open, onClose, accent }: { open: boolean; o
         <div style={{ padding: 22, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, maxWidth: 720 }}>
           <Field label="社会福祉法人名" span={2}>
             <input className="field-input ring" value={s.tree.name} onChange={(e) => update(s.tree.id, { name: e.target.value })} style={input} />
-            <div style={{ fontSize: 11.5, color: '#7a8794', marginTop: 6 }}>最初のスペースの前を「法人種別」、後を「法人名称」として区分選択画面に表示します → 法人種別 <b style={{ color: '#22303c' }}>{corpKind}</b>／法人名称 <b style={{ color: '#22303c' }}>{corpName || '（未設定）'}</b></div>
+            <div style={{ fontSize: 12, color: '#7a8794', marginTop: 6 }}>最初のスペースの前を「法人種別」、後を「法人名称」として区分選択画面に表示します → 法人種別 <b style={{ color: '#22303c' }}>{corpKind}</b>／法人名称 <b style={{ color: '#22303c' }}>{corpName || '（未設定）'}</b></div>
           </Field>
           <Field label="データ開始年月日（西暦8桁・下4桁は 0401）">
             <input className="field-input ring" value={s.corpStartDate} onChange={(e) => setSession({ corpStartDate: e.target.value.replace(/[^0-9]/g, '').slice(0, 8) })} placeholder="20240401" style={{ ...input, fontVariantNumeric: 'tabular-nums', borderColor: /^\d{4}0401$/.test(s.corpStartDate) ? '#cfd8e0' : '#e0997c' }} />
@@ -88,7 +88,7 @@ export function DivisionInfoDialog({ open, onClose, accent }: { open: boolean; o
       {tab === '伝票入力区分の設定' && (
         <div style={{ padding: '14px 22px 18px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <span style={{ fontSize: 12.5, color: '#5b6773' }}>集計区分の設定画面で追加した区分の詳細条件を設定します。行の「集計区分」を変えると格納先が移動します。</span>
+            <span style={{ fontSize: 14, color: '#5b6773' }}>集計区分の設定画面で追加した区分の詳細条件を設定します。行の「集計区分」を変えると格納先が移動します。</span>
             <button type="button" className="submit-btn" onClick={addEntry} style={{ ...btn(accent, true, true), marginLeft: 'auto' }}>伝票入力区分追加</button>
           </div>
           <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'auto', maxHeight: 420 }}>
@@ -97,27 +97,27 @@ export function DivisionInfoDialog({ open, onClose, accent }: { open: boolean; o
               <tbody>
                 {entries.map(({ node: n }) => (
                   <tr key={n.id} style={{ opacity: n.use === false ? 0.6 : 1 }}>
-                    <td style={{ ...TD, color: '#9aa5b1', fontSize: 11.5 }}>{n.id}</td>
+                    <td style={{ ...TD, color: '#9aa5b1', fontSize: 12 }}>{n.id}</td>
                     <td style={TD}><input className="field-input ring" value={n.code} onChange={(e) => update(n.id, { code: e.target.value.replace(/[^0-9]/g, '').slice(0, 3) })} style={{ ...input, padding: '5px 8px', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }} /></td>
                     <td style={TD}><input className="field-input ring" value={n.name} maxLength={32} onChange={(e) => update(n.id, { name: e.target.value })} style={{ ...input, padding: '5px 8px' }} /></td>
                     <td style={{ ...TD, textAlign: 'center' }}><input type="checkbox" checked={n.use !== false} onChange={() => update(n.id, { use: n.use === false })} title="区分選択画面に表示する" /></td>
                     <td style={TD}><div style={{ display: 'flex', gap: 3 }}>{COLORS.map((c) => <span key={c} onClick={() => update(n.id, { color: c })} title={c} style={{ width: 12, height: 12, borderRadius: 3, background: c, border: '1px solid ' + (n.color === c ? accent : '#dde4ea'), boxShadow: n.color === c ? `0 0 0 1px ${accent}` : 'none', cursor: 'pointer' }} />)}</div></td>
-                    <td style={TD}><select value={parentOf(n.id)} onChange={(e) => move(n, e.target.value)} style={{ ...input, padding: '5px 6px', fontSize: 12 }}>{parents.filter((p) => p.node.id !== n.id).map((p) => <option key={p.node.id}>{p.node.name}</option>)}</select></td>
-                    <td style={TD}><select value={n.category ?? ''} onChange={(e) => update(n.id, { category: e.target.value })} style={{ ...input, padding: '5px 6px', fontSize: 12 }}>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select></td>
-                    <td style={{ ...TD, color: '#5b6773', fontSize: 12 }}>{n.startYear}</td>
-                    <td style={{ ...TD, fontSize: 12 }}><span style={{ color: '#1f7a52', fontWeight: 700 }}>なし</span></td>
+                    <td style={TD}><select value={parentOf(n.id)} onChange={(e) => move(n, e.target.value)} style={{ ...input, padding: '5px 6px', fontSize: 14 }}>{parents.filter((p) => p.node.id !== n.id).map((p) => <option key={p.node.id}>{p.node.name}</option>)}</select></td>
+                    <td style={TD}><select value={n.category ?? ''} onChange={(e) => update(n.id, { category: e.target.value })} style={{ ...input, padding: '5px 6px', fontSize: 14 }}>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select></td>
+                    <td style={{ ...TD, color: '#5b6773', fontSize: 14 }}>{n.startYear}</td>
+                    <td style={{ ...TD, fontSize: 14 }}><span style={{ color: '#1f7a52', fontWeight: 700 }}>なし</span></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <div style={{ fontSize: 11.5, color: '#9aa5b1', marginTop: 8, lineHeight: 1.7 }}>内部コード＝システムが自動設定する区分のキー（変更不可。伝票はこのコードで区分を保持）。区分コード＝画面表示用の3桁。名称＝全角32文字まで。使用＝廃園などで使わなくなったらチェックを外す。カラー＝仕訳一覧・元帳の背景色（10区分まで自動配色）。事業種別＝資金収支計算書のサービス活動収入の大区分科目（科目表示設定に反映）。</div>
-          <div style={{ marginTop: 8 }}><span style={lbl}>現在の伝票入力区分</span><span style={{ fontSize: 12, color: '#5b6773' }}>{entries.map((x) => divisionLabel(x.node)).join('　')}</span></div>
+          <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 8, lineHeight: 1.7 }}>内部コード＝システムが自動設定する区分のキー（変更不可。伝票はこのコードで区分を保持）。区分コード＝画面表示用の3桁。名称＝全角32文字まで。使用＝廃園などで使わなくなったらチェックを外す。カラー＝仕訳一覧・元帳の背景色（10区分まで自動配色）。事業種別＝資金収支計算書のサービス活動収入の大区分科目（科目表示設定に反映）。</div>
+          <div style={{ marginTop: 8 }}><span style={lbl}>現在の伝票入力区分</span><span style={{ fontSize: 14, color: '#5b6773' }}>{entries.map((x) => divisionLabel(x.node)).join('　')}</span></div>
         </div>
       )}
 
       <div style={{ display: 'flex', gap: 8, padding: '12px 22px 18px', borderTop: '1px solid #eef2f5', alignItems: 'center' }}>
-        <span style={{ fontSize: 11.5, color: '#9aa5b1' }}>通常は基本情報を登録した状態で納品するため、ここでの設定は不要です。</span>
+        <span style={{ fontSize: 12, color: '#9aa5b1' }}>通常は基本情報を登録した状態で納品するため、ここでの設定は不要です。</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
           <button type="button" onClick={cancel} style={btn()}>キャンセル</button>
           <button type="button" className="submit-btn" onClick={ok} style={btn(accent, true)}>OK</button>
@@ -125,7 +125,7 @@ export function DivisionInfoDialog({ open, onClose, accent }: { open: boolean; o
       </div>
 
       <Modal open={caution} onClose={() => setCaution(false)} width={560} title="区分追加時の注意">
-        <div style={{ padding: '14px 22px 18px', fontSize: 13, color: '#48565f', lineHeight: 1.9 }}>
+        <div style={{ padding: '14px 22px 18px', fontSize: 14, color: '#48565f', lineHeight: 1.9 }}>
           <ol style={{ margin: 0, paddingLeft: 20 }}>
             <li>区分は階層構造に沿って順番に作成してください（社会福祉事業を起点に、右方向→下方向）。単独での追加はできません。</li>
             <li>区分を削除する前に、配下の拠点区分・サービス区分・小サービス区分を先に削除してください。</li>

@@ -33,9 +33,9 @@ function Shell({ variant, title, desc, actions, children }: { variant: 'form' | 
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '18px 22px 14px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
           <div>
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21 }}>
-              {title} <span style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#eef2f6', color: '#3d4a56', verticalAlign: 'middle', marginLeft: 6 }}>設定</span>
+              {title} <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#eef2f6', color: '#3d4a56', verticalAlign: 'middle', marginLeft: 6 }}>設定</span>
             </div>
-            <div style={{ color: '#7a8794', fontSize: 12, marginTop: 4 }}>{desc}</div>
+            <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>{desc}</div>
           </div>
           {actions && <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>{actions}</div>}
         </div>
@@ -44,9 +44,9 @@ function Shell({ variant, title, desc, actions, children }: { variant: 'form' | 
     </main>
   );
 }
-const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '8px 14px', borderRadius: 8, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
-const input: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '8px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', outline: 'none', background: '#fff' };
-const lbl: CSSProperties = { display: 'block', fontSize: 11, fontWeight: 700, color: '#8290a0', marginBottom: 5 };
+const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '8px 14px', borderRadius: 8, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
+const input: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '8px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none', background: '#fff' };
+const lbl: CSSProperties = { display: 'block', fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 5 };
 
 /* ---------------- マスタ管理（汎用） ---------------- */
 interface Field { key: string; label: string; type?: 'text' | 'number' | 'select' | 'color'; options?: string[]; width?: number; align?: 'right' }
@@ -164,12 +164,12 @@ function MasterPage({ variant, accent, label, tabs }: { variant: 'form' | 'sheet
         /* 旧 保守メニュー＞動作環境＞消費税動作環境（確認メモ #55）：消費税対応の切替。振替伝票形式・振替単一形式に税区分・税額の欄を出す。法人単位の設定 */
         <div data-tax-entry style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 22px', background: '#f8fafc', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
           <Toggle on={sess.taxEntry} onChange={(x) => { setSession({ taxEntry: x }); toast.show(x ? '振替伝票形式・振替単一形式に税区分・税額の欄を表示します' : '税区分・税額の欄を非表示にしました'); }} accent={accent} label="消費税対応（振替伝票形式・振替単一形式に税区分・税額の欄を表示する）" />
-          <span style={{ fontSize: 11.5, color: '#7a8794' }}>旧「消費税動作環境」。消費税の申告が必要な法人で有効にします。税率は下の税区分ごとに持ち、税額は 金額 × 税率 ÷（100 ＋ 税率）の切り捨てで計算します（手入力で変更可）。</span>
+          <span style={{ fontSize: 12, color: '#7a8794' }}>旧「消費税動作環境」。消費税の申告が必要な法人で有効にします。税率は下の税区分ごとに持ち、税額は 金額 × 税率 ÷（100 ＋ 税率）の切り捨てで計算します（手入力で変更可）。</span>
         </div>
       )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 22px', borderBottom: '1px solid #eef2f5' }}>
         <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="検索" autoComplete="off" style={{ ...input, width: 260 }} />
-        <span style={{ marginLeft: 'auto', fontSize: 12, color: '#8895a3' }}>{list.length} 件（無効 {rows.filter((r) => r._on !== '1').length}）</span>
+        <span style={{ marginLeft: 'auto', fontSize: 14, color: '#8895a3' }}>{list.length} 件（無効 {rows.filter((r) => r._on !== '1').length}）</span>
       </div>
       <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 330px)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -179,7 +179,7 @@ function MasterPage({ variant, accent, label, tabs }: { variant: 'form' | 'sheet
               <tr key={r._id} style={{ opacity: r._on === '1' ? 1 : 0.5 }}>
                 {cfg.fields.map((f) => <td key={f.key} style={f.align === 'right' ? NUM : TD}>{f.type === 'color' ? <span style={{ display: 'inline-block', width: 14, height: 14, borderRadius: 4, background: r[f.key], verticalAlign: 'middle' }} /> : f.type === 'number' && r[f.key] ? (f.key === 'rate' ? `${r[f.key]}%` : yen(Number(r[f.key]))) : r[f.key]}</td>)}
                 <td style={TD}><span onClick={() => setRows((rs) => rs.map((x) => (x._id === r._id ? { ...x, _on: x._on === '1' ? '0' : '1' } : x)))} role="switch" aria-checked={r._on === '1'} style={{ display: 'inline-block', width: 34, height: 18, borderRadius: 9, background: r._on === '1' ? accent : '#cfd8e0', position: 'relative', cursor: 'pointer' }}><span style={{ position: 'absolute', top: 2, left: r._on === '1' ? 18 : 2, width: 14, height: 14, borderRadius: '50%', background: '#fff', transition: 'left .15s' }} /></span></td>
-                <td style={{ ...TD, textAlign: 'right' }}><div style={{ display: 'inline-flex', gap: 6 }}><button type="button" className="btn-outline" onClick={() => setEdit({ ...r })} style={{ ...btn(), padding: '4px 10px', fontSize: 11.5 }}>編集</button><button type="button" className="btn-outline" onClick={() => { if (confirm('削除しますか？')) setRows((rs) => rs.filter((x) => x._id !== r._id)); }} style={{ ...btn('#c0392b'), padding: '4px 10px', fontSize: 11.5 }}>削除</button></div></td>
+                <td style={{ ...TD, textAlign: 'right' }}><div style={{ display: 'inline-flex', gap: 6 }}><button type="button" className="btn-outline" onClick={() => setEdit({ ...r })} style={{ ...btn(), padding: '4px 10px', fontSize: 12 }}>編集</button><button type="button" className="btn-outline" onClick={() => { if (confirm('削除しますか？')) setRows((rs) => rs.filter((x) => x._id !== r._id)); }} style={{ ...btn('#c0392b'), padding: '4px 10px', fontSize: 12 }}>削除</button></div></td>
               </tr>
             ))}
             {list.length === 0 && <tr><td colSpan={cfg.fields.length + 2} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>該当するデータがありません。</td></tr>}
@@ -189,20 +189,20 @@ function MasterPage({ variant, accent, label, tabs }: { variant: 'form' | 'sheet
       <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
       <Modal open={imp.open} onClose={() => setImp((i) => ({ ...i, open: false }))} width={720} title={`${cfg.title}のCSV取込`}>
         <div style={{ padding: '14px 22px 20px', display: 'grid', gap: 12 }}>
-          <div style={{ fontSize: 12.5, color: '#5b6773', lineHeight: 1.7 }}>1行目を見出し（{cfg.fields.map((f) => f.label).join('／')}／有効）として読み込みます。見出しがない場合はこの列順で取り込みます。文字コードは UTF-8（本番では Shift_JIS も対応）。</div>
+          <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.7 }}>1行目を見出し（{cfg.fields.map((f) => f.label).join('／')}／有効）として読み込みます。見出しがない場合はこの列順で取り込みます。文字コードは UTF-8（本番では Shift_JIS も対応）。</div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <input type="file" accept=".csv,text/csv" onChange={(e) => { const f = e.target.files?.[0]; if (f) readFile(f); e.target.value = ''; }} style={{ fontSize: 12.5, fontFamily: 'inherit' }} />
+            <input type="file" accept=".csv,text/csv" onChange={(e) => { const f = e.target.files?.[0]; if (f) readFile(f); e.target.value = ''; }} style={{ fontSize: 14, fontFamily: 'inherit' }} />
             <button type="button" className="btn-outline" onClick={sampleCsv} style={btn()}>サンプルCSVを読み込む</button>
-            {imp.name && <span style={{ fontSize: 12, color: '#7a8794' }}>{imp.name}　{imp.rows.length} 行{imp.byHeader ? '（見出し行あり）' : '（列順で対応付け）'}</span>}
+            {imp.name && <span style={{ fontSize: 14, color: '#7a8794' }}>{imp.name}　{imp.rows.length} 行{imp.byHeader ? '（見出し行あり）' : '（列順で対応付け）'}</span>}
           </div>
-          {imp.error && <div style={{ fontSize: 12.5, color: '#c0392b' }}>{imp.error}</div>}
+          {imp.error && <div style={{ fontSize: 14, color: '#c0392b' }}>{imp.error}</div>}
           {imp.rows.length > 0 && (
             <div style={{ border: '1px solid #e2e8ee', borderRadius: 8, overflow: 'auto', maxHeight: 300 }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead><tr>{cfg.fields.map((f) => <th key={f.key} style={{ ...TH, textAlign: f.align ?? 'left' }}>{f.label}</th>)}<th style={{ ...TH, width: 60 }}>有効</th></tr></thead>
                 <tbody>{imp.rows.slice(0, 50).map((r) => <tr key={r._id}>{cfg.fields.map((f) => <td key={f.key} style={f.align === 'right' ? NUM : TD}>{f.type === 'color' ? <span style={{ display: 'inline-block', width: 14, height: 14, borderRadius: 4, background: r[f.key], verticalAlign: 'middle' }} /> : r[f.key]}</td>)}<td style={TD}>{r._on === '1' ? '有効' : '無効'}</td></tr>)}</tbody>
               </table>
-              {imp.rows.length > 50 && <div style={{ padding: '6px 12px', fontSize: 11.5, color: '#9aa5b1' }}>…ほか {imp.rows.length - 50} 行</div>}
+              {imp.rows.length > 50 && <div style={{ padding: '6px 12px', fontSize: 12, color: '#9aa5b1' }}>…ほか {imp.rows.length - 50} 行</div>}
             </div>
           )}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
@@ -222,7 +222,7 @@ function MasterPage({ variant, accent, label, tabs }: { variant: 'form' | 'sheet
                   : <input className="field-input ring" value={edit[f.key] ?? ''} onChange={(e) => setEdit({ ...edit, [f.key]: f.type === 'number' ? e.target.value.replace(/[^0-9.]/g, '') : e.target.value })} inputMode={f.type === 'number' ? 'decimal' : undefined} style={{ ...input, textAlign: f.align }} />}
               </div>
             ))}
-            <label style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}><input type="checkbox" checked={edit._on === '1'} onChange={() => setEdit({ ...edit, _on: edit._on === '1' ? '0' : '1' })} />有効（入力時の候補に表示する）</label>
+            <label style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}><input type="checkbox" checked={edit._on === '1'} onChange={() => setEdit({ ...edit, _on: edit._on === '1' ? '0' : '1' })} />有効（入力時の候補に表示する）</label>
             <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
               <button type="button" onClick={() => setEdit(null)} style={btn()}>キャンセル</button>
               <button type="button" className="submit-btn" onClick={save} style={btn(accent, true)}>保存</button>
@@ -242,7 +242,7 @@ function OrgPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: strin
   const [tab, setTab] = useState('法人情報');
   const set = (k: keyof typeof f, v: string) => setF({ ...f, [k]: v });
   const card: CSSProperties = { border: '1px solid #e2e8ee', borderRadius: 12, overflow: 'hidden' };
-  const h: CSSProperties = { padding: '10px 14px', background: '#f6f8fa', fontSize: 12.5, fontWeight: 700, borderBottom: '1px solid #eef2f5' };
+  const h: CSSProperties = { padding: '10px 14px', background: '#f6f8fa', fontSize: 14, fontWeight: 700, borderBottom: '1px solid #eef2f5' };
   return (
     <Shell variant={variant} title="事業者" desc="法人の基本情報・会計期間・区分階層（事業区分／拠点区分／サービス区分／小サービス区分）・合算区分を管理します。" actions={<button type="button" className="submit-btn" onClick={() => toast.show('事業者情報を保存しました（プロトタイプ）')} style={btn(accent, true)}>保存</button>}>
       <ToastView msg={toast.msg} />
@@ -273,12 +273,12 @@ function OrgPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: strin
             </div>
           </div>
           <div style={card}>
-            <div style={{ ...h, display: 'flex', alignItems: 'center' }}>拠点区分 <button type="button" className="btn-outline" onClick={() => setSites([...sites, { code: String(sites.length + 1).padStart(2, '0'), name: '', kind: '保育所' }])} style={{ ...btn(), marginLeft: 'auto', padding: '4px 10px', fontSize: 11.5 }}>＋ 追加</button></div>
+            <div style={{ ...h, display: 'flex', alignItems: 'center' }}>拠点区分 <button type="button" className="btn-outline" onClick={() => setSites([...sites, { code: String(sites.length + 1).padStart(2, '0'), name: '', kind: '保育所' }])} style={{ ...btn(), marginLeft: 'auto', padding: '4px 10px', fontSize: 12 }}>＋ 追加</button></div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead><tr><th style={{ ...TH, width: 70 }}>コード</th><th style={TH}>拠点名</th><th style={{ ...TH, width: 140 }}>種別</th><th style={{ ...TH, width: 60 }} /></tr></thead>
-              <tbody>{sites.map((s, i) => <tr key={i}><td style={TD}>{s.code}</td><td style={TD}><input className="field-input" value={s.name} onChange={(e) => setSites(sites.map((x, k) => (k === i ? { ...x, name: e.target.value } : x)))} placeholder="拠点名" style={{ ...input, padding: '5px 8px' }} /></td><td style={TD}><select value={s.kind} onChange={(e) => setSites(sites.map((x, k) => (k === i ? { ...x, kind: e.target.value } : x)))} style={{ ...input, padding: '5px 8px' }}>{['法人本部', '保育所', '認定こども園', '子育て支援', 'その他'].map((o) => <option key={o}>{o}</option>)}</select></td><td style={TD}><button type="button" className="btn-outline" onClick={() => setSites(sites.filter((_, k) => k !== i))} style={{ ...btn('#c0392b'), padding: '3px 8px', fontSize: 11 }}>削除</button></td></tr>)}</tbody>
+              <tbody>{sites.map((s, i) => <tr key={i}><td style={TD}>{s.code}</td><td style={TD}><input className="field-input" value={s.name} onChange={(e) => setSites(sites.map((x, k) => (k === i ? { ...x, name: e.target.value } : x)))} placeholder="拠点名" style={{ ...input, padding: '5px 8px' }} /></td><td style={TD}><select value={s.kind} onChange={(e) => setSites(sites.map((x, k) => (k === i ? { ...x, kind: e.target.value } : x)))} style={{ ...input, padding: '5px 8px' }}>{['法人本部', '保育所', '認定こども園', '子育て支援', 'その他'].map((o) => <option key={o}>{o}</option>)}</select></td><td style={TD}><button type="button" className="btn-outline" onClick={() => setSites(sites.filter((_, k) => k !== i))} style={{ ...btn('#c0392b'), padding: '3px 8px', fontSize: 12 }}>削除</button></td></tr>)}</tbody>
             </table>
-            <div style={{ padding: '8px 14px', fontSize: 11.5, color: '#9aa5b1' }}>区分の階層と伝票入力区分の詳細は「区分階層・合算区分」タブで設定します。</div>
+            <div style={{ padding: '8px 14px', fontSize: 12, color: '#9aa5b1' }}>区分の階層と伝票入力区分の詳細は「区分階層・合算区分」タブで設定します。</div>
           </div>
         </div>
       </div>}
@@ -316,10 +316,10 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
     </>}>
       <ToastView msg={toast.msg} />
       <Modal open={importOpen} onClose={() => setImportOpen(false)} width={480} title="前年度決算から取込" strict>
-        <div style={{ padding: '16px 22px 18px', fontSize: 13, lineHeight: 1.8 }}>
+        <div style={{ padding: '16px 22px 18px', fontSize: 14, lineHeight: 1.8 }}>
           <div>前年度（令和7年度）の決算残高を貸借科目繰越残高に取り込みます。</div>
           <div style={{ color: '#c0392b', fontWeight: 700 }}>現在の入力値は上書きされます。</div>
-          <div style={{ fontSize: 12, color: '#7a8794', marginTop: 6 }}>対象：本部／チャイルド保育園の全拠点。取り込み後は貸借一致を確認し「OK」で確定してください。</div>
+          <div style={{ fontSize: 14, color: '#7a8794', marginTop: 6 }}>対象：本部／チャイルド保育園の全拠点。取り込み後は貸借一致を確認し「OK」で確定してください。</div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
             <button type="button" onClick={() => setImportOpen(false)} style={btn()}>キャンセル</button>
             <button type="button" className="submit-btn" onClick={importPrior} style={btn(accent, true)}>OK（取り込む）</button>
@@ -329,7 +329,7 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
       <Tabs items={['貸借科目繰越残高', '事業活動科目前年実績', '資金科目当期実績']} current={tab} onChange={setTab} accent={accent} />
       {tab !== '貸借科目繰越残高' && (
         <div style={{ padding: 22 }}>
-          <div style={{ fontSize: 12.5, color: '#5b6773', marginBottom: 10 }}>{tab === '事業活動科目前年実績' ? '事業活動計算書の前年度実績（前年度決算額）を登録します。年度更新をすると自動で設定されるため、通常は初年度のみ入力します。' : '期中から運用を開始した場合に、開始月までの資金収支計算書の実績（収入・支出）を登録します。'}</div>
+          <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 10 }}>{tab === '事業活動科目前年実績' ? '事業活動計算書の前年度実績（前年度決算額）を登録します。年度更新をすると自動で設定されるため、通常は初年度のみ入力します。' : '期中から運用を開始した場合に、開始月までの資金収支計算書の実績（収入・支出）を登録します。'}</div>
           <table style={{ width: '100%', borderCollapse: 'collapse', maxWidth: 720 }}>
             <thead><tr><th style={{ ...TH, width: 90 }}>コード</th><th style={TH}>科目名</th><th style={{ ...TH, width: 200, textAlign: 'right' }}>{tab === '事業活動科目前年実績' ? '借方' : '収入'}</th><th style={{ ...TH, width: 200, textAlign: 'right' }}>{tab === '事業活動科目前年実績' ? '貸方' : '支出'}</th></tr></thead>
             <tbody>
@@ -343,14 +343,14 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
       )}
       {tab === '貸借科目繰越残高' && <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 22px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#8290a0' }}>拠点</span>
-        {SITES.map((s, i) => <button key={s} type="button" className="chip" onClick={() => setSite(i)} style={{ padding: '5px 14px', borderRadius: 14, border: '1px solid ' + (site === i ? accent : '#d3dbe3'), background: site === i ? accent : '#fff', color: site === i ? '#fff' : '#5b6773', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{s}</button>)}
-        <span style={{ marginLeft: 'auto', fontSize: 12.5, padding: '4px 12px', borderRadius: 10, background: ok ? '#eaf5ef' : '#fdeee9', color: ok ? '#1f7a52' : '#c0392b', fontWeight: 700 }}>{ok ? '貸借一致' : `差額 ${yen(Math.abs(d - c))}（${d > c ? '借方' : '貸方'}が多い）`}</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>拠点</span>
+        {SITES.map((s, i) => <button key={s} type="button" className="chip" onClick={() => setSite(i)} style={{ padding: '5px 14px', borderRadius: 14, border: '1px solid ' + (site === i ? accent : '#d3dbe3'), background: site === i ? accent : '#fff', color: site === i ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{s}</button>)}
+        <span style={{ marginLeft: 'auto', fontSize: 14, padding: '4px 12px', borderRadius: 10, background: ok ? '#eaf5ef' : '#fdeee9', color: ok ? '#1f7a52' : '#c0392b', fontWeight: 700 }}>{ok ? '貸借一致' : `差額 ${yen(Math.abs(d - c))}（${d > c ? '借方' : '貸方'}が多い）`}</span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
         {(['借方', '貸方'] as const).map((side) => (
           <div key={side} style={{ borderRight: side === '借方' ? '1px solid #eef2f5' : 'none' }}>
-            <div style={{ padding: '9px 18px', background: side === '借方' ? '#eaf2fb' : '#fdeef3', color: side === '借方' ? '#2c5f9e' : '#b0426a', fontSize: 12.5, fontWeight: 700 }}>{side}（{side === '借方' ? '資産' : '負債・純資産'}）</div>
+            <div style={{ padding: '9px 18px', background: side === '借方' ? '#eaf2fb' : '#fdeef3', color: side === '借方' ? '#2c5f9e' : '#b0426a', fontSize: 14, fontWeight: 700 }}>{side}（{side === '借方' ? '資産' : '負債・純資産'}）</div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <tbody>
                 {ITEMS.map((it, i) => it.side === side && (
@@ -362,7 +362,7 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
           </div>
         ))}
       </div>
-      <div style={{ padding: '10px 22px 16px', fontSize: 11.5, color: '#9aa5b1' }}>※ 科目は主要なもののみ表示しています。確定後は前年仕訳の「繰越」として各元帳に反映されます。</div>
+      <div style={{ padding: '10px 22px 16px', fontSize: 12, color: '#9aa5b1' }}>※ 科目は主要なもののみ表示しています。確定後は前年仕訳の「繰越」として各元帳に反映されます。</div>
       </>}
     </Shell>
   );

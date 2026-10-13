@@ -22,11 +22,11 @@ export function CorpMenu({ accent, active, onSelect }: Props) {
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 'none' }}>
       {GROUPS.map((g) => (
         <div key={g.caption} data-corp-group={g.caption || '区分'} style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 2, background: '#f4f6f8', border: '1px solid #e2e8ee', borderRadius: 8, flex: 'none' }}>
-          <span style={{ fontSize: 9.5, fontWeight: 700, color: '#8290a0', padding: '0 4px', letterSpacing: '.02em', whiteSpace: 'nowrap', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }} title={g.caption || s.division}>{g.caption || divisionName}</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', padding: '0 4px', letterSpacing: '.02em', whiteSpace: 'nowrap', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }} title={g.caption || s.division}>{g.caption || divisionName}</span>
           {g.items.map((it) => {
             const on = active === it.target;
             return (
-              <button key={it.target} type="button" className="btn-outline" onClick={() => onSelect(it.target)} data-menu={it.target} title={it.title} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid ' + (on ? accent : '#d3dbe3'), background: on ? accent : '#fff', color: on ? '#fff' : '#3d4a56', fontSize: 11.5, fontWeight: 700, lineHeight: 1.3, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              <button key={it.target} type="button" className="btn-outline" onClick={() => onSelect(it.target)} data-menu={it.target} title={it.title} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid ' + (on ? accent : '#d3dbe3'), background: on ? accent : '#fff', color: on ? '#fff' : '#3d4a56', fontSize: 12, fontWeight: 700, lineHeight: 1.3, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                 {it.label}
               </button>
             );

@@ -72,7 +72,7 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
   const drawer = useLedgerDrawer(KEY[kind], kind);
   const openLedger = (month: string) => drawer.open({ account: target, month, kind, from: KEY[kind] });
   const picked = (month: string) => !drawer.collapsed && !!drawer.target && drawer.target.account === target && drawer.target.month === month;
-  const fieldBtn: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, width: 260, boxSizing: 'border-box', padding: '7px 10px', background: '#fff', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left', color: 'inherit' };
+  const fieldBtn: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, width: 260, boxSizing: 'border-box', padding: '7px 10px', background: '#fff', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left', color: 'inherit' };
 
   return (
     <>
@@ -86,7 +86,7 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
       tools={[{ label: isVendor ? '業者検索' : '科目検索', onClick: () => assist.open('target', isVendor ? 'vendor' : 'account') }, { label: 'グラフ作成', onClick: () => setGraphOpen(true), primary: true }]}
       period={
         <>
-          <span style={{ fontSize: 12.5, color: '#48565f' }}><b style={{ color: isPrev ? '#b7791f' : '#22303c' }}>{yearLabel}</b>（4月〜3月）</span>
+          <span style={{ fontSize: 14, color: '#48565f' }}><b style={{ color: isPrev ? '#b7791f' : '#22303c' }}>{yearLabel}</b>（4月〜3月）</span>
         </>
       }
       switches={
@@ -117,7 +117,7 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
               assist.close();
             }}
           />
-          <span style={{ marginLeft: 'auto', fontSize: 12, color: '#7a8794' }}>単位：{view.unit}</span>
+          <span style={{ marginLeft: 'auto', fontSize: 14, color: '#7a8794' }}>単位：{view.unit}</span>
         </>
       }
     >
@@ -160,8 +160,8 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
               return (
                 <tr key={r.m} data-month={r.m} onDoubleClick={() => { if (canOpen) openLedger(r.m); }} title={canOpen ? 'ダブルクリックでこの月の元帳を開く' : undefined} data-picked={picked(r.m) || undefined} style={{ background: picked(r.m) ? '#eaf5ef' : current ? '#fff8d6' : 'transparent', boxShadow: picked(r.m) ? `inset 3px 0 0 ${accent}` : undefined, cursor: canOpen ? 'pointer' : 'default' }}>
                   <td style={{ ...TD, fontWeight: 700, whiteSpace: 'nowrap' }}>
-                    {r.m}月{current && <span style={{ marginLeft: 6, fontSize: 10, color: '#b7791f' }}>当月</span>}
-                    {canOpen && <button type="button" className="btn-outline" data-action="元帳" onClick={(e) => { e.stopPropagation(); openLedger(r.m); }} style={{ marginLeft: 10, padding: '1px 8px', borderRadius: 6, border: '1px solid #dde4ea', background: '#fff', color: accent, fontSize: 10.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>元帳 ›</button>}
+                    {r.m}月{current && <span style={{ marginLeft: 6, fontSize: 12, color: '#b7791f' }}>当月</span>}
+                    {canOpen && <button type="button" className="btn-outline" data-action="元帳" onClick={(e) => { e.stopPropagation(); openLedger(r.m); }} style={{ marginLeft: 10, padding: '1px 8px', borderRadius: 6, border: '1px solid #dde4ea', background: '#fff', color: accent, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>元帳 ›</button>}
                   </td>
                   {isVendor ? (
                     <>
@@ -190,9 +190,9 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
       </div>
 
       {/* グラフ作成 */}
-      <Modal open={graphOpen} onClose={() => setGraphOpen(false)} width={860} title={<>{title} グラフ <span style={{ fontSize: 12.5, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>{target || '（未指定）'}　{yearLabel}</span></>}>
+      <Modal open={graphOpen} onClose={() => setGraphOpen(false)} width={860} title={<>{title} グラフ <span style={{ fontSize: 14, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>{target || '（未指定）'}　{yearLabel}</span></>}>
         <div style={{ padding: '12px 22px 18px' }}>
-          <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12, fontSize: 12.5 }}>
+          <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12, fontSize: 14 }}>
             <span style={{ display: 'flex', gap: 4, alignItems: 'center' }}><span style={LABEL}>表示</span>{(['月次', '累計'] as const).map((o) => <button key={o} type="button" onClick={() => setMode(o)} style={btn(mode === o ? accent : '#5b6773', mode === o, true)}>{o}</button>)}</span>
             <span style={{ display: 'flex', gap: 4, alignItems: 'center' }}><span style={LABEL}>比較</span>{(['なし', ...(kind === 'account' ? [] : ['予算' as const]), '前年度'] as const).map((o) => <button key={o} type="button" onClick={() => setCompare(o)} style={btn(compare === o ? accent : '#5b6773', compare === o, true)}>{o}</button>)}</span>
             <span style={{ display: 'flex', gap: 4, alignItems: 'center' }}><span style={LABEL}>種類</span>{(['棒', '折れ線'] as const).map((o) => <button key={o} type="button" onClick={() => setChart(o)} style={btn(chart === o ? accent : '#5b6773', chart === o, true)}>{o}</button>)}</span>
@@ -205,7 +205,7 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
             line={chart === '折れ線'}
             onPick={(i) => { if (i <= done && !isPrev && target) { setGraphOpen(false); openLedger(months[i]); } }}
           />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10, fontSize: 11.5, color: '#9aa5b1' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10, fontSize: 12, color: '#9aa5b1' }}>
             <span>{isPrev ? '前年度の実績です（元帳は当年度のみ開けます）。' : '9月以降は未到来のため実績は0です。棒（または折れ線）をクリックするとその月の元帳を開きます。'}</span>
             <button type="button" onClick={() => setGraphOpen(false)} style={{ ...btn(accent, true, true), marginLeft: 'auto' }}>閉じる</button>
           </div>
@@ -237,13 +237,13 @@ function TrendChart({ labels, primary, secondary, doneIndex, line, onPick }: { l
   const fmt = (v: number) => (Math.abs(v) >= 10000 ? (v / 10000).toLocaleString('ja-JP', { maximumFractionDigits: 1 }) + '万' : v.toLocaleString('ja-JP'));
   return (
     <div style={{ background: '#fff', border: '1px solid #dde4ea', borderRadius: 12, padding: '10px 12px 4px' }}>
-      <div style={{ display: 'flex', gap: 16, fontSize: 12, marginBottom: 4 }}>
+      <div style={{ display: 'flex', gap: 16, fontSize: 14, marginBottom: 4 }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 14, height: line ? 3 : 10, background: primary.color, borderRadius: 2 }} />{primary.name}</span>
         {secondary && <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 14, height: 3, background: secondary.color, borderRadius: 2 }} />{secondary.name}</span>}
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
-        {ticks.map((t) => <g key={t}><line x1={L} x2={W - R} y1={y(t)} y2={y(t)} stroke={t === 0 ? '#9aa5b1' : '#eef2f5'} /><text x={L - 8} y={y(t) + 4} textAnchor="end" fontSize={11} fill="#8290a0">{fmt(t)}</text></g>)}
-        {labels.map((l, i) => <text key={l} x={x(i)} y={H - B + 18} textAnchor="middle" fontSize={11.5} fill={i > doneIndex ? '#b3bcc5' : '#48565f'}>{l}</text>)}
+        {ticks.map((t) => <g key={t}><line x1={L} x2={W - R} y1={y(t)} y2={y(t)} stroke={t === 0 ? '#9aa5b1' : '#eef2f5'} /><text x={L - 8} y={y(t) + 4} textAnchor="end" fontSize={12} fill="#8290a0">{fmt(t)}</text></g>)}
+        {labels.map((l, i) => <text key={l} x={x(i)} y={H - B + 18} textAnchor="middle" fontSize={12} fill={i > doneIndex ? '#b3bcc5' : '#48565f'}>{l}</text>)}
         {!line && primary.values.map((v, i) => <rect key={i} x={x(i) - bw / 2} y={Math.min(y(v), y(0))} width={bw} height={Math.abs(y(v) - y(0))} rx={3} fill={primary.color} opacity={i > doneIndex ? 0.25 : 0.85} onClick={() => onPick(i)} style={{ cursor: i > doneIndex ? 'default' : 'pointer' }}><title>{labels[i]} {primary.name}：{v.toLocaleString('ja-JP')}</title></rect>)}
         {line && <path d={path(primary.values)} fill="none" stroke={primary.color} strokeWidth={2.5} />}
         {line && primary.values.map((v, i) => <circle key={i} cx={x(i)} cy={y(v)} r={4} fill={primary.color} opacity={i > doneIndex ? 0.3 : 1} onClick={() => onPick(i)} style={{ cursor: i > doneIndex ? 'default' : 'pointer' }}><title>{labels[i]} {primary.name}：{v.toLocaleString('ja-JP')}</title></circle>)}

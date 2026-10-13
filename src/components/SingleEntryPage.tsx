@@ -250,7 +250,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
     padding: '9px 10px',
     border: '1px solid transparent',
     borderRadius: 4,
-    fontSize: 13.5,
+    fontSize: 14,
     fontFamily: 'inherit',
     outline: 'none',
     color: '#22303c',
@@ -264,7 +264,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
     border: '1px solid #d3dbe3',
     background: '#fff',
     color,
-    fontSize: 11.5,
+    fontSize: 12,
     fontWeight: 700,
     fontFamily: 'inherit',
     cursor: 'pointer',
@@ -301,9 +301,9 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
         {delTarget && (
           <>
             次の伝票を削除します。<b>削除した伝票は元に戻せません。</b>
-            <div style={{ marginTop: 8, padding: '8px 12px', background: '#f6f8fa', border: '1px solid #e2e8ee', borderRadius: 8, fontSize: 13 }}>
+            <div style={{ marginTop: 8, padding: '8px 12px', background: '#f6f8fa', border: '1px solid #e2e8ee', borderRadius: 8, fontSize: 14 }}>
               {delTarget.date}　{delTarget.kari} ／ {delTarget.kashi}　<b>{delTarget.amount.toLocaleString('ja-JP')}円</b>
-              {delTarget.tekiyo && <div style={{ color: '#7a8794', fontSize: 12 }}>{delTarget.tekiyo}</div>}
+              {delTarget.tekiyo && <div style={{ color: '#7a8794', fontSize: 14 }}>{delTarget.tekiyo}</div>}
             </div>
           </>
         )}
@@ -333,15 +333,15 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
           <PaperTitle
             title="単一式入力"
             division={`${divisionName} 拠点区分`}
-            badge={<span style={{ fontSize: 11.5, fontWeight: 700, color: accent, whiteSpace: 'nowrap' }}>単一形式（1行＝1伝票）</span>}
-            right={<span style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 12.5, color: '#68757f', whiteSpace: 'nowrap' }}><span>会計期間　<b style={{ color: '#22303c', fontWeight: 600 }}>令和8年度</b></span>{tools.templateButton}</span>}
+            badge={<span style={{ fontSize: 12, fontWeight: 700, color: accent, whiteSpace: 'nowrap' }}>単一形式（1行＝1伝票）</span>}
+            right={<span style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 14, color: '#68757f', whiteSpace: 'nowrap' }}><span>会計期間　<b style={{ color: '#22303c', fontWeight: 600 }}>令和8年度</b></span>{tools.templateButton}</span>}
           />
 
           {/* 会計月タブ */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '4px 0 10px' }}>
-            <span style={{ fontSize: 11, color: PAPER.ink, fontWeight: 700, flex: 'none' }}>表示月</span>
+            <span style={{ fontSize: 12, color: PAPER.ink, fontWeight: 700, flex: 'none' }}>表示月</span>
             <FiscalMonthTabs current={v.monthFilter} accent={accent} onSelect={v.setMonth} withAll />
-            <span style={{ marginLeft: 'auto', fontSize: 12, color: '#8895a3', flex: 'none' }}>
+            <span style={{ marginLeft: 'auto', fontSize: 14, color: '#8895a3', flex: 'none' }}>
               <b style={{ color: '#22303c', fontWeight: 700 }}>{rows.length}</b> 件
             </span>
           </div>
@@ -361,38 +361,38 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
           </div>
           <div id="journal-scroll" className="pp-table" style={{ gridTemplateColumns: '1fr', overflowY: 'auto', minHeight: 150, maxHeight: 'calc(100vh - 720px)', alignContent: 'start' }}>
             {rows.length === 0 && (
-              <div className="pp-cell pp-center" style={{ padding: '40px 22px', color: '#9aa5b1', fontSize: 13 }}>この月の伝票はありません。下の入力行から登録してください。</div>
+              <div className="pp-cell pp-center" style={{ padding: '40px 22px', color: '#9aa5b1', fontSize: 14 }}>この月の伝票はありません。下の入力行から登録してください。</div>
             )}
             {rows.map((e, i) => {
               const isNew = e.id === v.lastAdded;
               const mt = meta[e.id];
               const bg = isNew ? '#fff2c9' : undefined;
-              const c: CSSProperties = { padding: '7px 8px', fontSize: 12.5, background: bg, animation: isNew ? 'rowin 1.8s ease' : 'none' };
+              const c: CSSProperties = { padding: '7px 8px', fontSize: 14, background: bg, animation: isNew ? 'rowin 1.8s ease' : 'none' };
               return (
                 <div key={e.id} className="pp-row" style={{ gridTemplateColumns: COLS }}>
                   <div className="pp-cell pp-num" style={{ ...c, color: '#8895a3' }}>{String(i + 1).padStart(3, '0')}</div>
                   <div className="pp-cell pp-num" style={{ ...c, color: '#48565f' }}>
                     {e.date}
-                    <span style={{ color: '#9aa5b1', fontSize: 11 }}>（{weekdayOfDate(e.date) || '－'}）</span>
+                    <span style={{ color: '#9aa5b1', fontSize: 12 }}>（{weekdayOfDate(e.date) || '－'}）</span>
                   </div>
                   <div className="pp-cell" style={{ ...c, gap: 5 }}>
-                    <span style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: e.shohyo ? '#eaf5ef' : '#f1f4f6', color: e.shohyo ? '#1f7a52' : '#9aa5b1' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: e.shohyo ? '#eaf5ef' : '#f1f4f6', color: e.shohyo ? '#1f7a52' : '#9aa5b1' }}>
                       {e.shohyo ? '有' : '無'}
                     </span>
-                    {mt?.check && <span title="チェック" style={{ fontSize: 11, fontWeight: 900, color: '#22303c' }}>✓</span>}
+                    {mt?.check && <span title="チェック" style={{ fontSize: 12, fontWeight: 900, color: '#22303c' }}>✓</span>}
                     {mt?.fusen && <span title={`付箋：${mt.fusen}`} style={{ width: 10, height: 10, borderRadius: 2, background: FUSEN_COLORS[mt.fusen], display: 'inline-block' }} />}
                   </div>
                   <div className="pp-cell pp-col" style={c}>
                     <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.kari}</div>
-                    <div style={{ fontSize: 10.5, color: '#b3bcc5' }}>資金科目：自動</div>
+                    <div style={{ fontSize: 12, color: '#b3bcc5' }}>資金科目：自動</div>
                   </div>
                   <div className="pp-cell pp-col" style={c}>
                     <div style={{ color: '#48565f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.kashi}</div>
-                    <div style={{ fontSize: 10.5, color: '#b3bcc5', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mt?.aite ? `内部取引　相手：${mt.aite}` : '資金科目：自動'}</div>
+                    <div style={{ fontSize: 12, color: '#b3bcc5', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mt?.aite ? `内部取引　相手：${mt.aite}` : '資金科目：自動'}</div>
                   </div>
                   <div className="pp-cell pp-col" style={c}>
                     <div style={{ color: '#48565f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.tekiyo || '—'}</div>
-                    <div style={{ fontSize: 10.5, color: '#9aa5b1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: 12, color: '#9aa5b1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {e.gyosha || '業者なし'}
                       {e.cheque ? `　小切手 ${e.cheque}` : ''}
                     </div>
@@ -409,7 +409,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
 
           {/* 入力行（紙の単一式入力の配置：上に サービス区分、下に 4段の項目） */}
           <div style={{ display: 'flex', alignItems: 'stretch', gap: 12, margin: '14px 0 8px', flexWrap: 'wrap' }}>
-            <span style={{ alignSelf: 'center', fontSize: 12.5, color: PAPER.ink, fontWeight: 700, whiteSpace: 'nowrap' }}>令和 <b className="pp-num" style={{ padding: '0 3px' }}>8</b> 年　入力中の伝票</span>
+            <span style={{ alignSelf: 'center', fontSize: 14, color: PAPER.ink, fontWeight: 700, whiteSpace: 'nowrap' }}>令和 <b className="pp-num" style={{ padding: '0 3px' }}>8</b> 年　入力中の伝票</span>
             <div className="ef-field" style={{ display: 'flex', width: 250 }}>
               <PaperBox label="サービス区分" grow>
                 <ComboField id="se-service" kind="service" value={f.service} onChange={(x) => v.setField('service', x)} onCommit={() => focusId('se-month')} placeholder="コード・名称で指定" dropUp disabled={ro} padY={6} />
@@ -427,9 +427,9 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
               </PaperBox>
             </div>
             {queue && (
-              <div style={{ alignSelf: 'center', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 8, background: '#eef4fb', border: '1px solid #c9dbf0', color: '#2c5f9e', fontSize: 12.5, fontWeight: 700 }}>
+              <div style={{ alignSelf: 'center', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 8, background: '#eef4fb', border: '1px solid #c9dbf0', color: '#2c5f9e', fontSize: 14, fontWeight: 700 }}>
                 連続定型「{queue.name}」 {queue.i + 1}／{queue.lines.length} 枚目
-                <button type="button" className="ef-act" onClick={() => { setQueue(null); toast.show('連続定型を終了しました（入力中の内容は残っています）'); }} style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #c9dbf0', background: '#fff', color: '#2c5f9e', fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>終了</button>
+                <button type="button" className="ef-act" onClick={() => { setQueue(null); toast.show('連続定型を終了しました（入力中の内容は残っています）'); }} style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #c9dbf0', background: '#fff', color: '#2c5f9e', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>終了</button>
               </div>
             )}
             <div style={{ marginLeft: 'auto', alignSelf: 'center' }}>
@@ -448,12 +448,12 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
                 {lab('取引区分', undefined, '科目から自動判定')}
               </div>
               <div className="pp-row" style={{ gridTemplateColumns: PCOLS }}>
-                <div className="pp-cell" style={valCell}><span className="pp-ro" style={{ fontSize: 12 }}>自動採番<small>自動</small></span></div>
+                <div className="pp-cell" style={valCell}><span className="pp-ro" style={{ fontSize: 14 }}>自動採番<small>自動</small></span></div>
                 <div className="pp-cell ef-field" style={{ ...valCell, gridColumn: 'span 2', gap: 3 }}>
                   <input id="se-month" className="ef-input pp-input" aria-label="月" disabled={ro} value={f.month} onChange={(e) => v.setField('month', e.target.value)} onKeyDown={onEnter(() => focusId('se-day'))} inputMode="numeric" style={dateInput} />
                   <span style={{ color: '#9aa5b1' }}>/</span>
                   <input id="se-day" className="ef-input pp-input" aria-label="日" disabled={ro} value={f.day} onChange={(e) => v.setField('day', e.target.value)} onKeyDown={onEnter(() => focusId('se-kari'))} inputMode="numeric" style={dateInput} />
-                  <span title="曜日は日付から自動で表示します" style={{ fontSize: 12.5, color: wd ? '#48565f' : '#a3adb8', minWidth: 30, textAlign: 'center' }}>（{wd || '－'}）</span>
+                  <span title="曜日は日付から自動で表示します" style={{ fontSize: 14, color: wd ? '#48565f' : '#a3adb8', minWidth: 30, textAlign: 'center' }}>（{wd || '－'}）</span>
                 </div>
                 <div className="pp-cell ef-field" style={valCell}>
                   <ComboField id="se-kari" kind="account" value={f.kariKamoku} onChange={(x) => v.setField('kariKamoku', x)} onCommit={() => focusId('se-kashi')} placeholder="コード・名称・フリガナ" dropUp listWidth={400} disabled={ro} invalid={fieldState(issues, 'kari', 'pair')} message={fieldMessage(issues, 'kari')} />
@@ -461,7 +461,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
                 <div className="pp-cell ef-field" style={valCell}>
                   <ComboField id="se-kashi" kind="account" value={f.kashiKamoku} onChange={(x) => v.setField('kashiKamoku', x)} onCommit={afterKashi} placeholder="コード・名称・フリガナ" dropUp listWidth={400} disabled={ro} invalid={fieldState(issues, 'kashi', 'pair')} message={fieldMessage(issues, 'kashi', 'pair')} />
                 </div>
-                <div className="pp-cell" data-torihiki-cell style={valCell}><span className="pp-ro pp-ro-fill" style={{ fontSize: 12, fontWeight: 700, color: blocked ? '#c0392b' : f.kariKamoku && f.kashiKamoku ? '#3d4a56' : '#a3adb8' }}>{blocked ? '登録できません' : f.kariKamoku && f.kashiKamoku ? judgeTorihiki(f.kariKamoku, f.kashiKamoku, fundMode === '強制資金').kind : '－'}</span></div>
+                <div className="pp-cell" data-torihiki-cell style={valCell}><span className="pp-ro pp-ro-fill" style={{ fontSize: 14, fontWeight: 700, color: blocked ? '#c0392b' : f.kariKamoku && f.kashiKamoku ? '#3d4a56' : '#a3adb8' }}>{blocked ? '登録できません' : f.kariKamoku && f.kashiKamoku ? judgeTorihiki(f.kariKamoku, f.kashiKamoku, fundMode === '強制資金').kind : '－'}</span></div>
               </div>
               {/* 2段目 */}
               <div className="pp-row" style={{ gridTemplateColumns: PCOLS }}>
@@ -473,7 +473,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
                 {lab('小切手No')}
               </div>
               <div className="pp-row" style={{ gridTemplateColumns: PCOLS }}>
-                <div className="pp-cell pp-num" style={valCell}><span className="pp-ro" style={{ fontSize: 12 }}>自動</span></div>
+                <div className="pp-cell pp-num" style={valCell}><span className="pp-ro" style={{ fontSize: 14 }}>自動</span></div>
                 <div className="pp-cell" style={valCell}>
                   {tools.viewOnly ? <span className="pp-ro pp-ro-s">{flags.shohyo ? '有' : '無'}</span> : <PaperToggle on={flags.shohyo} onLabel="有" offLabel="無" disabled={ro} title="証憑 有／無" onChange={(x) => setFlags((s) => ({ ...s, shohyo: x }))} />}
                 </div>
@@ -486,7 +486,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
                   {showCheque ? (
                     <input id="se-cheque" className="ef-input pp-input" disabled={ro} value={cheque} onChange={(e) => setCheque(e.target.value)} onKeyDown={onEnter(() => focusId('se-amount'))} placeholder="任意" autoComplete="off" style={textInput} />
                   ) : (
-                    <span className="pp-ro pp-ro-fill" style={{ fontSize: 11, color: '#9aa5b1' }}>—（入力の変更で表示）</span>
+                    <span className="pp-ro pp-ro-fill" style={{ fontSize: 12, color: '#9aa5b1' }}>—（入力の変更で表示）</span>
                   )}
                 </div>
               </div>
@@ -498,7 +498,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
                 {lab('')}
               </div>
               <div className="pp-row" style={{ gridTemplateColumns: PCOLS }}>
-                <div className="pp-cell" style={{ ...valCell, gridColumn: 'span 3' }}><span className="pp-ro pp-ro-fill" style={{ fontSize: 11.5, fontWeight: issues.length ? 700 : 400, color: issues.length ? '#7a5600' : '#8290a0' }}>{issues.length ? `${issues.length} 件（下に表示）` : '問題なし'}</span></div>
+                <div className="pp-cell" style={{ ...valCell, gridColumn: 'span 3' }}><span className="pp-ro pp-ro-fill" style={{ fontSize: 12, fontWeight: issues.length ? 700 : 400, color: issues.length ? '#7a5600' : '#8290a0' }}>{issues.length ? `${issues.length} 件（下に表示）` : '問題なし'}</span></div>
                 <div className="pp-cell pp-auto" style={{ ...valCell, minHeight: 36 }}><div style={{ width: '100%', marginTop: -11 }}><BudgetHintLive account={f.kariKamoku} threshold={budgetTh} onOpen={() => setGraphAcct(f.kariKamoku)} /></div></div>
                 <div className="pp-cell pp-auto" style={{ ...valCell, minHeight: 36 }}><div style={{ width: '100%', marginTop: -11 }}><BudgetHintLive account={f.kashiKamoku} threshold={budgetTh} onOpen={() => setGraphAcct(f.kashiKamoku)} /></div></div>
                 <div className="pp-cell pp-auto" style={valCell} />
@@ -535,11 +535,11 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10 }}>
-            <span style={{ fontSize: 11.5, color: '#7a8794', minWidth: 0 }}>Enter：{ENTER_ORDER.split('。')[0]}。金額で Enter → 登録</span>
+            <span style={{ fontSize: 12, color: '#7a8794', minWidth: 0 }}>Enter：{ENTER_ORDER.split('。')[0]}。金額で Enter → 登録</span>
             <span style={{ marginLeft: 'auto', flex: 'none' }}>{tools.submitButton}</span>
           </div>
           {/* 未入力などのメッセージ（科目の組み合わせのエラーは各入力欄の直下、確認はモーダルで表示） */}
-          {v.err && <div role="alert" style={{ marginTop: 8, color: '#c0392b', fontSize: 12.5, fontWeight: 600 }}>{v.err}</div>}
+          {v.err && <div role="alert" style={{ marginTop: 8, color: '#c0392b', fontSize: 14, fontWeight: 600 }}>{v.err}</div>}
         </div>
 
         {/* 機能ボタン（入力補助／参照） */}

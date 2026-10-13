@@ -265,7 +265,7 @@ export function FlowMapPage() {
     const dx = Math.max(40, Math.abs(tx - sx) / 2) * (leftward ? -1 : 1);
     return { d: `M${sx},${ay} C${sx + dx},${ay} ${tx - dx},${by} ${tx},${by}`, mx: (sx + tx) / 2, my: (ay + by) / 2 - 6 };
   };
-  const btn: CSSProperties = { padding: '6px 10px', border: '1px solid #cfd8e0', borderRadius: 8, background: '#fff', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', color: '#3d4a56' };
+  const btn: CSSProperties = { padding: '6px 10px', border: '1px solid #cfd8e0', borderRadius: 8, background: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', color: '#3d4a56' };
   const counts = { page: NODES.filter((n) => n.kind === 'page').length, other: NODES.filter((n) => n.kind !== 'page').length };
 
   return (
@@ -273,17 +273,17 @@ export function FlowMapPage() {
       {/* ツールバー */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', background: '#fff', borderBottom: '1px solid #dde4ea', flexWrap: 'wrap' }}>
         <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16 }}>画面遷移図</div>
-        <span style={{ fontSize: 11.5, color: '#7a8794' }}>Web チャッピー プロトタイプ　ページ {counts.page}／ダイアログ等 {counts.other}　ドラッグで移動・ホイールで拡大縮小・クリックで画面を開く</span>
+        <span style={{ fontSize: 12, color: '#7a8794' }}>Web チャッピー プロトタイプ　ページ {counts.page}／ダイアログ等 {counts.other}　ドラッグで移動・ホイールで拡大縮小・クリックで画面を開く</span>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           {(Object.keys(KIND_LABEL) as Kind[]).map((k) => (
-            <label key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, color: '#48565f', padding: '3px 8px', borderRadius: 8, ...KIND_STYLE[k], cursor: 'pointer' }}>
+            <label key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#48565f', padding: '3px 8px', borderRadius: 8, ...KIND_STYLE[k], cursor: 'pointer' }}>
               <input type="checkbox" checked={kinds[k]} onChange={(e) => setKinds({ ...kinds, [k]: e.target.checked })} />{KIND_LABEL[k]}
             </label>
           ))}
-          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, color: '#48565f' }}><input type="checkbox" checked={showWeak} onChange={(e) => setShowWeak(e.target.checked)} />細い矢印（補助的な遷移）も表示</label>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#48565f' }}><input type="checkbox" checked={showWeak} onChange={(e) => setShowWeak(e.target.checked)} />細い矢印（補助的な遷移）も表示</label>
           <span style={{ width: 1, height: 20, background: '#e2e8ee' }} />
           <button type="button" onClick={() => zoomAt(0.8)} style={btn}>－</button>
-          <span style={{ fontSize: 12, width: 44, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{Math.round(view.k * 100)}%</span>
+          <span style={{ fontSize: 14, width: 44, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{Math.round(view.k * 100)}%</span>
           <button type="button" onClick={() => zoomAt(1.25)} style={btn}>＋</button>
           <button type="button" onClick={fit} style={btn}>全体</button>
           <button type="button" onClick={() => setView({ x: 20, y: 20, k: 1 })} style={btn}>100%</button>
@@ -306,8 +306,8 @@ export function FlowMapPage() {
           {/* フレーム（分類） */}
           {frames.map((f) => (
             <div key={f.group.key} style={{ position: 'absolute', left: f.x, top: f.y, width: f.w, height: f.h, border: `1.5px solid ${f.group.color}33`, background: '#f7f9fb', borderRadius: 14 }}>
-              <div style={{ position: 'absolute', left: 14, top: -14, display: 'flex', alignItems: 'baseline', gap: 8, padding: '3px 10px', background: f.group.color, color: '#fff', borderRadius: 8, fontSize: 13, fontWeight: 800, whiteSpace: 'nowrap' }}>
-                {f.group.title}{f.group.note && <span style={{ fontSize: 10.5, fontWeight: 500, opacity: 0.9 }}>{f.group.note}</span>}
+              <div style={{ position: 'absolute', left: 14, top: -14, display: 'flex', alignItems: 'baseline', gap: 8, padding: '3px 10px', background: f.group.color, color: '#fff', borderRadius: 8, fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap' }}>
+                {f.group.title}{f.group.note && <span style={{ fontSize: 12, fontWeight: 500, opacity: 0.9 }}>{f.group.note}</span>}
               </div>
             </div>
           ))}
@@ -327,7 +327,7 @@ export function FlowMapPage() {
                   {e.label && (isHot || !hover) && (!e.weak || isHot || view.k > 0.8) && (
                     <g>
                       <rect x={p.mx - e.label.length * 5.6 - 5} y={p.my - 9} width={e.label.length * 11.2 + 10} height={17} rx={4} fill="#fff" stroke={isHot ? '#1f7a52' : '#dde4ea'} />
-                      <text x={p.mx} y={p.my + 3.5} textAnchor="middle" fontSize={11} fill={isHot ? '#1f7a52' : '#5b6773'} fontWeight={isHot ? 700 : 500}>{e.label}</text>
+                      <text x={p.mx} y={p.my + 3.5} textAnchor="middle" fontSize={12} fill={isHot ? '#1f7a52' : '#5b6773'} fontWeight={isHot ? 700 : 500}>{e.label}</text>
                     </g>
                   )}
                 </g>
@@ -343,19 +343,19 @@ export function FlowMapPage() {
               <div key={n.id} data-node={n.id} onMouseEnter={() => setHover(n.id)} onMouseLeave={() => setHover(null)} onClick={() => openNode(n)} title={(n.note ? n.note + '　' : '') + (n.open ? `クリックで「${displayName(n.open)}」を開く` : n.url ? 'クリックで開く' : '')}
                 style={{ position: 'absolute', left: p.x, top: p.y, width: p.w, height: p.h, cursor: n.open || n.url ? 'pointer' : 'default', opacity: dim ? 0.3 : 1, transition: 'opacity .12s' }}>
                 {/* Figma のアートボード名のように枠の上に名前 */}
-                <div style={{ position: 'absolute', left: 0, top: -17, fontSize: 11, fontWeight: 700, color: hover === n.id ? '#1f7a52' : '#5b6773', whiteSpace: 'nowrap', maxWidth: p.w + 60, overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.label}</div>
+                <div style={{ position: 'absolute', left: 0, top: -17, fontSize: 12, fontWeight: 700, color: hover === n.id ? '#1f7a52' : '#5b6773', whiteSpace: 'nowrap', maxWidth: p.w + 60, overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.label}</div>
                 <div style={{ width: '100%', height: '100%', boxSizing: 'border-box', borderRadius: 6, boxShadow: hover === n.id ? '0 0 0 2px #1f7a52, 0 8px 20px rgba(30,50,70,.18)' : '0 2px 6px rgba(30,50,70,.08)', overflow: 'hidden', ...KIND_STYLE[n.kind] }}>
                   {isPage ? (
                     <>
                       <div style={{ height: 10, background: '#dfe6ec', borderBottom: '1px solid #cfd8e0' }} />
                       <div style={{ display: 'flex', gap: 3, padding: '4px 6px' }}>{[0, 1, 2, 3].map((i) => <span key={i} style={{ width: 22, height: 4, borderRadius: 2, background: i === 0 ? '#1f7a52' : '#cfd8e0' }} />)}</div>
                       <div style={{ margin: '2px 6px', height: 36, borderRadius: 3, background: '#f1f4f6', border: '1px solid #e2e8ee', padding: 4, display: 'grid', gap: 3 }}>{[0, 1, 2].map((i) => <span key={i} style={{ height: 4, borderRadius: 2, background: '#dfe6ec', width: `${90 - i * 20}%` }} />)}</div>
-                      <div style={{ position: 'absolute', right: 6, bottom: 5, fontSize: 9, color: '#9aa5b1' }}>{KIND_LABEL[n.kind]}</div>
+                      <div style={{ position: 'absolute', right: 6, bottom: 5, fontSize: 12, color: '#9aa5b1' }}>{KIND_LABEL[n.kind]}</div>
                     </>
                   ) : (
                     <>
-                      <div style={{ padding: '6px 8px', fontSize: 10.5, fontWeight: 700, color: '#48565f', lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{n.note ?? n.label}</div>
-                      <div style={{ position: 'absolute', right: 6, bottom: 4, fontSize: 9, color: '#9aa5b1' }}>{KIND_LABEL[n.kind]}</div>
+                      <div style={{ padding: '6px 8px', fontSize: 12, fontWeight: 700, color: '#48565f', lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{n.note ?? n.label}</div>
+                      <div style={{ position: 'absolute', right: 6, bottom: 4, fontSize: 12, color: '#9aa5b1' }}>{KIND_LABEL[n.kind]}</div>
                     </>
                   )}
                 </div>
@@ -364,13 +364,13 @@ export function FlowMapPage() {
           })}
         </div>
         {/* 凡例 */}
-        <div style={{ position: 'absolute', left: 14, bottom: 14, background: '#fff', border: '1px solid #dde4ea', borderRadius: 10, padding: '8px 12px', fontSize: 11, color: '#5b6773', display: 'grid', gap: 4, boxShadow: '0 6px 18px rgba(30,50,70,.1)' }}>
+        <div style={{ position: 'absolute', left: 14, bottom: 14, background: '#fff', border: '1px solid #dde4ea', borderRadius: 10, padding: '8px 12px', fontSize: 12, color: '#5b6773', display: 'grid', gap: 4, boxShadow: '0 6px 18px rgba(30,50,70,.1)' }}>
           <div><span style={{ display: 'inline-block', width: 26, height: 0, borderTop: '2px solid #5b6773', verticalAlign: 'middle', marginRight: 6 }} />主な遷移（操作名つき）</div>
           <div><span style={{ display: 'inline-block', width: 26, height: 0, borderTop: '1.5px dashed #9aa5b1', verticalAlign: 'middle', marginRight: 6 }} />補助的な遷移（ダイアログを開くなど）</div>
           <div style={{ color: '#9aa5b1' }}>アートボードにマウスを乗せると関係する矢印だけ強調。キー：＋／－で拡大縮小、0 で全体</div>
         </div>
       </div>
-      <div style={{ padding: '4px 14px', fontSize: 10.5, color: '#8290a0', background: '#fff', borderTop: '1px solid #eef2f5' }}>{COPYRIGHT}</div>
+      <div style={{ padding: '4px 14px', fontSize: 12, color: '#8290a0', background: '#fff', borderTop: '1px solid #eef2f5' }}>{COPYRIGHT}</div>
     </div>
   );
 }

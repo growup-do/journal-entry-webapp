@@ -14,7 +14,7 @@ export function JournalCountModal({ open, onClose }: Props) {
   const s = useSession();
   const total = JOURNAL_COUNTS.reduce((t, r) => t.map((x, i) => x + r.c[i]), [0, 0, 0, 0, 0, 0]);
   return (
-    <Modal open={open} onClose={onClose} width={560} title={<>{displayName('仕訳数')} <span style={{ fontSize: 12, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>{s.fiscalYear}　{s.division}</span></>}>
+    <Modal open={open} onClose={onClose} width={560} title={<>{displayName('仕訳数')} <span style={{ fontSize: 14, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>{s.fiscalYear}　{s.division}</span></>}>
       <div style={{ padding: '6px 20px 18px' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
@@ -51,7 +51,7 @@ export function JournalCountModal({ open, onClose }: Props) {
           </tfoot>
         </table>
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
-          <button type="button" className="btn-outline" onClick={onClose} style={{ padding: '8px 40px', border: '1px solid #cfd8e0', borderRadius: 8, background: '#fff', color: '#22303c', fontSize: 13.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>閉じる</button>
+          <button type="button" className="btn-outline" onClick={onClose} style={{ padding: '8px 40px', border: '1px solid #cfd8e0', borderRadius: 8, background: '#fff', color: '#22303c', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>閉じる</button>
         </div>
       </div>
     </Modal>

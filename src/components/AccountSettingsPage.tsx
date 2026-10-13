@@ -167,27 +167,27 @@ const rowMatches = (r: AcctRow, q: string) => {
 
 /* ---- 小さな表示部品 ---- */
 const Badge = ({ kind }: { kind: '項目' | '科目' }) => (
-  <span title={kind === '項目' ? '集計上の見出し（伝票には入力しません）' : '伝票に入力する科目'} style={{ flex: 'none', fontSize: 10.5, fontWeight: 800, lineHeight: '16px', padding: '0 6px', borderRadius: 5, border: '1px solid ' + (kind === '項目' ? '#3d4a56' : '#b9c6d2'), background: kind === '項目' ? '#3d4a56' : '#fff', color: kind === '項目' ? '#fff' : '#5b6773' }}>{kind}</span>
+  <span title={kind === '項目' ? '集計上の見出し（伝票には入力しません）' : '伝票に入力する科目'} style={{ flex: 'none', fontSize: 12, fontWeight: 800, lineHeight: '16px', padding: '0 6px', borderRadius: 5, border: '1px solid ' + (kind === '項目' ? '#3d4a56' : '#b9c6d2'), background: kind === '項目' ? '#3d4a56' : '#fff', color: kind === '項目' ? '#fff' : '#5b6773' }}>{kind}</span>
 );
 const Chip = ({ on, onClick, accent, children }: { on: boolean; onClick: () => void; accent: string; children: ReactNode }) => (
-  <button type="button" aria-pressed={on} onClick={onClick} style={{ padding: '4px 11px', borderRadius: 999, border: '1px solid ' + (on ? accent : '#cfd8e0'), background: on ? accent : '#fff', color: on ? '#fff' : '#48565f', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>{children}</button>
+  <button type="button" aria-pressed={on} onClick={onClick} style={{ padding: '4px 11px', borderRadius: 999, border: '1px solid ' + (on ? accent : '#cfd8e0'), background: on ? accent : '#fff', color: on ? '#fff' : '#48565f', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>{children}</button>
 );
-const AutoTag = ({ manual }: { manual?: boolean }) => <span style={{ fontSize: 10, fontWeight: 800, padding: '1px 6px', borderRadius: 5, background: manual ? '#fff1b8' : '#e8f0fb', color: manual ? '#8a6d00' : '#2c5f9e', marginLeft: 6 }}>{manual ? '手動' : '自動設定'}</span>;
-const Mark = ({ children, title }: { children: ReactNode; title: string }) => <span title={title} style={{ fontSize: 10.5, fontWeight: 700, padding: '1px 5px', borderRadius: 4, background: '#eef2f6', color: '#48565f' }}>{children}</span>;
-const Swatch = ({ c }: { c: { fg: string; bg: string } }) => <span title="科目色" style={{ display: 'inline-block', width: 22, height: 15, borderRadius: 4, border: '1px solid #cfd8e0', background: c.bg, color: c.fg, fontSize: 10.5, fontWeight: 800, lineHeight: '15px', textAlign: 'center' }}>A</span>;
+const AutoTag = ({ manual }: { manual?: boolean }) => <span style={{ fontSize: 12, fontWeight: 800, padding: '1px 6px', borderRadius: 5, background: manual ? '#fff1b8' : '#e8f0fb', color: manual ? '#8a6d00' : '#2c5f9e', marginLeft: 6 }}>{manual ? '手動' : '自動設定'}</span>;
+const Mark = ({ children, title }: { children: ReactNode; title: string }) => <span title={title} style={{ fontSize: 12, fontWeight: 700, padding: '1px 5px', borderRadius: 4, background: '#eef2f6', color: '#48565f' }}>{children}</span>;
+const Swatch = ({ c }: { c: { fg: string; bg: string } }) => <span title="科目色" style={{ display: 'inline-block', width: 22, height: 15, borderRadius: 4, border: '1px solid #cfd8e0', background: c.bg, color: c.fg, fontSize: 12, fontWeight: 800, lineHeight: '15px', textAlign: 'center' }}>A</span>;
 const Section = ({ title, note, right, children }: { title: string; note?: string; right?: ReactNode; children: ReactNode }) => (
   <section style={{ ...card, marginTop: 12 }}>
-    <div style={cardHead}>{title}{note && <span style={{ fontSize: 11, fontWeight: 500, color: '#8290a0' }}>{note}</span>}{right && <span style={{ marginLeft: 'auto' }}>{right}</span>}</div>
+    <div style={cardHead}>{title}{note && <span style={{ fontSize: 12, fontWeight: 500, color: '#8290a0' }}>{note}</span>}{right && <span style={{ marginLeft: 'auto' }}>{right}</span>}</div>
     <div style={{ padding: 12 }}>{children}</div>
   </section>
 );
 const RelRow = ({ label, note, state, on, onOpen, disabled }: { label: string; note: string; state: ReactNode; on: boolean; onOpen: () => void; disabled?: boolean }) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderBottom: '1px solid #f1f4f6' }}>
     <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{ fontSize: 12.5, fontWeight: 700 }}>{label}</div>
-      <div style={{ fontSize: 11, color: '#8290a0', lineHeight: 1.5 }}>{note}</div>
+      <div style={{ fontSize: 14, fontWeight: 700 }}>{label}</div>
+      <div style={{ fontSize: 12, color: '#8290a0', lineHeight: 1.5 }}>{note}</div>
     </div>
-    <span style={{ fontSize: 12, fontWeight: 700, color: on ? '#1f7a52' : '#9aa5b1', textAlign: 'right', maxWidth: 150 }}>{state}</span>
+    <span style={{ fontSize: 14, fontWeight: 700, color: on ? '#1f7a52' : '#9aa5b1', textAlign: 'right', maxWidth: 150 }}>{state}</span>
     <span data-tip={disabled ? '左のスイッチをオンにすると設定できます' : undefined} style={{ display: 'inline-flex' }}><button type="button" onClick={onOpen} disabled={disabled} style={{ ...btn('#5b6773', false, true), opacity: disabled ? 0.45 : 1, cursor: disabled ? 'default' : 'pointer' }}>設定</button></span>
   </div>
 );
@@ -333,7 +333,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
     const k = name + '|' + svc; const v = !use[k];
     setUse((u) => { const n = { ...u, [k]: v }; if (link === '区分内') rows.forEach((m) => { n[m.name + '|' + svc] = v; }); if (link === '横一列') SERVICES.forEach((s) => { n[name + '|' + s] = v; }); return n; });
   };
-  const small: CSSProperties = { ...input, padding: '6px 8px', fontSize: 12.5 };
+  const small: CSSProperties = { ...input, padding: '6px 8px', fontSize: 14 };
   const ro: CSSProperties = { ...small, background: '#f5f7f9', color: '#48565f', fontVariantNumeric: 'tabular-nums' };
   // Excel／ファイル（CSV）／印刷：表示中のタブ（勘定科目／資金科目）の一覧を出力（既存の「貸借科目 Excel 出力」「事業科目 Excel 出力」「ファイル」に相当）
   const exportList = (kind: ExportKind) => {
@@ -358,7 +358,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
   const cols = sel ? 'minmax(230px, 1fr) 76px 132px 48px 50px' : 'minmax(280px, 1.4fr) 84px 140px 56px minmax(150px, 1fr) 150px 60px';
   const cell: CSSProperties = { padding: '0 10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
   const mono: CSSProperties = { ...cell, fontVariantNumeric: 'tabular-nums', color: '#48565f' };
-  const hcell: CSSProperties = { ...cell, fontSize: 11.5, fontWeight: 700, color: '#6b7783' };
+  const hcell: CSSProperties = { ...cell, fontSize: 12, fontWeight: 700, color: '#6b7783' };
   const scrollH = 'calc(100vh - 330px)';
 
   return (
@@ -389,9 +389,9 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                 <span style={{ display: 'inline-flex', gap: 5 }}>
                   {(['使用', '非使用'] as const).map((u) => <Chip key={u} on={useF === u} onClick={() => setUseF(useF === u ? null : u)} accent={accent}>{u}</Chip>)}
                 </span>
-                <span style={{ marginLeft: 'auto', fontSize: 12, color: '#8895a3' }}>{visible.length} 科目</span>
+                <span style={{ marginLeft: 'auto', fontSize: 14, color: '#8895a3' }}>{visible.length} 科目</span>
               </div>
-              <div style={{ display: 'flex', gap: 14, alignItems: 'center', fontSize: 11.5, color: '#6b7783', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 14, alignItems: 'center', fontSize: 12, color: '#6b7783', flexWrap: 'wrap' }}>
                 <span style={{ display: 'inline-flex', gap: 5, alignItems: 'center' }}><Badge kind="項目" />集計上の見出し（伝票には入力しません）</span>
                 <span style={{ display: 'inline-flex', gap: 5, alignItems: 'center' }}><Badge kind="科目" />伝票に入力する科目</span>
                 <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 6 }}>
@@ -408,21 +408,21 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                 {!sel && <><span style={hcell}>{fundTab ? '勘定科目' : '対応する資金科目'}</span><span style={hcell}>関連する設定</span></>}
                 <span style={hcell}>使用</span>
               </div>
-              {items.length === 0 && <div style={{ padding: 28, color: '#9aa5b1', fontSize: 13, textAlign: 'center' }}>条件に合う科目がありません。検索語やフィルタを変更してください。</div>}
+              {items.length === 0 && <div style={{ padding: 28, color: '#9aa5b1', fontSize: 14, textAlign: 'center' }}>条件に合う科目がありません。検索語やフィルタを変更してください。</div>}
               {items.map((it) => {
                 if (it.t === 'top') return (
                   <div key={'t' + it.name} style={{ display: 'flex', alignItems: 'center', gap: 8, height: 36, padding: '0 10px', background: '#e6ecf1', borderBottom: '1px solid #d5dde4', fontSize: 14.5, fontWeight: 800 }}>
-                    <Badge kind="項目" />{it.name}<span style={{ fontSize: 11.5, fontWeight: 500, color: '#6b7783' }}>{it.count} 科目</span>
+                    <Badge kind="項目" />{it.name}<span style={{ fontSize: 12, fontWeight: 500, color: '#6b7783' }}>{it.count} 科目</span>
                   </div>
                 );
                 if (it.t === 'group') { const open = filtering || !collapsed.includes(it.g.name); return (
                   <div key={'g' + it.g.name} role="button" tabIndex={0} aria-expanded={open} onClick={() => setCollapsed((c) => (c.includes(it.g.name) ? c.filter((x) => x !== it.g.name) : [...c, it.g.name]))} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) setCollapsed((c) => (c.includes(it.g.name) ? c.filter((x) => x !== it.g.name) : [...c, it.g.name])); }}
-                    style={{ display: 'grid', gridTemplateColumns: cols, alignItems: 'center', height: 36, background: '#f3f6f9', borderBottom: '1px solid #e6ebf0', cursor: 'pointer', fontSize: 13.5 }}>
+                    style={{ display: 'grid', gridTemplateColumns: cols, alignItems: 'center', height: 36, background: '#f3f6f9', borderBottom: '1px solid #e6ebf0', cursor: 'pointer', fontSize: 14 }}>
                     <span style={{ ...cell, paddingLeft: 24, display: 'flex', alignItems: 'center', gap: 7, fontWeight: 800 }}>
-                      <span style={{ width: 12, color: '#6b7783', fontSize: 11 }}>{open ? '▼' : '▶'}</span><Badge kind="項目" /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.g.name}</span><span style={{ fontSize: 11.5, fontWeight: 500, color: '#6b7783' }}>{it.count} 科目</span>
+                      <span style={{ width: 12, color: '#6b7783', fontSize: 12 }}>{open ? '▼' : '▶'}</span><Badge kind="項目" /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.g.name}</span><span style={{ fontSize: 12, fontWeight: 500, color: '#6b7783' }}>{it.count} 科目</span>
                     </span>
-                    <span style={mono} /><span style={{ ...mono, fontSize: 12.5 }}>{headKubun(it.g)}</span><span style={cell} />
-                    {!sel && <><span style={{ ...cell, fontSize: 12, color: '#8290a0' }}>費目 {it.g.himoku}</span><span style={cell} /></>}
+                    <span style={mono} /><span style={{ ...mono, fontSize: 14 }}>{headKubun(it.g)}</span><span style={cell} />
+                    {!sel && <><span style={{ ...cell, fontSize: 14, color: '#8290a0' }}>費目 {it.g.himoku}</span><span style={cell} /></>}
                     <span style={cell} />
                   </div>
                 ); }
@@ -436,15 +436,15 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: on ? 700 : 500, ...(r.color ? { color: r.color.fg, background: r.color.bg, padding: '1px 6px', borderRadius: 4 } : {}) }}>{fundTab ? r.fund : r.dispName}</span>
                     </span>
                     <span style={mono}>{r.code}</span>
-                    <span style={{ ...mono, fontSize: 12.5 }}>{fundTab ? r.fundKubun : r.kubun}</span>
-                    <span style={{ ...cell, fontSize: 12.5 }}>{r.a === '1' ? '借方' : '貸方'}</span>
+                    <span style={{ ...mono, fontSize: 14 }}>{fundTab ? r.fundKubun : r.kubun}</span>
+                    <span style={{ ...cell, fontSize: 14 }}>{r.a === '1' ? '借方' : '貸方'}</span>
                     {!sel && <>
-                      <span style={{ ...cell, fontSize: 12.5, color: r.fund === '—' ? '#b7c2cc' : '#48565f' }}>{fundTab ? r.dispName : r.fund}</span>
+                      <span style={{ ...cell, fontSize: 14, color: r.fund === '—' ? '#b7c2cc' : '#48565f' }}>{fundTab ? r.dispName : r.fund}</span>
                       <span style={{ ...cell, display: 'flex', gap: 4, alignItems: 'center' }}>
                         {r.color && <Swatch c={r.color} />}{r.depr && <Mark title="減価償却連動">償却</Mark>}{r.oneYear && <Mark title="1年基準科目">1年</Mark>}{r.meisai && <Mark title={`決算附属明細書：${r.meisai}`}>明細</Mark>}{!r.internal.startsWith('0') && <Mark title={`内部取引：${r.internal}`}>内部</Mark>}
                       </span>
                     </>}
-                    <span style={{ ...cell, fontSize: 12, fontWeight: 700, color: used ? '#1f7a52' : '#9aa5b1' }}>{used ? '使用' : '非使用'}</span>
+                    <span style={{ ...cell, fontSize: 14, fontWeight: 700, color: used ? '#1f7a52' : '#9aa5b1' }}>{used ? '使用' : '非使用'}</span>
                   </div>
                 );
               })}
@@ -458,12 +458,12 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                 <Badge kind="科目" /><b style={{ fontSize: 16, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fundTab ? `${sel.fund}（${sel.dispName}）` : sel.dispName}</b>
                 <button type="button" aria-label="詳細パネルを閉じる" onClick={() => pick(null)} style={{ ...btn('#5b6773', false, true), marginLeft: 'auto' }}>× 閉じる</button>
               </div>
-              <div style={{ fontSize: 11.5, color: '#8290a0', marginTop: 4 }}>{groupDef(sel.group).top} ＞ {sel.group}　／　キーコード {sel.key}（登録順に自動付与・変更不可）</div>
+              <div style={{ fontSize: 12, color: '#8290a0', marginTop: 4 }}>{groupDef(sel.group).top} ＞ {sel.group}　／　キーコード {sel.key}（登録順に自動付与・変更不可）</div>
 
               <Section title="科目の説明" right={<button type="button" onClick={() => setDescEdit(!descEdit)} style={btn(descEdit ? accent : '#5b6773', descEdit, true)}>{descEdit ? '編集を終了' : '編集'}</button>}>
                 {descEdit
                   ? <textarea className="field-input" value={sel.desc} onChange={(e) => upd({ desc: e.target.value })} rows={3} aria-label="科目の説明" placeholder="この科目で処理する内容を入力（伝票入力の科目選択時にも表示されます）" style={{ ...small, resize: 'vertical', lineHeight: 1.7 }} />
-                  : <div style={{ fontSize: 13, lineHeight: 1.8, color: sel.desc ? '#22303c' : '#9aa5b1' }}>{sel.desc || '説明は未登録です。「編集」で入力できます。'}</div>}
+                  : <div style={{ fontSize: 14, lineHeight: 1.8, color: sel.desc ? '#22303c' : '#9aa5b1' }}>{sel.desc || '説明は未登録です。「編集」で入力できます。'}</div>}
               </Section>
 
               <Section title="項目とコード" note="親の項目から自動設定">
@@ -474,7 +474,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                   <div style={{ gridColumn: 'span 2' }}><span style={lbl}>区分コード（3-2-2-2-2 桁）<AutoTag manual={sel.manualCode} /></span>{sel.manualCode ? <input className="field-input ring" value={sel.kubun} onChange={(e) => upd({ kubun: e.target.value.replace(/[^0-9-]/g, '').slice(0, 15) })} style={{ ...small, fontVariantNumeric: 'tabular-nums' }} /> : <div style={ro}>{sel.kubun}</div>}</div>
                 </div>
                 <div style={{ marginTop: 10 }}>
-                  <Toggle on={sel.manualCode} accent={accent} label={<span style={{ fontSize: 12.5 }}>コードを手動で変更</span>} onChange={(v) => upd(v ? { manualCode: true } : { manualCode: false, himoku: groupDef(sel.group).himoku, kubun: kubunOf(sel.code) })} />
+                  <Toggle on={sel.manualCode} accent={accent} label={<span style={{ fontSize: 14 }}>コードを手動で変更</span>} onChange={(v) => upd(v ? { manualCode: true } : { manualCode: false, himoku: groupDef(sel.group).himoku, kubun: kubunOf(sel.code) })} />
                 </div>
               </Section>
 
@@ -487,7 +487,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                     <span style={lbl}>施設ごとの表示名（空欄の施設は表示用科目名称を使います）</span>
                     <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #e2e8ee' }}>
                       <thead><tr><th style={{ ...TH, width: 150 }}>拠点（施設）</th><th style={TH}>表示名</th></tr></thead>
-                      <tbody>{SITES.map((s) => <tr key={s}><td style={{ ...TD, fontSize: 12.5 }}>{s}</td><td style={{ ...TD, padding: 3 }}><input className="field-input" value={sel.siteNames[s] ?? ''} onChange={(e) => upd({ siteNames: { ...sel.siteNames, [s]: e.target.value } })} placeholder={sel.dispName} aria-label={`${s}の表示名`} style={{ ...small, padding: '4px 8px' }} /></td></tr>)}</tbody>
+                      <tbody>{SITES.map((s) => <tr key={s}><td style={{ ...TD, fontSize: 14 }}>{s}</td><td style={{ ...TD, padding: 3 }}><input className="field-input" value={sel.siteNames[s] ?? ''} onChange={(e) => upd({ siteNames: { ...sel.siteNames, [s]: e.target.value } })} placeholder={sel.dispName} aria-label={`${s}の表示名`} style={{ ...small, padding: '4px 8px' }} /></td></tr>)}</tbody>
                     </table>
                   </div>
                 </div>
@@ -515,15 +515,15 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
               </Section>
 
               <section style={{ ...card, marginTop: 12 }}>
-                <div style={cardHead}>関連する設定 <span style={{ fontSize: 11, fontWeight: 500, color: '#8290a0' }}>別画面の設定のうち、この科目に関係するもの</span></div>
+                <div style={cardHead}>関連する設定 <span style={{ fontSize: 12, fontWeight: 500, color: '#8290a0' }}>別画面の設定のうち、この科目に関係するもの</span></div>
                 <RelRow label="科目色設定" note="文字色・背景色。カラー帳票有効時に印刷へ反映" on={!!sel.color} state={sel.color ? <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Swatch c={sel.color} />設定あり</span> : '設定なし'} onOpen={() => setRel('color')} />
                 <RelRow label="減価償却連動" note="固定資産科目を減価償却と連動させます" on={sel.depr} state={groupDef(sel.group).fixed ? (sel.depr ? '連動する' : '連動しない') : '対象外（固定資産のみ）'} onOpen={() => setRel('depr')} disabled={!groupDef(sel.group).fixed} />
                 <RelRow label="1年基準科目" note="1年以内に期限が到来する分を流動へ振り替える科目" on={sel.oneYear} state={sel.oneYear ? '対象' : '対象外'} onOpen={() => setRel('oneYear')} />
                 <RelRow label="決算附属明細書へ集計" note={`${displayName('決算附属明細書')}で集計する科目`} on={!!sel.meisai} state={sel.meisai || '集計しない'} onOpen={() => setRel('meisai')} />
                 <RelRow label="内部取引科目と相手区分" note="区分間の取引に使う科目と相手先の対応" on={!sel.internal.startsWith('0')} state={sel.internal.startsWith('0') ? '通常の科目' : `${sel.internal.split('：')[1]}／${sel.partner || '入力時に指定'}`} onOpen={() => setRel('internal')} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px' }}>
-                  <div style={{ flex: 1 }}><div style={{ fontSize: 12.5, fontWeight: 700 }}>使用科目設定</div><div style={{ fontSize: 11, color: '#8290a0' }}>区分ごとの使用／非使用</div></div>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: usedCount(sel) ? '#1f7a52' : '#9aa5b1' }}>{usedCount(sel) ? `${usedCount(sel)} / ${SERVICES.length} 区分で使用` : '非使用'}</span>
+                  <div style={{ flex: 1 }}><div style={{ fontSize: 14, fontWeight: 700 }}>使用科目設定</div><div style={{ fontSize: 12, color: '#8290a0' }}>区分ごとの使用／非使用</div></div>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: usedCount(sel) ? '#1f7a52' : '#9aa5b1' }}>{usedCount(sel) ? `${usedCount(sel)} / ${SERVICES.length} 区分で使用` : '非使用'}</span>
                   <button type="button" onClick={() => setTab('使用科目設定')} style={btn('#5b6773', false, true)}>開く</button>
                 </div>
               </section>
@@ -546,7 +546,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
               <div style={cardHead}>{title as string}</div>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}><thead><tr><th style={{ ...TH, width: 70 }}>費目No</th><th style={TH}>費目名称（ダブルクリックで編集）</th></tr></thead>
                 <tbody>{(list as readonly (readonly [number, string])[]).map(([n, l]) => <tr key={n}><td style={{ ...TD, fontVariantNumeric: 'tabular-nums' }}>{n}</td><td style={{ ...TD, background: '#fff1b8' }}>{l}</td></tr>)}
-                  {[14, 15, 16].map((n) => <tr key={n}><td style={{ ...TD, fontVariantNumeric: 'tabular-nums' }}>{n}</td><td style={TD}><input className="field-input" value={himokuNames[n] ?? ''} onChange={(e) => setHimokuNames({ ...himokuNames, [n]: e.target.value })} placeholder="（空白）Enterで確定して新規登録" style={{ ...input, padding: '3px 8px', fontSize: 12.5 }} /></td></tr>)}
+                  {[14, 15, 16].map((n) => <tr key={n}><td style={{ ...TD, fontVariantNumeric: 'tabular-nums' }}>{n}</td><td style={TD}><input className="field-input" value={himokuNames[n] ?? ''} onChange={(e) => setHimokuNames({ ...himokuNames, [n]: e.target.value })} placeholder="（空白）Enterで確定して新規登録" style={{ ...input, padding: '3px 8px', fontSize: 14 }} /></td></tr>)}
                 </tbody></table>
             </div>
           ))}
@@ -557,11 +557,11 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
       {tab === '使用科目設定' && (
         <div style={{ padding: 22 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
-            <span style={lbl}>科目</span>{(['全科目', '内部取引科目'] as const).map((l) => <label key={l} style={{ fontSize: 12.5, display: 'flex', gap: 4 }}><input type="radio" name="use-acct" checked={acctView === l} onChange={() => setAcctView(l)} data-use-view={l} />{l}</label>)}
+            <span style={lbl}>科目</span>{(['全科目', '内部取引科目'] as const).map((l) => <label key={l} style={{ fontSize: 14, display: 'flex', gap: 4 }}><input type="radio" name="use-acct" checked={acctView === l} onChange={() => setAcctView(l)} data-use-view={l} />{l}</label>)}
             <span style={{ width: 1, height: 18, background: '#dde4ea' }} />
-            <span style={lbl}>区分</span>{(['全区分', '起動区分のみ'] as const).map((l) => <label key={l} style={{ fontSize: 12.5, display: 'flex', gap: 4 }}><input type="radio" name="use-div" checked={divView === l} onChange={() => setDivView(l)} data-use-view={l} />{l}</label>)}
+            <span style={lbl}>区分</span>{(['全区分', '起動区分のみ'] as const).map((l) => <label key={l} style={{ fontSize: 14, display: 'flex', gap: 4 }}><input type="radio" name="use-div" checked={divView === l} onChange={() => setDivView(l)} data-use-view={l} />{l}</label>)}
             <span style={{ width: 1, height: 18, background: '#dde4ea' }} />
-            <span style={lbl}>チェック連動</span>{(['しない', '区分内', '横一列'] as const).map((l) => <label key={l} style={{ fontSize: 12.5, display: 'flex', gap: 4 }}><input type="radio" checked={link === l} onChange={() => setLink(l)} />{l}</label>)}
+            <span style={lbl}>チェック連動</span>{(['しない', '区分内', '横一列'] as const).map((l) => <label key={l} style={{ fontSize: 14, display: 'flex', gap: 4 }}><input type="radio" checked={link === l} onChange={() => setLink(l)} />{l}</label>)}
             <button type="button" onClick={() => setUse(Object.fromEntries(Object.keys(use).map((k) => [k, true])))} style={{ ...btn('#5b6773', false, true), marginLeft: 8 }}>全て ON</button>
             <button type="button" onClick={() => setResetOpen(true)} title="表示中の区分の使用科目を、事業区分（事業種別）に応じた初期状態に戻します（旧【使用科目設定更新】）" style={btn('#5b6773', false, true)} data-use-reset>初期状態に戻す</button>
             <Modal open={resetOpen} onClose={() => setResetOpen(false)} width={520} title="使用科目を初期状態に戻す">
@@ -570,12 +570,12 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setResetOpen(false)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={resetUse} style={btn(accent, true)} data-use-reset-run>初期状態に戻す</button></div>
               </div>
             </Modal>
-            <span style={{ marginLeft: 'auto', fontSize: 12, color: '#7a8794' }}>区分ごとに使用する科目をチェック（帳票の表示／非表示にも使います）</span>
+            <span style={{ marginLeft: 'auto', fontSize: 14, color: '#7a8794' }}>区分ごとに使用する科目をチェック（帳票の表示／非表示にも使います）</span>
           </div>
           <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 380px)' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead><tr><th style={TH}>科目</th>{useCols.map((s) => <th key={s} style={{ ...TH, textAlign: 'center', width: 110 }}>{s}</th>)}</tr></thead>
-              <tbody>{useRows.length === 0 && <tr><td colSpan={useCols.length + 1} style={{ ...TD, color: '#9aa5b1', textAlign: 'center', padding: 28 }}>内部取引科目として設定された科目はありません。勘定科目タブで科目を選び「関連する設定 › 内部取引科目と相手区分」で指定します。</td></tr>}{useRows.map((m) => <tr key={m.key}><td style={{ ...TD, fontWeight: 500 }}>{m.dispName}<span style={{ fontSize: 10.5, color: '#9aa5b1', marginLeft: 6 }}>{m.group}</span>{!m.internal.startsWith('0') && <span style={{ fontSize: 10, fontWeight: 800, marginLeft: 6, padding: '0 5px', borderRadius: 4, background: '#eef2f6', color: '#3d4a56' }}>内部</span>}</td>{useCols.map((s) => <td key={s} style={{ ...TD, textAlign: 'center' }}><input type="checkbox" aria-label={`${m.dispName}を${s}で使用`} checked={!!use[m.name + '|' + s]} onChange={() => toggleUse(m.name, s)} /></td>)}</tr>)}</tbody>
+              <tbody>{useRows.length === 0 && <tr><td colSpan={useCols.length + 1} style={{ ...TD, color: '#9aa5b1', textAlign: 'center', padding: 28 }}>内部取引科目として設定された科目はありません。勘定科目タブで科目を選び「関連する設定 › 内部取引科目と相手区分」で指定します。</td></tr>}{useRows.map((m) => <tr key={m.key}><td style={{ ...TD, fontWeight: 500 }}>{m.dispName}<span style={{ fontSize: 12, color: '#9aa5b1', marginLeft: 6 }}>{m.group}</span>{!m.internal.startsWith('0') && <span style={{ fontSize: 12, fontWeight: 800, marginLeft: 6, padding: '0 5px', borderRadius: 4, background: '#eef2f6', color: '#3d4a56' }}>内部</span>}</td>{useCols.map((s) => <td key={s} style={{ ...TD, textAlign: 'center' }}><input type="checkbox" aria-label={`${m.dispName}を${s}で使用`} checked={!!use[m.name + '|' + s]} onChange={() => toggleUse(m.name, s)} /></td>)}</tr>)}</tbody>
             </table>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}><button type="button" onClick={() => exportUse('fund')} style={btn()}>資金科目ファイル出力</button><button type="button" onClick={() => exportUse('bs')} style={btn()}>貸借・事業科目ファイル出力</button><button type="button" className="submit-btn" onClick={() => toast.show('使用科目設定を保存しました')} style={{ ...btn(accent, true), marginLeft: 'auto' }}>OK</button></div>
@@ -589,13 +589,13 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
             {([['資産（流動資産・固定資産）', (c: string) => c === '現預金' || c === '資産'], ['負債', (c: string) => c === '負債']] as const).map(([title, f]) => {
               const list = rows.filter((r) => f(r.cls));
               return (
-                <div key={title} style={card}><div style={cardHead}>{title}<span style={{ fontSize: 11, fontWeight: 600, color: '#5b6773', marginLeft: 6 }}>対象 {list.filter((r) => subLedger[r.name]).length} 科目</span></div>
+                <div key={title} style={card}><div style={cardHead}>{title}<span style={{ fontSize: 12, fontWeight: 600, color: '#5b6773', marginLeft: 6 }}>対象 {list.filter((r) => subLedger[r.name]).length} 科目</span></div>
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}><thead><tr><th style={TH}>科目・項目</th><th style={{ ...TH, textAlign: 'right', width: 150 }}>令和7年度末残高</th><th style={{ ...TH, width: 110, textAlign: 'center' }}>補助簿を作る</th></tr></thead>
                     <tbody>
                       {list.length === 0 && <tr><td colSpan={3} style={{ ...TD, color: '#9aa5b1', textAlign: 'center', padding: 24 }}>該当する科目がありません</td></tr>}
                       {list.map((r) => { const on = !!subLedger[r.name]; const bal = ((r.key * 48271) % 1200) * 1000; return (
                         <tr key={r.key} style={{ background: on ? '#fff7cc' : '#fff' }}>
-                          <td style={TD}>{r.dispName}<span style={{ fontSize: 10.5, color: '#9aa5b1', marginLeft: 6 }}>{r.group}</span></td>
+                          <td style={TD}>{r.dispName}<span style={{ fontSize: 12, color: '#9aa5b1', marginLeft: 6 }}>{r.group}</span></td>
                           <td style={{ ...TD, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{bal.toLocaleString('ja-JP')}</td>
                           <td style={{ ...TD, textAlign: 'center' }}><input type="checkbox" checked={on} onChange={() => setSubLedger((x) => ({ ...x, [r.name]: !on }))} aria-label={`${r.dispName}の補助簿を作る`} /></td>
                         </tr>
@@ -606,7 +606,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
             })}
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <span style={{ fontSize: 12.5, color: '#5b6773' }}>対象 {Object.values(subLedger).filter(Boolean).length} 科目　残高は前年度末（令和7年度末）のサンプルです</span>
+            <span style={{ fontSize: 14, color: '#5b6773' }}>対象 {Object.values(subLedger).filter(Boolean).length} 科目　残高は前年度末（令和7年度末）のサンプルです</span>
             <button type="button" className="submit-btn" onClick={() => toast.show('補助簿（明細表）の設定を保存しました')} style={{ ...btn(accent, true), marginLeft: 'auto' }}>保存して終了</button>
           </div>
         </div>
@@ -615,7 +615,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
       {/* ---- まとめて設定（複数科目の関連する設定を同時に変更） ---- */}
       <Modal open={bulkOpen} onClose={() => setBulkOpen(false)} width={560} title={`関連する設定をまとめて変更：${bulk.length} 科目`}>
         <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
-          <div style={{ fontSize: 12.5, color: '#5b6773', maxHeight: 72, overflow: 'auto' }}>対象：{rows.filter((r) => bulk.includes(r.key)).map((r) => r.dispName).join('、')}</div>
+          <div style={{ fontSize: 14, color: '#5b6773', maxHeight: 72, overflow: 'auto' }}>対象：{rows.filter((r) => bulk.includes(r.key)).map((r) => r.dispName).join('、')}</div>
           <Notice>「変更しない」の項目はそのままです。選んだ科目すべてに同じ値を設定します。固定資産以外の科目に減価償却連動を設定しても、減価償却では対象になりません。</Notice>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <Field label="科目色"><select value={bulkVal.color} onChange={(e) => setBulkVal({ ...bulkVal, color: e.target.value })} style={small}><option value="">変更しない</option><option value="none">色を外す</option>{COLOR_PRESETS.map((x) => <option key={x.label} value={x.label}>{x.label}</option>)}</select></Field>
@@ -640,16 +640,16 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                 const its = STD.filter((s) => s.group === g.name); const free = its.filter((s) => !registered.has(s.name)); const all = free.length > 0 && free.every((s) => addChecked.includes(s.name));
                 return (
                   <div key={g.name}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 12px', background: '#f3f6f9', borderBottom: '1px solid #e6ebf0', fontSize: 13, fontWeight: 800, position: 'sticky', top: 0 }}>
-                      <Badge kind="項目" />{g.name}<span style={{ fontSize: 11, fontWeight: 500, color: '#8290a0' }}>{g.top}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 12px', background: '#f3f6f9', borderBottom: '1px solid #e6ebf0', fontSize: 14, fontWeight: 800, position: 'sticky', top: 0 }}>
+                      <Badge kind="項目" />{g.name}<span style={{ fontSize: 12, fontWeight: 500, color: '#8290a0' }}>{g.top}</span>
                       {free.length > 0 && <button type="button" onClick={() => setAddChecked((c) => (all ? c.filter((n) => !free.some((s) => s.name === n)) : [...c, ...free.map((s) => s.name).filter((n) => !c.includes(n))]))} style={{ ...btn('#5b6773', false, true), marginLeft: 'auto' }}>{all ? 'チェックを外す' : 'すべてチェック'}</button>}
                     </div>
                     {its.map((s) => { const done = registered.has(s.name); const ck = addChecked.includes(s.name); return (
                       <label key={s.name} style={{ display: 'flex', alignItems: 'flex-start', gap: 9, padding: '8px 12px 8px 30px', borderBottom: '1px solid #f1f4f6', cursor: done ? 'default' : 'pointer', background: ck ? '#eaf1f8' : '#fff', opacity: done ? 0.55 : 1 }}>
                         <input type="checkbox" checked={done || ck} disabled={done} onChange={() => toggleAdd(s.name)} style={{ marginTop: 3, width: 16, height: 16 }} />
                         <span style={{ flex: 1, minWidth: 0 }}>
-                          <span style={{ fontSize: 13.5, fontWeight: 600 }}>{s.name}</span>{done && <span style={{ fontSize: 10.5, fontWeight: 700, color: '#1f7a52', marginLeft: 8 }}>登録済み</span>}
-                          <span style={{ display: 'block', fontSize: 11.5, color: '#7a8794', lineHeight: 1.6 }}>{s.desc}</span>
+                          <span style={{ fontSize: 14, fontWeight: 600 }}>{s.name}</span>{done && <span style={{ fontSize: 12, fontWeight: 700, color: '#1f7a52', marginLeft: 8 }}>登録済み</span>}
+                          <span style={{ display: 'block', fontSize: 12, color: '#7a8794', lineHeight: 1.6 }}>{s.desc}</span>
                         </span>
                       </label>
                     ); })}
@@ -659,14 +659,14 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
             </div>
             <div style={{ display: 'grid', gap: 10, alignContent: 'start' }}>
               <div style={{ ...card }}>
-                <div style={cardHead}>追加する科目 <span style={{ fontSize: 11, fontWeight: 500, color: '#8290a0' }}>{addChecked.length} 件</span><span style={{ marginLeft: 'auto' }}><AutoTag manual={addManual} /></span></div>
+                <div style={cardHead}>追加する科目 <span style={{ fontSize: 12, fontWeight: 500, color: '#8290a0' }}>{addChecked.length} 件</span><span style={{ marginLeft: 'auto' }}><AutoTag manual={addManual} /></span></div>
                 <div style={{ maxHeight: '36vh', overflow: 'auto' }}>
-                  {addChecked.length === 0 ? <div style={{ padding: 22, fontSize: 12.5, color: '#9aa5b1', textAlign: 'center' }}>左の一覧でチェックした科目が、ここに自動設定されたコードとともに表示されます。</div> : (
+                  {addChecked.length === 0 ? <div style={{ padding: 22, fontSize: 14, color: '#9aa5b1', textAlign: 'center' }}>左の一覧でチェックした科目が、ここに自動設定されたコードとともに表示されます。</div> : (
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                       <thead><tr><th style={TH}>科目（親の項目）</th><th style={{ ...TH, width: 78 }}>表示コード</th><th style={{ ...TH, width: 56 }}>費目</th><th style={{ ...TH, width: 138 }}>区分コード</th></tr></thead>
                       <tbody>{addChecked.map((n) => { const s = STD.find((x) => x.name === n)!; const c = addCode(n); const set = (p: Partial<Codes>) => setAddOver((o) => ({ ...o, [n]: { ...o[n], ...p } })); const ci: CSSProperties = { ...small, padding: '3px 6px', fontVariantNumeric: 'tabular-nums' }; return (
                         <tr key={n}>
-                          <td style={TD}><div style={{ fontWeight: 600, fontSize: 13 }}>{n}</div><div style={{ fontSize: 11, color: '#8290a0' }}>{s.group}</div></td>
+                          <td style={TD}><div style={{ fontWeight: 600, fontSize: 14 }}>{n}</div><div style={{ fontSize: 12, color: '#8290a0' }}>{s.group}</div></td>
                           {addManual ? <>
                             <td style={{ ...TD, padding: 3 }}><input className="field-input" aria-label={`${n}の表示コード`} value={c.code} onChange={(e) => set({ code: e.target.value.replace(/[^0-9]/g, '').slice(0, 9) })} style={ci} /></td>
                             <td style={{ ...TD, padding: 3 }}><input className="field-input" aria-label={`${n}の費目コード`} value={c.himoku} onChange={(e) => set({ himoku: e.target.value.replace(/[^0-9]/g, '').slice(0, 2) })} style={ci} /></td>
@@ -674,7 +674,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                           </> : <>
                             <td style={{ ...TD, fontVariantNumeric: 'tabular-nums', background: '#f5f7f9' }}>{c.code}</td>
                             <td style={{ ...TD, fontVariantNumeric: 'tabular-nums', background: '#f5f7f9' }}>{c.himoku}</td>
-                            <td style={{ ...TD, fontVariantNumeric: 'tabular-nums', background: '#f5f7f9', fontSize: 12.5 }}>{c.kubun}</td>
+                            <td style={{ ...TD, fontVariantNumeric: 'tabular-nums', background: '#f5f7f9', fontSize: 14 }}>{c.kubun}</td>
                           </>}
                         </tr>
                       ); })}</tbody>
@@ -682,11 +682,11 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                   )}
                 </div>
                 <div style={{ padding: '10px 12px', borderTop: '1px solid #eef2f5' }}>
-                  <Toggle on={addManual} onChange={setAddManual} accent={accent} label={<span style={{ fontSize: 12.5 }}>コードを手動で変更</span>} />
-                  <div style={{ fontSize: 11, color: '#8290a0', marginTop: 4 }}>通常は自動設定のままで問題ありません。独自のコード体系を使う場合のみオンにしてください。</div>
+                  <Toggle on={addManual} onChange={setAddManual} accent={accent} label={<span style={{ fontSize: 14 }}>コードを手動で変更</span>} />
+                  <div style={{ fontSize: 12, color: '#8290a0', marginTop: 4 }}>通常は自動設定のままで問題ありません。独自のコード体系を使う場合のみオンにしてください。</div>
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#6b7783', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#6b7783', flexWrap: 'wrap' }}>
                 標準科目にない科目：
                 <select value={blankGroup} onChange={(e) => setBlankGroup(e.target.value)} aria-label="空の科目を作成する項目" style={{ ...small, width: 190 }}>{GROUPS.map((g) => <option key={g.name}>{g.name}</option>)}</select>
                 <button type="button" onClick={addBlank} style={btn('#5b6773', false, true)}>この項目に空の科目を作成</button>
@@ -708,11 +708,11 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
               <Toggle on={!!sel.color} accent={accent} label="この科目に色を付ける" onChange={(v) => upd({ color: v ? { fg: '#c0392b', bg: '#ffffff' } : null })} />
               {sel.color && <>
                 <div style={{ display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <label style={{ fontSize: 12.5, display: 'flex', gap: 8, alignItems: 'center' }}>文字色<input type="color" value={sel.color.fg} onChange={(e) => upd({ color: { ...sel.color!, fg: e.target.value } })} /></label>
-                  <label style={{ fontSize: 12.5, display: 'flex', gap: 8, alignItems: 'center' }}>背景色<input type="color" value={sel.color.bg} onChange={(e) => upd({ color: { ...sel.color!, bg: e.target.value } })} /></label>
+                  <label style={{ fontSize: 14, display: 'flex', gap: 8, alignItems: 'center' }}>文字色<input type="color" value={sel.color.fg} onChange={(e) => upd({ color: { ...sel.color!, fg: e.target.value } })} /></label>
+                  <label style={{ fontSize: 14, display: 'flex', gap: 8, alignItems: 'center' }}>背景色<input type="color" value={sel.color.bg} onChange={(e) => upd({ color: { ...sel.color!, bg: e.target.value } })} /></label>
                   <span style={{ display: 'inline-flex', gap: 5 }}>{COLOR_PRESETS.map((p) => <button key={p.label} type="button" onClick={() => upd({ color: { fg: p.fg, bg: p.bg } })} style={{ ...btn('#5b6773', false, true), color: p.fg, background: p.bg }}>{p.label}</button>)}</span>
                 </div>
-                <div><span style={lbl}>表示の見本</span><div style={{ border: '1px solid #e2e8ee', borderRadius: 8, padding: '8px 12px', display: 'flex', gap: 14, fontSize: 13.5, color: sel.color.fg, background: sel.color.bg }}><span style={{ fontVariantNumeric: 'tabular-nums' }}>{sel.code}</span><span style={{ flex: 1 }}>{sel.printName}</span><span style={{ fontVariantNumeric: 'tabular-nums' }}>1,234,567</span></div></div>
+                <div><span style={lbl}>表示の見本</span><div style={{ border: '1px solid #e2e8ee', borderRadius: 8, padding: '8px 12px', display: 'flex', gap: 14, fontSize: 14, color: sel.color.fg, background: sel.color.bg }}><span style={{ fontVariantNumeric: 'tabular-nums' }}>{sel.code}</span><span style={{ flex: 1 }}>{sel.printName}</span><span style={{ fontVariantNumeric: 'tabular-nums' }}>1,234,567</span></div></div>
               </>}
               <Notice>画面の科目一覧にはすぐ反映されます。印刷への反映は「{displayName('環境設定')}」でカラー帳票を有効にしている場合のみです。</Notice>
             </>}
@@ -760,8 +760,8 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
             <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: 360, overflow: 'auto' }}>
               {swap.keys.map((k, i) => { const r = rows.find((x) => x.key === k)!; const on = i === swap.cur; return (
                 <div key={k} draggable onDragStart={() => setSwap({ ...swap, drag: i, cur: i })} onDragOver={(e) => { e.preventDefault(); }} onDrop={(e) => { e.preventDefault(); if (swap.drag != null) moveSwap(swap.drag, i); }} onDragEnd={() => setSwap((sw) => (sw ? { ...sw, drag: null } : sw))} onClick={() => setSwap({ ...swap, cur: i })}
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 12px', borderBottom: '1px solid #f1f4f6', background: on ? '#eef2f6' : '#fff', cursor: 'grab', fontSize: 13, opacity: swap.drag === i ? 0.4 : 1 }}>
-                  <span style={{ color: '#b7c2cc', fontSize: 14 }}>⋮⋮</span><span style={{ width: 28, color: '#8290a0', fontVariantNumeric: 'tabular-nums', fontSize: 12 }}>{i + 1}</span><span style={{ width: 60, fontVariantNumeric: 'tabular-nums', color: '#5b6773' }}>{r.code}</span><span style={{ flex: 1, fontWeight: on ? 700 : 500 }}>{r.dispName}</span><span style={{ fontSize: 11, color: '#9aa5b1' }}>キー {r.key}</span>
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 12px', borderBottom: '1px solid #f1f4f6', background: on ? '#eef2f6' : '#fff', cursor: 'grab', fontSize: 14, opacity: swap.drag === i ? 0.4 : 1 }}>
+                  <span style={{ color: '#b7c2cc', fontSize: 14 }}>⋮⋮</span><span style={{ width: 28, color: '#8290a0', fontVariantNumeric: 'tabular-nums', fontSize: 14 }}>{i + 1}</span><span style={{ width: 60, fontVariantNumeric: 'tabular-nums', color: '#5b6773' }}>{r.code}</span><span style={{ flex: 1, fontWeight: on ? 700 : 500 }}>{r.dispName}</span><span style={{ fontSize: 12, color: '#9aa5b1' }}>キー {r.key}</span>
                 </div>); })}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -776,9 +776,9 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
       </Modal>
       <Modal open={recalc != null} onClose={() => {}} closable={false} width={460} title="仕訳更新">
         <div style={{ padding: '18px 22px 22px' }}>
-          <div style={{ fontSize: 13, marginBottom: 10 }}>全仕訳の勘定科目と資金科目の連動を整理しています…　{recalc}%</div>
+          <div style={{ fontSize: 14, marginBottom: 10 }}>全仕訳の勘定科目と資金科目の連動を整理しています…　{recalc}%</div>
           <div style={{ height: 10, background: '#eef2f5', borderRadius: 5, overflow: 'hidden' }}><div style={{ width: `${recalc ?? 0}%`, height: '100%', background: accent, transition: 'width .1s' }} /></div>
-          <div style={{ fontSize: 11.5, color: '#9aa5b1', marginTop: 8 }}>処理中は中断できません。伝票数によっては数分かかる場合があります。</div>
+          <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 8 }}>処理中は中断できません。伝票数によっては数分かかる場合があります。</div>
         </div>
       </Modal>
     </SettingsShell>
@@ -797,7 +797,7 @@ export function SummaryAutoCompleteTab({ accent }: { accent: string }) {
       <Notice>伝票入力時に過去に入力した摘要から候補を自動表示します（環境設定「摘要自動補完入力機能を有効にする」）。「入力された摘要を候補に追加する」が有効なら、登録した摘要がここに自動で溜まります。</Notice>
       <div style={{ display: 'flex', gap: 8 }}><input className="field-input ring" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) add(); }} placeholder="摘要文字列を入力して Enter で追加" style={input} /><button type="button" onClick={add} style={btn(accent, true)}>追加</button></div>
       <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: 320, overflow: 'auto' }}>
-        {cands.map((c) => <label key={c} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', borderBottom: '1px solid #f1f4f6', fontSize: 13 }}><input type="checkbox" checked={checked.has(c)} onChange={(e) => { const n = new Set(checked); if (e.target.checked) n.add(c); else n.delete(c); setChecked(n); }} /><span style={{ flex: 1 }}>{c}</span></label>)}
+        {cands.map((c) => <label key={c} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', borderBottom: '1px solid #f1f4f6', fontSize: 14 }}><input type="checkbox" checked={checked.has(c)} onChange={(e) => { const n = new Set(checked); if (e.target.checked) n.add(c); else n.delete(c); setChecked(n); }} /><span style={{ flex: 1 }}>{c}</span></label>)}
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
         <button type="button" onClick={() => { if (!checked.size) return toast.show('削除する候補をチェックしてください'); if (confirm(`${checked.size} 件の候補を削除しますか？`)) { setCands(cands.filter((c) => !checked.has(c))); setChecked(new Set()); } }} style={btn('#c0392b')}>削除</button>

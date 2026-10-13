@@ -135,7 +135,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
   const openLedger = (name: string) => drawer.open({ account: name, month: view.month, kind: 'account', from: KEY });
   const picked = (name: string) => !drawer.collapsed && drawer.target?.account === name;
   const rowBg = (r: { name: string; level: number; leaf: boolean }, i: number) => (view.pattern === '標準' ? (i % 2 ? '#f3f6f9' : 'transparent') : info.test(r.name, r.leaf) ? info.color : 'transparent');
-  const linkBtn: CSSProperties = { marginLeft: 10, padding: '1px 8px', borderRadius: 6, border: '1px solid #dde4ea', background: '#fff', color: accent, fontSize: 10.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' };
+  const linkBtn: CSSProperties = { marginLeft: 10, padding: '1px 8px', borderRadius: 6, border: '1px solid #dde4ea', background: '#fff', color: accent, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' };
   const analysisBlocked = kind === '合算区分';
 
   return (
@@ -156,24 +156,24 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
       period={
         <>
           <FiscalMonthTabs current={view.month} accent={accent} onSelect={(m) => setView({ month: m ?? '8' })} range={range} onRange={setRange} />
-          <span style={{ fontSize: 12.5, color: '#48565f' }}>{range ? periodText(range) : `令和8年 ${view.month}月`}</span>
+          <span style={{ fontSize: 14, color: '#48565f' }}>{range ? periodText(range) : `令和8年 ${view.month}月`}</span>
         </>
       }
       parts={{ items: PARTS, current: view.part, onChange: (i) => setView({ part: i }) }}
       targetLabel="科目検索"
       target={
         <>
-          <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="科目名の一部を入力すると一覧で強調します" autoComplete="off" style={{ width: 300, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', outline: 'none' }} />
-          {q.trim() && <span style={{ fontSize: 12, color: rows.some((r) => hit(r.name)) ? accent : '#c0392b', fontWeight: 700 }}>{rows.filter((r) => hit(r.name)).length ? `${rows.filter((r) => hit(r.name)).length} 件の科目を強調表示中` : '該当する科目がありません'}</span>}
-          {q && <button type="button" onClick={() => setQ('')} style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid #cfd8e0', background: '#fff', color: '#5b6773', fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>解除</button>}
-          <span style={{ fontSize: 11.5, color: '#9aa5b1' }}>科目の行の「元帳」で、右側に元帳を表示します</span>
+          <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="科目名の一部を入力すると一覧で強調します" autoComplete="off" style={{ width: 300, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
+          {q.trim() && <span style={{ fontSize: 14, color: rows.some((r) => hit(r.name)) ? accent : '#c0392b', fontWeight: 700 }}>{rows.filter((r) => hit(r.name)).length ? `${rows.filter((r) => hit(r.name)).length} 件の科目を強調表示中` : '該当する科目がありません'}</span>}
+          {q && <button type="button" onClick={() => setQ('')} style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid #cfd8e0', background: '#fff', color: '#5b6773', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>解除</button>}
+          <span style={{ fontSize: 12, color: '#9aa5b1' }}>科目の行の「元帳」で、右側に元帳を表示します</span>
         </>
       }
       listNote={<span>{rows.length} 行{hiddenZero > 0 ? `（0円の ${hiddenZero} 行を非表示）` : ''}</span>}
       switches={
         <>
           <Segmented label="表示階層" items={DEPTHS} value={view.depth} onChange={(d) => setView({ depth: d })} accent={accent} />
-          {view.depth === '就労授産' && <span style={{ fontSize: 11.5, color: '#7a8794' }}>就労支援事業の科目を、特定の項目・科目の子として結合して表示します（サンプルには就労支援事業の科目がありません）</span>}
+          {view.depth === '就労授産' && <span style={{ fontSize: 12, color: '#7a8794' }}>就労支援事業の科目を、特定の項目・科目の子として結合して表示します（サンプルには就労支援事業の科目がありません）</span>}
           <Segmented label="行の配色" items={PATTERNS} value={view.pattern} onChange={(p) => setView({ pattern: p })} accent={accent} />
           <SwitchPill label="内訳（区分ごと）" on={members.length > 0 && view.breakdown} onChange={(v) => setView({ breakdown: v })} accent={accent} disabled={members.length === 0} title={members.length === 0 ? `入力区分（${s.division}）で起動中は内訳がないため切り替えできません。合算区分または親区分（法人・事業区分・拠点区分）で起動すると、区分ごとの金額を表示できます` : '区分ごとの金額の列を表示します'} />
         </>
@@ -200,7 +200,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
               <label style={{ ...CHECK, cursor: 'default', opacity: 0.5 }}><input type="checkbox" disabled />累計</label>
             </>
           )}
-          <span data-pattern-legend style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: '#7a8794' }}>
+          <span data-pattern-legend style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#7a8794' }}>
             <span style={{ width: 14, height: 14, borderRadius: 3, background: info.color, border: '1px solid #c3ccd4' }} />
             配色「{view.pattern}」：{info.note}
           </span>
@@ -209,9 +209,9 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
     >
       <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 400px)' }}>
         {view.part !== 0 ? (
-          <div style={{ padding: '48px 22px', textAlign: 'center', color: '#9aa5b1', fontSize: 13 }}>「{PARTS[view.part]}」のサンプルデータは未作成です（資産の部で表の構成をご確認ください）。</div>
+          <div style={{ padding: '48px 22px', textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>「{PARTS[view.part]}」のサンプルデータは未作成です（資産の部で表の構成をご確認ください）。</div>
         ) : flat.length === 0 ? (
-          <div style={{ padding: '48px 22px', textAlign: 'center', color: '#9aa5b1', fontSize: 13 }}>表示する列を1つ以上選んでください。</div>
+          <div style={{ padding: '48px 22px', textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>表示する列を1つ以上選んでください。</div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
@@ -219,7 +219,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
                 <th style={{ ...TH, minWidth: 260 }} rowSpan={2}>科目名</th>
                 {groups.map((g, i) => (
                   <th key={i} style={{ ...TH, textAlign: 'center', borderLeft: '1px solid #e6ecf1', background: g.breakdown ? '#f0f5fa' : TH.background }} colSpan={g.cols.length}>
-                    {g.breakdown && <span style={{ marginRight: 6, padding: '0 5px', borderRadius: 4, background: '#fff', border: '1px solid #d3dbe3', fontSize: 9.5 }}>内訳</span>}
+                    {g.breakdown && <span style={{ marginRight: 6, padding: '0 5px', borderRadius: 4, background: '#fff', border: '1px solid #d3dbe3', fontSize: 12 }}>内訳</span>}
                     {g.label}
                   </th>
                 ))}
@@ -251,16 +251,16 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
           </table>
         )}
       </div>
-      <div data-format-note style={{ padding: '8px 22px', borderTop: '1px solid #eef2f5', fontSize: 11.5, color: '#9aa5b1', display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+      <div data-format-note style={{ padding: '8px 22px', borderTop: '1px solid #eef2f5', fontSize: 12, color: '#9aa5b1', display: 'flex', gap: 14, flexWrap: 'wrap' }}>
         <span>金額の書式は「動作環境」の設定に従います（桁区切り：{s.env.thousandsSep}／負の表記：{s.env.negativeSign}・{s.env.negativeColor}字／0円の行：{zeroCut ? `表示しない${hiddenZero > 0 ? `（${hiddenZero} 行を省略中）` : ''}` : '表示する'}）</span>
       </div>
 
       <Modal open={graph} onClose={() => setGraph(false)} width={640} title={`${displayName(KEY)} - 残高グラフ`}>
         <div style={{ padding: '12px 22px 18px' }}>
           {(() => { const items = rows.filter((r) => r.level <= 1 && r.values[1] > 0).slice(0, 8); const max = Math.max(1, ...items.map((r) => r.values[1])); return (
-            <div style={{ display: 'grid', gap: 8 }}>{items.map((r) => { const v = r.values[1]; return <div key={r.name} style={{ display: 'grid', gridTemplateColumns: '160px 1fr 120px', gap: 10, alignItems: 'center', fontSize: 12.5 }}><span style={{ fontWeight: r.level === 0 ? 700 : 500 }}>{r.name}</span><div style={{ height: 14, background: '#eef2f5', borderRadius: 7, overflow: 'hidden' }}><div style={{ width: `${(v / max) * 100}%`, height: '100%', background: accent }} /></div><span style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{money(v)}</span></div>; })}</div>
+            <div style={{ display: 'grid', gap: 8 }}>{items.map((r) => { const v = r.values[1]; return <div key={r.name} style={{ display: 'grid', gridTemplateColumns: '160px 1fr 120px', gap: 10, alignItems: 'center', fontSize: 14 }}><span style={{ fontWeight: r.level === 0 ? 700 : 500 }}>{r.name}</span><div style={{ height: 14, background: '#eef2f5', borderRadius: 7, overflow: 'hidden' }}><div style={{ width: `${(v / max) * 100}%`, height: '100%', background: accent }} /></div><span style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{money(v)}</span></div>; })}</div>
           ); })()}
-          <div style={{ fontSize: 11.5, color: '#9aa5b1', marginTop: 10 }}>{PARTS[view.part]}・当年度末残高（{s.division}）。値はサンプルです。</div>
+          <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 10 }}>{PARTS[view.part]}・当年度末残高（{s.division}）。値はサンプルです。</div>
         </div>
       </Modal>
 
@@ -270,10 +270,10 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
             const base = blk.items[0].value;
             return (
               <div key={blk.title}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#5b6773', marginBottom: 6 }}>{blk.title}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#5b6773', marginBottom: 6 }}>{blk.title}</div>
                 <div style={{ display: 'grid', gap: 6 }}>
                   {blk.items.map((it, i) => (
-                    <div key={it.name} style={{ display: 'grid', gridTemplateColumns: '170px 1fr 120px 64px', gap: 10, alignItems: 'center', fontSize: 12.5 }}>
+                    <div key={it.name} style={{ display: 'grid', gridTemplateColumns: '170px 1fr 120px 64px', gap: 10, alignItems: 'center', fontSize: 14 }}>
                       <span style={{ fontWeight: i === 0 ? 700 : 500, paddingLeft: i === 0 ? 0 : 12 }}>{it.name}</span>
                       <div style={{ height: 14, background: '#eef2f5', borderRadius: 7, overflow: 'hidden' }}><div style={{ width: `${Math.min(100, (Math.abs(it.value) / base) * 100)}%`, height: '100%', background: i === 0 ? '#9aa5b1' : blk.color }} /></div>
                       <span style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: i === 0 ? 700 : 400 }}>{money(it.value)}</span>
@@ -284,8 +284,8 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
               </div>
             );
           })}
-          <div style={{ fontSize: 11.5, color: '#9aa5b1' }}>事業活動の収入・支出の構成と、収入に対する比率（人件費率など）。値はサンプルです。</div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" onClick={() => setAnalysis(false)} style={{ padding: '8px 22px', borderRadius: 8, border: 'none', background: accent, color: '#fff', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>閉じる</button></div>
+          <div style={{ fontSize: 12, color: '#9aa5b1' }}>事業活動の収入・支出の構成と、収入に対する比率（人件費率など）。値はサンプルです。</div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" onClick={() => setAnalysis(false)} style={{ padding: '8px 22px', borderRadius: 8, border: 'none', background: accent, color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>閉じる</button></div>
         </div>
       </Modal>
     </ReportShell>

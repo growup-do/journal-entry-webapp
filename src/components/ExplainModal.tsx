@@ -15,12 +15,12 @@ export function ExplainModal({ open, onClose, accent, title, sections, source, w
         <div style={{ display: 'grid', gap: 14, maxHeight: '60vh', overflow: 'auto', paddingRight: 4 }}>
           {sections.map((s) => (
             <section key={s.h}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: accent, marginBottom: 4 }}>{s.h}</div>
-              <div style={{ fontSize: 13, color: '#48565f', lineHeight: 1.85 }}>{s.body}</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: accent, marginBottom: 4 }}>{s.h}</div>
+              <div style={{ fontSize: 14, color: '#48565f', lineHeight: 1.85 }}>{s.body}</div>
             </section>
           ))}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16, fontSize: 11.5, color: '#9aa5b1' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16, fontSize: 12, color: '#9aa5b1' }}>
           {source && <span>出典：{source}</span>}
           <button type="button" className="btn-outline" onClick={() => window.open(SUPPORT_URL, '_blank', 'noopener')} style={{ ...btn('#5b6773', false, true), marginLeft: 'auto' }}>サポートサイトで詳しく見る ↗</button>
           <button type="button" onClick={onClose} style={btn(accent, true, true)}>閉じる</button>

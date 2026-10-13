@@ -47,22 +47,22 @@ export function SettingsMenu({ accent, active, onNavigate }: Props) {
     const on = active === label;
     const off = ENTRY_ONLY.includes(label) && kind !== '入力区分';
     const color = off ? '#b3bcc5' : g.danger ? DANGER : on ? accent : '#22303c';
-    const style: CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, width: '100%', textAlign: 'left', padding: '7px 10px', border: 'none', background: on ? '#eef2f6' : 'transparent', borderRadius: 7, fontSize: 13, fontFamily: 'inherit', color, fontWeight: on || g.danger ? 700 : 500, cursor: off ? 'not-allowed' : 'pointer' };
+    const style: CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, width: '100%', textAlign: 'left', padding: '7px 10px', border: 'none', background: on ? '#eef2f6' : 'transparent', borderRadius: 7, fontSize: 14, fontFamily: 'inherit', color, fontWeight: on || g.danger ? 700 : 500, cursor: off ? 'not-allowed' : 'pointer' };
     return (
       <button key={label} type="button" className="menu-sub" data-menu={label} aria-disabled={off} title={off ? `${kind}で起動中は利用できません（入力区分ごとの設定です）` : undefined} onClick={off ? undefined : () => { setOpen(false); onNavigate(label); }} style={style}>
         <span style={{ flex: 1 }}>{displayName(label)}</span>
-        {off && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 8, background: '#f1f4f6', color: '#9aa5b1' }}>利用不可</span>}
+        {off && <span style={{ fontSize: 12, fontWeight: 700, padding: '1px 6px', borderRadius: 8, background: '#f1f4f6', color: '#9aa5b1' }}>利用不可</span>}
       </button>
     );
   };
   const group = (g: SettingsGroup) => (
     <section key={g.key} style={{ breakInside: 'avoid', border: '1px solid ' + (g.danger ? '#f2c9c2' : '#dde4ea'), borderRadius: 10, overflow: 'hidden', background: g.danger ? '#fdf5f3' : '#fff' }}>
       <div style={{ padding: '7px 12px', background: g.danger ? '#f9e4df' : '#eef2f6', borderBottom: '1px solid ' + (g.danger ? '#f2c9c2' : '#dde4ea') }}>
-        <div style={{ fontSize: 11.5, fontWeight: 800, color: g.danger ? DANGER : '#22303c', letterSpacing: '.04em', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ fontSize: 12, fontWeight: 800, color: g.danger ? DANGER : '#22303c', letterSpacing: '.04em', display: 'flex', alignItems: 'center', gap: 6 }}>
           {g.danger && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={DANGER} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l10 18H2z" /><path d="M12 10v5M12 18v.5" /></svg>}
           {g.label}
         </div>
-        {g.note && <div style={{ fontSize: 10.5, color: g.danger ? '#b5564a' : '#7a8794', marginTop: 1 }}>{g.note}</div>}
+        {g.note && <div style={{ fontSize: 12, color: g.danger ? '#b5564a' : '#7a8794', marginTop: 1 }}>{g.note}</div>}
       </div>
       <div style={{ padding: 6 }}>{g.items.map((l) => item(l, g))}</div>
     </section>
@@ -77,7 +77,7 @@ export function SettingsMenu({ accent, active, onNavigate }: Props) {
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         title="各種設定"
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 32, padding: '0 10px 0 8px', borderRadius: 16, background: open || isActive ? accent : '#f4f6f8', color: open || isActive ? '#fff' : '#5b6773', border: '1px solid ' + (open || isActive ? accent : '#e2e8ee'), cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 32, padding: '0 10px 0 8px', borderRadius: 16, background: open || isActive ? accent : '#f4f6f8', color: open || isActive ? '#fff' : '#5b6773', border: '1px solid ' + (open || isActive ? accent : '#e2e8ee'), cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="3" />
@@ -88,8 +88,8 @@ export function SettingsMenu({ accent, active, onNavigate }: Props) {
       {open && (
         <div role="menu" style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 860, maxWidth: 'calc(100vw - 24px)', maxHeight: 'calc(100vh - 90px)', overflow: 'auto', background: '#fff', border: '1px solid #dde4ea', borderRadius: 12, boxShadow: '0 12px 32px rgba(24,42,62,.18)', padding: 10, zIndex: 130, fontFamily: "'Noto Sans JP', sans-serif" }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, padding: '4px 10px 8px' }}>
-            <span style={{ fontSize: 13.5, fontWeight: 800 }}>各種設定</span>
-            <span style={{ fontSize: 11, color: '#9aa5b1' }}>起動中の区分：{session.division}（{kind}）</span>
+            <span style={{ fontSize: 14, fontWeight: 800 }}>各種設定</span>
+            <span style={{ fontSize: 12, color: '#9aa5b1' }}>起動中の区分：{session.division}（{kind}）</span>
           </div>
           {/* 3列で高さをそろえる：左＝マスター設定（11項目）、中＝保守・運用＋登録機能、右＝ユーザー・権限＋年度更新（警告色。右下に離して置く） */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12, alignItems: 'start' }}>

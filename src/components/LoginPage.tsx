@@ -22,7 +22,7 @@ export function LoginPage({ onLogin }: { onLogin: (kind: 'standard' | 'review') 
   const [busy, setBusy] = useState(false);
   const toast = useToast();
   const input: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '11px 12px', border: '1px solid #cfd8e0', borderRadius: 9, fontSize: 14.5, fontFamily: 'inherit', outline: 'none', color: '#22303c', background: '#fff' };
-  const lbl: CSSProperties = { display: 'block', fontSize: 11.5, fontWeight: 700, color: '#8290a0', marginBottom: 6 };
+  const lbl: CSSProperties = { display: 'block', fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 6 };
   const submit = () => {
     if (!email.trim() || !pw) return toast.show('メールアドレスとパスワードを入力してください');
     // 通常アカウント／確認用アカウント（確認メモなどを出さない）のどちらかに一致したときだけ入れる
@@ -69,12 +69,12 @@ export function LoginPage({ onLogin }: { onLogin: (kind: 'standard' | 'review') 
           <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, background: GREEN, color: '#fff', borderRadius: 10, fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 20 }}>会</span>
           <div>
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 18, lineHeight: 1.2 }}>会計基準システム</div>
-            <div style={{ fontSize: 11.5, color: '#7a8794' }}>社会福祉法人向け　Web版</div>
+            <div style={{ fontSize: 12, color: '#7a8794' }}>社会福祉法人向け　Web版</div>
           </div>
         </div>
         <div style={{ background: '#fff', border: '1px solid #dde4ea', borderRadius: 16, boxShadow: '0 10px 36px rgba(30,50,70,.10)', padding: '28px 30px 24px' }}>
           <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 18, marginBottom: 4 }}>ログイン</div>
-          <div style={{ fontSize: 12, color: '#7a8794', marginBottom: 18 }}>登録済みのメールアドレスとパスワードを入力してください。</div>
+          <div style={{ fontSize: 14, color: '#7a8794', marginBottom: 18 }}>登録済みのメールアドレスとパスワードを入力してください。</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
               <span style={lbl}>メールアドレス</span>
@@ -84,19 +84,19 @@ export function LoginPage({ onLogin }: { onLogin: (kind: 'standard' | 'review') 
               <span style={lbl}>パスワード</span>
               <div style={{ position: 'relative' }}>
                 <input id="login-pw" className="field-input ring" type={show ? 'text' : 'password'} value={pw} onChange={(e) => setPw(e.target.value)} onKeyDown={onEnter} autoComplete="current-password" style={{ ...input, paddingRight: 64 }} />
-                <button type="button" onClick={() => setShow((s) => !s)} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', color: '#7a8794', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>{show ? '隠す' : '表示'}</button>
+                <button type="button" onClick={() => setShow((s) => !s)} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', color: '#7a8794', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>{show ? '隠す' : '表示'}</button>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12.5 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 14 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: '#5b6773' }}><input type="checkbox" checked={keep} onChange={() => setKeep(!keep)} />ログイン状態を保持する</label>
-              <button type="button" onClick={openReset} style={{ border: 'none', background: 'transparent', color: GREEN, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5 }}>パスワードをお忘れですか？</button>
+              <button type="button" onClick={openReset} style={{ border: 'none', background: 'transparent', color: GREEN, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }}>パスワードをお忘れですか？</button>
             </div>
-            <button id="login-submit" type="button" className="submit-btn" onClick={submit} disabled={busy} style={{ marginTop: 4, width: '100%', padding: '13px 16px', background: GREEN, color: '#fff', border: 'none', borderRadius: 11, fontWeight: 700, fontSize: 15, fontFamily: 'inherit', cursor: 'pointer', boxShadow: '0 3px 12px rgba(31,122,82,.24)', opacity: busy ? 0.7 : 1 }}>
+            <button id="login-submit" type="button" className="submit-btn" onClick={submit} disabled={busy} style={{ marginTop: 4, width: '100%', padding: '13px 16px', background: GREEN, color: '#fff', border: 'none', borderRadius: 11, fontWeight: 700, fontSize: 16, fontFamily: 'inherit', cursor: 'pointer', boxShadow: '0 3px 12px rgba(31,122,82,.24)', opacity: busy ? 0.7 : 1 }}>
               {busy ? 'ログイン中…' : 'ログイン'}
             </button>
           </div>
         </div>
-        <div style={{ textAlign: 'center', fontSize: 11, color: '#9aa5b1', marginTop: 14 }}>ご利用には事業者の管理者による招待が必要です。</div>
+        <div style={{ textAlign: 'center', fontSize: 12, color: '#9aa5b1', marginTop: 14 }}>ご利用には事業者の管理者による招待が必要です。</div>
         <Footer compact />
       </div>
 
@@ -106,7 +106,7 @@ export function LoginPage({ onLogin }: { onLogin: (kind: 'standard' | 'review') 
         <div style={{ padding: '18px 26px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
           {reset.step === 0 && (
             <>
-              <div style={{ fontSize: 13, color: '#5b6773', lineHeight: 1.7 }}>登録済みのメールアドレスを入力してください。再設定用の確認コードをお送りします。</div>
+              <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.7 }}>登録済みのメールアドレスを入力してください。再設定用の確認コードをお送りします。</div>
               <div><span style={lbl}>メールアドレス</span><input className="field-input ring" type="email" value={reset.email} onChange={(e) => setReset({ ...reset, email: e.target.value })} onKeyDown={onResetEnter} autoFocus autoComplete="username" style={input} /></div>
             </>
           )}
@@ -116,16 +116,16 @@ export function LoginPage({ onLogin }: { onLogin: (kind: 'standard' | 'review') 
               <div>
                 <span style={lbl}>確認コード（6桁）</span>
                 <input className="field-input ring" value={reset.code} onChange={(e) => setReset({ ...reset, code: e.target.value.replace(/[^0-9]/g, '').slice(0, 6) })} onKeyDown={onResetEnter} inputMode="numeric" autoFocus placeholder="000000" style={{ ...input, textAlign: 'center', fontSize: 24, letterSpacing: '.3em', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }} />
-                <div style={{ fontSize: 11.5, color: '#9aa5b1', marginTop: 6 }}>コードの有効期限は10分です。届かない場合は迷惑メールフォルダをご確認ください。（プロトタイプでは6桁の数字であれば進めます）</div>
+                <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 6 }}>コードの有効期限は10分です。届かない場合は迷惑メールフォルダをご確認ください。（プロトタイプでは6桁の数字であれば進めます）</div>
               </div>
-              <button type="button" onClick={() => toast.show('確認コードを再送しました')} style={{ alignSelf: 'flex-start', border: 'none', background: 'transparent', color: GREEN, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, padding: 0 }}>コードを再送する</button>
+              <button type="button" onClick={() => toast.show('確認コードを再送しました')} style={{ alignSelf: 'flex-start', border: 'none', background: 'transparent', color: GREEN, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, padding: 0 }}>コードを再送する</button>
             </>
           )}
           {reset.step === 2 && (
             <>
               <div><span style={lbl}>新しいパスワード（8文字以上・英数字混在）</span><input className="field-input ring" type="password" value={reset.pw} onChange={(e) => setReset({ ...reset, pw: e.target.value })} onKeyDown={onResetEnter} autoFocus autoComplete="new-password" style={input} /></div>
               <div><span style={lbl}>新しいパスワード（確認）</span><input className="field-input ring" type="password" value={reset.pw2} onChange={(e) => setReset({ ...reset, pw2: e.target.value })} onKeyDown={onResetEnter} autoComplete="new-password" style={input} /></div>
-              <div style={{ display: 'flex', gap: 10, fontSize: 11.5 }}>
+              <div style={{ display: 'flex', gap: 10, fontSize: 12 }}>
                 {[['8文字以上', reset.pw.length >= 8], ['英字を含む', /[a-zA-Z]/.test(reset.pw)], ['数字を含む', /[0-9]/.test(reset.pw)], ['確認と一致', reset.pw.length > 0 && reset.pw === reset.pw2]].map(([t, ok]) => (
                   <span key={t as string} style={{ color: ok ? GREEN : '#9aa5b1', fontWeight: 700 }}>{ok ? '✓' : '○'} {t as string}</span>
                 ))}
@@ -136,11 +136,11 @@ export function LoginPage({ onLogin }: { onLogin: (kind: 'standard' | 'review') 
             <Notice tone="ok">パスワードを再設定しました。新しいパスワードでログインしてください。（プロトタイプ：ログイン欄に反映済みです）</Notice>
           )}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
-            {reset.step > 0 && reset.step < 3 && <button type="button" onClick={() => setReset({ ...reset, step: reset.step - 1 })} style={{ marginRight: 'auto', padding: '9px 16px', border: '1px solid #cfd8e0', borderRadius: 8, background: '#fff', color: '#5b6773', fontWeight: 700, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }}>戻る</button>}
-            {reset.step < 3 && <button type="button" onClick={closeReset} style={{ padding: '9px 16px', border: '1px solid #cfd8e0', borderRadius: 8, background: '#fff', color: '#5b6773', fontWeight: 700, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }}>キャンセル</button>}
+            {reset.step > 0 && reset.step < 3 && <button type="button" onClick={() => setReset({ ...reset, step: reset.step - 1 })} style={{ marginRight: 'auto', padding: '9px 16px', border: '1px solid #cfd8e0', borderRadius: 8, background: '#fff', color: '#5b6773', fontWeight: 700, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' }}>戻る</button>}
+            {reset.step < 3 && <button type="button" onClick={closeReset} style={{ padding: '9px 16px', border: '1px solid #cfd8e0', borderRadius: 8, background: '#fff', color: '#5b6773', fontWeight: 700, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' }}>キャンセル</button>}
             {reset.step < 3
-              ? <button type="button" className="submit-btn" onClick={resetNext} disabled={reset.sending} style={{ padding: '9px 20px', border: 'none', borderRadius: 8, background: GREEN, color: '#fff', fontWeight: 700, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer', opacity: reset.sending ? 0.7 : 1 }}>{reset.step === 0 ? (reset.sending ? '送信中…' : '確認コードを送信') : reset.step === 1 ? '次へ' : 'パスワードを再設定'}</button>
-              : <button type="button" className="submit-btn" onClick={() => { closeReset(); setTimeout(() => document.getElementById('login-submit')?.focus(), 0); }} style={{ padding: '9px 20px', border: 'none', borderRadius: 8, background: GREEN, color: '#fff', fontWeight: 700, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }}>ログイン画面へ</button>}
+              ? <button type="button" className="submit-btn" onClick={resetNext} disabled={reset.sending} style={{ padding: '9px 20px', border: 'none', borderRadius: 8, background: GREEN, color: '#fff', fontWeight: 700, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', opacity: reset.sending ? 0.7 : 1 }}>{reset.step === 0 ? (reset.sending ? '送信中…' : '確認コードを送信') : reset.step === 1 ? '次へ' : 'パスワードを再設定'}</button>
+              : <button type="button" className="submit-btn" onClick={() => { closeReset(); setTimeout(() => document.getElementById('login-submit')?.focus(), 0); }} style={{ padding: '9px 20px', border: 'none', borderRadius: 8, background: GREEN, color: '#fff', fontWeight: 700, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' }}>ログイン画面へ</button>}
           </div>
         </div>
       </Modal>

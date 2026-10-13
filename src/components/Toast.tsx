@@ -29,7 +29,7 @@ export function ToastView({ msg }: { msg: string }) {
         color: '#fff',
         padding: '9px 16px',
         borderRadius: 10,
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: 600,
         boxShadow: '0 8px 24px rgba(0,0,0,.25)',
         whiteSpace: 'nowrap',

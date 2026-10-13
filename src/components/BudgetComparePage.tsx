@@ -51,25 +51,25 @@ export function BudgetComparePage({ variant, accent }: Props) {
       period={
         <>
           <FiscalMonthTabs current={view.month} accent={accent} onSelect={(m) => setView({ month: m ?? '10' })} />
-          <span style={{ fontSize: 12.5, color: '#48565f' }}>令和8年 {view.month}月</span>
+          <span style={{ fontSize: 14, color: '#48565f' }}>令和8年 {view.month}月</span>
         </>
       }
       parts={{ items: PARTS, current: view.part, onChange: (i) => setView({ part: i }) }}
       targetLabel="科目検索"
       target={
         <>
-          <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="科目名の一部を入力" autoComplete="off" style={{ width: 240, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 12.5, fontFamily: 'inherit', outline: 'none' }} />
-          {q.trim() && <span style={{ fontSize: 12, color: hits ? accent : '#c0392b', fontWeight: 700 }}>{hits ? `${hits} 件の科目を強調表示中` : '該当する科目がありません'}</span>}
-          {q && <button type="button" onClick={() => setQ('')} style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid #cfd8e0', background: '#fff', color: '#5b6773', fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>クリア</button>}
+          <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="科目名の一部を入力" autoComplete="off" style={{ width: 240, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
+          {q.trim() && <span style={{ fontSize: 14, color: hits ? accent : '#c0392b', fontWeight: 700 }}>{hits ? `${hits} 件の科目を強調表示中` : '該当する科目がありません'}</span>}
+          {q && <button type="button" onClick={() => setQ('')} style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid #cfd8e0', background: '#fff', color: '#5b6773', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>クリア</button>}
         </>
       }
       switches={<Segmented label="表示形式" items={VIEWS} value={view.kind} onChange={(k) => setView({ kind: k })} accent={accent} />}
     >
       {view.part !== 3 ? (
-        <div style={{ padding: '48px 22px', textAlign: 'center', color: '#9aa5b1', fontSize: 13 }}>「{PARTS[view.part]}」のサンプルデータは未作成です（資金で表の構成をご確認ください）。</div>
+        <div style={{ padding: '48px 22px', textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>「{PARTS[view.part]}」のサンプルデータは未作成です（資金で表の構成をご確認ください）。</div>
       ) : view.kind !== '表' ? (
         <div data-graph={view.kind} style={{ padding: '18px 22px 24px', overflow: 'auto', maxHeight: 'calc(100vh - 360px)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '260px 130px 1fr 90px', gap: 12, padding: '0 0 6px', borderBottom: '1px solid #e2e8ee', fontSize: 10.5, fontWeight: 700, color: '#8290a0' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '260px 130px 1fr 90px', gap: 12, padding: '0 0 6px', borderBottom: '1px solid #e2e8ee', fontSize: 12, fontWeight: 700, color: '#8290a0' }}>
             <span>科目名</span><span style={{ textAlign: 'right' }}>実績額</span><span>{view.kind}</span><span style={{ textAlign: 'right' }}>{view.kind === '実績グラフ' ? '実績額' : view.kind === '達成率グラフ' ? '達成率' : '構成比'}</span>
           </div>
           {rows.map((r, i) => {
@@ -77,16 +77,16 @@ export function BudgetComparePage({ variant, accent }: Props) {
             const g = bar(b, a);
             return (
               <div key={i} style={{ display: 'grid', gridTemplateColumns: '260px 130px 1fr 90px', alignItems: 'center', gap: 12, padding: '6px 0', borderBottom: '1px solid #f1f4f6', background: hit(r.name) ? '#fff8d6' : 'transparent' }}>
-                <div style={{ fontSize: 12.5, fontWeight: r.level === 0 ? 700 : r.level === 1 ? 600 : 400, paddingLeft: r.level * 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
-                <div style={{ textAlign: 'right', fontSize: 12.5, fontVariantNumeric: 'tabular-nums' }}>{money(a)}</div>
+                <div style={{ fontSize: 14, fontWeight: r.level === 0 ? 700 : r.level === 1 ? 600 : 400, paddingLeft: r.level * 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
+                <div style={{ textAlign: 'right', fontSize: 14, fontVariantNumeric: 'tabular-nums' }}>{money(a)}</div>
                 <div style={{ position: 'relative', height: 16, background: '#eef2f5', borderRadius: 4, overflow: 'hidden' }}>
                   <div style={{ position: 'absolute', inset: 0, width: `${Math.max(0, Math.min(1, g.ratio)) * 100}%`, background: view.kind === '達成率グラフ' ? accent : view.kind === '実績グラフ' ? '#2c5f9e' : '#b7791f', opacity: r.level === 0 ? 0.95 : 0.7 }} />
                 </div>
-                <div style={{ textAlign: 'right', fontSize: 12.5, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{g.text}</div>
+                <div style={{ textAlign: 'right', fontSize: 14, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{g.text}</div>
               </div>
             );
           })}
-          <div style={{ fontSize: 11, color: '#9aa5b1', marginTop: 10 }}>{graphNote}</div>
+          <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 10 }}>{graphNote}</div>
         </div>
       ) : (
         <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 360px)' }}>

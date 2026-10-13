@@ -16,7 +16,7 @@ import { FUSEN_COLORS } from '../store/journalStore';
 
 const DIV_TABS = ['金額書式', '伝票入力', '画面・バックアップ'];
 const grid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 14, alignItems: 'start' };
-const colorLbl: CSSProperties = { fontSize: 12, display: 'flex', gap: 6, alignItems: 'center' };
+const colorLbl: CSSProperties = { fontSize: 14, display: 'flex', gap: 6, alignItems: 'center' };
 
 export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'form' | 'sheet'; accent: string; /** 他画面を開く（印刷の詳細設定） */ onNavigate?: (page: string) => void }) {
   const [infoOpen, setInfoOpen] = useState(false);
@@ -37,7 +37,7 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
     return <span style={{ fontVariantNumeric: 'tabular-nums', color: n < 0 && v.negativeColor === '赤' ? '#c0392b' : '#22303c', display: 'inline-flex', alignItems: 'center' }}>{v.negativePos === '前' && sign}{body}{v.negativePos === '後' && sign}</span>;
   };
   function radios<O extends string>(opts: readonly O[], cur: O, on: (o: O) => void, text?: (o: O) => string) {
-    return <div style={{ display: 'flex', gap: 14, fontSize: 12.5, flexWrap: 'wrap', paddingTop: 2 }}>{opts.map((o) => <label key={o} style={{ display: 'flex', gap: 4, alignItems: 'center' }}><input type="radio" checked={cur === o} onChange={() => on(o)} />{text ? text(o) : o}</label>)}</div>;
+    return <div style={{ display: 'flex', gap: 14, fontSize: 14, flexWrap: 'wrap', paddingTop: 2 }}>{opts.map((o) => <label key={o} style={{ display: 'flex', gap: 4, alignItems: 'center' }}><input type="radio" checked={cur === o} onChange={() => on(o)} />{text ? text(o) : o}</label>)}</div>;
   }
   /** この画面から移した項目（補正予算の入力方式・参照パネルの初期表示）は、移動先の画面で保存した値を維持する */
   const save = () => { setSession((x) => ({ env: { ...v, supplementMode: x.env.supplementMode, wideInitial: x.env.wideInitial, wideMonth: x.env.wideMonth, ledger1Init: x.env.ledger1Init, ledger2Init: x.env.ledger2Init, order: x.env.order } })); toast.show(`${displayName('環境設定')}を保存しました（全区分共通の設定はすべての区分に反映されます）`); };
@@ -82,8 +82,8 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
       <Modal open={fileOpen} onClose={() => setFileOpen(false)} width={520} title={`${displayName('環境設定')}の保存／読込`}>
         <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
           <Notice>区分「{s.division}」の環境条件を設定ファイルとして保存し、別の区分・別の端末で読み込めます（既存の「動作設定ファイル（.ini）」に相当。Web版では JSON 形式）。</Notice>
-          <div style={card}><div style={cardHead}>設定の保存</div><div style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 12, fontSize: 12.5 }}><span style={{ flex: 1, color: '#5b6773' }}>現在設定中（未保存分を含む）の条件をファイルに書き出します。</span><button type="button" onClick={saveFile} style={btn(accent, true)}>保存（ダウンロード）</button></div></div>
-          <div style={card}><div style={cardHead}>設定の読込</div><div style={{ padding: 14, display: 'grid', gap: 10, fontSize: 12.5 }}>
+          <div style={card}><div style={cardHead}>設定の保存</div><div style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 12, fontSize: 14 }}><span style={{ flex: 1, color: '#5b6773' }}>現在設定中（未保存分を含む）の条件をファイルに書き出します。</span><button type="button" onClick={saveFile} style={btn(accent, true)}>保存（ダウンロード）</button></div></div>
+          <div style={card}><div style={cardHead}>設定の読込</div><div style={{ padding: 14, display: 'grid', gap: 10, fontSize: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><span style={{ flex: 1, color: '#5b6773' }}>保存した設定ファイルを選んで読み込みます。読み込んだ内容は「OK（保存）」で確定します。</span><button type="button" onClick={() => fileRef.current?.click()} style={btn(accent)}>ファイルを選択…</button></div>
             <input ref={fileRef} type="file" accept=".json,application/json" onChange={(e) => onFile(e.target.files?.[0])} style={{ display: 'none' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><span style={{ flex: 1, color: '#9aa5b1' }}>手元にファイルがない場合は、サンプルの設定を読み込んで動作を確認できます。</span><button type="button" onClick={() => applyLoaded(SAMPLE_ENV, 'サンプル設定')} style={btn()}>サンプルを読み込む</button></div>
@@ -104,12 +104,12 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
             </div></div>
             <div style={card}><div style={cardHead}>付箋の色の意味</div><div style={{ padding: 14, display: 'grid', gap: 8 }}>
               {(['赤', '青', '黄', '緑'] as const).map((f) => (
-                <label key={f} style={{ display: 'grid', gridTemplateColumns: '16px 24px minmax(0, 1fr)', gap: 8, alignItems: 'center', fontSize: 12.5 }}>
+                <label key={f} style={{ display: 'grid', gridTemplateColumns: '16px 24px minmax(0, 1fr)', gap: 8, alignItems: 'center', fontSize: 14 }}>
                   <span aria-hidden style={{ width: 14, height: 14, borderRadius: 3, background: FUSEN_COLORS[f] }} /><span>{f}</span>
-                  <input className="field-input" value={v.fusenNames[f]} onChange={(e) => set({ fusenNames: { ...v.fusenNames, [f]: e.target.value } })} placeholder="（任意）この色の付箋の使い方" aria-label={`${f}の付箋の意味`} style={{ ...input, padding: '5px 8px', fontSize: 12.5 }} data-fusen-name={f} />
+                  <input className="field-input" value={v.fusenNames[f]} onChange={(e) => set({ fusenNames: { ...v.fusenNames, [f]: e.target.value } })} placeholder="（任意）この色の付箋の使い方" aria-label={`${f}の付箋の意味`} style={{ ...input, padding: '5px 8px', fontSize: 14 }} data-fusen-name={f} />
                 </label>
               ))}
-              <div style={{ fontSize: 12, color: '#7a8794' }}>意味を入れると、伝票入力・日記帳・元帳の付箋ボタンのツールチップと、検索条件・印刷の絞り込みに「赤（{v.fusenNames.赤 || '…'}）」のように表示します。空欄のときは色だけを表示します（既存では利用者が自由に使い分けているため、初期値は空です）。付箋の色は4色固定です。</div>
+              <div style={{ fontSize: 14, color: '#7a8794' }}>意味を入れると、伝票入力・日記帳・元帳の付箋ボタンのツールチップと、検索条件・印刷の絞り込みに「赤（{v.fusenNames.赤 || '…'}）」のように表示します。空欄のときは色だけを表示します（既存では利用者が自由に使い分けているため、初期値は空です）。付箋の色は4色固定です。</div>
             </div></div>
             <div style={card}><div style={cardHead}>検索・日付の表記</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
               {T('noFurigana', 'フリガナ検索を無効にする（科目・業者・摘要の検索でフリガナを使わない）')}
@@ -129,8 +129,8 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
                 <Field label="負の表示色"><select value={v.negativeColor} onChange={(e) => set({ negativeColor: e.target.value as EnvSettings['negativeColor'] })} style={input}><option>黒</option><option>赤</option></select></Field>
                 <div style={{ gridColumn: 'span 2' }}>{T('zeroCut', '0項目カット（相殺結果が0円の項目を表示・印刷しない）')}</div>
                 <div style={{ gridColumn: 'span 2' }}>{T('autoAmountFont', '金額フォントサイズを自動調整する（桁数が多い金額を欄内に収める）')}</div>
-                <div style={{ gridColumn: 'span 2', padding: '10px 12px', background: '#f8fafc', borderRadius: 10, fontSize: 14, display: 'flex', gap: 24, alignItems: 'center' }}><span style={{ fontSize: 12, color: '#5b6773' }}>表示例：</span>{sample(1234567)}{sample(-89012)}</div>
-                {v.thousandsSep === '点線' && <div style={{ gridColumn: 'span 2', fontSize: 12, color: '#7a8794' }}>点線：3桁ごとに点線の区切り線を引きます（金額欄の位取り線。文字としての記号は入りません）。</div>}
+                <div style={{ gridColumn: 'span 2', padding: '10px 12px', background: '#f8fafc', borderRadius: 10, fontSize: 14, display: 'flex', gap: 24, alignItems: 'center' }}><span style={{ fontSize: 14, color: '#5b6773' }}>表示例：</span>{sample(1234567)}{sample(-89012)}</div>
+                {v.thousandsSep === '点線' && <div style={{ gridColumn: 'span 2', fontSize: 14, color: '#7a8794' }}>点線：3桁ごとに点線の区切り線を引きます（金額欄の位取り線。文字としての記号は入りません）。</div>}
               </div></div>
             )}
             {tab === '伝票入力' && (
@@ -143,7 +143,7 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
                 </div></div>
                 <div style={card}><div style={cardHead}>摘要・仕訳の入力補助</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
                   {T('autoComplete', '摘要自動補完入力機能を有効にする')}
-                  <div style={{ paddingLeft: 46, display: 'flex', gap: 14, fontSize: 12.5, flexWrap: 'wrap' }}>{[true, false].map((b) => <label key={String(b)} style={{ display: 'flex', gap: 4 }}><input type="radio" checked={v.autoCompleteAdd === b} disabled={!v.autoComplete} onChange={() => set({ autoCompleteAdd: b })} />入力された摘要を候補に{b ? '追加する' : '追加しない'}</label>)}</div>
+                  <div style={{ paddingLeft: 46, display: 'flex', gap: 14, fontSize: 14, flexWrap: 'wrap' }}>{[true, false].map((b) => <label key={String(b)} style={{ display: 'flex', gap: 4 }}><input type="radio" checked={v.autoCompleteAdd === b} disabled={!v.autoComplete} onChange={() => set({ autoCompleteAdd: b })} />入力された摘要を候補に{b ? '追加する' : '追加しない'}</label>)}</div>
                   {T('specialPopup', '特殊摘要入力時のポップアップを有効にする（入力可能な科目候補を表示）')}
                   {T('oneSideInternal', '借方側（貸方側）のみの内部取引仕訳を許可する')}
                   {T('searchTotal', '仕訳一覧の検索合計を有効にする（検索時に金額合計を右上に表示）')}
@@ -151,7 +151,7 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
                 <div style={card}><div style={cardHead}>予算チェック</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
                   {T('budgetCheck', '予算チェック機能を使う（科目入力時に予算執行額をチェック）')}
                   <Field label={`しきい値：${v.budgetThreshold}%`}><input type="range" min={0} max={100} step={1} value={v.budgetThreshold} disabled={!v.budgetCheck} onChange={(e) => set({ budgetThreshold: Number(e.target.value) })} style={{ width: '100%' }} /></Field>
-                  <div style={{ fontSize: 12, color: '#7a8794' }}>達成率がしきい値以上の科目を選ぶと、伝票入力の「予算残／達成率」を赤く表示します。</div>
+                  <div style={{ fontSize: 14, color: '#7a8794' }}>達成率がしきい値以上の科目を選ぶと、伝票入力の「予算残／達成率」を赤く表示します。</div>
                 </div></div>
               </>
             )}
@@ -160,7 +160,7 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
                 <div style={card}><div style={cardHead}>バックアップ先</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
                   <Field label="保存先">{radios(['クラウド（標準）', 'フォルダ指定', 'Dropbox'] as const, v.backupDest, (o) => set({ backupDest: o }))}</Field>
                   {v.backupDest === 'フォルダ指定' && <Field label="保存フォルダ"><input className="field-input" value={v.backupFolder} onChange={(e) => set({ backupFolder: e.target.value })} placeholder="例：ダウンロード／会計バックアップ" style={input} /></Field>}
-                  <div style={{ fontSize: 12, color: '#7a8794' }}>「データのバックアップ」を実行したときの保存先です。区分ごとに指定できます。</div>
+                  <div style={{ fontSize: 14, color: '#7a8794' }}>「データのバックアップ」を実行したときの保存先です。区分ごとに指定できます。</div>
                 </div></div>
                 <div style={card}><div style={cardHead}>画面背景</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
                   <Field label="背景の種類">{radios(['色', '画像'] as const, v.bgMode, (o) => set({ bgMode: o }))}</Field>
@@ -171,9 +171,9 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
                       <span style={{ display: 'inline-flex', width: 120, height: 34, borderRadius: 8, overflow: 'hidden', border: '1px solid #cfd8e0' }}><span style={{ flex: 2, background: v.bgColor }} /><span style={{ flex: 1, background: v.bgColorRight }} /></span>
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}><button type="button" className="btn-outline" onClick={() => toast.show('背景画像の選択（プロトタイプでは未対応）')} style={btn()}>画像を選択…</button><span style={{ fontSize: 12, color: '#7a8794' }}>未選択</span></div>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}><button type="button" className="btn-outline" onClick={() => toast.show('背景画像の選択（プロトタイプでは未対応）')} style={btn()}>画像を選択…</button><span style={{ fontSize: 14, color: '#7a8794' }}>未選択</span></div>
                   )}
-                  <div style={{ fontSize: 12, color: '#7a8794' }}>区分ごとに背景を変えると、起動中の区分を取り違えにくくなります。</div>
+                  <div style={{ fontSize: 14, color: '#7a8794' }}>区分ごとに背景を変えると、起動中の区分を取り違えにくくなります。</div>
                 </div></div>
               </>
             )}

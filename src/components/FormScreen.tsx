@@ -87,7 +87,7 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 'none' }}>
             <button type="button" data-menu="ホーム（ロゴ）" onClick={() => onNavigate('ホーム')} title="ホームへ" style={{ display: 'flex', alignItems: 'center', gap: 9, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: 'inherit', color: 'inherit' }}>
               <span style={logoStyle(GREEN, 28, 15)}>会</span>
-              <span style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 15.5, whiteSpace: 'nowrap' }}>
+              <span style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16, whiteSpace: 'nowrap' }}>
                 会計基準システム
               </span>
             </button>
@@ -96,7 +96,7 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
           <span style={{ color: '#c3ccd4' }}>｜</span>
           <DivisionPicker accent={GREEN} />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12.5, color: '#68757f', flex: 'none', marginLeft: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: '#68757f', flex: 'none', marginLeft: 12 }}>
           <HeaderTools accent={GREEN} page={page} onNavigate={onNavigate} />
           <SettingsMenu accent={GREEN} active={page} onNavigate={onNavigate} />
           <UserMenu accent={GREEN} soft="#eef4f0" onNavigate={onNavigate} />
@@ -354,10 +354,10 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
   });
 
   const panelOpen = !wide.collapsed && !wide.narrow;
-  const smallInput: CSSProperties = { padding: '4px 8px', border: '1px solid #cfd8e0', borderRadius: 7, fontSize: 12, fontFamily: 'inherit' };
+  const smallInput: CSSProperties = { padding: '4px 8px', border: '1px solid #cfd8e0', borderRadius: 7, fontSize: 14, fontFamily: 'inherit' };
   /** 明細の列：コード（行番号）｜摘要・業者｜金額｜行の操作（証憑・チェック・付箋／挿入・削除） */
   const GRID = '52px minmax(0,1fr) 170px 158px';
-  const rowBtn: CSSProperties = { padding: '3px 7px', borderRadius: 6, border: '1px solid #cfd8e0', background: '#fff', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', color: '#5b6773' };
+  const rowBtn: CSSProperties = { padding: '3px 7px', borderRadius: 6, border: '1px solid #cfd8e0', background: '#fff', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', color: '#5b6773' };
   const paperDate: CSSProperties = { ...dateInput, border: '1px solid transparent', borderRadius: 4, background: 'transparent' };
   const divisionName = sess.division.replace(/^\d+\s*/, '');
   const fillerRows = Math.max(0, 6 - rows.length);
@@ -406,11 +406,11 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
               <PaperTitle
                 title="仕訳伝票"
                 division={`${divisionName} 拠点区分`}
-                badge={<span style={{ fontSize: 11.5, fontWeight: 700, color: GREEN, whiteSpace: 'nowrap' }}>仕訳伝票形式（複数行）　<span style={{ color: '#7a8794', fontWeight: 500 }}>{sess.fiscalYear}</span></span>}
+                badge={<span style={{ fontSize: 12, fontWeight: 700, color: GREEN, whiteSpace: 'nowrap' }}>仕訳伝票形式（複数行）　<span style={{ color: '#7a8794', fontWeight: 500 }}>{sess.fiscalYear}</span></span>}
                 right={tools.templateButton}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 14, borderLeft: `1px solid ${PAPER.lineSoft}` }}>
-                  <span style={{ fontSize: 11, color: '#8895a3' }}>取引区分（科目から自動判定）</span>
+                  <span style={{ fontSize: 12, color: '#8895a3' }}>取引区分（科目から自動判定）</span>
                   <TorihikiBadge kari={kari} kashi={kashi} force={fundMode === '強制資金'} blocked={blocked} right={tools.fundSwitch} />
                 </div>
               </PaperTitle>
@@ -419,7 +419,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
               <div style={{ display: 'flex', alignItems: 'stretch', gap: 14, flexWrap: 'wrap', marginBottom: 14 }}>
                 <PaperBox label={<span>入力区分<span className="pp-sub">サービス区分</span></span>} grow>
                   <span className="pp-ro pp-ro-fill" title="入力区分は、画面上部の区分の選択で切り替えます" style={{ gap: 8, fontSize: 14, color: '#22303c', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    <span className="pp-num" style={{ fontSize: 12, color: '#7a8794' }}>{sess.division.split(' ')[0]}</span>
+                    <span className="pp-num" style={{ fontSize: 14, color: '#7a8794' }}>{sess.division.split(' ')[0]}</span>
                     <span>{divisionName}</span>
                   </span>
                 </PaperBox>
@@ -433,7 +433,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                 <div className="ef-field" style={{ display: 'flex' }}>
                   <PaperBox label={<span>伝票<span className="pp-sub">No</span></span>} width={manual ? 190 : undefined}>
                     {manual ? (
-                      <input id="fe-no" className="ef-input pp-input" disabled={!editable} value={manualNo} onChange={(e) => setManualNo(e.target.value)} onKeyDown={onEnter(() => focusId('fe-kari'))} placeholder="例 8-101" autoComplete="off" style={{ height: 34, width: '100%', padding: '0 8px', fontSize: 13.5 }} />
+                      <input id="fe-no" className="ef-input pp-input" disabled={!editable} value={manualNo} onChange={(e) => setManualNo(e.target.value)} onKeyDown={onEnter(() => focusId('fe-kari'))} placeholder="例 8-101" autoComplete="off" style={{ height: 34, width: '100%', padding: '0 8px', fontSize: 14 }} />
                     ) : (
                       <span className="pp-ro" style={{ whiteSpace: 'nowrap' }}>自動採番（<span className="pp-num" style={{ color: '#22303c', fontWeight: 700 }}>{parseInt(month, 10) || 8}-{nextSeq}</span>）</span>
                     )}
@@ -450,7 +450,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                   <div key={s.id} className="pp-table ef-field" style={{ gridTemplateColumns: '1fr' }}>
                     <div className="pp-row" style={{ gridTemplateColumns: '64px minmax(0,1fr)' }}>
                       <div className="pp-lab" style={{ color: s.color }}>
-                        <span><FieldLabel color={s.color} style={{ fontSize: 12, marginBottom: 0, display: 'inline' }}>{s.side}科目</FieldLabel><span className="pp-sub">BS&amp;PL</span></span>
+                        <span><FieldLabel color={s.color} style={{ fontSize: 14, marginBottom: 0, display: 'inline' }}>{s.side}科目</FieldLabel><span className="pp-sub">BS&amp;PL</span></span>
                       </div>
                       <div className="pp-cell" style={{ padding: '7px 8px' }}>
                         <ComboField id={s.id} kind="account" value={s.value} onChange={s.set} onCommit={s.commit} disabled={!editable} invalid={s.state} message={s.msg} placeholder={`${s.side}科目：コード・科目名・フリガナ`} fontSize={14.5} padY={10} listWidth={400} />
@@ -474,15 +474,15 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                   <FieldLabel color={partner ? '#6b3fb5' : '#8895a3'}>内部取引相手区分{partner ? '（必須）' : ''}</FieldLabel>
                   <ComboField id="fe-aite" title={!partner ? '左の「内部取引」スイッチをオンにすると入力できます（内部取引科目を選ぶと自動でオンになります）' : undefined} kind="service" value={aite} onChange={setAite} onCommit={() => focusId('fe-tek-0')} disabled={!editable || !partner} invalid={partner ? fieldState(issues, 'aite') : undefined} message={partner ? fieldMessage(issues, 'aite') : undefined} placeholder="コード・区分名・フリガナ" />
                 </div>
-                <div style={{ fontSize: 11.5, color: partner ? '#6b5a8a' : '#8895a3', lineHeight: 1.7, paddingBottom: 4 }}>{partner ? <>内部取引の相手先となる区分を指定します。入力中の区分（{sess.division}）とは別の区分を選んでください。</> : '内部取引のときは、スイッチをオンにして相手区分を指定します。内部取引科目を選ぶと自動でオンになります。'}</div>
+                <div style={{ fontSize: 12, color: partner ? '#6b5a8a' : '#8895a3', lineHeight: 1.7, paddingBottom: 4 }}>{partner ? <>内部取引の相手先となる区分を指定します。入力中の区分（{sess.division}）とは別の区分を選んでください。</> : '内部取引のときは、スイッチをオンにして相手区分を指定します。内部取引科目を選ぶと自動でオンになります。'}</div>
               </div>
 
               {/* 3段目：明細（コード｜摘要／業者｜金額｜行の操作）。空の罫線行を足して用紙らしく見せる */}
               <div className="pp-table" style={{ gridTemplateColumns: '1fr' }}>
                 <div className="pp-row" style={{ gridTemplateColumns: GRID }}>
                   <div className="pp-lab">コード<span className="pp-sub">行</span></div>
-                  <div className="pp-lab" style={{ fontSize: 12 }}>摘要／業者</div>
-                  <div className="pp-lab" style={{ fontSize: 12 }}>金額</div>
+                  <div className="pp-lab" style={{ fontSize: 14 }}>摘要／業者</div>
+                  <div className="pp-lab" style={{ fontSize: 14 }}>金額</div>
                   <div className="pp-lab"><span>{inp.shohyo ? '証憑・' : ''}チェック・付箋<span className="pp-sub">挿入／削除</span></span></div>
                 </div>
                 {rows.map((r, i) => {
@@ -491,9 +491,9 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                   return (
                     <div key={r.id} className="pp-row" style={{ gridTemplateColumns: GRID }}>
                       <div className="pp-cell pp-center" style={{ padding: '4px 4px', background: on ? '#f7fbf9' : undefined }}>
-                        <button type="button" tabIndex={-1} onClick={() => { setCur(i); focusId(`fe-tek-${i}`); }} title={`${i + 1}行目を行の操作の対象にする`} style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', fontSize: 13, fontWeight: 700, color: on ? GREEN : '#9aa5b1' }}>
+                        <button type="button" tabIndex={-1} onClick={() => { setCur(i); focusId(`fe-tek-${i}`); }} title={`${i + 1}行目を行の操作の対象にする`} style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', fontSize: 14, fontWeight: 700, color: on ? GREEN : '#9aa5b1' }}>
                           <span className="ef-rowno pp-num">{String(i + 1).padStart(2, '0')}</span>
-                          <span className="ef-rownow" style={{ padding: '1px 5px', borderRadius: 7, background: GREEN, color: '#fff', fontSize: 9.5, fontWeight: 800, whiteSpace: 'nowrap' }}>入力中</span>
+                          <span className="ef-rownow" style={{ padding: '1px 5px', borderRadius: 7, background: GREEN, color: '#fff', fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap' }}>入力中</span>
                         </button>
                       </div>
                       <div className="pp-cell" style={{ padding: '6px 8px', gap: 8, background: on ? '#f7fbf9' : undefined }}>
@@ -519,7 +519,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                           inputMode="numeric"
                           autoComplete="off"
                           placeholder="0"
-                          style={{ width: '100%', padding: '8px 10px', textAlign: 'right', fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderColor: plus ? '#6b3fb5' : 'transparent' }}
+                          style={{ width: '100%', padding: '8px 10px', textAlign: 'right', fontSize: 16, fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderColor: plus ? '#6b3fb5' : 'transparent' }}
                         />
                       </div>
                       <div className="pp-cell pp-col" style={{ padding: '4px 6px', gap: 4, alignItems: 'center', background: on ? '#f7fbf9' : undefined, position: 'relative' }}>
@@ -535,7 +535,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                 })}
                 {Array.from({ length: fillerRows }, (_, k) => (
                   <div key={'blank-' + k} className="pp-row" aria-hidden style={{ gridTemplateColumns: GRID }}>
-                    <div className="pp-cell pp-empty pp-center pp-num" style={{ color: '#c9d4ce', fontSize: 12 }}>{String(rows.length + k + 1).padStart(2, '0')}</div>
+                    <div className="pp-cell pp-empty pp-center pp-num" style={{ color: '#c9d4ce', fontSize: 14 }}>{String(rows.length + k + 1).padStart(2, '0')}</div>
                     <div className="pp-cell pp-empty" />
                     <div className="pp-cell pp-empty" />
                     <div className="pp-cell pp-empty" />
@@ -543,8 +543,8 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                 ))}
                 {/* 行追加・行数 */}
                 <div className="pp-row" style={{ gridTemplateColumns: '1fr' }}>
-                  <div className="pp-cell" style={{ padding: '6px 10px', fontSize: 11.5, color: '#8290a0' }}>
-                    {!tools.viewOnly && <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={rowAdd} title={editable ? '最後に1行追加します（金額欄で Shift+Enter でも行を追加できます）' : tools.reason} style={{ padding: '4px 11px', borderRadius: 7, border: '1px dashed #b9c4cf', background: '#fff', color: '#48565f', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', marginRight: 10 }}>＋ 行追加</button>}
+                  <div className="pp-cell" style={{ padding: '6px 10px', fontSize: 12, color: '#8290a0' }}>
+                    {!tools.viewOnly && <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={rowAdd} title={editable ? '最後に1行追加します（金額欄で Shift+Enter でも行を追加できます）' : tools.reason} style={{ padding: '4px 11px', borderRadius: 7, border: '1px dashed #b9c4cf', background: '#fff', color: '#48565f', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', marginRight: 10 }}>＋ 行追加</button>}
                     {rows.length} 行
                     <span style={{ marginLeft: 12, color: '#9aa5b1' }}>Enter で登録／Shift+Enter で行追加</span>
                   </div>
@@ -562,15 +562,15 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                   </div>
                   <div className="pp-cell" style={{ padding: 0 }}>
                     <div className="pp-foot" style={{ width: '100%' }}>
-                      <span className="pp-lab" style={{ fontSize: 12 }}>合計</span>
-                      <span className="pp-val pp-grow pp-num"><span className="pp-ro pp-ro-fill" style={{ justifyContent: 'flex-end', fontSize: 18, fontWeight: 800, color: '#22303c' }}><span style={{ fontSize: 12, color: '#8290a0', marginRight: 4 }}>¥</span>{total.toLocaleString('ja-JP')}</span></span>
+                      <span className="pp-lab" style={{ fontSize: 14 }}>合計</span>
+                      <span className="pp-val pp-grow pp-num"><span className="pp-ro pp-ro-fill" style={{ justifyContent: 'flex-end', fontSize: 18, fontWeight: 800, color: '#22303c' }}><span style={{ fontSize: 14, color: '#8290a0', marginRight: 4 }}>¥</span>{total.toLocaleString('ja-JP')}</span></span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {(inp.spare1 || inp.spare2) && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 10, fontSize: 12, color: '#5b6773', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 10, fontSize: 14, color: '#5b6773', flexWrap: 'wrap' }}>
                   {inp.spare1 && <label className="ef-field" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>予備1 <input className="ef-input" disabled={!editable} value={spare[0]} onChange={(e) => setSpare([e.target.value, spare[1]])} style={{ ...smallInput, width: 120 }} /></label>}
                   {inp.spare2 && <label className="ef-field" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>予備2 <input className="ef-input" disabled={!editable} value={spare[1]} onChange={(e) => setSpare([spare[0], e.target.value])} style={{ ...smallInput, width: 120 }} /></label>}
                 </div>
@@ -578,13 +578,13 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
             </div>
 
             {queue.length > 0 && (
-              <div role="status" style={{ marginTop: 12, padding: '7px 12px', borderRadius: 9, background: '#eef6f1', border: '1px solid #cfe5d8', color: '#1f6a48', fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div role="status" style={{ marginTop: 12, padding: '7px 12px', borderRadius: 9, background: '#eef6f1', border: '1px solid #cfe5d8', color: '#1f6a48', fontSize: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span>定型仕訳の続き：この伝票を登録すると、次の伝票（残り {queue.length} 枚）を呼び出します。</span>
-                <button type="button" className="ef-act" onClick={() => { setQueue([]); toast.show('定型仕訳の続きを取り消しました'); }} style={{ marginLeft: 'auto', padding: '3px 10px', borderRadius: 7, border: '1px solid #b7d6c5', background: '#fff', color: '#1f6a48', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>続きを取り消す</button>
+                <button type="button" className="ef-act" onClick={() => { setQueue([]); toast.show('定型仕訳の続きを取り消しました'); }} style={{ marginLeft: 'auto', padding: '3px 10px', borderRadius: 7, border: '1px solid #b7d6c5', background: '#fff', color: '#1f6a48', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>続きを取り消す</button>
               </div>
             )}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
-              <div role="alert" style={{ flex: 1, minHeight: 20, color: '#c0392b', fontSize: 12.5, fontWeight: 600 }}>{err}</div>
+              <div role="alert" style={{ flex: 1, minHeight: 20, color: '#c0392b', fontSize: 14, fontWeight: 600 }}>{err}</div>
               {tools.submitButton}
             </div>
           </div>

@@ -42,12 +42,12 @@ export function UserSettingsPage({ variant, accent }: Props) {
   const [mailCode, setMailCode] = useState('');
   const isSheet = variant === 'sheet';
   const card: CSSProperties = { background: '#fff', border: '1px solid #dde4ea', borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'hidden' };
-  const h2: CSSProperties = { padding: '14px 18px', borderBottom: '1px solid #eef2f5', fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 15 };
-  const label: CSSProperties = { display: 'block', fontSize: 11, fontWeight: 700, color: '#8290a0', marginBottom: 6 };
-  const input: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '9px 11px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 13.5, fontFamily: 'inherit', outline: 'none', color: '#22303c', background: '#fff' };
-  const btn = (primary?: boolean): CSSProperties => ({ padding: '9px 20px', borderRadius: 8, border: primary ? 'none' : '1px solid #cfd8e0', background: primary ? accent : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
+  const h2: CSSProperties = { padding: '14px 18px', borderBottom: '1px solid #eef2f5', fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16 };
+  const label: CSSProperties = { display: 'block', fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 6 };
+  const input: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '9px 11px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none', color: '#22303c', background: '#fff' };
+  const btn = (primary?: boolean): CSSProperties => ({ padding: '9px 20px', borderRadius: 8, border: primary ? 'none' : '1px solid #cfd8e0', background: primary ? accent : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
   const Toggle = ({ on, onChange, text }: { on: boolean; onChange: () => void; text: string }) => (
-    <label style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid #f1f4f6', cursor: 'pointer', fontSize: 13 }}>
+    <label style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid #f1f4f6', cursor: 'pointer', fontSize: 14 }}>
       <span style={{ flex: 1 }}>{text}</span>
       <span onClick={onChange} role="switch" aria-checked={on} style={{ width: 40, height: 22, borderRadius: 11, background: on ? accent : '#cfd8e0', position: 'relative', transition: 'background .15s' }}>
         <span style={{ position: 'absolute', top: 2, left: on ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left .15s', boxShadow: '0 1px 3px rgba(0,0,0,.25)' }} />
@@ -73,7 +73,7 @@ export function UserSettingsPage({ variant, accent }: Props) {
       <div style={{ width: '100%', maxWidth: 1000, display: 'flex', flexDirection: 'column', gap: 20 }}>
         <div>
           <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 18 : 22 }}>ユーザー設定</div>
-          <div style={{ color: '#7a8794', fontSize: 12.5, marginTop: 4 }}>ご自身のアカウント情報・パスワード・通知・表示の設定です。事業者全体の設定は「設定」メニューから行います。</div>
+          <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>ご自身のアカウント情報・パスワード・通知・表示の設定です。事業者全体の設定は「設定」メニューから行います。</div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 20, alignItems: 'start' }}>
@@ -91,14 +91,14 @@ export function UserSettingsPage({ variant, accent }: Props) {
                     {avatar && <button type="button" className="btn-outline" onClick={() => { setAvatar(null); toast.show('プロフィール画像を削除しました'); }} style={{ ...btn(), color: '#c0392b' }}>削除</button>}
                   </div>
                   <input ref={fileRef} type="file" accept="image/*" onChange={(e) => onAvatarFile(e.target.files?.[0])} style={{ display: 'none' }} />
-                  <div style={{ fontSize: 11, color: '#9aa5b1', marginTop: 6 }}>JPEG／PNG・2MBまで</div>
+                  <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 6 }}>JPEG／PNG・2MBまで</div>
                 </div>
               </div>
               <div><span style={label}>氏名</span><input className="field-input ring" value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} style={input} /></div>
               <div><span style={label}>フリガナ</span><input className="field-input ring" value={profile.kana} onChange={(e) => setProfile({ ...profile, kana: e.target.value })} style={input} /></div>
               <div style={{ gridColumn: 'span 2' }}><span style={label}>メールアドレス（ログインID）</span><input className="field-input ring" value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} style={input} /></div>
               <div><span style={label}>所属</span><input className="field-input ring" value={profile.dept} onChange={(e) => setProfile({ ...profile, dept: e.target.value })} style={input} /></div>
-              <div><span style={label}>権限</span><div style={{ ...input, background: '#f5f7f9', color: '#5b6773' }}>{profile.role}</div><div style={{ fontSize: 10.5, color: '#9aa5b1', marginTop: 4 }}>権限の変更は管理者が「メンバーの追加、管理」で行います</div></div>
+              <div><span style={label}>権限</span><div style={{ ...input, background: '#f5f7f9', color: '#5b6773' }}>{profile.role}</div><div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 4 }}>権限の変更は管理者が「メンバーの追加、管理」で行います</div></div>
               <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end' }}>
                 <button type="button" className="submit-btn" onClick={() => toast.show('プロフィールを保存しました（プロトタイプ）')} style={btn(true)}>保存</button>
               </div>
@@ -113,7 +113,7 @@ export function UserSettingsPage({ variant, accent }: Props) {
               <div><span style={label}>新しいパスワード（8文字以上・英数字混在）</span><input type="password" className="field-input ring" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} autoComplete="new-password" style={input} /></div>
               <div><span style={label}>新しいパスワード（確認）</span><input type="password" className="field-input ring" value={pw.confirm} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} autoComplete="new-password" style={input} /></div>
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" className="submit-btn" onClick={savePw} style={btn(true)}>パスワードを変更</button></div>
-              <div style={{ borderTop: '1px solid #eef2f5', paddingTop: 12, fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>変更するときは、登録済みのメールアドレス（{profile.email}）に確認コードをお送りします。メールでの確認が済むと、新しいパスワードに切り替わります。</div>
+              <div style={{ borderTop: '1px solid #eef2f5', paddingTop: 12, fontSize: 14, color: '#7a8794', lineHeight: 1.7 }}>変更するときは、登録済みのメールアドレス（{profile.email}）に確認コードをお送りします。メールでの確認が済むと、新しいパスワードに切り替わります。</div>
             </div>
           </section>
 
@@ -150,7 +150,7 @@ export function UserSettingsPage({ variant, accent }: Props) {
             <span style={label}>確認コード（6桁）</span>
             <input data-pw-mail-code className="field-input ring" value={mailCode} onChange={(e) => setMailCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))} onKeyDown={onEnter(confirmPw)} inputMode="numeric" autoFocus placeholder="000000" style={{ ...input, width: 200, textAlign: 'center', fontSize: 24, letterSpacing: '.3em', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }} />
           </div>
-          <button type="button" onClick={() => toast.show('確認コードを再送しました')} style={{ marginTop: 10, border: 'none', background: 'transparent', color: accent, fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', padding: 0 }}>メールが届かないときは、確認コードを再送する</button>
+          <button type="button" onClick={() => toast.show('確認コードを再送しました')} style={{ marginTop: 10, border: 'none', background: 'transparent', color: accent, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', padding: 0 }}>メールが届かないときは、確認コードを再送する</button>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
             <button type="button" onClick={() => setMailOpen(false)} style={btn()}>キャンセル</button>
             <button type="button" className="submit-btn" onClick={confirmPw} disabled={mailCode.length !== 6} style={{ ...btn(true), opacity: mailCode.length === 6 ? 1 : 0.5 }}>パスワードを変更</button>

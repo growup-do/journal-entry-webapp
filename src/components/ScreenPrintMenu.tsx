@@ -73,18 +73,18 @@ export function ScreenPrintMenu({ page, groups, actions, accent, data, label = '
   const icon = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9V3h12v6" /><rect x="3" y="9" width="18" height="9" rx="2" /><path d="M7 14h10v7H7z" /></svg>;
   return (
     <div ref={ref} data-screen-print={page ?? (actions ? 'actions' : 'custom')} style={{ position: 'relative', display: 'inline-flex' }}>
-      <button type="button" className={tone === 'act' ? 'ef-act' : 'btn-outline'} aria-haspopup={single ? undefined : 'menu'} aria-expanded={single ? undefined : open} onClick={() => (single ? choose(items[0]) : setOpen((o) => !o))} title={single ? `${items[0].name} を印刷（期間・詳細設定・出力先を指定）` : 'この画面に関係する帳票を選んで印刷します'} style={{ ...(tone === 'act' ? { padding: '6px 10px', borderRadius: 8, border: '1px solid #cfd8e0', background: '#fff', color: '#48565f', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' } : btn(accent, false, small)), display: 'inline-flex', alignItems: 'center', gap: 6, ...style }}>
+      <button type="button" className={tone === 'act' ? 'ef-act' : 'btn-outline'} aria-haspopup={single ? undefined : 'menu'} aria-expanded={single ? undefined : open} onClick={() => (single ? choose(items[0]) : setOpen((o) => !o))} title={single ? `${items[0].name} を印刷（期間・詳細設定・出力先を指定）` : 'この画面に関係する帳票を選んで印刷します'} style={{ ...(tone === 'act' ? { padding: '6px 10px', borderRadius: 8, border: '1px solid #cfd8e0', background: '#fff', color: '#48565f', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' } : btn(accent, false, small)), display: 'inline-flex', alignItems: 'center', gap: 6, ...style }}>
         {icon}{label}{!single && <Chevron open={open} color="currentColor" />}
       </button>
       {open && !single && (
         <div role="menu" style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, minWidth: 280, maxWidth: 420, maxHeight: '60vh', overflowY: 'auto', background: '#fff', border: '1px solid #dde4ea', borderRadius: 10, boxShadow: '0 12px 32px rgba(24,42,62,.16)', padding: 6, zIndex: 120, textAlign: 'left' }}>
           {gs.map((g, gi) => (
             <div key={gi} style={{ paddingBottom: gi < gs.length - 1 ? 4 : 0, marginBottom: gi < gs.length - 1 ? 4 : 0, borderBottom: gi < gs.length - 1 ? '1px solid #eef2f5' : 'none' }}>
-              {g.label && <div style={{ padding: '6px 10px 3px', fontSize: 10.5, fontWeight: 800, color: '#8290a0', letterSpacing: '.04em' }}>{g.label}</div>}
+              {g.label && <div style={{ padding: '6px 10px 3px', fontSize: 12, fontWeight: 800, color: '#8290a0', letterSpacing: '.04em' }}>{g.label}</div>}
               {g.items.map((it) => (
-                <button key={it.name} type="button" role="menuitem" className="menu-sub" data-print-item={it.name} onClick={() => choose(it)} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '7px 10px', border: 'none', borderRadius: 7, background: 'transparent', fontFamily: 'inherit', fontSize: 12.5, color: '#22303c', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                <button key={it.name} type="button" role="menuitem" className="menu-sub" data-print-item={it.name} onClick={() => choose(it)} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '7px 10px', border: 'none', borderRadius: 7, background: 'transparent', fontFamily: 'inherit', fontSize: 14, color: '#22303c', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.name}</span>
-                  {it.note && <span style={{ marginLeft: 'auto', fontSize: 10.5, color: '#9aa5b1', flex: 'none' }}>{it.note}</span>}
+                  {it.note && <span style={{ marginLeft: 'auto', fontSize: 12, color: '#9aa5b1', flex: 'none' }}>{it.note}</span>}
                 </button>
               ))}
             </div>

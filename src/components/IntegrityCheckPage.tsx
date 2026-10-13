@@ -43,7 +43,7 @@ export function IntegrityCheckPage({ variant, accent }: { variant: 'form' | 'she
             <div key={d.kind} style={card}>
               <div style={cardHead}>
                 {d.kind}
-                {res && <span style={{ fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: d.ok ? '#eaf5ef' : '#fdeee9', color: d.ok ? '#1f7a52' : '#c0392b' }}>{d.ok ? '正常終了' : '要確認あり'}</span>}
+                {res && <span style={{ fontSize: 12, fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: d.ok ? '#eaf5ef' : '#fdeee9', color: d.ok ? '#1f7a52' : '#c0392b' }}>{d.ok ? '正常終了' : '要確認あり'}</span>}
                 <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
                   {res && <button type="button" onClick={() => copy(d.kind)} style={btn('#5b6773', false, true)}>コピー</button>}
                   {res && <button type="button" onClick={() => setExp({ kind: 'text', title: `${d.kind} 診断結果`, fileName: `${d.kind.replace(/\s/g, '')}_診断結果`, meta: res[0], text: res.join('\n') })} style={btn('#5b6773', false, true)}>ファイル出力</button>}
@@ -51,9 +51,9 @@ export function IntegrityCheckPage({ variant, accent }: { variant: 'form' | 'she
                 </span>
               </div>
               <div style={{ padding: 14 }}>
-                <div style={{ fontSize: 12.5, color: '#5b6773', marginBottom: busy || res ? 10 : 0 }}>{d.desc}</div>
+                <div style={{ fontSize: 14, color: '#5b6773', marginBottom: busy || res ? 10 : 0 }}>{d.desc}</div>
                 {busy && <div style={{ height: 8, background: '#eef2f5', borderRadius: 4, overflow: 'hidden' }}><div style={{ width: `${progress}%`, height: '100%', background: accent, transition: 'width .1s' }} /></div>}
-                {res && <pre style={{ margin: 0, padding: 12, background: '#1e2630', color: '#d7dee6', borderRadius: 10, fontSize: 12, lineHeight: 1.7, whiteSpace: 'pre-wrap', fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace" }}>{res.join('\n')}</pre>}
+                {res && <pre style={{ margin: 0, padding: 12, background: '#1e2630', color: '#d7dee6', borderRadius: 10, fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap', fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace" }}>{res.join('\n')}</pre>}
               </div>
             </div>
           );

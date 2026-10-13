@@ -107,15 +107,15 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
       period={
         <>
           <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} withAll range={range} onRange={(p) => { setRange(p); setDay(null); }} />
-          <span style={{ fontSize: 12.5, color: '#48565f' }}>{range ? periodText(range) : month == null ? '令和8年 全期間' : day != null ? `令和8年 ${m}月${day}日（1日分）` : `令和8年 ${m}月1日 〜 令和8年 ${m}月末日`}</span>
-          {day != null && <button type="button" onClick={() => setDay(null)} style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid ' + accent, background: '#fff', color: accent, fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{m}月{day}日のみ表示中 ×月全体を表示</button>}
+          <span style={{ fontSize: 14, color: '#48565f' }}>{range ? periodText(range) : month == null ? '令和8年 全期間' : day != null ? `令和8年 ${m}月${day}日（1日分）` : `令和8年 ${m}月1日 〜 令和8年 ${m}月末日`}</span>
+          {day != null && <button type="button" onClick={() => setDay(null)} style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid ' + accent, background: '#fff', color: accent, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{m}月{day}日のみ表示中 ×月全体を表示</button>}
         </>
       }
       periodAside={
-        <span data-total style={{ fontSize: 12.5, color: '#48565f' }}>
+        <span data-total style={{ fontSize: 14, color: '#48565f' }}>
           <b style={{ color: '#22303c' }}>{rows.length}</b> 件
           {compound ? (
-            <span title="1枚の伝票に複数行ある仕訳（複合仕訳）が含まれるため、金額を単純に合計できません" style={{ padding: '2px 8px', borderRadius: 8, background: '#fff7e6', border: '1px solid #f3d9b0', color: '#8a5a00', fontSize: 11.5, fontWeight: 700 }}>複合仕訳を含むため検索合計は表示できません</span>
+            <span title="1枚の伝票に複数行ある仕訳（複合仕訳）が含まれるため、金額を単純に合計できません" style={{ padding: '2px 8px', borderRadius: 8, background: '#fff7e6', border: '1px solid #f3d9b0', color: '#8a5a00', fontSize: 12, fontWeight: 700 }}>複合仕訳を含むため検索合計は表示できません</span>
           ) : (
             <>{filtered && s.env.searchTotal ? '検索合計' : '合計'} <b style={{ color: filtered ? accent : '#22303c', fontVariantNumeric: 'tabular-nums' }}>{money(total)}</b></>
           )}
@@ -125,9 +125,9 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
       listNote={<span>行の右端の「訂正」「削除」、または行のダブルクリックで伝票を訂正できます{selectable && '。行頭のチェックで複数行を選び、まとめて削除できます'}</span>}
       target={
         <>
-          <input className="search-input" value={kw} onChange={(e) => setKw(e.target.value)} placeholder="科目・摘要・業者で絞り込み" autoComplete="off" style={{ width: 240, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 12.5, fontFamily: 'inherit', outline: 'none' }} />
-          {condActive(cond) && <button type="button" onClick={() => setCond(EMPTY_COND)} style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid ' + accent, background: '#fff', color: accent, fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>検索条件で絞り込み中 ×解除</button>}
-          <span style={{ fontSize: 11.5, color: '#9aa5b1' }}>金額・伝票No・付箋・区分などは右上の「検索条件」で指定します</span>
+          <input className="search-input" value={kw} onChange={(e) => setKw(e.target.value)} placeholder="科目・摘要・業者で絞り込み" autoComplete="off" style={{ width: 240, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
+          {condActive(cond) && <button type="button" onClick={() => setCond(EMPTY_COND)} style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid ' + accent, background: '#fff', color: accent, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>検索条件で絞り込み中 ×解除</button>}
+          <span style={{ fontSize: 12, color: '#9aa5b1' }}>金額・伝票No・付箋・区分などは右上の「検索条件」で指定します</span>
         </>
       }
       switches={
@@ -164,7 +164,7 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
               <tr key={r.id} data-voucher={r.id} data-selected={sel.includes(r.id) || undefined} onDoubleClick={() => ra.openEdit(r)} onClick={(e) => { if (selectable && (e.shiftKey || e.metaKey || e.ctrlKey)) { e.preventDefault(); toggleSel(r.id, idx, e.shiftKey); } }} title={ra.editable ? 'ダブルクリックで伝票を訂正' : undefined} style={{ cursor: ra.editable ? 'pointer' : 'default', background: sel.includes(r.id) ? '#fff7cc' : dt.rowBg(r) }}>
                 {selectable && <td style={{ ...TD, textAlign: 'center' }} onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}><input type="checkbox" checked={sel.includes(r.id)} onChange={() => undefined} onClick={(e) => toggleSel(r.id, idx, e.shiftKey)} aria-label={`Seq ${r.seq} を選択`} /></td>}
                 <td style={TD}><div style={{ fontWeight: 700 }}>{dt.chip(r)}{r.seq}</div></td>
-                <td style={TD}><div style={{ fontSize: 10.5, color: '#9aa5b1' }}>{r.kind}{r.source && <span data-source={r.source} title={r.source === '自動按分' ? `自動按分で登録した伝票（${r.from ?? ''}）` : `別システムから取り込んだ伝票（${r.from ?? ''}）`} style={{ marginLeft: 3, padding: '0 4px', borderRadius: 4, background: '#eef2f5', color: '#5b6773', fontWeight: 700 }}>{r.source === '自動按分' ? '按分' : r.source}</span>}</div><div>{r.date}</div></td>
+                <td style={TD}><div style={{ fontSize: 12, color: '#9aa5b1' }}>{r.kind}{r.source && <span data-source={r.source} title={r.source === '自動按分' ? `自動按分で登録した伝票（${r.from ?? ''}）` : `別システムから取り込んだ伝票（${r.from ?? ''}）`} style={{ marginLeft: 3, padding: '0 4px', borderRadius: 4, background: '#eef2f5', color: '#5b6773', fontWeight: 700 }}>{r.source === '自動按分' ? '按分' : r.source}</span>}</div><div>{r.date}</div></td>
                 <td style={TD}>{r.no}</td>
                 {dt.nameOn && <td style={TD}>{dt.nameTag(r)}</td>}
                 <td style={TD}>
@@ -173,7 +173,7 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
                     <span style={{ color: '#9aa5b1' }}>―</span>
                     <span style={{ color: colorDC ? '#b0426a' : '#48565f' }}>{r.kashi}</span>
                   </div>
-                  <div style={{ fontSize: 11.5, color: '#7a8794', marginTop: 2 }}>{showBiz ? (r.gyosha || '業者なし') : r.tekiyo}{!showBiz && r.gyosha ? `　／ ${r.gyosha}` : ''}{r.cheque ? `　小切手 ${r.cheque}` : ''}</div>
+                  <div style={{ fontSize: 12, color: '#7a8794', marginTop: 2 }}>{showBiz ? (r.gyosha || '業者なし') : r.tekiyo}{!showBiz && r.gyosha ? `　／ ${r.gyosha}` : ''}{r.cheque ? `　小切手 ${r.cheque}` : ''}</div>
                 </td>
                 <td style={{ ...NUM, fontWeight: 700 }}>{money(r.amount)}</td>
                 <td style={{ ...TD, paddingTop: 5, paddingBottom: 5 }}>{ra.cell(r)}</td>
@@ -200,17 +200,17 @@ function BulkDeleteMenu({ open, onToggle, onPick }: { open: boolean; onToggle: (
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
   }, [open, onToggle]);
-  const item: CSSProperties = { display: 'block', width: '100%', textAlign: 'left', padding: '8px 10px', border: 'none', background: 'transparent', borderRadius: 8, fontSize: 12.5, fontWeight: 700, color: '#c0392b', fontFamily: 'inherit', cursor: 'pointer' };
+  const item: CSSProperties = { display: 'block', width: '100%', textAlign: 'left', padding: '8px 10px', border: 'none', background: 'transparent', borderRadius: 8, fontSize: 14, fontWeight: 700, color: '#c0392b', fontFamily: 'inherit', cursor: 'pointer' };
   return (
     <span style={{ position: 'relative', display: 'inline-flex' }} data-bulk-delete>
       <button type="button" onClick={onToggle} aria-expanded={open} aria-haspopup="menu" title="インポート伝票・自動按分伝票をまとめて削除します" style={{ ...btn('#c0392b', false, true), display: 'inline-flex', alignItems: 'center', gap: 4 }}>一括削除<Chevron open={open} color="currentColor" /></button>
       {open && (
         <div role="menu" style={{ position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 40, minWidth: 280, background: '#fff', border: '1px solid #e2e8ee', borderRadius: 10, boxShadow: '0 10px 30px rgba(20,30,40,.14)', padding: 6 }}>
-          <div style={{ padding: '4px 10px 6px', fontSize: 11, color: '#8290a0', lineHeight: 1.6 }}>年度内の全件から、取込・按分の実行単位を選んで削除します（削除した仕訳は元に戻せません）</div>
+          <div style={{ padding: '4px 10px 6px', fontSize: 12, color: '#8290a0', lineHeight: 1.6 }}>年度内の全件から、取込・按分の実行単位を選んで削除します（削除した仕訳は元に戻せません）</div>
           {(['インポート', '自動按分'] as const).map((src) => (
             <button key={src} type="button" role="menuitem" data-bulk-src={src} onClick={() => onPick(src)} style={item}>
               {src}伝票を一括削除
-              <span style={{ display: 'block', fontSize: 11, color: '#8290a0', fontWeight: 500 }}>{src === 'インポート' ? '小口現金・預金出納・減価償却・AI自動仕訳・給与などから取り込んだ伝票（行に「インポート」の印）' : '自動按分で登録した伝票（行に「按分」の印）'}</span>
+              <span style={{ display: 'block', fontSize: 12, color: '#8290a0', fontWeight: 500 }}>{src === 'インポート' ? '小口現金・預金出納・減価償却・AI自動仕訳・給与などから取り込んだ伝票（行に「インポート」の印）' : '自動按分で登録した伝票（行に「按分」の印）'}</span>
             </button>
           ))}
         </div>
@@ -235,7 +235,7 @@ function BulkDeleteModal({ src, all, onClose, onConfirm }: { src: NonNullable<Vo
       <div data-bulk-delete-modal style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
         <Notice tone="warn">{src === 'インポート' ? '別システム（小口現金・預金出納・減価償却・AI自動仕訳・給与など）から取り込んだ伝票を、取込の単位ごとに年度内の全件まとめて削除します。' : '自動按分で登録した伝票を、実行の単位ごとに年度内の全件まとめて削除します。'}<b style={{ color: '#c0392b' }}>削除した仕訳は元に戻せません。</b></Notice>
         {groups.length === 0 ? (
-          <div style={{ padding: 24, textAlign: 'center', color: '#9aa5b1', fontSize: 13 }}>この年度に{src}伝票はありません。</div>
+          <div style={{ padding: 24, textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>この年度に{src}伝票はありません。</div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead><tr><th style={{ ...th, width: 34 }}><input type="checkbox" aria-label="すべて選択" checked={picked.length === groups.length} onChange={() => setPicked(picked.length === groups.length ? [] : groups.map((g) => g.batch))} /></th><th style={th}>{src === 'インポート' ? '取込元' : '按分テンプレート'}</th><th style={th}>{src === 'インポート' ? '取込' : '実行'}の単位</th><th style={th}>期間</th><th style={{ ...th, textAlign: 'right' }}>件数</th><th style={{ ...th, textAlign: 'right' }}>合計金額</th></tr></thead>
@@ -244,7 +244,7 @@ function BulkDeleteModal({ src, all, onClose, onConfirm }: { src: NonNullable<Vo
                 <tr key={g.batch} data-batch={g.batch} onClick={() => setPicked((p) => (on ? p.filter((x) => x !== g.batch) : [...p, g.batch]))} style={{ cursor: 'pointer', background: on ? '#fff7cc' : undefined }}>
                   <td style={{ ...TD, textAlign: 'center' }}><input type="checkbox" checked={on} onChange={() => undefined} aria-label={`${g.from} ${g.first} を選択`} /></td>
                   <td style={TD}><b>{g.from}</b></td>
-                  <td style={{ ...TD, fontSize: 11.5, color: '#7a8794', fontFamily: 'ui-monospace, monospace' }}>{g.batch}</td>
+                  <td style={{ ...TD, fontSize: 12, color: '#7a8794', fontFamily: 'ui-monospace, monospace' }}>{g.batch}</td>
                   <td style={TD}>令和8年 {g.first} 〜 {g.last}</td>
                   <td style={NUM}>{g.rows.length} 件</td>
                   <td style={NUM}>{money(g.total)}</td>
@@ -254,13 +254,13 @@ function BulkDeleteModal({ src, all, onClose, onConfirm }: { src: NonNullable<Vo
           </table>
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 12.5, color: '#48565f' }}>{picked.length} 単位・{ids.length} 件を選択中</span>
+          <span style={{ fontSize: 14, color: '#48565f' }}>{picked.length} 単位・{ids.length} 件を選択中</span>
           <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
             <button type="button" onClick={onClose} style={btn()}>キャンセル</button>
             <button type="button" className="submit-btn" disabled={ids.length === 0} onClick={() => onConfirm(ids)} style={{ ...btn('#c0392b', true), opacity: ids.length === 0 ? 0.5 : 1 }} data-bulk-confirm>選択した {ids.length} 件の削除確認へ</button>
           </span>
         </div>
-        <div style={{ fontSize: 11.5, color: '#9aa5b1' }}>次の画面で対象の仕訳を確認してから削除します（通常の「選択した仕訳の削除」と同じ流れ）。</div>
+        <div style={{ fontSize: 12, color: '#9aa5b1' }}>次の画面で対象の仕訳を確認してから削除します（通常の「選択した仕訳の削除」と同じ流れ）。</div>
       </div>
     </Modal>
   );

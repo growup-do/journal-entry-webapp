@@ -37,13 +37,13 @@ const CSS = `
 .ef-box { transition: background .1s, border-color .1s; }
 .ef-box:focus-within { outline: 3px solid var(--ef-accent, #1f7a52); outline-offset: 1px; background: #fff8d6 !important; border-color: var(--ef-accent, #1f7a52) !important; }
 .ef-bare { outline: none !important; background: transparent !important; }
-.ef-now { display: none; margin-left: 6px; padding: 1px 7px; border-radius: 8px; background: var(--ef-accent, #1f7a52); color: #fff; font-size: 10px; font-weight: 800; letter-spacing: .06em; vertical-align: 1px; }
+.ef-now { display: none; margin-left: 6px; padding: 1px 7px; border-radius: 8px; background: var(--ef-accent, #1f7a52); color: #fff; font-size: 12px; font-weight: 800; letter-spacing: .06em; vertical-align: 1px; }
 .ef-row { transition: background .1s; }
 .ef-row:focus-within { background: #fffdf0 !important; box-shadow: inset 4px 0 0 var(--ef-accent, #1f7a52); }
 .ef-rownow { display: none; }
 .ef-row:focus-within .ef-rownow { display: inline-block; }
 .ef-row:focus-within .ef-rowno { display: none; }
-.ef-kbd { display: inline-block; margin-left: 6px; padding: 0 5px; border: 1px solid currentColor; border-radius: 4px; font-size: 9.5px; font-weight: 700; line-height: 15px; opacity: .7; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: nowrap; }
+.ef-kbd { display: inline-block; margin-left: 6px; padding: 0 5px; border: 1px solid currentColor; border-radius: 4px; font-size: 12px; font-weight: 700; line-height: 15px; opacity: .7; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: nowrap; }
 .ef-act { transition: filter .12s, border-color .12s, box-shadow .12s; }
 .ef-act:hover:not(:disabled) { filter: brightness(.96); box-shadow: 0 0 0 3px rgba(40,60,80,.08); }
 .ef-act:focus-visible { outline: 3px solid var(--ef-accent, #1f7a52); outline-offset: 2px; }
@@ -65,7 +65,7 @@ export const scopeStyle = (accent: string): CSSProperties => ({ '--ef-accent': a
 /** 入力欄の見出し（入力位置は太枠と背景色で示す。「入力中」マークは廃止） */
 export function FieldLabel({ children, color, style }: { children: ReactNode; color?: string; style?: CSSProperties }) {
   return (
-    <span className="ef-label" style={{ display: 'block', fontSize: 11, fontWeight: 700, color: color ?? '#8290a0', marginBottom: 6, letterSpacing: '.03em', whiteSpace: 'nowrap', ...style }}>
+    <span className="ef-label" style={{ display: 'block', fontSize: 12, fontWeight: 700, color: color ?? '#8290a0', marginBottom: 6, letterSpacing: '.03em', whiteSpace: 'nowrap', ...style }}>
       {children}
     </span>
   );
@@ -170,7 +170,7 @@ interface ComboProps {
   title?: string;
 }
 
-export function ComboField({ id, kind, value, onChange, onCommit, placeholder, freeText, dropUp, disabled, invalid, message, fontSize = 13.5, padY = 9, listWidth, onFocusField, title }: ComboProps) {
+export function ComboField({ id, kind, value, onChange, onCommit, placeholder, freeText, dropUp, disabled, invalid, message, fontSize = 14, padY = 9, listWidth, onFocusField, title }: ComboProps) {
   const all = useMemo(() => candidatesOf(kind), [kind]);
   const [text, setText] = useState(value);
   const [editing, setEditing] = useState(false);
@@ -268,7 +268,7 @@ export function ComboField({ id, kind, value, onChange, onCommit, placeholder, f
   return (
     <div className="ef-combo" data-tip={disabled && title ? title : undefined} style={{ flex: '1 1 auto', minWidth: 0, width: '100%' }}>
     <div className="ef-box" data-combo title={disabled ? undefined : title} style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%', boxSizing: 'border-box', border: '1px solid ' + border, borderRadius: 8, background: disabled ? '#fff' : invalid === 'error' ? '#fdeee9' : '#fffbe6', minWidth: 0 }}>
-      {cur?.code && !editing && <span style={{ flex: 'none', marginLeft: 8, padding: '1px 6px', borderRadius: 5, background: '#eef2f6', color: '#5b6773', fontSize: 11, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{cur.code}</span>}
+      {cur?.code && !editing && <span style={{ flex: 'none', marginLeft: 8, padding: '1px 6px', borderRadius: 5, background: '#eef2f6', color: '#5b6773', fontSize: 12, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{cur.code}</span>}
       <input
         id={id}
         ref={inputRef}
@@ -299,30 +299,30 @@ export function ComboField({ id, kind, value, onChange, onCommit, placeholder, f
         onKeyDown={onKeyDown}
         style={{ flex: 1, minWidth: 0, width: '100%', border: 'none', padding: `${padY}px 8px ${padY}px 9px`, fontSize, fontFamily: 'inherit', color: disabled ? '#9aa5b1' : '#22303c' }}
       />
-      <button type="button" tabIndex={-1} aria-label="候補を開く" disabled={disabled} onMouseDown={(e) => { e.preventDefault(); if (disabled) return; inputRef.current?.focus(); setOpen((o) => !o); }} style={{ flex: 'none', width: 24, alignSelf: 'stretch', border: 'none', background: 'transparent', color: '#9aa5b1', fontSize: 9, cursor: disabled ? 'default' : 'pointer', fontFamily: 'inherit' }}>▼</button>
+      <button type="button" tabIndex={-1} aria-label="候補を開く" disabled={disabled} onMouseDown={(e) => { e.preventDefault(); if (disabled) return; inputRef.current?.focus(); setOpen((o) => !o); }} style={{ flex: 'none', width: 24, alignSelf: 'stretch', border: 'none', background: 'transparent', color: '#9aa5b1', fontSize: 12, cursor: disabled ? 'default' : 'pointer', fontFamily: 'inherit' }}>▼</button>
       {open && !disabled && (
         <div onMouseDown={(e) => e.preventDefault()} style={{ position: 'absolute', [dropUp ? 'bottom' : 'top']: 'calc(100% + 6px)', left: 0, minWidth: '100%', width: listWidth, zIndex: 80, background: '#fff', border: '1px solid #d3dce4', borderRadius: 10, boxShadow: '0 14px 36px rgba(24,42,62,.2)', overflow: 'hidden', textAlign: 'left' }}>
           <div ref={listRef} role="listbox" style={{ position: 'relative', maxHeight: 236, overflowY: 'auto', padding: '4px 0' }}>
             {list.map((c, i) => {
               const on = i === hi;
               return (
-                <div key={c.value} data-i={i} role="option" aria-selected={on} className="ef-cand" onMouseEnter={() => setHi(i)} onClick={() => { settle(c.value); onCommit?.(c.value); }} style={{ display: 'flex', alignItems: 'baseline', gap: 8, padding: '7px 12px', background: on ? 'var(--ef-accent, #1f7a52)' : 'transparent', color: on ? '#fff' : '#283641', fontSize: 13.5, lineHeight: 1.3, whiteSpace: 'nowrap' }}>
-                  <span style={{ flex: 'none', minWidth: 38, fontSize: 11.5, fontWeight: 700, fontVariantNumeric: 'tabular-nums', opacity: on ? 0.95 : 0.6 }}>{c.code}</span>
+                <div key={c.value} data-i={i} role="option" aria-selected={on} className="ef-cand" onMouseEnter={() => setHi(i)} onClick={() => { settle(c.value); onCommit?.(c.value); }} style={{ display: 'flex', alignItems: 'baseline', gap: 8, padding: '7px 12px', background: on ? 'var(--ef-accent, #1f7a52)' : 'transparent', color: on ? '#fff' : '#283641', fontSize: 14, lineHeight: 1.3, whiteSpace: 'nowrap' }}>
+                  <span style={{ flex: 'none', minWidth: 38, fontSize: 12, fontWeight: 700, fontVariantNumeric: 'tabular-nums', opacity: on ? 0.95 : 0.6 }}>{c.code}</span>
                   <span style={{ fontWeight: c.value === value ? 700 : 500 }}>{nameOf(kind, c)}</span>
-                  {c.kana && <span style={{ fontSize: 10.5, opacity: on ? 0.85 : 0.5 }}>{c.kana}</span>}
-                  {c.group && <span style={{ marginLeft: 'auto', paddingLeft: 12, fontSize: 10.5, opacity: on ? 0.85 : 0.5 }}>{c.group}</span>}
+                  {c.kana && <span style={{ fontSize: 12, opacity: on ? 0.85 : 0.5 }}>{c.kana}</span>}
+                  {c.group && <span style={{ marginLeft: 'auto', paddingLeft: 12, fontSize: 12, opacity: on ? 0.85 : 0.5 }}>{c.group}</span>}
                 </div>
               );
             })}
-            {list.length === 0 && <div style={{ padding: '12px 14px', fontSize: 12.5, color: miss ? '#c0392b' : '#9aa5b1' }}>{freeText ? '候補はありません（入力した文字のまま登録できます）' : '該当する候補がありません。コード・名称・フリガナを確認してください'}</div>}
+            {list.length === 0 && <div style={{ padding: '12px 14px', fontSize: 14, color: miss ? '#c0392b' : '#9aa5b1' }}>{freeText ? '候補はありません（入力した文字のまま登録できます）' : '該当する候補がありません。コード・名称・フリガナを確認してください'}</div>}
           </div>
-          <div style={{ padding: '5px 12px', borderTop: '1px solid #eef2f5', background: '#fafcfd', fontSize: 10.5, color: '#8290a0', whiteSpace: 'nowrap' }}>
+          <div style={{ padding: '5px 12px', borderTop: '1px solid #eef2f5', background: '#fafcfd', fontSize: 12, color: '#8290a0', whiteSpace: 'nowrap' }}>
             コード・名称・フリガナで絞り込み　↑↓ 選択　Enter 決定　Esc 閉じる
           </div>
         </div>
       )}
     </div>
-    {message && <div className="ef-msg" role="alert" data-field-msg style={{ marginTop: 4, fontSize: 11.5, fontWeight: 700, color: '#a5281b', lineHeight: 1.45 }}>{message}</div>}
+    {message && <div className="ef-msg" role="alert" data-field-msg style={{ marginTop: 4, fontSize: 12, fontWeight: 700, color: '#a5281b', lineHeight: 1.45 }}>{message}</div>}
     </div>
   );
 }
@@ -438,12 +438,12 @@ export function IssueList({ issues, onConfirm, confirmDisabled, compact, confirm
     if (list.length === 0) return null;
     const t = TONE[level];
     return (
-      <div role={level === 'error' ? 'alert' : 'status'} style={{ border: '1px solid ' + t.bd, borderLeft: '5px solid ' + t.fg, background: t.bg, borderRadius: 9, padding: compact ? '7px 10px' : '9px 12px', color: t.fg, fontSize: 12.5, lineHeight: 1.6 }}>
+      <div role={level === 'error' ? 'alert' : 'status'} style={{ border: '1px solid ' + t.bd, borderLeft: '5px solid ' + t.fg, background: t.bg, borderRadius: 9, padding: compact ? '7px 10px' : '9px 12px', color: t.fg, fontSize: 14, lineHeight: 1.6 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span aria-hidden style={{ flex: 'none', width: 18, height: 18, borderRadius: '50%', background: t.fg, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900 }}>{t.icon}</span>
-          <span style={{ fontWeight: 800, fontSize: 11.5, letterSpacing: '.03em' }}>{t.tag}</span>
+          <span aria-hidden style={{ flex: 'none', width: 18, height: 18, borderRadius: '50%', background: t.fg, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 900 }}>{t.icon}</span>
+          <span style={{ fontWeight: 800, fontSize: 12, letterSpacing: '.03em' }}>{t.tag}</span>
           {level === 'warn' && errors.length === 0 && onConfirm && (
-            <button id={confirmId} type="button" className="ef-act" disabled={!!confirmDisabled} title={confirmDisabled || '内容を確認したうえで、このまま登録します'} onClick={onConfirm} style={{ marginLeft: 'auto', padding: '5px 14px', borderRadius: 7, border: '1px solid #b07d00', background: '#d99a00', color: '#fff', fontSize: 12.5, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>確認して登録</button>
+            <button id={confirmId} type="button" className="ef-act" disabled={!!confirmDisabled} title={confirmDisabled || '内容を確認したうえで、このまま登録します'} onClick={onConfirm} style={{ marginLeft: 'auto', padding: '5px 14px', borderRadius: 7, border: '1px solid #b07d00', background: '#d99a00', color: '#fff', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>確認して登録</button>
           )}
         </div>
         <ul style={{ margin: '4px 0 0', paddingLeft: 26 }}>
@@ -490,7 +490,7 @@ export function ActButton({ label, k, onClick, tone = 'normal', accent = '#1f7a5
   const tip = [title, k ? `ショートカット：Alt+${k}` : ''].filter(Boolean).join('　');
   return (
     <span data-tip={disabled && title ? title : undefined} style={{ display: 'inline-flex' }}>
-    <button id={id} type="button" className="ef-act" data-menu={menu ?? (typeof label === 'string' ? label : undefined)} disabled={disabled} aria-pressed={active} title={disabled ? undefined : tip} onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: wide ? 220 : undefined, padding: wide ? '10px 28px' : solid ? '8px 16px' : '6px 10px', borderRadius: 8, border: '1px solid ' + (solid ? c : tone === 'danger' ? '#e6b3ab' : active ? accent : '#cfd8e0'), background: solid ? c : active ? accent + '18' : '#fff', color: solid ? '#fff' : active ? accent : c, fontSize: wide ? 15 : solid ? 13.5 : 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: solid ? '0 3px 10px rgba(30,50,70,.18)' : 'none' }}>
+    <button id={id} type="button" className="ef-act" data-menu={menu ?? (typeof label === 'string' ? label : undefined)} disabled={disabled} aria-pressed={active} title={disabled ? undefined : tip} onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: wide ? 220 : undefined, padding: wide ? '10px 28px' : solid ? '8px 16px' : '6px 10px', borderRadius: 8, border: '1px solid ' + (solid ? c : tone === 'danger' ? '#e6b3ab' : active ? accent : '#cfd8e0'), background: solid ? c : active ? accent + '18' : '#fff', color: solid ? '#fff' : active ? accent : c, fontSize: wide ? 16 : solid ? 14 : 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: solid ? '0 3px 10px rgba(30,50,70,.18)' : 'none' }}>
       {label}
     </button>
     </span>
@@ -499,7 +499,7 @@ export function ActButton({ label, k, onClick, tone = 'normal', accent = '#1f7a5
 export function ActionGroup({ caption, note, children, danger }: { caption: string; note?: ReactNode; children: ReactNode; danger?: boolean }) {
   return (
     <div role="group" aria-label={caption} style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '8px 10px 9px', border: '1px solid ' + (danger ? '#f0cfc9' : '#e2e8ee'), borderRadius: 10, background: danger ? '#fffafa' : '#fbfcfd', minWidth: 0 }}>
-      <div style={{ fontSize: 10.5, fontWeight: 800, color: '#8290a0', letterSpacing: '.05em', whiteSpace: 'nowrap' }}>{caption}{note && <span style={{ fontWeight: 600, marginLeft: 8, color: '#5b6773', letterSpacing: 0 }}>{note}</span>}</div>
+      <div style={{ fontSize: 12, fontWeight: 800, color: '#8290a0', letterSpacing: '.05em', whiteSpace: 'nowrap' }}>{caption}{note && <span style={{ fontWeight: 600, marginLeft: 8, color: '#5b6773', letterSpacing: 0 }}>{note}</span>}</div>
       <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>{children}</div>
     </div>
   );
@@ -554,29 +554,29 @@ export function openCandidatesOfFocused(): boolean {
 /** キーボード操作一覧（ヘルプ） */
 export function ShortcutHelpModal({ open, onClose, shortcuts, formatName, enterOrder }: { open: boolean; onClose: () => void; shortcuts: Shortcut[]; formatName: string; enterOrder: string }) {
   const groups = Array.from(new Set(shortcuts.map((s) => s.group)));
-  const row: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '4px 0', borderBottom: '1px dashed #eef2f5', fontSize: 12.5 };
-  const key: CSSProperties = { flex: 'none', padding: '1px 7px', border: '1px solid #b9c4cf', borderBottomWidth: 2, borderRadius: 5, background: '#f6f8fa', fontSize: 11, fontWeight: 700, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', color: '#3d4a56', whiteSpace: 'nowrap' };
+  const row: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '4px 0', borderBottom: '1px dashed #eef2f5', fontSize: 14 };
+  const key: CSSProperties = { flex: 'none', padding: '1px 7px', border: '1px solid #b9c4cf', borderBottomWidth: 2, borderRadius: 5, background: '#f6f8fa', fontSize: 12, fontWeight: 700, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', color: '#3d4a56', whiteSpace: 'nowrap' };
   return (
-    <Modal open={open} onClose={onClose} width={780} title={<>キーボード操作一覧 <span style={{ fontSize: 12, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>{formatName}</span></>}>
+    <Modal open={open} onClose={onClose} width={780} title={<>キーボード操作一覧 <span style={{ fontSize: 14, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>{formatName}</span></>}>
       <div style={{ padding: '12px 22px 18px', display: 'grid', gap: 14 }}>
-        <div style={{ padding: '10px 12px', background: '#f3f6f9', border: '1px solid #dde4ea', borderRadius: 10, fontSize: 12.5, lineHeight: 1.8, color: '#48565f' }}>
+        <div style={{ padding: '10px 12px', background: '#f3f6f9', border: '1px solid #dde4ea', borderRadius: 10, fontSize: 14, lineHeight: 1.8, color: '#48565f' }}>
           マウスを使わずに伝票登録まで操作できます。ショートカットは<b>どの入力欄にいても同じキーで同じ機能</b>が動きます（カーソル位置で機能は変わりません）。
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '12px 22px' }}>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 800, color: '#8290a0', marginBottom: 4 }}>入力欄の移動・候補の選択</div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: '#8290a0', marginBottom: 4 }}>入力欄の移動・候補の選択</div>
             <div style={row}><span>次の項目へ</span><span style={key}>Enter</span></div>
             <div style={row}><span>前の項目へ</span><span style={key}>Shift+Tab</span></div>
-            <div style={row}><span>候補を絞り込む</span><span style={{ fontSize: 11.5, color: '#7a8794' }}>コード・名称・フリガナを入力</span></div>
+            <div style={row}><span>候補を絞り込む</span><span style={{ fontSize: 12, color: '#7a8794' }}>コード・名称・フリガナを入力</span></div>
             <div style={row}><span>候補を選ぶ</span><span style={key}>↑ ↓</span></div>
             <div style={row}><span>候補を決定して次へ</span><span style={key}>Enter</span></div>
             <div style={row}><span>候補を閉じる</span><span style={key}>Esc</span></div>
-            <div style={{ fontSize: 11.5, color: '#7a8794', marginTop: 6, lineHeight: 1.7 }}>Enter の順序：{enterOrder}</div>
-            <div style={{ fontSize: 11.5, color: '#7a8794', marginTop: 4, lineHeight: 1.7 }}>戻る：<b style={{ color: '#22303c' }}>Shift+Tab</b> で1つ前の入力欄へ戻ります。内部取引スイッチの上では Shift+Enter でオン／オフ。</div>
+            <div style={{ fontSize: 12, color: '#7a8794', marginTop: 6, lineHeight: 1.7 }}>Enter の順序：{enterOrder}</div>
+            <div style={{ fontSize: 12, color: '#7a8794', marginTop: 4, lineHeight: 1.7 }}>戻る：<b style={{ color: '#22303c' }}>Shift+Tab</b> で1つ前の入力欄へ戻ります。内部取引スイッチの上では Shift+Enter でオン／オフ。</div>
           </div>
           {groups.map((g) => (
             <div key={g}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: '#8290a0', marginBottom: 4 }}>{g}</div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#8290a0', marginBottom: 4 }}>{g}</div>
               {shortcuts.filter((s) => s.group === g).map((s) => (
                 <div key={s.key + s.label} style={{ ...row, opacity: s.disabled ? 0.45 : 1 }}><span>{s.label}</span><span style={key}>Alt+{s.key}</span></div>
               ))}
@@ -595,23 +595,23 @@ export function ShortcutHelpModal({ open, onClose, shortcuts, formatName, enterO
 export function FormatSwitcher({ current, onSwitch, accent, right }: { current: EntryFormat; /** 未指定のときは切替を出さず、現在の形式だけ表示 */ onSwitch?: (k: EntryFormat) => void; accent: string; right?: ReactNode }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '10px 22px', borderBottom: '1px solid #e2e8ee', background: '#f6f8fa' }}>
-      <span style={{ fontSize: 11, fontWeight: 800, color: '#8290a0', letterSpacing: '.05em', flex: 'none' }}>伝票の形式</span>
+      <span style={{ fontSize: 12, fontWeight: 800, color: '#8290a0', letterSpacing: '.05em', flex: 'none' }}>伝票の形式</span>
       {onSwitch ? (
         <div role="tablist" aria-label="伝票の形式" style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 3, padding: 3, border: '1px solid #cfd8e0', borderRadius: 11, background: '#e9eef2' }}>
           {ENTRY_FORMATS.map((k) => {
             const on = k === current;
             return (
-              <button key={k} type="button" role="tab" aria-selected={on} className="ef-act" data-menu={'形式:' + k} title={FORMAT_NOTE[k]} onClick={() => { if (!on) onSwitch(k); }} style={{ display: 'inline-flex', alignItems: 'center', padding: '6px 13px', borderRadius: 8, border: 'none', background: on ? accent : 'transparent', color: on ? '#fff' : '#48565f', fontSize: 13, fontWeight: on ? 800 : 600, fontFamily: 'inherit', cursor: on ? 'default' : 'pointer', whiteSpace: 'nowrap', boxShadow: on ? '0 2px 8px rgba(30,50,70,.2)' : 'none' }}>
-                {on && <span aria-hidden style={{ marginRight: 5, fontSize: 11 }}>●</span>}
+              <button key={k} type="button" role="tab" aria-selected={on} className="ef-act" data-menu={'形式:' + k} title={FORMAT_NOTE[k]} onClick={() => { if (!on) onSwitch(k); }} style={{ display: 'inline-flex', alignItems: 'center', padding: '6px 13px', borderRadius: 8, border: 'none', background: on ? accent : 'transparent', color: on ? '#fff' : '#48565f', fontSize: 14, fontWeight: on ? 800 : 600, fontFamily: 'inherit', cursor: on ? 'default' : 'pointer', whiteSpace: 'nowrap', boxShadow: on ? '0 2px 8px rgba(30,50,70,.2)' : 'none' }}>
+                {on && <span aria-hidden style={{ marginRight: 5, fontSize: 12 }}>●</span>}
                 {displayName(k)}
               </button>
             );
           })}
         </div>
       ) : (
-        <span style={{ padding: '6px 14px', borderRadius: 8, background: accent, color: '#fff', fontSize: 13, fontWeight: 800 }}>{displayName(current)}</span>
+        <span style={{ padding: '6px 14px', borderRadius: 8, background: accent, color: '#fff', fontSize: 14, fontWeight: 800 }}>{displayName(current)}</span>
       )}
-      <span className="ef-hide-narrow" style={{ fontSize: 11.5, color: '#7a8794' }}>{FORMAT_NOTE[current]}</span>
+      <span className="ef-hide-narrow" style={{ fontSize: 12, color: '#7a8794' }}>{FORMAT_NOTE[current]}</span>
       {right && <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>{right}</div>}
     </div>
   );
@@ -623,8 +623,8 @@ export function FormatSwitcher({ current, onSwitch, accent, right }: { current: 
 export function ReadOnlyBanner({ reason }: { reason: string }) {
   if (!reason) return null;
   return (
-    <div role="alert" data-readonly-banner style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 22px', background: '#fdecea', borderBottom: '1px solid #f2c9c2', color: '#8a1f16', fontSize: 12.5 }}>
-      <span style={{ flex: 'none', padding: '2px 9px', borderRadius: 8, background: '#c0392b', color: '#fff', fontSize: 11, fontWeight: 800 }}>参照のみ</span>
+    <div role="alert" data-readonly-banner style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 22px', background: '#fdecea', borderBottom: '1px solid #f2c9c2', color: '#8a1f16', fontSize: 14 }}>
+      <span style={{ flex: 'none', padding: '2px 9px', borderRadius: 8, background: '#c0392b', color: '#fff', fontSize: 12, fontWeight: 800 }}>参照のみ</span>
       <span><b>{reason}</b>　伝票の登録・訂正・削除と行の操作はできません（操作ボタンは表示されません）。参照（残高・問合せ・印刷）は利用できます。</span>
     </div>
   );
@@ -637,7 +637,7 @@ export function ConfirmModal({ open, title, children, okLabel, cancelLabel = '�
   return (
     <Modal open={open} onClose={onClose} width={480} title={title} strict>
       <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 14 }}>
-        <div style={{ fontSize: 13.5, lineHeight: 1.8 }}>{children}</div>
+        <div style={{ fontSize: 14, lineHeight: 1.8 }}>{children}</div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button type="button" className="ef-act" autoFocus onClick={onClose} style={btn()}>{cancelLabel}</button>
           <button type="button" className="ef-act" onClick={onOk} style={btn(danger ? '#c0392b' : accent, true)}>{okLabel}</button>
@@ -664,10 +664,10 @@ export function fundLabelOf(name: string, other: string, mode: FundMode): { text
 export function FundAccountLine({ name, other, mode }: { name: string; other: string; mode: FundMode }) {
   const f = fundLabelOf(name, other, mode);
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5, fontSize: 11.5, minHeight: 20, minWidth: 0 }}>
-      <span style={{ flex: 'none', fontSize: 10.5, fontWeight: 700, color: '#8290a0' }}>資金科目</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5, fontSize: 12, minHeight: 20, minWidth: 0 }}>
+      <span style={{ flex: 'none', fontSize: 12, fontWeight: 700, color: '#8290a0' }}>資金科目</span>
       <span style={{ color: f.tone === 'on' ? '#0e6b7a' : '#8290a0', fontWeight: f.tone === 'on' ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.text}</span>
-      {mode !== '自動資金' && <span style={{ flex: 'none', padding: '1px 6px', borderRadius: 6, background: '#efe6fb', color: '#6b3fb5', fontSize: 10, fontWeight: 800 }}>{mode}</span>}
+      {mode !== '自動資金' && <span style={{ flex: 'none', padding: '1px 6px', borderRadius: 6, background: '#efe6fb', color: '#6b3fb5', fontSize: 12, fontWeight: 800 }}>{mode}</span>}
     </div>
   );
 }
@@ -688,7 +688,7 @@ export function FusenTab({ color, offset = -30, top = '50%' }: { color: FusenCol
 }
 
 export function FlagButtons({ shohyo, check, fusen, onChange, disabled, showShohyo = true }: { shohyo: boolean; check: boolean; fusen: FusenColor; onChange: (p: Partial<{ shohyo: boolean; check: boolean; fusen: FusenColor }>) => void; disabled?: boolean; showShohyo?: boolean }) {
-  const dot: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: 6, border: '1px solid #dde4ea', background: '#fff', cursor: disabled ? 'not-allowed' : 'pointer', fontSize: 10.5, fontWeight: 800, fontFamily: 'inherit', padding: 0 };
+  const dot: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: 6, border: '1px solid #dde4ea', background: '#fff', cursor: disabled ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 800, fontFamily: 'inherit', padding: 0 };
   return (
     <span style={{ display: 'inline-flex', gap: 3 }}>
       {showShohyo && <button type="button" tabIndex={-1} disabled={disabled} title="証憑 有／無" onClick={() => onChange({ shohyo: !shohyo })} style={{ ...dot, background: shohyo ? '#eaf5ef' : '#fff', color: shohyo ? '#1f7a52' : '#b3bcc5' }}>{shohyo ? '有' : '無'}</button>}
@@ -738,10 +738,10 @@ const PAPER_CSS = `
 .pp-cell.pp-col { flex-direction: column; align-items: stretch; justify-content: center; gap: 0; }
 .pp-cell.pp-right { justify-content: flex-end; }
 .pp-cell.pp-center { justify-content: center; }
-.pp-lab { background: ${PAPER.fill}; color: ${PAPER.ink}; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; padding: 3px 8px; display: flex; align-items: center; justify-content: center; text-align: center; white-space: nowrap; line-height: 1.3; min-width: 0; box-sizing: border-box; }
+.pp-lab { background: ${PAPER.fill}; color: ${PAPER.ink}; font-size: 14px; font-weight: 700; letter-spacing: .06em; padding: 3px 8px; display: flex; align-items: center; justify-content: center; text-align: center; white-space: nowrap; line-height: 1.3; min-width: 0; box-sizing: border-box; }
 .pp-lab.pp-left { justify-content: flex-start; }
-.pp-lab small { font-size: 9.5px; font-weight: 600; letter-spacing: .04em; opacity: .75; }
-.pp-lab .pp-sub { display: block; font-size: 9.5px; font-weight: 600; letter-spacing: .02em; opacity: .75; }
+.pp-lab small { font-size: 12px; font-weight: 600; letter-spacing: .04em; opacity: .75; }
+.pp-lab .pp-sub { display: block; font-size: 12px; font-weight: 600; letter-spacing: .02em; opacity: .75; }
 .pp-band { background: ${PAPER.band}; }
 .pp-cell.pp-empty { min-height: 40px; }
 .pp-num { font-variant-numeric: tabular-nums; }
@@ -757,9 +757,9 @@ const PAPER_CSS = `
 .pp-input:focus:not(:disabled) { background: #fff8d6 !important; }
 .pp-input:disabled { color: #9aa5b1; background: #fff !important; border-style: dashed; }
 /* 自動表示・読み取り専用の欄：白地にグレー文字（入力できる欄の薄い黄色と見分ける） */
-.pp-ro { display: inline-flex; align-items: center; min-height: 32px; padding: 4px 2px; color: #7a8794; font-size: 13px; }
-.pp-ro small { font-size: 10px; color: #9aa5b1; margin-left: 6px; }
-.pp-ro.pp-ro-s { min-height: 24px; padding: 2px 2px; font-size: 12px; }
+.pp-ro { display: inline-flex; align-items: center; min-height: 32px; padding: 4px 2px; color: #7a8794; font-size: 14px; }
+.pp-ro small { font-size: 12px; color: #9aa5b1; margin-left: 6px; }
+.pp-ro.pp-ro-s { min-height: 24px; padding: 2px 2px; font-size: 14px; }
 .pp-ro.pp-ro-fill { display: flex; width: 100%; box-sizing: border-box; min-width: 0; }
 .pp-cell.pp-auto, .pp-val.pp-auto, .pp-cell:has(> .pp-ro), .pp-val:has(> .pp-ro),
 .pp-row:focus-within > .pp-cell.pp-auto, .pp-row:focus-within > .pp-cell:has(> .pp-ro) { background: #fff; }
@@ -767,10 +767,10 @@ const PAPER_CSS = `
 /* 下段の Seq No／チェック／証憑／小切手No の並び */
 .pp-foot { display: flex; align-items: stretch; min-width: 0; min-height: 40px; }
 .pp-foot > .pp-lab { border-right: 1px solid ${PAPER.lineSoft}; flex: none; padding: 3px 9px; }
-.pp-foot > .pp-val { display: flex; align-items: center; gap: 6px; padding: 3px 10px; border-right: 1px solid ${PAPER.lineSoft}; min-width: 0; font-size: 12.5px; color: #22303c; }
+.pp-foot > .pp-val { display: flex; align-items: center; gap: 6px; padding: 3px 10px; border-right: 1px solid ${PAPER.lineSoft}; min-width: 0; font-size: 14px; color: #22303c; }
 .pp-foot > .pp-val:last-child { border-right: none; }
 .pp-foot > .pp-val.pp-grow { flex: 1 1 auto; }
-.pp-toggle { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 26px; padding: 0 8px; border: 1px solid ${PAPER.lineSoft}; border-radius: 4px; background: #fff; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; color: #22303c; }
+.pp-toggle { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 26px; padding: 0 8px; border: 1px solid ${PAPER.lineSoft}; border-radius: 4px; background: #fff; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; color: #22303c; }
 .pp-toggle:disabled { cursor: not-allowed; opacity: .55; }
 .pp-toggle.pp-on { background: ${PAPER.fill}; color: ${PAPER.ink}; border-color: ${PAPER.line}; }
 .pp-toggle:focus-visible { outline: 3px solid var(--ef-accent, #1f7a52); outline-offset: 1px; }
@@ -817,7 +817,7 @@ export function PaperBox({ label, children, width, grow, muted }: { label: React
   return (
     <div className="pp-row" style={{ gridTemplateColumns: 'auto minmax(0,1fr)', border: `1px solid ${PAPER.line}`, display: 'inline-grid', width, flex: grow ? '1 1 auto' : 'none', minWidth: 0 }}>
       <div className="pp-lab">{label}</div>
-      <div className="pp-cell" style={{ padding: '2px 8px', minHeight: 38, fontSize: 13.5, background: muted ? '#eceff2' : undefined }}>{children}</div>
+      <div className="pp-cell" style={{ padding: '2px 8px', minHeight: 38, fontSize: 14, background: muted ? '#eceff2' : undefined }}>{children}</div>
     </div>
   );
 }
@@ -847,7 +847,7 @@ export function PaperFootItems({ seq, check, shohyo, cheque, note }: { seq: Reac
           <span className={'pp-val' + (note ? '' : ' pp-grow')}>{cheque}</span>
         </>
       )}
-      {note && <span className="pp-val pp-grow" style={{ fontSize: 12, color: '#5b6773', whiteSpace: 'nowrap', overflow: 'hidden' }}>{note}</span>}
+      {note && <span className="pp-val pp-grow" style={{ fontSize: 14, color: '#5b6773', whiteSpace: 'nowrap', overflow: 'hidden' }}>{note}</span>}
     </div>
   );
 }

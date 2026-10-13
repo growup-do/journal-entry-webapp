@@ -45,17 +45,17 @@ export function DivisionPicker({ accent, compact }: { accent: string; compact?: 
         data-menu="区分・年度の切替"
         onClick={() => setOpen(true)}
         title="区分・年度を切り替える"
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: compact ? '3px 9px' : '4px 10px', borderRadius: 8, border: '1px solid ' + (isPast ? '#1f7a52' : isFuture ? '#b7791f' : '#dde4ea'), background: isPast ? '#eaf5ef' : isFuture ? '#fff7e6' : '#f7f9fb', color: '#22303c', fontSize: compact ? 12 : 12.5, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: compact ? '3px 9px' : '4px 10px', borderRadius: 8, border: '1px solid ' + (isPast ? '#1f7a52' : isFuture ? '#b7791f' : '#dde4ea'), background: isPast ? '#eaf5ef' : isFuture ? '#fff7e6' : '#f7f9fb', color: '#22303c', fontSize: compact ? 14 : 14, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}
       >
         <span style={{ color: '#68757f' }}>会計期間</span>
         <b style={{ fontWeight: 700 }}>{s.fiscalYear}</b>
-        {isPast && <span style={{ fontSize: 10, fontWeight: 800, color: '#1f7a52' }}>過去年度</span>}
-        {isFuture && <span style={{ fontSize: 10, fontWeight: 800, color: '#b7791f' }}>翌年度</span>}
+        {isPast && <span style={{ fontSize: 12, fontWeight: 800, color: '#1f7a52' }}>過去年度</span>}
+        {isFuture && <span style={{ fontSize: 12, fontWeight: 800, color: '#b7791f' }}>翌年度</span>}
         <span style={{ color: '#c3ccd4' }}>｜</span>
         <span style={{ color: '#68757f' }}>{s.divisionPath.slice(-2, -1)[0]}</span>
         <span style={{ color: '#c3ccd4' }}>›</span>
         <b style={{ fontWeight: 700 }}>{s.division}</b>
-        {kind !== '入力区分' && <span style={{ fontSize: 10, fontWeight: 800, padding: '1px 6px', borderRadius: 8, background: kind === '合算区分' ? '#fbe9d0' : '#e8f0fb', color: kind === '合算区分' ? '#b45309' : '#2c5f9e' }}>{kind}</span>}
+        {kind !== '入力区分' && <span style={{ fontSize: 12, fontWeight: 800, padding: '1px 6px', borderRadius: 8, background: kind === '合算区分' ? '#fbe9d0' : '#e8f0fb', color: kind === '合算区分' ? '#b45309' : '#2c5f9e' }}>{kind}</span>}
         <Chevron open={open} />
       </button>
       <DivisionDialog open={open} onClose={() => { setOpen(false); setStartup(false); }} accent={accent} startup={startup} onApplied={(info) => { if (info.yearChanged || info.startup) setCont({ year: info.year, division: info.division }); }} />
@@ -130,7 +130,7 @@ export function DivisionDialog({ open, onClose, accent, startup, onApplied }: { 
           <span style={lbl}>現在選択されている年度</span>
           <select value={year} onChange={(e) => setYear(e.target.value)} style={{ ...input, width: 160 }}>{YEARS.map((y) => <option key={y} value={y}>{y}{y === s.currentYear ? '（当年度）' : ''}</option>)}</select>
           <span role="radiogroup" aria-label="区分の表示方法" data-division-view style={{ display: 'inline-flex', border: '1px solid #cfd8e0', borderRadius: 8, overflow: 'hidden', marginLeft: 8 }}>
-            {(['ツリー', '一覧'] as const).map((v) => <button key={v} type="button" role="radio" aria-checked={view === v} onClick={() => setView(v)} style={{ padding: '4px 12px', border: 'none', background: view === v ? accent : '#fff', color: view === v ? '#fff' : '#5b6773', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{v}</button>)}
+            {(['ツリー', '一覧'] as const).map((v) => <button key={v} type="button" role="radio" aria-checked={view === v} onClick={() => setView(v)} style={{ padding: '4px 12px', border: 'none', background: view === v ? accent : '#fff', color: view === v ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{v}</button>)}
           </span>
           <span style={{ marginLeft: 'auto' }}>{view === 'ツリー' && <OrgChartLegend />}</span>
         </div>
@@ -142,25 +142,25 @@ export function DivisionDialog({ open, onClose, accent, startup, onApplied }: { 
 
         {s.merges.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#8290a0' }}>合算区分（任意の組合せ）</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>合算区分（任意の組合せ）</span>
             {s.merges.map((m) => {
               const on = sel === m.name;
               return (
-                <button key={m.name} type="button" data-division={m.name} aria-pressed={on} onClick={() => setSel(m.name)} onDoubleClick={() => apply(m.name)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 10, border: '1px solid ' + (on ? accent : '#e6c99a'), background: on ? accent : '#fffaf0', color: on ? '#fff' : '#22303c', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', boxShadow: on ? `0 0 0 3px ${accent}33` : 'none' }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: on ? 'rgba(255,255,255,.25)' : '#fbe9d0', color: on ? '#fff' : '#b45309' }}>合算</span>
+                <button key={m.name} type="button" data-division={m.name} aria-pressed={on} onClick={() => setSel(m.name)} onDoubleClick={() => apply(m.name)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 10, border: '1px solid ' + (on ? accent : '#e6c99a'), background: on ? accent : '#fffaf0', color: on ? '#fff' : '#22303c', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', boxShadow: on ? `0 0 0 3px ${accent}33` : 'none' }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: on ? 'rgba(255,255,255,.25)' : '#fbe9d0', color: on ? '#fff' : '#b45309' }}>合算</span>
                   {m.name}
-                  <span style={{ fontSize: 11, fontWeight: 500, opacity: 0.8 }}>{m.members.join('・')}</span>
+                  <span style={{ fontSize: 12, fontWeight: 500, opacity: 0.8 }}>{m.members.join('・')}</span>
                 </button>
               );
             })}
           </div>
         )}
-        <div style={{ fontSize: 11.5, color: '#9aa5b1', marginTop: 10 }}>親区分（法人・事業区分・拠点区分など）と合算区分で開くと、伝票入力など一部のメニューが使えなくなります。ダブルクリックでも確定できます。</div>
+        <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 10 }}>親区分（法人・事業区分・拠点区分など）と合算区分で開くと、伝票入力など一部のメニューが使えなくなります。ダブルクリックでも確定できます。</div>
 
-        <label data-skip-division style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, padding: '9px 12px', borderRadius: 10, background: '#f6f8fa', fontSize: 12.5, color: '#22303c', cursor: 'pointer' }}>
+        <label data-skip-division style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, padding: '9px 12px', borderRadius: 10, background: '#f6f8fa', fontSize: 14, color: '#22303c', cursor: 'pointer' }}>
           <input type="checkbox" checked={!!skipUntil} onChange={(e) => setSkipUntil(writeSkipUntil(e.target.checked))} style={{ width: 16, height: 16, accentColor: accent, cursor: 'pointer' }} />
           <span style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>今後1か月間、ログイン時にこの画面を表示しない</span>
-          <span style={{ fontSize: 11.5, color: '#7a8794', minWidth: 0 }}>{skipDate ? `${skipDate.getMonth() + 1}月${skipDate.getDate()}日まで表示しません。` : ''}前回の年度・区分で開始します。変更は画面上部の「会計期間／区分」から。</span>
+          <span style={{ fontSize: 12, color: '#7a8794', minWidth: 0 }}>{skipDate ? `${skipDate.getMonth() + 1}月${skipDate.getDate()}日まで表示しません。` : ''}前回の年度・区分で開始します。変更は画面上部の「会計期間／区分」から。</span>
         </label>
 
         <div style={{ display: 'flex', gap: 8, marginTop: 14, alignItems: 'center' }}>
@@ -175,12 +175,12 @@ export function DivisionDialog({ open, onClose, accent, startup, onApplied }: { 
 
       <Modal open={mergeOpen} onClose={() => setMergeOpen(false)} width={520} title="合算部門の選択" strict>
         <div style={{ padding: '14px 22px 18px' }}>
-          <div style={{ fontSize: 12.5, color: '#5b6773', marginBottom: 8 }}>合算する部門をチェックし、名称を付けて完了してください（1/2 → 2/2）。</div>
+          <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 8 }}>合算する部門をチェックし、名称を付けて完了してください（1/2 → 2/2）。</div>
           <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: 8, maxHeight: 220, overflow: 'auto' }}>
             {entries.map(({ node }) => {
               const label = divisionLabel(node);
               const on = mergeMembers.includes(label);
-              return <label key={node.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', fontSize: 13, cursor: 'pointer' }}><input type="checkbox" checked={on} onChange={() => setMergeMembers((m) => (on ? m.filter((x) => x !== label) : [...m, label]))} />{label}</label>;
+              return <label key={node.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', fontSize: 14, cursor: 'pointer' }}><input type="checkbox" checked={on} onChange={() => setMergeMembers((m) => (on ? m.filter((x) => x !== label) : [...m, label]))} />{label}</label>;
             })}
           </div>
           <div style={{ marginTop: 12 }}><span style={lbl}>合算名称</span><input className="field-input ring" value={mergeName} onChange={(e) => setMergeName(e.target.value)} placeholder={`合算_${String(s.merges.length + 1).padStart(3, '0')}`} style={input} /></div>
@@ -196,8 +196,8 @@ export function DivisionDialog({ open, onClose, accent, startup, onApplied }: { 
       {confirm && (
         <Modal open width={560} onClose={() => setConfirm(null)} title="年度切替確認">
           <div data-year-confirm={future ? '翌年度以降' : '前年度以前'} style={{ padding: '18px 22px', background: tone.bg, borderTop: `3px solid ${tone.bd}`, display: 'grid', gap: 12 }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: tone.fg }}>{s.fiscalYear} から {year} に切り替えます</div>
-            <div style={{ fontSize: 13, color: tone.fg, lineHeight: 1.8 }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: tone.fg }}>{s.fiscalYear} から {year} に切り替えます</div>
+            <div style={{ fontSize: 14, color: tone.fg, lineHeight: 1.8 }}>
               {future ? '翌年度以降の年度です。年度更新前の翌年度は予算の入力などに使います。伝票の入力はできません。' : '前年度以前の年度です。過去の年度を参照している間は画面上部に帯を表示し、伝票の入力・訂正はできません（閲覧のみ）。'}
               <br />切り替えたあと、前年度の決算額と繰越額を比べる「金額の連続性チェック」の結果を表示します。
             </div>
@@ -212,13 +212,13 @@ export function DivisionDialog({ open, onClose, accent, startup, onApplied }: { 
   );
 }
 
-const cellS: CSSProperties = { padding: '7px 10px', borderBottom: '1px solid #eef2f5', fontSize: 12.5, color: 'inherit', whiteSpace: 'nowrap' };
+const cellS: CSSProperties = { padding: '7px 10px', borderBottom: '1px solid #eef2f5', fontSize: 14, color: 'inherit', whiteSpace: 'nowrap' };
 /** 区分の一覧表示（ツリーの代わり。依頼書 2.1-2「ツリー（階層表示）または一覧表示」） */
 function DivisionList({ items, accent, selected, onSelect, onConfirm }: { items: { node: DivisionNode; path: string[] }[]; accent: string; selected: string; onSelect: (label: string) => void; onConfirm: (label: string) => void }) {
   return (
     <div data-division-list style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: '54vh', overflow: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-        <thead><tr>{['区分', '種類', 'コード', '上位区分', '伝票入力'].map((h) => <th key={h} style={{ textAlign: 'left', padding: '7px 10px', fontSize: 11, color: '#8290a0', background: '#f6f8fa', borderBottom: '1px solid #e2e8ee', position: 'sticky', top: 0 }}>{h}</th>)}</tr></thead>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+        <thead><tr>{['区分', '種類', 'コード', '上位区分', '伝票入力'].map((h) => <th key={h} style={{ textAlign: 'left', padding: '7px 10px', fontSize: 12, color: '#8290a0', background: '#f6f8fa', borderBottom: '1px solid #e2e8ee', position: 'sticky', top: 0 }}>{h}</th>)}</tr></thead>
         <tbody>
           {items.map(({ node, path }) => {
             const label = divisionLabel(node);
@@ -248,8 +248,8 @@ export function ContinuityCheckModal({ info, accent, onClose }: { info: { year: 
   const prev = idx > 0 ? YEARS[idx - 1] : null;
   const future = idx > YEARS.indexOf(s.currentYear);
   const ROWS: [string, number][] = [['資産合計', 128_450_000], ['負債合計', 21_300_000], ['純資産合計', 107_150_000], ['支払資金残高（当期末）', 9_500_000]];
-  const th: CSSProperties = { textAlign: 'left', padding: '7px 10px', fontSize: 11, color: '#8290a0', background: '#f6f8fa', borderBottom: '1px solid #e2e8ee' };
-  const td: CSSProperties = { padding: '7px 10px', borderBottom: '1px solid #eef2f5', fontSize: 13 };
+  const th: CSSProperties = { textAlign: 'left', padding: '7px 10px', fontSize: 12, color: '#8290a0', background: '#f6f8fa', borderBottom: '1px solid #e2e8ee' };
+  const td: CSSProperties = { padding: '7px 10px', borderBottom: '1px solid #eef2f5', fontSize: 14 };
   const num: CSSProperties = { ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
   return (
     <Modal open width={640} onClose={onClose} title="金額の連続性チェック" dismissible>
@@ -265,7 +265,7 @@ export function ContinuityCheckModal({ info, accent, onClose }: { info: { year: 
               <thead><tr><th style={th}>項目</th><th style={{ ...th, textAlign: 'right' }}>{prev} 決算額</th><th style={{ ...th, textAlign: 'right' }}>{info.year} 繰越額</th><th style={{ ...th, textAlign: 'right' }}>差額</th></tr></thead>
               <tbody>{ROWS.map(([n, v]) => <tr key={n}><td style={td}>{n}</td><td style={num}>{v.toLocaleString('ja-JP')}</td><td style={num}>{v.toLocaleString('ja-JP')}</td><td style={{ ...num, color: '#1f7a52', fontWeight: 700 }}>0</td></tr>)}</tbody>
             </table>
-            <div style={{ fontSize: 12, color: '#7a8794' }}>差額があるときは金額を赤で表示し、「開始残高」を開くボタンを出します（サンプルの数値はすべて一致）。</div>
+            <div style={{ fontSize: 14, color: '#7a8794' }}>差額があるときは金額を赤で表示し、「開始残高」を開くボタンを出します（サンプルの数値はすべて一致）。</div>
           </>
         )}
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" onClick={onClose} style={btn(accent, true)}>OK</button></div>

@@ -88,7 +88,7 @@ export function LedgerDrawer({ state, accent, onNavigate }: { state: LedgerDrawe
       <EntryStyles />
       <style>{`@keyframes ledger-drawer-in { from { transform: translateX(40px); opacity: 0 } to { transform: none; opacity: 1 } }`}</style>
       {/* 開閉タブ：伝票入力の参照パネルと同じ。閉じているときは画面右端、開いているときはパネルの左外側。縦幅は両方の表記を重ねて同じにする */}
-      <button type="button" className="ef-act" data-ledger-toggle aria-expanded={!collapsed} onClick={toggle} title={collapsed ? `${displayName(page)}をパネルで開く${account ? `（前回：${account}）` : ''}。表の行の「元帳」でも開きます` : '元帳パネルを折りたたむ（Esc）'} style={{ position: 'fixed', top: top + 12, right: collapsed ? 0 : `min(${LEDGER_DRAWER_WIDTH}px, 94vw)`, zIndex: 95, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, width: 32, boxSizing: 'border-box', padding: '12px 0', background: '#fff', border: '1px solid #dde4ea', borderRight: 'none', borderRadius: '10px 0 0 10px', boxShadow: '-3px 3px 12px rgba(30,50,70,.14)', cursor: 'pointer', color: '#48565f', fontFamily: 'inherit', fontSize: 12, fontWeight: 700, transition: 'right .28s ease' }}>
+      <button type="button" className="ef-act" data-ledger-toggle aria-expanded={!collapsed} onClick={toggle} title={collapsed ? `${displayName(page)}をパネルで開く${account ? `（前回：${account}）` : ''}。表の行の「元帳」でも開きます` : '元帳パネルを折りたたむ（Esc）'} style={{ position: 'fixed', top: top + 12, right: collapsed ? 0 : `min(${LEDGER_DRAWER_WIDTH}px, 94vw)`, zIndex: 95, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, width: 32, boxSizing: 'border-box', padding: '12px 0', background: '#fff', border: '1px solid #dde4ea', borderRight: 'none', borderRadius: '10px 0 0 10px', boxShadow: '-3px 3px 12px rgba(30,50,70,.14)', cursor: 'pointer', color: '#48565f', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, transition: 'right .28s ease' }}>
         <span aria-hidden>{collapsed ? '◀' : '▶'}</span>
         <span style={{ display: 'grid', justifyItems: 'center', alignItems: 'center' }}>
           <span aria-hidden={!collapsed} style={{ gridArea: '1 / 1', writingMode: 'vertical-rl', letterSpacing: '.1em', visibility: collapsed ? 'visible' : 'hidden' }}>元帳パネル</span>
@@ -100,27 +100,27 @@ export function LedgerDrawer({ state, accent, onNavigate }: { state: LedgerDrawe
         {/* 見出し：どの画面から、何の元帳か */}
         <div style={{ padding: '12px 16px 10px', borderBottom: '1px solid #eef2f5', flex: 'none', display: 'grid', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 11, color: '#8290a0' }}>{displayName(from)} <span style={{ margin: '0 4px' }}>›</span></span>
-            <span style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 15 }}>{displayName(page)}</span>
-            <span style={{ fontSize: 11, color: '#8290a0' }}>{sess.fiscalYear}／{sess.division}</span>
+            <span style={{ fontSize: 12, color: '#8290a0' }}>{displayName(from)} <span style={{ margin: '0 4px' }}>›</span></span>
+            <span style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16 }}>{displayName(page)}</span>
+            <span style={{ fontSize: 12, color: '#8290a0' }}>{sess.fiscalYear}／{sess.division}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <div className="ef-field" style={{ flex: '1 1 260px', minWidth: 0 }}>
               <ComboField id="ledger-drawer-acc" kind={vendor ? 'vendor' : 'account'} value={account} onChange={setAccount} placeholder={vendor ? 'コード・業者名で指定' : 'コード・科目名・フリガナで指定'} listWidth={380} fontSize={14.5} padY={8} />
             </div>
-            <button type="button" className="ef-act" data-ledger-drawer-full onClick={openFull} title="全画面の元帳で開きます（長い期間の確認・印刷向き）。元帳の「← 戻る」でこの画面に戻れます" style={{ flex: 'none', padding: '8px 12px', borderRadius: 8, border: '1px solid ' + accent, background: '#fff', color: accent, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>元帳の画面で開く ›</button>
+            <button type="button" className="ef-act" data-ledger-drawer-full onClick={openFull} title="全画面の元帳で開きます（長い期間の確認・印刷向き）。元帳の「← 戻る」でこの画面に戻れます" style={{ flex: 'none', padding: '8px 12px', borderRadius: 8, border: '1px solid ' + accent, background: '#fff', color: accent, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>元帳の画面で開く ›</button>
           </div>
           <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} withAll />
         </div>
         {/* 本体 */}
         <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
           {!account ? (
-            <div style={{ padding: '36px 16px', textAlign: 'center', color: '#9aa5b1', fontSize: 12.5, lineHeight: 1.8 }}>{vendor ? '業者' : '科目'}が選ばれていません。<br />表の行の「元帳」を押すか、上の入力欄にコード・名称を入力して指定してください。</div>
+            <div style={{ padding: '36px 16px', textAlign: 'center', color: '#9aa5b1', fontSize: 14, lineHeight: 1.8 }}>{vendor ? '業者' : '科目'}が選ばれていません。<br />表の行の「元帳」を押すか、上の入力欄にコード・名称を入力して指定してください。</div>
           ) : (
             <LedgerTable account={account} month={month} editable={editable} onEdit={setEdit} vendor={vendor} />
           )}
         </div>
-        <div style={{ flex: 'none', padding: '8px 16px', borderTop: '1px solid #eef2f5', background: '#fbfcfd', fontSize: 11.5, color: '#8290a0', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ flex: 'none', padding: '8px 16px', borderTop: '1px solid #eef2f5', background: '#fbfcfd', fontSize: 12, color: '#8290a0', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <span><b style={{ color: '#22303c' }}>{monthLabel}</b>　{lines.length} 件　{vendor ? '支払' : '増減'} <b style={{ color: total < 0 ? '#c0392b' : '#22303c', fontVariantNumeric: 'tabular-nums' }}>{total.toLocaleString('ja-JP')}</b></span>
           <span style={{ marginLeft: 'auto' }}>別の行を押すと、その{vendor ? '業者' : '科目'}に差し替わります。行をダブルクリック、または「{editable ? '訂正' : '表示'}」で伝票を開きます</span>
         </div>

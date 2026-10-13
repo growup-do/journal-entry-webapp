@@ -107,26 +107,26 @@ export function DailyAuditPage({ variant, accent, onNavigate, onClose }: Props) 
   const cells: (number | null)[] = [...Array(first.getDay()).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
   while (cells.length % 7) cells.push(null);
 
-  const panelTitle: CSSProperties = { fontSize: 11, fontWeight: 700, color: '#8290a0', padding: '10px 14px 0' };
+  const panelTitle: CSSProperties = { fontSize: 12, fontWeight: 700, color: '#8290a0', padding: '10px 14px 0' };
   const cell = (label: string, value: number | null, opt?: { hi?: 'green' | 'yellow'; sub?: string }): CSSProperties & { label: string; value: number | null; hi?: 'green' | 'yellow'; sub?: string } => ({ label, value, ...opt });
   const Box = ({ label, value, hi, sub }: { label: string; value: number | null; hi?: 'green' | 'yellow'; sub?: string }) => (
     <div style={{ padding: '9px 12px', border: '1px solid #e2e8ee', borderRadius: 8, background: hi === 'green' ? '#e6f6ec' : hi === 'yellow' ? '#fff8d6' : '#fff', minWidth: 0 }}>
-      <div style={{ fontSize: 11, color: '#5b6773', fontWeight: 600 }}>{label}</div>
-      <div style={{ textAlign: 'right', fontWeight: 700, fontSize: 15, fontVariantNumeric: 'tabular-nums', color: value != null && value < 0 ? '#c0392b' : '#22303c' }}>{value == null ? '—' : yen(value)}</div>
-      {sub && <div style={{ textAlign: 'right', fontSize: 11, color: BLUE_TXT, fontVariantNumeric: 'tabular-nums' }}>{sub}</div>}
+      <div style={{ fontSize: 12, color: '#5b6773', fontWeight: 600 }}>{label}</div>
+      <div style={{ textAlign: 'right', fontWeight: 700, fontSize: 16, fontVariantNumeric: 'tabular-nums', color: value != null && value < 0 ? '#c0392b' : '#22303c' }}>{value == null ? '—' : yen(value)}</div>
+      {sub && <div style={{ textAlign: 'right', fontSize: 12, color: BLUE_TXT, fontVariantNumeric: 'tabular-nums' }}>{sub}</div>}
     </div>
   );
   const Same = ({ ng }: { ng?: boolean }) => (
     <div style={{ textAlign: 'center', margin: '4px 0' }}>
       {ng ? (
-        <span style={{ display: 'inline-block', padding: '2px 12px', borderRadius: 10, background: '#fdecea', border: '1px solid #f1b9b2', color: RED, fontSize: 11.5, fontWeight: 700 }}>不一致　差額 {yen(STOP.diff)}</span>
+        <span style={{ display: 'inline-block', padding: '2px 12px', borderRadius: 10, background: '#fdecea', border: '1px solid #f1b9b2', color: RED, fontSize: 12, fontWeight: 700 }}>不一致　差額 {yen(STOP.diff)}</span>
       ) : (
-        <span style={{ display: 'inline-block', padding: '2px 12px', borderRadius: 10, background: shown ? '#fff1b8' : '#f1f4f6', color: shown ? '#8a6d00' : '#b3bcc5', fontSize: 11.5, fontWeight: 700, letterSpacing: '.2em' }}>同額</span>
+        <span style={{ display: 'inline-block', padding: '2px 12px', borderRadius: 10, background: shown ? '#fff1b8' : '#f1f4f6', color: shown ? '#8a6d00' : '#b3bcc5', fontSize: 12, fontWeight: 700, letterSpacing: '.2em' }}>同額</span>
       )}
     </div>
   );
   const v = (n: number) => (shown ? n : 0);
-  const miniBtn: CSSProperties = { padding: '4px 12px', borderRadius: 8, border: '1px solid ' + RED, background: '#fff', color: RED, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' };
+  const miniBtn: CSSProperties = { padding: '4px 12px', borderRadius: 8, border: '1px solid ' + RED, background: '#fff', color: RED, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' };
   const onlyStopped = `不一致が見つかったときに使います`;
 
   return (
@@ -154,11 +154,11 @@ export function DailyAuditPage({ variant, accent, onNavigate, onClose }: Props) 
       ) : undefined}
       period={
         <>
-          <span style={{ fontSize: 12.5, color: '#48565f' }}>令和8年度　繰越残高 〜 決算月仕訳{stopped ? `（${stopDay}で停止中）` : ''}</span>
+          <span style={{ fontSize: 14, color: '#48565f' }}>令和8年度　繰越残高 〜 決算月仕訳{stopped ? `（${stopDay}で停止中）` : ''}</span>
         </>
       }
       target={<span>全科目（資金収支・貸借・事業活動の整合を月ごとに検査します。科目の個別指定はありません）</span>}
-      periodAside={<span style={{ fontSize: 12.5, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: stopped ? '#fdecea' : done ? '#fff1b8' : '#f1f4f6', color: stopped ? RED : done ? '#8a6d00' : '#8290a0' }}>{phase === 'running' ? '調査中…' : stopped ? `${stopDay}で不一致` : done ? 'すべて同額（OK）' : '未調査'}</span>}
+      periodAside={<span style={{ fontSize: 14, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: stopped ? '#fdecea' : done ? '#fff1b8' : '#f1f4f6', color: stopped ? RED : done ? '#8a6d00' : '#8290a0' }}>{phase === 'running' ? '調査中…' : stopped ? `${stopDay}で不一致` : done ? 'すべて同額（OK）' : '未調査'}</span>}
     >
       <ToastView msg={toast.msg} />
 
@@ -166,11 +166,11 @@ export function DailyAuditPage({ variant, accent, onNavigate, onClose }: Props) 
         <div style={{ padding: '26px 28px 22px' }}>
           <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
             <span style={{ flex: 'none', width: 40, height: 40, borderRadius: '50%', background: '#e8f0fb', color: '#2c5f9e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700 }}>?</span>
-            <div style={{ fontSize: 15, fontWeight: 700 }}>一致・不一致検索を開始しますか？</div>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>一致・不一致検索を開始しますか？</div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 22 }}>
-            <button type="button" onClick={() => { setPhase('idle'); onClose?.(); }} style={{ padding: '9px 22px', border: '1px solid #cfd8e0', borderRadius: 8, background: '#fff', color: '#5b6773', fontWeight: 700, fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer' }}>いいえ</button>
-            <button type="button" onClick={() => run(0)} style={{ padding: '9px 26px', background: accent, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer' }}>はい</button>
+            <button type="button" onClick={() => { setPhase('idle'); onClose?.(); }} style={{ padding: '9px 22px', border: '1px solid #cfd8e0', borderRadius: 8, background: '#fff', color: '#5b6773', fontWeight: 700, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' }}>いいえ</button>
+            <button type="button" onClick={() => run(0)} style={{ padding: '9px 26px', background: accent, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' }}>はい</button>
           </div>
         </div>
       </Modal>
@@ -179,15 +179,15 @@ export function DailyAuditPage({ variant, accent, onNavigate, onClose }: Props) 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
             {/* 月別の調査結果 */}
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#8290a0', marginBottom: 8 }}>調査結果（月別）</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 8 }}>調査結果（月別）</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, minmax(0,1fr))', gap: 6 }}>
                 {SLOTS.map((s, i) => {
                   const st = phase === 'running' ? (i < doneCount ? 'ok' : i === doneCount ? 'busy' : 'wait') : stopped ? (i < STOP.slot ? 'ok' : i === STOP.slot ? 'ng' : 'wait') : done ? 'ok' : 'wait';
                   const isCur = s === `${month}月仕訳`;
                   return (
                     <div key={s} style={{ border: '1px solid ' + (isCur ? accent : '#dde4ea'), borderRadius: 8, overflow: 'hidden', background: isCur ? '#fff' : '#f6f8fa', boxShadow: isCur ? `0 0 0 2px ${accent}33` : 'none' }}>
-                      <div style={{ fontSize: 10.5, fontWeight: 700, color: '#5b6773', textAlign: 'center', padding: '5px 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s}</div>
-                      <div style={{ margin: 4, height: 30, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11.5, fontWeight: 800, letterSpacing: '.02em', background: st === 'ok' ? '#f5a623' : st === 'ng' ? RED : st === 'busy' ? '#22303c' : '#2c5f9e', color: '#fff', transition: 'background .2s' }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#5b6773', textAlign: 'center', padding: '5px 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s}</div>
+                      <div style={{ margin: 4, height: 30, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, letterSpacing: '.02em', background: st === 'ok' ? '#f5a623' : st === 'ng' ? RED : st === 'busy' ? '#22303c' : '#2c5f9e', color: '#fff', transition: 'background .2s' }}>
                         {st === 'ok' ? 'OK 同額' : st === 'ng' ? `× 不一致` : st === 'busy' ? '調査中…' : '？ 未調査'}
                       </div>
                     </div>
@@ -197,24 +197,24 @@ export function DailyAuditPage({ variant, accent, onNavigate, onClose }: Props) 
             </div>
             {/* カレンダー */}
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#8290a0', marginBottom: 8 }}>令和{era}年 {month}月　<span style={{ fontWeight: 500 }}>日付ごとの仕訳件数</span><span style={{ fontWeight: 500, marginLeft: 8 }}>（仕訳 {monthVouchers.length} 件）</span></div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 8 }}>令和{era}年 {month}月　<span style={{ fontWeight: 500 }}>日付ごとの仕訳件数</span><span style={{ fontWeight: 500, marginLeft: 8 }}>（仕訳 {monthVouchers.length} 件）</span></div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0,1fr))', gap: 4 }}>
                 {['日', '月', '火', '水', '木', '金', '土'].map((w, i) => (
-                  <div key={w} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: i === 0 ? '#c0392b' : i === 6 ? '#2c5f9e' : '#8290a0', padding: '4px 0' }}>{w}</div>
+                  <div key={w} style={{ textAlign: 'center', fontSize: 12, fontWeight: 700, color: i === 0 ? '#c0392b' : i === 6 ? '#2c5f9e' : '#8290a0', padding: '4px 0' }}>{w}</div>
                 ))}
                 {cells.map((d, i) => {
                   const n = d ? counts.get(d) ?? 0 : 0;
                   const ng = stopped && d === STOP.day;
                   if (ng) return (
-                    <button key={i} type="button" onClick={showVouchers} title={`${stopDay}の伝票を日記帳で開く`} style={{ height: 52, border: '2px solid ' + RED, borderRadius: 6, background: '#fdecea', padding: '3px 5px', fontSize: 11, color: RED, fontWeight: 700, position: 'relative', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', display: 'block', width: '100%' }}>
-                      {d}<span style={{ marginLeft: 6, padding: '0 6px', borderRadius: 6, background: RED, color: '#fff', fontSize: 10 }}>不一致</span>
-                      <span style={{ position: 'absolute', right: 5, bottom: 3, fontSize: 10.5 }}>{n}件</span>
+                    <button key={i} type="button" onClick={showVouchers} title={`${stopDay}の伝票を日記帳で開く`} style={{ height: 52, border: '2px solid ' + RED, borderRadius: 6, background: '#fdecea', padding: '3px 5px', fontSize: 12, color: RED, fontWeight: 700, position: 'relative', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', display: 'block', width: '100%' }}>
+                      {d}<span style={{ marginLeft: 6, padding: '0 6px', borderRadius: 6, background: RED, color: '#fff', fontSize: 12 }}>不一致</span>
+                      <span style={{ position: 'absolute', right: 5, bottom: 3, fontSize: 12 }}>{n}件</span>
                     </button>
                   );
                   return (
-                    <div key={i} style={{ height: 52, border: '1px solid #e6ecf1', borderRadius: 6, background: d ? (n ? '#eaf5ef' : '#fff') : '#f6f8fa', padding: '4px 6px', fontSize: 11, color: '#5b6773', position: 'relative' }}>
+                    <div key={i} style={{ height: 52, border: '1px solid #e6ecf1', borderRadius: 6, background: d ? (n ? '#eaf5ef' : '#fff') : '#f6f8fa', padding: '4px 6px', fontSize: 12, color: '#5b6773', position: 'relative' }}>
                       {d}
-                      {n > 0 && <span style={{ position: 'absolute', right: 5, bottom: 4, fontSize: 10.5, fontWeight: 700, color: '#1f7a52' }}>{n}件</span>}
+                      {n > 0 && <span style={{ position: 'absolute', right: 5, bottom: 4, fontSize: 12, fontWeight: 700, color: '#1f7a52' }}>{n}件</span>}
                     </div>
                   );
                 })}
@@ -266,13 +266,13 @@ export function DailyAuditPage({ variant, accent, onNavigate, onClose }: Props) 
           <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
             <span style={{ flex: 'none', width: 40, height: 40, borderRadius: '50%', background: '#e8f0fb', color: '#2c5f9e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700 }}>?</span>
             <div>
-              <div style={{ fontSize: 15, fontWeight: 700 }}>{stopDay}から検査を続けますか？</div>
-              <div style={{ fontSize: 12.5, color: '#7a8794', marginTop: 4 }}>{stopDay}以降の仕訳をもう一度検査します。伝票の訂正がまだのときは、先に「伝票表示」から訂正してください。</div>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>{stopDay}から検査を続けますか？</div>
+              <div style={{ fontSize: 14, color: '#7a8794', marginTop: 4 }}>{stopDay}以降の仕訳をもう一度検査します。伝票の訂正がまだのときは、先に「伝票表示」から訂正してください。</div>
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 22 }}>
-            <button type="button" onClick={() => setContinueOpen(false)} style={{ padding: '9px 22px', border: '1px solid #cfd8e0', borderRadius: 8, background: '#fff', color: '#5b6773', fontWeight: 700, fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer' }}>いいえ</button>
-            <button type="button" onClick={resume} style={{ padding: '9px 26px', background: accent, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer' }}>はい</button>
+            <button type="button" onClick={() => setContinueOpen(false)} style={{ padding: '9px 22px', border: '1px solid #cfd8e0', borderRadius: 8, background: '#fff', color: '#5b6773', fontWeight: 700, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' }}>いいえ</button>
+            <button type="button" onClick={resume} style={{ padding: '9px 26px', background: accent, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' }}>はい</button>
           </div>
         </div>
       </Modal>

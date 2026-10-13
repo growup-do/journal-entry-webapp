@@ -23,7 +23,7 @@ export function Chips({ current, accent, onToggle }: Props) {
             onClick={() => onToggle(label)}
             style={{
               padding: '6px 14px',
-              fontSize: 12.5,
+              fontSize: 14,
               fontWeight: 600,
               borderRadius: 20,
               cursor: 'pointer',

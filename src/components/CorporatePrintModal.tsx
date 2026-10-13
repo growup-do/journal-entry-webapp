@@ -50,18 +50,18 @@ export function CorporatePrintModal({ open, onClose }: Props) {
     if (!checked.size) return toast.show('帳票を選択してください');
     setExp({ kind, title: `決算書・決算附属明細書（${checked.size}帳票）`, fileName: `決算書一括_${s.fiscalYear}`, meta: `法人印刷　${period}`, ...table() });
   };
-  const btn = (primary?: boolean): CSSProperties => ({ padding: '9px 20px', borderRadius: 8, border: primary ? 'none' : '1px solid #cfd8e0', background: primary ? ACCENT : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
-  const th: CSSProperties = { padding: '6px 4px', fontSize: 10.5, fontWeight: 700, color: '#8290a0', background: '#f6f8fa', borderBottom: '1px solid #eef2f5', textAlign: 'center', whiteSpace: 'nowrap' };
+  const btn = (primary?: boolean): CSSProperties => ({ padding: '9px 20px', borderRadius: 8, border: primary ? 'none' : '1px solid #cfd8e0', background: primary ? ACCENT : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
+  const th: CSSProperties = { padding: '6px 4px', fontSize: 12, fontWeight: 700, color: '#8290a0', background: '#f6f8fa', borderBottom: '1px solid #eef2f5', textAlign: 'center', whiteSpace: 'nowrap' };
 
   return (
     <>
-    <Modal open={open} onClose={onClose} width={1120} title={<>法人印刷 <span style={{ fontSize: 12, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>決算書・決算附属明細書　一覧</span></>}>
+    <Modal open={open} onClose={onClose} width={1120} title={<>法人印刷 <span style={{ fontSize: 14, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>決算書・決算附属明細書　一覧</span></>}>
       <ToastView msg={toast.msg} />
       <div style={{ padding: '14px 22px 20px' }}>
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <button type="button" className="btn-outline" onClick={() => toggleGroup('required')} style={btn()}>✓ 必須帳票のON/OFF</button>
           <button type="button" className="btn-outline" onClick={() => toggleGroup('optional')} style={btn()}>✓ 省略可能帳票のON/OFF</button>
-          <span style={{ marginLeft: 'auto', fontSize: 12, color: '#7a8794', alignSelf: 'center' }}>選択 <b style={{ color: '#22303c' }}>{checked.size}</b> 帳票</span>
+          <span style={{ marginLeft: 'auto', fontSize: 14, color: '#7a8794', alignSelf: 'center' }}>選択 <b style={{ color: '#22303c' }}>{checked.size}</b> 帳票</span>
         </div>
         <div style={{ overflowX: 'auto', border: '1px solid #dde4ea', borderRadius: 10 }}>
           <table style={{ borderCollapse: 'collapse', width: '100%' }}>
@@ -75,7 +75,7 @@ export function CorporatePrintModal({ open, onClose }: Props) {
             <tbody>
               {CLOSING_REPORT_ROWS.map((row, r) => (
                 <tr key={row.name}>
-                  <td style={{ padding: '8px 10px', fontSize: 12.5, fontWeight: 600, borderBottom: '1px solid #f1f4f6', whiteSpace: 'nowrap' }}>{row.name}</td>
+                  <td style={{ padding: '8px 10px', fontSize: 14, fontWeight: 600, borderBottom: '1px solid #f1f4f6', whiteSpace: 'nowrap' }}>{row.name}</td>
                   {cols.map((c, i) => {
                     const avail = row.avail.includes(c);
                     const req = row.required.includes(c);
@@ -91,8 +91,8 @@ export function CorporatePrintModal({ open, onClose }: Props) {
             </tbody>
           </table>
         </div>
-        <div style={{ fontSize: 11, color: '#9aa5b1', marginTop: 8 }}>青い背景＝必須帳票、白＝省略可能、灰＝その区分では出力対象外</div>
-        <div style={{ fontSize: 11.5, color: '#5b6773', marginTop: 6 }}>印刷の流れ：① 帳票を選ぶ → ② 「プレビュー」で内容を確認 → ③ 「印刷」または Excel出力／PDF出力（この画面内で完結します）。金額の書式などは各帳票の印刷（詳細設定）と同じ設定が反映されます。</div>
+        <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 8 }}>青い背景＝必須帳票、白＝省略可能、灰＝その区分では出力対象外</div>
+        <div style={{ fontSize: 12, color: '#5b6773', marginTop: 6 }}>印刷の流れ：① 帳票を選ぶ → ② 「プレビュー」で内容を確認 → ③ 「印刷」または Excel出力／PDF出力（この画面内で完結します）。金額の書式などは各帳票の印刷（詳細設定）と同じ設定が反映されます。</div>
         <div style={{ display: 'flex', gap: 8, marginTop: 16, alignItems: 'center' }}>
           <button type="button" className="btn-outline" onClick={() => out('excel')} style={btn()}>Excel出力</button>
           <button type="button" className="btn-outline" onClick={() => out('pdf')} style={btn()}>PDF出力</button>

@@ -21,7 +21,7 @@ export function LoadDivisionSettings({ accent, kind, onDone, small }: { accent: 
         <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
           {!confirm ? (
             <>
-              <div style={{ fontSize: 12.5, color: '#3d4a56' }}>読み込み元の伝票入力区分を選んでください。選んだ区分の{kind}を、起動中の区分「<b>{s.division}</b>」の設定として読み込みます。</div>
+              <div style={{ fontSize: 14, color: '#3d4a56' }}>読み込み元の伝票入力区分を選んでください。選んだ区分の{kind}を、起動中の区分「<b>{s.division}</b>」の設定として読み込みます。</div>
               <select value={from} onChange={(e) => setFrom(e.target.value)} style={input} aria-label="読み込み元の区分" data-load-from>{others.map((o) => <option key={o}>{o}</option>)}</select>
               <Notice tone="warn">起動中の区分の現在の設定は上書きされます。元に戻せないため、必要なら先に「設定の保存」でファイルに書き出してください。</Notice>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
@@ -31,8 +31,8 @@ export function LoadDivisionSettings({ accent, kind, onDone, small }: { accent: 
             </>
           ) : (
             <>
-              <div style={{ fontSize: 13, fontWeight: 700 }}>「{s.division}」の{kind}は、「{from}」の設定で上書きされます。</div>
-              <div style={{ fontSize: 12.5, color: '#5b6773' }}>実行してもよろしいですか？（この操作は取り消せません）</div>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>「{s.division}」の{kind}は、「{from}」の設定で上書きされます。</div>
+              <div style={{ fontSize: 14, color: '#5b6773' }}>実行してもよろしいですか？（この操作は取り消せません）</div>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                 <button type="button" onClick={() => setConfirm(false)} style={btn()}>戻る</button>
                 <button type="button" className="submit-btn" onClick={() => { close(); onDone(from); }} style={btn('#c0392b', true)} data-load-run>上書きして読み込む</button>

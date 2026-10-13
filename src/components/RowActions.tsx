@@ -38,11 +38,11 @@ interface RowActionsProps {
 
 const small = (color: string, disabled: boolean): CSSProperties => ({
   padding: '4px 10px', borderRadius: 7, border: '1px solid ' + (disabled ? '#dde4ea' : color), background: '#fff', color: disabled ? '#b3bcc5' : color,
-  fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: disabled ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', pointerEvents: disabled ? 'none' : 'auto',
+  fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: disabled ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', pointerEvents: disabled ? 'none' : 'auto',
 });
 const arrow = (disabled: boolean): CSSProperties => ({
   width: 24, height: 24, padding: 0, borderRadius: 6, border: '1px solid ' + (disabled ? '#e6ecf1' : '#cfd8e0'), background: disabled ? '#f8fafc' : '#fff', color: disabled ? '#c8d0d8' : '#5b6773',
-  fontSize: 10, fontWeight: 800, fontFamily: 'inherit', cursor: disabled ? 'not-allowed' : 'pointer', lineHeight: 1, pointerEvents: disabled ? 'none' : 'auto',
+  fontSize: 12, fontWeight: 800, fontFamily: 'inherit', cursor: disabled ? 'not-allowed' : 'pointer', lineHeight: 1, pointerEvents: disabled ? 'none' : 'auto',
 });
 
 /** 行の操作エリア（1行分） */
@@ -89,29 +89,29 @@ export function DeleteVoucherModal({ voucher, onClose, onDeleted }: { voucher: V
   if ((voucher?.id ?? null) !== shownId) { setShownId(voucher?.id ?? null); setAgree(false); }
   if (!voucher) return null;
   const siblings = getVouchers().filter((r) => r.seq === voucher.seq && r.no === voucher.no && r.id !== voucher.id).length;
-  const cell: CSSProperties = { padding: '7px 12px', borderBottom: '1px solid #f1f4f6', fontSize: 13 };
-  const head: CSSProperties = { ...cell, width: 96, background: '#f8fafc', color: '#8290a0', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap' };
+  const cell: CSSProperties = { padding: '7px 12px', borderBottom: '1px solid #f1f4f6', fontSize: 14 };
+  const head: CSSProperties = { ...cell, width: 96, background: '#f8fafc', color: '#8290a0', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' };
   const items: [string, ReactNode][] = [
-    ['Seq／伝票No', <>{voucher.seq}　／　{voucher.no}<span style={{ marginLeft: 8, fontSize: 11, color: '#9aa5b1' }}>{voucher.kind}</span></>],
+    ['Seq／伝票No', <>{voucher.seq}　／　{voucher.no}<span style={{ marginLeft: 8, fontSize: 12, color: '#9aa5b1' }}>{voucher.kind}</span></>],
     ['年月日', `令和8年 ${voucher.date.replace('/', '月')}日`],
     ['区分', voucher.service],
     ['借方科目', voucher.kari],
     ['貸方科目', voucher.kashi],
     ['摘要', <>{voucher.tekiyo}{voucher.gyosha ? <span style={{ marginLeft: 8, color: '#7a8794' }}>／ {voucher.gyosha}</span> : null}</>],
-    ['金額', <b style={{ fontVariantNumeric: 'tabular-nums', fontSize: 15 }}>{yen(voucher.amount)} 円</b>],
+    ['金額', <b style={{ fontVariantNumeric: 'tabular-nums', fontSize: 16 }}>{yen(voucher.amount)} 円</b>],
   ];
   return (
     <Modal open onClose={onClose} width={520} strict title={<span style={{ color: RED }}>伝票の削除</span>}>
       <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 12px', background: '#fdeee9', border: '1px solid #f2c9c2', borderRadius: 10, color: '#8a2a1f', fontSize: 12.5, lineHeight: 1.7 }}>
-          <span style={{ flex: 'none', width: 22, height: 22, borderRadius: '50%', background: RED, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13 }}>!</span>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 12px', background: '#fdeee9', border: '1px solid #f2c9c2', borderRadius: 10, color: '#8a2a1f', fontSize: 14, lineHeight: 1.7 }}>
+          <span style={{ flex: 'none', width: 22, height: 22, borderRadius: '50%', background: RED, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14 }}>!</span>
           <span>次の伝票を削除します。<b>一度削除した伝票は元に戻せません。</b>内容を確認してください。</span>
         </div>
         <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #e2e8ee', borderRadius: 10 }}>
           <tbody>{items.map(([k, val]) => <tr key={k}><td style={head}>{k}</td><td style={cell}>{val}</td></tr>)}</tbody>
         </table>
-        {siblings > 0 && <div style={{ fontSize: 12, color: '#7a8794' }}>この伝票には他に {siblings} 行あります。削除するのは上の1行だけです。</div>}
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+        {siblings > 0 && <div style={{ fontSize: 14, color: '#7a8794' }}>この伝票には他に {siblings} 行あります。削除するのは上の1行だけです。</div>}
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, cursor: 'pointer' }}>
           <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
           内容を確認しました（削除すると元に戻せません）
         </label>
@@ -165,7 +165,7 @@ export function useRowActions({ rows, accent, returnTo }: { /** 画面に表示�
   /** 一覧の上に出す1行の注意書き（使える操作がすべて有効なら null） */
   const notice: ReactNode = !editable || !reorderable ? (
     <>
-      <span style={{ padding: '1px 8px', borderRadius: 6, background: '#fff', border: '1px solid #f3d9b0', fontWeight: 700, fontSize: 11 }}>{s.role !== '入力可' ? '参照のみ' : startKindOf(s)}</span>
+      <span style={{ padding: '1px 8px', borderRadius: 6, background: '#fff', border: '1px solid #f3d9b0', fontWeight: 700, fontSize: 12 }}>{s.role !== '入力可' ? '参照のみ' : startKindOf(s)}</span>
       <span>
         {editReason || reorderReason}。
         {isViewOnly(s) ? '行の「表示」で伝票の内容を確認できます。訂正・削除・表示順の入換のボタンは表示されません。' : !editable ? `「訂正」「削除」${!reorderable ? '「▲▼（表示順の入換）」' : ''}は使えません（無効表示）。` : '「▲▼（表示順の入換）」は使えません（無効表示）。'}

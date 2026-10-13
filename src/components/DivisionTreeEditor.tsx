@@ -59,21 +59,21 @@ export function DivisionTreeEditor({ accent, compact }: { accent: string; compac
       <div style={card}>
         <div style={{ ...cardHead, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           区分階層
-          <span style={{ fontSize: 11, fontWeight: 500, color: '#8290a0' }}>カードを押して選択・右の「＋」で配下に追加</span>
+          <span style={{ fontSize: 12, fontWeight: 500, color: '#8290a0' }}>カードを押して選択・右の「＋」で配下に追加</span>
           <span style={{ marginLeft: 'auto' }}><OrgChartLegend /></span>
         </div>
         <div style={{ padding: 12 }}>
           <DivisionOrgChart tree={s.tree} accent={accent} isSelected={(n) => n.id === selId} onSelect={(n) => setSelId(n.id)} canSelect={() => true} action={addButton} hint="押すと、下の設定欄にこの区分の内容を表示します" maxHeight={compact ? '38vh' : 'none'} />
         </div>
-        <div style={{ padding: '0 14px 12px', fontSize: 11.5, color: '#9aa5b1', lineHeight: 1.6 }}>区分は階層構造に沿って順番に作成します（法人 → 事業区分 → 拠点区分 → サービス区分 → 小サービス区分）。運用開始後の階層変更は影響が大きいため、本番では確認ダイアログとバックアップを挟みます。</div>
+        <div style={{ padding: '0 14px 12px', fontSize: 12, color: '#9aa5b1', lineHeight: 1.6 }}>区分は階層構造に沿って順番に作成します（法人 → 事業区分 → 拠点区分 → サービス区分 → 小サービス区分）。運用開始後の階層変更は影響が大きいため、本番では確認ダイアログとバックアップを挟みます。</div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: compact ? 'minmax(0,1fr)' : 'repeat(auto-fit, minmax(360px, 1fr))', gap: 18, alignItems: 'start' }}>
         <div style={card}>
           <div style={{ ...cardHead, display: 'flex', alignItems: 'center', gap: 8 }}>
-            {sel ? <>{sel.kind}の設定<span style={{ fontSize: 12, fontWeight: 500, color: '#5b6773' }}>{sel.code ? `${sel.code} ` : ''}{sel.name}</span></> : '区分の設定'}
+            {sel ? <>{sel.kind}の設定<span style={{ fontSize: 14, fontWeight: 500, color: '#5b6773' }}>{sel.code ? `${sel.code} ` : ''}{sel.name}</span></> : '区分の設定'}
             {sel && childKind && <button type="button" className="btn-outline" onClick={() => addChild(sel)} style={{ ...btn(accent, false, true), marginLeft: 'auto' }}>＋ 配下に{childKind}を追加</button>}
           </div>
-          {!sel ? <div style={{ padding: 20, color: '#9aa5b1', fontSize: 13 }}>上の組織図から区分を選んでください。</div> : (
+          {!sel ? <div style={{ padding: 20, color: '#9aa5b1', fontSize: 14 }}>上の組織図から区分を選んでください。</div> : (
             <div style={{ padding: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <Field label="名称" span={2}><input className="field-input ring" value={sel.name} onChange={(e) => update(sel.id, { name: e.target.value })} style={input} /></Field>
               {sel.kind === '法人' && <><Field label="データ開始年月日"><input className="field-input" defaultValue="20240401" style={input} /></Field><Field label="法人税納税の有無"><select style={input} defaultValue="非課税"><option>非課税</option><option>税効果会計を適用しない</option><option>税効果会計を適用する</option></select></Field></>}
@@ -85,22 +85,22 @@ export function DivisionTreeEditor({ accent, compact }: { accent: string; compac
                   <Field label="事業種別"><select value={sel.category ?? ''} onChange={(e) => update(sel.id, { category: e.target.value })} style={input}>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select></Field>
                   <Field label="カラー（一覧・元帳の背景色）"><div style={{ display: 'flex', gap: 6 }}>{COLORS.map((c) => <span key={c} onClick={() => update(sel.id, { color: c })} style={{ width: 24, height: 24, borderRadius: 6, background: c, border: '2px solid ' + (sel.color === c ? accent : '#e2e8ee'), cursor: 'pointer' }} />)}</div></Field>
                   <Field label="開始年度"><div style={{ ...input, background: '#f5f7f9', color: '#5b6773' }}>{sel.startYear}</div></Field>
-                  <label style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}><input type="checkbox" checked={sel.use !== false} onChange={() => update(sel.id, { use: sel.use === false })} />使用する（区分選択画面に表示。廃園などで使わなくなった場合はチェックを外す）</label>
-                  <div style={{ gridColumn: 'span 2', fontSize: 11.5, color: '#9aa5b1' }}>年度更新待ち：<b style={{ color: '#1f7a52' }}>なし</b>（{s.currentYear} まで更新済み）</div>
+                  <label style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}><input type="checkbox" checked={sel.use !== false} onChange={() => update(sel.id, { use: sel.use === false })} />使用する（区分選択画面に表示。廃園などで使わなくなった場合はチェックを外す）</label>
+                  <div style={{ gridColumn: 'span 2', fontSize: 12, color: '#9aa5b1' }}>年度更新待ち：<b style={{ color: '#1f7a52' }}>なし</b>（{s.currentYear} まで更新済み）</div>
                 </>
               )}
-              {!sel.entry && sel.kind !== '法人' && <div style={{ gridColumn: 'span 2', fontSize: 12, color: '#7a8794' }}>集計用の区分です。伝票は配下の伝票入力区分（3桁コード付き）で入力します。</div>}
+              {!sel.entry && sel.kind !== '法人' && <div style={{ gridColumn: 'span 2', fontSize: 14, color: '#7a8794' }}>集計用の区分です。伝票は配下の伝票入力区分（3桁コード付き）で入力します。</div>}
               {sel.kind !== '法人' && <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end' }}><button type="button" className="btn-outline" onClick={() => remove(sel)} style={btn('#c0392b')}>この区分を削除</button></div>}
             </div>
           )}
         </div>
         {!compact && <div style={card}>
-          <div style={cardHead}>合算区分（任意の組合せ） <span style={{ fontSize: 11, fontWeight: 500, color: '#8290a0' }}>区分選択の「合算追加」からも作成できます</span></div>
+          <div style={cardHead}>合算区分（任意の組合せ） <span style={{ fontSize: 12, fontWeight: 500, color: '#8290a0' }}>区分選択の「合算追加」からも作成できます</span></div>
           <div style={{ padding: 14 }}>
-            {s.merges.length === 0 && <div style={{ fontSize: 12.5, color: '#9aa5b1' }}>合算区分はありません。</div>}
+            {s.merges.length === 0 && <div style={{ fontSize: 14, color: '#9aa5b1' }}>合算区分はありません。</div>}
             {s.merges.map((m) => (
-              <div key={m.name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: '1px solid #f1f4f6', fontSize: 13 }}>
-                <b>{m.name}</b><span style={{ color: '#7a8794', fontSize: 12 }}>{m.members.join('・')}</span>
+              <div key={m.name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: '1px solid #f1f4f6', fontSize: 14 }}>
+                <b>{m.name}</b><span style={{ color: '#7a8794', fontSize: 14 }}>{m.members.join('・')}</span>
                 <button type="button" className="btn-outline" onClick={() => { if (confirm(`「${m.name}」を削除しますか？`)) setSession({ merges: s.merges.filter((x) => x.name !== m.name) }); }} style={{ ...btn('#c0392b', false, true), marginLeft: 'auto' }}>削除</button>
               </div>
             ))}
@@ -108,7 +108,7 @@ export function DivisionTreeEditor({ accent, compact }: { accent: string; compac
           </div>
         </div>}
       </div>
-      {!compact && <div style={{ gridColumn: '1 / -1', fontSize: 11.5, color: '#9aa5b1' }}><span style={lbl}>選択中の伝票入力区分</span>{all.filter((x) => x.node.entry).map((x) => divisionLabel(x.node)).join('　')}</div>}
+      {!compact && <div style={{ gridColumn: '1 / -1', fontSize: 12, color: '#9aa5b1' }}><span style={lbl}>選択中の伝票入力区分</span>{all.filter((x) => x.node.entry).map((x) => divisionLabel(x.node)).join('　')}</div>}
     </div>
   );
 }

@@ -300,9 +300,9 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
 
   const cell: CSSProperties = { ...TD, padding: '6px 10px', borderRight: '1px solid #eef2f5' };
   const numCell: CSSProperties = { ...NUM, padding: '6px 10px', borderRight: '1px solid #eef2f5' };
-  const inp: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '6px 8px', border: '1px solid #cfd8e0', borderRadius: 6, fontSize: 13, fontFamily: 'inherit', outline: 'none', background: '#fff' };
-  const fieldBtn: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, width: '100%', boxSizing: 'border-box', padding: '6px 8px', background: '#fff', border: '1px solid #cfd8e0', borderRadius: 6, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left', color: 'inherit' };
-  const btn = (primary?: boolean): CSSProperties => ({ padding: '8px 16px', borderRadius: 8, border: primary ? 'none' : '1px solid #cfd8e0', background: primary ? accent : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
+  const inp: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '6px 8px', border: '1px solid #cfd8e0', borderRadius: 6, fontSize: 14, fontFamily: 'inherit', outline: 'none', background: '#fff' };
+  const fieldBtn: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, width: '100%', boxSizing: 'border-box', padding: '6px 8px', background: '#fff', border: '1px solid #cfd8e0', borderRadius: 6, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left', color: 'inherit' };
+  const btn = (primary?: boolean): CSSProperties => ({ padding: '8px 16px', borderRadius: 8, border: primary ? 'none' : '1px solid #cfd8e0', background: primary ? accent : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
   // 旧「オプション」バッジ：標準機能になったため表示しない（確認メモ #56）
   const badge = null;
 
@@ -332,7 +332,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
                 <button type="button" className="btn-outline" onClick={() => { setAiLines([]); setAiFileName(''); setAiOpen(true); }} style={btn()}>AI自動仕訳 インポート</button>
                 <button type="button" className="btn-outline" onClick={() => setAiConfirmOpen(true)} style={{ ...btn(), position: 'relative' }}>
                   AI自動仕訳 会計確認
-                  {aiPending.length > 0 && <span style={{ position: 'absolute', top: -7, right: -7, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9, background: '#c0392b', color: '#fff', fontSize: 10.5, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{aiPending.length}</span>}
+                  {aiPending.length > 0 && <span style={{ position: 'absolute', top: -7, right: -7, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9, background: '#c0392b', color: '#fff', fontSize: 12, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{aiPending.length}</span>}
                 </button>
               </>
             ) : (
@@ -349,7 +349,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       <ToastView msg={toast.msg} />
 
       {/* 残高サマリー */}
-      <div style={{ display: 'flex', gap: 16, padding: '10px 22px', borderBottom: '1px solid #eef2f5', fontSize: 12.5, color: '#5b6773', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 16, padding: '10px 22px', borderBottom: '1px solid #eef2f5', fontSize: 14, color: '#5b6773', flexWrap: 'wrap' }}>
         <span>前月繰越 <b style={{ color: '#22303c', fontVariantNumeric: 'tabular-nums' }}>{yen(opening)}</b></span>
         <span>当月入金 <b style={{ color: '#2c5f9e', fontVariantNumeric: 'tabular-nums' }}>{yen(monthIn)}</b></span>
         <span>当月出金 <b style={{ color: '#b0426a', fontVariantNumeric: 'tabular-nums' }}>{yen(monthOut)}</b></span>
@@ -382,7 +382,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
             </tr>
             {view.map((r) => {
               if (r.special === '締切線') return <tr key={r.id}><td colSpan={7} style={{ padding: 0, borderBottom: '3px double #22303c' }} /></tr>;
-              if (r.special === '改ページ') return <tr key={r.id}><td colSpan={7} style={{ padding: '3px 10px', fontSize: 10.5, color: '#9aa5b1', textAlign: 'center', background: 'repeating-linear-gradient(90deg,#e6ecf1 0 6px,transparent 6px 12px) center/100% 1px no-repeat' }}>— 改ページ —</td></tr>;
+              if (r.special === '改ページ') return <tr key={r.id}><td colSpan={7} style={{ padding: '3px 10px', fontSize: 12, color: '#9aa5b1', textAlign: 'center', background: 'repeating-linear-gradient(90deg,#e6ecf1 0 6px,transparent 6px 12px) center/100% 1px no-repeat' }}>— 改ページ —</td></tr>;
               if (r.special === '小計行') return <tr key={r.id} style={{ background: '#f3f6f9' }}><td style={numCell}>{yen(monthIn)}</td><td style={cell} /><td style={{ ...cell, fontWeight: 700 }}>小計</td><td style={cell} /><td style={numCell}>{yen(monthOut)}</td><td style={{ ...numCell, fontWeight: 700 }}>{yen(r.bal)}</td><td style={TD} /></tr>;
               const bg = r.aggregated ? '#fff8c4' : r.ai === 'pending' ? '#f3e8ff' : r.imported ? '#eaf2fb' : 'transparent';
               return (
@@ -391,14 +391,14 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
                   <td style={{ ...cell, fontVariantNumeric: 'tabular-nums' }}>{r.special === '摘要行' ? '' : `令和8年 ${r.month}月 ${r.day}日`}</td>
                   <td style={cell}>{r.tekiyo}</td>
                   <td style={cell}>
-                    {r.code && <span style={{ color: '#9aa5b1', fontSize: 11, marginRight: 6 }}>{r.code}</span>}{r.account}
-                    {r.ai === 'pending' && <span title={`AI推定（信頼度 ${r.aiConf ?? '-'}%）承認待ち`} style={{ marginLeft: 6, fontSize: 10, fontWeight: 800, color: '#6b3fb5', background: '#efe6fb', borderRadius: 5, padding: '1px 5px' }}>AI {r.aiConf}%</span>}
-                    {r.linked && <span title="会計連動済み（仕訳伝票を作成済み）" style={{ marginLeft: 6, fontSize: 10, fontWeight: 800, color: '#1f7a52', background: '#eaf5ef', borderRadius: 5, padding: '1px 5px' }}>連動済</span>}
+                    {r.code && <span style={{ color: '#9aa5b1', fontSize: 12, marginRight: 6 }}>{r.code}</span>}{r.account}
+                    {r.ai === 'pending' && <span title={`AI推定（信頼度 ${r.aiConf ?? '-'}%）承認待ち`} style={{ marginLeft: 6, fontSize: 12, fontWeight: 800, color: '#6b3fb5', background: '#efe6fb', borderRadius: 5, padding: '1px 5px' }}>AI {r.aiConf}%</span>}
+                    {r.linked && <span title="会計連動済み（仕訳伝票を作成済み）" style={{ marginLeft: 6, fontSize: 12, fontWeight: 800, color: '#1f7a52', background: '#eaf5ef', borderRadius: 5, padding: '1px 5px' }}>連動済</span>}
                   </td>
                   <td style={{ ...numCell, color: '#b0426a' }}>{r.outAmt ? yen(r.outAmt) : ''}</td>
                   <td style={{ ...numCell, fontWeight: 700 }}>{r.special ? '' : yen(r.bal)}</td>
                   <td style={{ ...TD, padding: '4px 8px', textAlign: 'right' }}>
-                    <button type="button" className="btn-outline" onClick={() => (r.aggregated ? lockedMsg() : setRows((rs) => rs.filter((x) => x.id !== r.id)))} title="行の削除" style={{ padding: '3px 8px', border: '1px solid #d3dbe3', borderRadius: 6, background: '#fff', color: r.aggregated ? '#c3ccd4' : '#c0392b', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>削除</button>
+                    <button type="button" className="btn-outline" onClick={() => (r.aggregated ? lockedMsg() : setRows((rs) => rs.filter((x) => x.id !== r.id)))} title="行の削除" style={{ padding: '3px 8px', border: '1px solid #d3dbe3', borderRadius: 6, background: '#fff', color: r.aggregated ? '#c3ccd4' : '#c0392b', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>削除</button>
                   </td>
                 </tr>
               );
@@ -407,7 +407,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
             <tr style={{ background: '#fbfcfd', borderTop: `2px solid ${accent}` }}>
               <td style={{ ...cell, padding: '8px 8px' }}><input id="cb-in" className="field-input ring" value={entry.inAmt} onChange={(e) => setEntry({ ...entry, inAmt: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => focusId('cb-day'))} inputMode="numeric" placeholder="入金" style={{ ...inp, textAlign: 'right' }} /></td>
               <td style={{ ...cell, padding: '8px 8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#5b6773' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 14, color: '#5b6773' }}>
                   <span>令和8</span>
                   <input className="field-input" value={entry.month} onChange={(e) => setEntry({ ...entry, month: e.target.value.replace(/[^0-9]/g, '').slice(0, 2) })} inputMode="numeric" style={{ ...inp, width: 34, padding: '6px 2px', textAlign: 'center' }} />
                   <input id="cb-day" className="field-input" value={entry.day} onChange={(e) => setEntry({ ...entry, day: e.target.value.replace(/[^0-9]/g, '').slice(0, 2) })} onKeyDown={onEnter(() => focusId('cb-tekiyo'))} inputMode="numeric" placeholder="日" style={{ ...inp, width: 34, padding: '6px 2px', textAlign: 'center' }} />
@@ -418,8 +418,8 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
                 <AssistField buttonId="cb-acc" value={entry.account} placeholder="勘定科目検索" open={assist.isOpen('acc')} onOpen={() => assist.open('acc', 'account')} accent={accent} accentRgb={accentRgb} buttonStyle={fieldBtn} panelStyle={{ position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, width: 260, zIndex: 60 }} groups={assist.groups} query={assist.query} empty={assist.empty} onInput={assist.setQuery} onPick={(v) => { setEntry((en) => ({ ...en, account: v })); assist.close(); focusId('cb-out'); }} />
               </td>
               <td style={{ ...cell, padding: '8px 8px' }}><input id="cb-out" className="field-input ring" value={entry.outAmt} onChange={(e) => setEntry({ ...entry, outAmt: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(add)} inputMode="numeric" placeholder="出金" style={{ ...inp, textAlign: 'right' }} /></td>
-              <td style={{ ...numCell, color: '#9aa5b1', fontSize: 11 }}>自動計算</td>
-              <td style={{ ...TD, padding: '8px 8px' }}><button type="button" className="submit-btn" onClick={add} style={{ ...btn(true), padding: '7px 12px', fontSize: 12 }}>登録</button></td>
+              <td style={{ ...numCell, color: '#9aa5b1', fontSize: 12 }}>自動計算</td>
+              <td style={{ ...TD, padding: '8px 8px' }}><button type="button" className="submit-btn" onClick={add} style={{ ...btn(true), padding: '7px 12px', fontSize: 14 }}>登録</button></td>
             </tr>
           </tbody>
         </table>
@@ -428,14 +428,14 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       {/* ---- 特殊行の挿入 ---- */}
       <Modal open={specialOpen} onClose={() => setSpecialOpen(false)} width={420} title="特殊行の挿入">
         <div style={{ padding: '18px 22px 20px' }}>
-          <div style={{ fontSize: 13.5, marginBottom: 14 }}>カーソル位置へ挿入する特殊行を選択して下さい</div>
+          <div style={{ fontSize: 14, marginBottom: 14 }}>カーソル位置へ挿入する特殊行を選択して下さい</div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
             {(['小計行', '改ページ', '締切線'] as const).map((k) => <button key={k} type="button" className="btn-outline" onClick={() => insertSpecial(k)} style={btn()}>{k}</button>)}
           </div>
           <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: 12, display: 'flex', alignItems: 'center', gap: 16 }}>
             <button type="button" className="btn-outline" onClick={() => insertSpecial('摘要行')} style={btn()}>摘要行</button>
-            <label style={{ fontSize: 12.5, display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={specialOpts.date} onChange={() => setSpecialOpts({ ...specialOpts, date: !specialOpts.date })} />年月日欄を表示</label>
-            <label style={{ fontSize: 12.5, display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={specialOpts.balance} onChange={() => setSpecialOpts({ ...specialOpts, balance: !specialOpts.balance })} />残高欄を表示</label>
+            <label style={{ fontSize: 14, display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={specialOpts.date} onChange={() => setSpecialOpts({ ...specialOpts, date: !specialOpts.date })} />年月日欄を表示</label>
+            <label style={{ fontSize: 14, display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={specialOpts.balance} onChange={() => setSpecialOpts({ ...specialOpts, balance: !specialOpts.balance })} />残高欄を表示</label>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}><button type="button" onClick={() => setSpecialOpen(false)} style={btn()}>キャンセル</button></div>
         </div>
@@ -444,7 +444,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       {/* ---- 集計：明細選択 ---- */}
       <Modal open={aggOpen && !aggConfirm} onClose={() => setAggOpen(false)} width={860} title="集計">
         <div style={{ padding: '14px 22px 18px' }}>
-          <div style={{ fontSize: 13.5, marginBottom: 10 }}>集計する明細を選択してください。<span style={{ fontSize: 12, color: '#7a8794', marginLeft: 8 }}>（選択 {aggSel.size} 件）</span></div>
+          <div style={{ fontSize: 14, marginBottom: 10 }}>集計する明細を選択してください。<span style={{ fontSize: 14, color: '#7a8794', marginLeft: 8 }}>（選択 {aggSel.size} 件）</span></div>
           <div style={{ maxHeight: 380, overflow: 'auto', border: '1px solid #e2e8ee', borderRadius: 10 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead><tr><th style={{ ...TH, width: 36 }} /><th style={{ ...TH, textAlign: 'right' }}>入金額</th><th style={TH}>年月日</th><th style={TH}>摘要</th><th style={TH}>勘定科目</th><th style={{ ...TH, textAlign: 'right' }}>出金額</th><th style={{ ...TH, textAlign: 'right' }}>残高</th></tr></thead>
@@ -472,7 +472,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
 
       {/* ---- 集計：確認 ---- */}
       <Modal open={aggConfirm} onClose={() => setAggConfirm(false)} width={620} title="集計 ― 確認">
-        <div style={{ padding: '18px 22px 20px', fontSize: 13.5, lineHeight: 1.7 }}>
+        <div style={{ padding: '18px 22px 20px', fontSize: 14, lineHeight: 1.7 }}>
           <div>選択された明細は…</div>
           <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: '10px 14px', margin: '8px 0 12px', background: '#fbfcfd' }}>
             {aggRange.length > 0 && (
@@ -484,12 +484,12 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
           </div>
           <div style={{ fontWeight: 700 }}>この時点での残高は　<span style={{ fontSize: 16 }}>{yen(aggBal)}円</span>になります。</div>
           <div style={{ marginTop: 8 }}>集計を開始してもよろしいですか？</div>
-          <label style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 8, fontSize: 13 }}><input type="checkbox" checked={aggLink} onChange={() => setAggLink(!aggLink)} />集計したら会計連動フォルダへこの伝票情報を送る</label>
+          <label style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 8, fontSize: 14 }}><input type="checkbox" checked={aggLink} onChange={() => setAggLink(!aggLink)} />集計したら会計連動フォルダへこの伝票情報を送る</label>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
             <button type="button" className="submit-btn" onClick={runAggregate} style={btn(true)}>OK</button>
             <button type="button" onClick={() => setAggConfirm(false)} style={btn()}>キャンセル</button>
           </div>
-          <div style={{ marginTop: 16, padding: '10px 14px', background: '#f3f6f9', borderRadius: 10, fontSize: 12, color: '#48565f' }}>
+          <div style={{ marginTop: 16, padding: '10px 14px', background: '#f3f6f9', borderRadius: 10, fontSize: 14, color: '#48565f' }}>
             集計された明細に対しては以下の操作が出来なくなります。<br />①日付・金額・科目・摘要など、明細内容の訂正　②前期繰越の金額訂正　③行の挿入　④行の削除<br />※一度集計した明細に対して修正を行う場合は『集計取消』を実行してから行ってください。
           </div>
         </div>
@@ -498,11 +498,11 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       {/* ---- 預金出納：新規出納帳 ---- */}
       <Modal open={newBookOpen} onClose={() => setNewBookOpen(false)} width={420} title="新規出納帳">
         <div style={{ padding: '14px 22px 18px' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 8 }}>勘定科目（預金）</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#8290a0', marginBottom: 8 }}>勘定科目（預金）</div>
           {BANK_ACCOUNTS.map((a) => (
-            <label key={a} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '7px 4px', fontSize: 13.5, cursor: 'pointer' }}><input type="radio" name="book" checked={book === a} onChange={() => setBook(a)} />{a}</label>
+            <label key={a} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '7px 4px', fontSize: 14, cursor: 'pointer' }}><input type="radio" name="book" checked={book === a} onChange={() => setBook(a)} />{a}</label>
           ))}
-          <div style={{ fontSize: 11.5, color: '#7a8794', marginTop: 10, lineHeight: 1.6 }}>※ 使用しないとして設定されている科目は選択できません。ご使用になられる場合は、使用科目へ設定を変更してください。</div>
+          <div style={{ fontSize: 12, color: '#7a8794', marginTop: 10, lineHeight: 1.6 }}>※ 使用しないとして設定されている科目は選択できません。ご使用になられる場合は、使用科目へ設定を変更してください。</div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
             <button type="button" className="submit-btn" onClick={() => { setNewBookOpen(false); toast.show(`${book} の出納帳を開きました`); }} style={btn(true)}>OK</button>
             <button type="button" onClick={() => setNewBookOpen(false)} style={btn()}>キャンセル</button>
@@ -513,11 +513,11 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       {/* ---- 預金出納：預金残高 ---- */}
       <Modal open={bankBalanceOpen} onClose={() => setBankBalanceOpen(false)} width={420} title="預金残高">
         <div style={{ padding: '18px 22px 20px' }}>
-          <div style={{ fontSize: 13.5, marginBottom: 12 }}>通帳の預金残高を入力して下さい</div>
+          <div style={{ fontSize: 14, marginBottom: 12 }}>通帳の預金残高を入力して下さい</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 13 }}>残高</span>
-            <input className="field-input ring" value={bankInput} onChange={(e) => setBankInput(e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" autoFocus onKeyDown={onEnter(() => { setBankBalance(parseInt(bankInput, 10) || 0); setBankBalanceOpen(false); })} style={{ ...inp, flex: 1, textAlign: 'right', fontSize: 15, fontWeight: 700 }} />
-            <span style={{ fontSize: 13 }}>円</span>
+            <span style={{ fontSize: 14 }}>残高</span>
+            <input className="field-input ring" value={bankInput} onChange={(e) => setBankInput(e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" autoFocus onKeyDown={onEnter(() => { setBankBalance(parseInt(bankInput, 10) || 0); setBankBalanceOpen(false); })} style={{ ...inp, flex: 1, textAlign: 'right', fontSize: 16, fontWeight: 700 }} />
+            <span style={{ fontSize: 14 }}>円</span>
             <button type="button" className="submit-btn" onClick={() => { setBankBalance(parseInt(bankInput, 10) || 0); setBankBalanceOpen(false); }} style={btn(true)}>決定</button>
           </div>
           <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}><button type="button" onClick={() => setBankBalanceOpen(false)} style={btn()}>キャンセル</button></div>
@@ -527,10 +527,10 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       {/* ---- 預金出納：銀行CSV取込 ---- */}
       <Modal open={csvOpen} onClose={() => setCsvOpen(false)} width={560} title="CSVファイルの取り込み">
         <div style={{ padding: '14px 22px 20px' }}>
-          <div style={{ fontSize: 12.5, color: '#5b6773', marginBottom: 10 }}>システム年度：令和8年（2026年）　対象口座：{book}</div>
+          <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 10 }}>システム年度：令和8年（2026年）　対象口座：{book}</div>
           <div onClick={importCsv} style={{ border: '3px dashed #e0b400', background: '#fff9c4', borderRadius: 12, padding: '46px 20px', textAlign: 'center', cursor: 'pointer' }}>
             <div style={{ fontSize: 20, fontWeight: 800, color: '#22303c' }}>CSVファイルをドロップしてください。</div>
-            <div style={{ fontSize: 12, color: '#7a8794', marginTop: 6 }}>（プロトタイプ：クリックするとサンプル3件を取り込みます）</div>
+            <div style={{ fontSize: 14, color: '#7a8794', marginTop: 6 }}>（プロトタイプ：クリックするとサンプル3件を取り込みます）</div>
             <button type="button" className="btn-outline" onClick={(e) => { e.stopPropagation(); importCsv(); }} style={{ ...btn(), marginTop: 18 }}>CSVファイルを指定する</button>
           </div>
           <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}><button type="button" onClick={() => setCsvOpen(false)} style={btn()}>キャンセル</button></div>
@@ -541,16 +541,16 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       <Modal open={bulkOpen} onClose={() => setBulkOpen(false)} width={560} title="インポート伝票一括削除">
         <div style={{ padding: '14px 22px 20px' }}>
           <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, minHeight: 160, maxHeight: 260, overflow: 'auto' }}>
-            <div style={{ padding: '8px 12px', background: '#f6f8fa', fontSize: 11, fontWeight: 700, color: '#8290a0', borderBottom: '1px solid #eef2f5' }}>コメント（取込単位）</div>
+            <div style={{ padding: '8px 12px', background: '#f6f8fa', fontSize: 12, fontWeight: 700, color: '#8290a0', borderBottom: '1px solid #eef2f5' }}>コメント（取込単位）</div>
             {rows.some((r) => r.imported) ? (
-              <div onDoubleClick={(e) => { if (e.shiftKey) bulkDelete(); else toast.show('[Shift] キーを押しながらダブルクリックしてください'); }} title="Shift + ダブルクリックで一括削除" style={{ padding: '10px 12px', fontSize: 13, cursor: 'pointer' }}>
+              <div onDoubleClick={(e) => { if (e.shiftKey) bulkDelete(); else toast.show('[Shift] キーを押しながらダブルクリックしてください'); }} title="Shift + ダブルクリックで一括削除" style={{ padding: '10px 12px', fontSize: 14, cursor: 'pointer' }}>
                 銀行CSV取込　{rows.filter((r) => r.imported).length} 件　（{book}）
               </div>
             ) : (
-              <div style={{ padding: '30px 12px', textAlign: 'center', color: '#9aa5b1', fontSize: 12.5 }}>インポートされた伝票はありません。</div>
+              <div style={{ padding: '30px 12px', textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>インポートされた伝票はありません。</div>
             )}
           </div>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginTop: 12, fontSize: 12.5, color: '#48565f', lineHeight: 1.7 }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginTop: 12, fontSize: 14, color: '#48565f', lineHeight: 1.7 }}>
             <span style={{ flex: 'none', width: 28, height: 28, borderRadius: '50%', background: '#e8f0fb', color: '#2c5f9e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>i</span>
             <span>一括削除は大変危険な操作です。この為削除をするには、[Shift]キーを押しながら、コメント行をダブルクリックすると一括削除を継続する様になっております。</span>
           </div>
@@ -561,14 +561,14 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       {/* ---- 小口現金：区分の切替 ---- */}
       <Modal open={pettyOpen} onClose={() => setPettyOpen(false)} width={480} title="小口区分の切替">
         <div style={{ padding: '14px 22px 18px' }}>
-          <div style={{ fontSize: 12.5, color: '#5b6773', marginBottom: 10 }}>開く小口現金の区分（担当）を選択してください。区分ごとに出納帳・繰越残高を分けて管理します。</div>
+          <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 10 }}>開く小口現金の区分（担当）を選択してください。区分ごとに出納帳・繰越残高を分けて管理します。</div>
           <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'hidden' }}>
             {PETTY_BOOKS.map((b) => (
-              <label key={b.name} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '9px 12px', borderBottom: '1px solid #f1f4f6', fontSize: 13.5, cursor: 'pointer', background: pettyPick === b.name ? '#fff8c4' : '#fff' }}>
+              <label key={b.name} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '9px 12px', borderBottom: '1px solid #f1f4f6', fontSize: 14, cursor: 'pointer', background: pettyPick === b.name ? '#fff8c4' : '#fff' }}>
                 <input type="radio" name="petty-book" checked={pettyPick === b.name} onChange={() => setPettyPick(b.name)} />
-                <span style={{ flex: 1, fontWeight: 600 }}>{b.name}{b.name === book && <span style={{ marginLeft: 8, fontSize: 10.5, color: '#1f7a52', fontWeight: 700 }}>表示中</span>}</span>
-                <span style={{ fontSize: 12, color: '#7a8794' }}>担当：{b.staff}</span>
-                <span style={{ fontSize: 11, color: '#9aa5b1' }}>{b.place}</span>
+                <span style={{ flex: 1, fontWeight: 600 }}>{b.name}{b.name === book && <span style={{ marginLeft: 8, fontSize: 12, color: '#1f7a52', fontWeight: 700 }}>表示中</span>}</span>
+                <span style={{ fontSize: 14, color: '#7a8794' }}>担当：{b.staff}</span>
+                <span style={{ fontSize: 12, color: '#9aa5b1' }}>{b.place}</span>
               </label>
             ))}
           </div>
@@ -582,7 +582,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       {/* ---- 会計連動：確認 ---- */}
       <Modal open={linkOpen} onClose={() => setLinkOpen(false)} width={860} title="会計連動 ― 作成する仕訳伝票の確認">
         <div style={{ padding: '14px 22px 18px' }}>
-          <div style={{ fontSize: 13, marginBottom: 10 }}>集計済みの明細 <b>{linkTargets.length} 件</b> を、次の仕訳伝票として会計システムへ送ります。相手科目は <b>{cashAccount}</b> です。</div>
+          <div style={{ fontSize: 14, marginBottom: 10 }}>集計済みの明細 <b>{linkTargets.length} 件</b> を、次の仕訳伝票として会計システムへ送ります。相手科目は <b>{cashAccount}</b> です。</div>
           <div style={{ maxHeight: 360, overflow: 'auto', border: '1px solid #e2e8ee', borderRadius: 10 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead><tr><th style={TH}>日付</th><th style={TH}>借方科目</th><th style={TH}>貸方科目</th><th style={TH}>摘要</th><th style={{ ...TH, textAlign: 'right' }}>金額</th></tr></thead>
@@ -594,7 +594,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
               </tbody>
             </table>
           </div>
-          <div style={{ marginTop: 10, padding: '10px 14px', background: '#f3f6f9', borderRadius: 10, fontSize: 12, color: '#48565f', lineHeight: 1.7 }}>伝票は「伝票」区分・証憑なしで登録され、仕訳一覧・勘定元帳に反映されます。連動済みの明細は二重に送られません。</div>
+          <div style={{ marginTop: 10, padding: '10px 14px', background: '#f3f6f9', borderRadius: 10, fontSize: 14, color: '#48565f', lineHeight: 1.7 }}>伝票は「伝票」区分・証憑なしで登録され、仕訳一覧・勘定元帳に反映されます。連動済みの明細は二重に送られません。</div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
             <button type="button" className="submit-btn" onClick={runLink} style={btn(true)}>OK（{linkTargets.length} 件を送る）</button>
             <button type="button" onClick={() => setLinkOpen(false)} style={btn()}>キャンセル</button>
@@ -605,12 +605,12 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       {/* ---- AI自動仕訳 インポート ---- */}
       <Modal open={aiOpen} onClose={() => setAiOpen(false)} width={900} title="AI自動仕訳システムからのインポート">
         <div style={{ padding: '14px 22px 18px' }}>
-          <div style={{ fontSize: 12.5, color: '#5b6773', marginBottom: 10 }}>対象：{book}　　AI自動仕訳システムが出力した明細ファイル（CSV：日付,摘要,金額[,入金/出金]　または JSON）を読み込み、推定科目を確認してから取り込みます。</div>
+          <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 10 }}>対象：{book}　　AI自動仕訳システムが出力した明細ファイル（CSV：日付,摘要,金額[,入金/出金]　または JSON）を読み込み、推定科目を確認してから取り込みます。</div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <input ref={aiFile} type="file" accept=".csv,.json,text/csv,application/json" onChange={(e) => onAiFile(e.target.files?.[0])} style={{ display: 'none' }} />
             <button type="button" className="btn-outline" onClick={() => { if (aiFile.current) { aiFile.current.value = ''; aiFile.current.click(); } }} style={btn()}>ファイルを選択（.csv／.json）</button>
             <button type="button" className="btn-outline" onClick={() => loadAiText(AI_SAMPLE_CSV, 'sample_ai_journal.csv')} style={btn()}>サンプルを読み込む</button>
-            {aiFileName && <span style={{ fontSize: 12.5, color: '#48565f' }}>読込：<b>{aiFileName}</b>（{aiLines.length} 件）</span>}
+            {aiFileName && <span style={{ fontSize: 14, color: '#48565f' }}>読込：<b>{aiFileName}</b>（{aiLines.length} 件）</span>}
           </div>
           {aiLines.length > 0 ? (
             <div style={{ marginTop: 12, maxHeight: 360, overflow: 'auto', border: '1px solid #e2e8ee', borderRadius: 10 }}>
@@ -630,7 +630,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
                         </select>
                       </td>
                       <td style={NUM}>
-                        <span style={{ display: 'inline-block', minWidth: 46, padding: '2px 6px', borderRadius: 8, fontSize: 11.5, fontWeight: 800, background: l.conf >= 80 ? '#eaf5ef' : l.conf >= 60 ? '#fff1b8' : '#fdeee9', color: l.conf >= 80 ? '#1f7a52' : l.conf >= 60 ? '#8a6d00' : '#c0392b' }}>{l.conf}%</span>
+                        <span style={{ display: 'inline-block', minWidth: 46, padding: '2px 6px', borderRadius: 8, fontSize: 12, fontWeight: 800, background: l.conf >= 80 ? '#eaf5ef' : l.conf >= 60 ? '#fff1b8' : '#fdeee9', color: l.conf >= 80 ? '#1f7a52' : l.conf >= 60 ? '#8a6d00' : '#c0392b' }}>{l.conf}%</span>
                       </td>
                     </tr>
                   ))}
@@ -638,9 +638,9 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
               </table>
             </div>
           ) : (
-            <div style={{ marginTop: 12, border: '2px dashed #cfd8e0', borderRadius: 12, padding: '36px 20px', textAlign: 'center', color: '#9aa5b1', fontSize: 13 }}>ファイルを選択するか「サンプルを読み込む」を押すと、ここに明細のプレビューが表示されます。</div>
+            <div style={{ marginTop: 12, border: '2px dashed #cfd8e0', borderRadius: 12, padding: '36px 20px', textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>ファイルを選択するか「サンプルを読み込む」を押すと、ここに明細のプレビューが表示されます。</div>
           )}
-          <div style={{ marginTop: 10, fontSize: 11.5, color: '#7a8794', lineHeight: 1.7 }}>信頼度が低い行は推定科目を選び直せます。取り込んだ明細は「承認待ち」となり、「AI自動仕訳 会計確認」で承認すると通常の明細として集計できます。</div>
+          <div style={{ marginTop: 10, fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>信頼度が低い行は推定科目を選び直せます。取り込んだ明細は「承認待ち」となり、「AI自動仕訳 会計確認」で承認すると通常の明細として集計できます。</div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
             <span data-tip={aiLines.some((l) => l.on) ? undefined : '取り込む行にチェックを入れると押せます'} style={{ display: 'inline-flex' }}><button type="button" className="submit-btn" disabled={aiLines.filter((l) => l.on).length === 0} onClick={importAi} style={{ ...btn(true), opacity: aiLines.some((l) => l.on) ? 1 : 0.5 }}>取り込む（{aiLines.filter((l) => l.on).length} 件）</button></span>
             <button type="button" onClick={() => setAiOpen(false)} style={btn()}>キャンセル</button>
@@ -651,7 +651,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       {/* ---- AI自動仕訳 会計確認 ---- */}
       <Modal open={aiConfirmOpen} onClose={() => setAiConfirmOpen(false)} width={900} title="AI自動仕訳 会計確認 ― 承認待ちの明細">
         <div style={{ padding: '14px 22px 18px' }}>
-          <div style={{ fontSize: 12.5, color: '#5b6773', marginBottom: 10 }}>AI自動仕訳から取り込んだ明細の科目・金額を確認し、承認または差戻しを行います。承認した明細は出納帳の通常明細として集計・会計連動の対象になります。</div>
+          <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 10 }}>AI自動仕訳から取り込んだ明細の科目・金額を確認し、承認または差戻しを行います。承認した明細は出納帳の通常明細として集計・会計連動の対象になります。</div>
           <div style={{ maxHeight: 380, overflow: 'auto', border: '1px solid #e2e8ee', borderRadius: 10 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead><tr><th style={TH}>日付</th><th style={TH}>摘要</th><th style={TH}>勘定科目（AI推定）</th><th style={{ ...TH, textAlign: 'right' }}>入金</th><th style={{ ...TH, textAlign: 'right' }}>出金</th><th style={{ ...TH, textAlign: 'right' }}>信頼度</th><th style={{ ...TH, width: 150 }} /></tr></thead>
@@ -670,8 +670,8 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
                     <td style={{ ...NUM, color: '#b0426a' }}>{r.outAmt ? yen(r.outAmt) : ''}</td>
                     <td style={NUM}><span style={{ fontWeight: 800, color: (r.aiConf ?? 0) >= 80 ? '#1f7a52' : (r.aiConf ?? 0) >= 60 ? '#8a6d00' : '#c0392b' }}>{r.aiConf}%</span></td>
                     <td style={{ ...TD, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      <button type="button" className="submit-btn" onClick={() => approveAi(r.id)} style={{ ...btn(true), padding: '5px 10px', fontSize: 12, marginRight: 4 }}>承認</button>
-                      <button type="button" className="btn-outline" onClick={() => returnAi(r.id)} style={{ ...btn(), padding: '5px 10px', fontSize: 12, color: '#c0392b' }}>差戻し</button>
+                      <button type="button" className="submit-btn" onClick={() => approveAi(r.id)} style={{ ...btn(true), padding: '5px 10px', fontSize: 14, marginRight: 4 }}>承認</button>
+                      <button type="button" className="btn-outline" onClick={() => returnAi(r.id)} style={{ ...btn(), padding: '5px 10px', fontSize: 14, color: '#c0392b' }}>差戻し</button>
                     </td>
                   </tr>
                 ))}

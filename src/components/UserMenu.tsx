@@ -35,7 +35,7 @@ export function UserMenu({ accent, soft, onNavigate }: Props) {
     };
   }, [open]);
 
-  const item: CSSProperties = { display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', padding: '9px 12px', border: 'none', background: 'transparent', borderRadius: 7, fontSize: 13, fontFamily: 'inherit', color: '#22303c', cursor: 'pointer' };
+  const item: CSSProperties = { display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', padding: '9px 12px', border: 'none', background: 'transparent', borderRadius: 7, fontSize: 14, fontFamily: 'inherit', color: '#22303c', cursor: 'pointer' };
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
@@ -45,16 +45,16 @@ export function UserMenu({ accent, soft, onNavigate }: Props) {
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         title="ユーザーメニュー"
-        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: '50%', background: soft, color: accent, fontSize: 13, fontWeight: 700, border: '2px solid ' + (open ? accent : 'transparent'), cursor: 'pointer', fontFamily: 'inherit' }}
+        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: '50%', background: soft, color: accent, fontSize: 14, fontWeight: 700, border: '2px solid ' + (open ? accent : 'transparent'), cursor: 'pointer', fontFamily: 'inherit' }}
       >
         経
       </button>
       {open && (
         <div role="menu" style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 240, background: '#fff', border: '1px solid #dde4ea', borderRadius: 12, boxShadow: '0 12px 32px rgba(24,42,62,.18)', padding: 6, zIndex: 130, fontFamily: "'Noto Sans JP', sans-serif" }}>
           <div style={{ padding: '10px 12px 8px', borderBottom: '1px solid #eef2f5', marginBottom: 4 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 700 }}>経理 担当者</div>
-            <div style={{ fontSize: 11.5, color: '#7a8794' }}>社会福祉法人 チャイルド保育園</div>
-            <div style={{ marginTop: 6, fontSize: 11, color: '#5b6773' }}>権限：<b style={{ color: session.role === '入力可' ? '#1f7a52' : '#b7791f' }}>{session.role}</b></div>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>経理 担当者</div>
+            <div style={{ fontSize: 12, color: '#7a8794' }}>社会福祉法人 チャイルド保育園</div>
+            <div style={{ marginTop: 6, fontSize: 12, color: '#5b6773' }}>権限：<b style={{ color: session.role === '入力可' ? '#1f7a52' : '#b7791f' }}>{session.role}</b></div>
           </div>
           {USER_MENU_ITEMS.map((label) => (
             <button key={label} type="button" className="menu-sub" data-menu={label} onClick={() => { setOpen(false); onNavigate(label === '事業者設定' ? '事業者' : label); }} style={item}>
