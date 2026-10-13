@@ -108,7 +108,6 @@ const NODES: Node[] = [
   N('dep', '減価償却', 'page', 'option', { open: '減価償却' }),
   N('bank', '預金出納帳', 'page', 'option', { open: '預金出納' }),
   N('receipt', '伺い書（収入・支出調書）', 'page', 'option', { open: '収入支出' }),
-  N('stamp', '電子印', 'page', 'option', { open: '電子印', note: 'プロトタイプ未作成' }),
   // 各種設定
   N('s-org', '法人・区分', 'page', 'settings', { open: '事業者' }),
   N('s-acct', '科目設定', 'page', 'settings', { open: '勘定科目' }),

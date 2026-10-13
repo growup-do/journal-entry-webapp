@@ -109,8 +109,6 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
       return <ReceiptsPaymentsPage variant={variant} accent={accent} />;
     case '減価償却':
       return <DepreciationPage variant={variant} accent={accent} />;
-    case '電子印':
-      return <PlaceholderPage title="電子印" accent={accent} />;
     case '予算対比':
       return <BudgetComparePage variant={variant} accent={accent} onNavigate={onNavigate} />;
     default:
