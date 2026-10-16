@@ -9,7 +9,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { ToastView, useToast } from './Toast';
 import { BudgetGraphModal, BudgetHintLive, EntryConfirmModal, TorihikiBadge, useEntryTools, type EntryFlags } from './EntryExtras';
-import { ComboField, ConfirmModal, EntryStyles, FlagButtons, FundAccountLine, PAPER, PaperBox, PaperStyles, PaperTitle, PaperToggle, fieldMessage, fieldState, focusId, hasError, hasWarn, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor, FusenTab } from './EntryCommon';
+import { ComboField, ConfirmModal, EntryStyles, FundAccountLine, PAPER, PaperBox, PaperStyles, PaperTitle, fieldMessage, fieldState, focusId, hasError, hasWarn, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor, FusenTab, VoucherMarks } from './EntryCommon';
 import { useWidePanel } from './WidePanel';
 import { yearOfMonth } from './SingleEntryTools';
 import { judgeTorihiki } from '../lib/accounts';
@@ -272,7 +272,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
   const afterKashi = () => focusId('se-internal');
   const budgetTh = sess.env.budgetCheck ? sess.env.budgetThreshold : 101;
   const divisionName = f.service.replace(/^\d+\s*/, '');
-  /** 入力欄の列：伝票No／Seq No ｜ 日・証憑 ｜ 付箋・チェック ｜ 借方 ｜ 貸方 ｜ 右端（取引区分・小切手No・金額） */
+  /** 入力欄の列：伝票No ｜ 日 ｜ （空き） ｜ 借方 ｜ 貸方 ｜ 右端（取引区分・小切手No・金額）。Seq No・チェック・証憑・付箋は上の「伝票の印」の枠 */
   const PCOLS = '72px 124px 104px minmax(0,1fr) minmax(0,1fr) 176px';
   const lab = (text: ReactNode, extra?: CSSProperties, sub?: ReactNode) => <div className="pp-lab" style={extra}><span>{text}{sub && <span className="pp-sub">{sub}</span>}</span></div>;
   const valCell: CSSProperties = { padding: '5px 8px', minHeight: 44 };
@@ -408,15 +408,15 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
           </div>
 
           {/* 入力行（紙の単一式入力の配置：上に サービス区分、下に 4段の項目） */}
-          <div style={{ display: 'flex', alignItems: 'stretch', gap: 12, margin: '14px 0 8px', flexWrap: 'wrap' }}>
-            <span style={{ alignSelf: 'center', fontSize: 14, color: PAPER.ink, fontWeight: 700, whiteSpace: 'nowrap' }}>令和 <b className="pp-num" style={{ padding: '0 3px' }}>8</b> 年　入力中の伝票</span>
-            <div className="ef-field" style={{ display: 'flex', width: 250 }}>
+          <div style={{ margin: '14px 0 6px', fontSize: 14, color: PAPER.ink, fontWeight: 700 }}>令和 <b className="pp-num" style={{ padding: '0 3px' }}>8</b> 年　入力中の伝票</div>
+          <div style={{ display: 'flex', alignItems: 'stretch', gap: 12, margin: '0 0 8px', flexWrap: 'wrap' }}>
+            <div className="ef-field" style={{ display: 'flex', width: 220 }}>
               <PaperBox label="サービス区分" grow>
                 <ComboField id="se-service" kind="service" value={f.service} onChange={(x) => v.setField('service', x)} onCommit={() => focusId('se-month')} placeholder="コード・名称で指定" dropUp disabled={ro} padY={6} />
               </PaperBox>
             </div>
             {/* 内部取引相手区分（最初から表示。スイッチがオンのときだけ入力できる） */}
-            <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} style={{ display: 'flex', width: 430 }}>
+            <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} style={{ display: 'flex', width: 400 }}>
               <PaperBox label={<span style={{ color: partner ? '#6b3fb5' : '#8895a3' }}>内部取引相手区分</span>} grow muted={!partner}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', minWidth: 0 }}>
                   {tools.internalSwitch}
@@ -426,6 +426,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
                 </div>
               </PaperBox>
             </div>
+            <VoucherMarks seq="自動" flags={flags} onChange={(p) => setFlags((st) => ({ ...st, ...p }))} disabled={ro} viewOnly={tools.viewOnly} />
             {queue && (
               <div style={{ alignSelf: 'center', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 8, background: '#eef4fb', border: '1px solid #c9dbf0', color: '#2c5f9e', fontSize: 14, fontWeight: 700 }}>
                 連続定型「{queue.name}」 {queue.i + 1}／{queue.lines.length} 枚目
@@ -465,21 +466,13 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
               </div>
               {/* 2段目 */}
               <div className="pp-row" style={{ gridTemplateColumns: PCOLS }}>
-                {lab('Seq No')}
-                {lab('証憑')}
-                {lab('付箋・チェック')}
+                {lab('', { gridColumn: 'span 3' })}
                 {lab(<span style={{ color: BLUE }}>借方－資金科目</span>, undefined, '自動表示')}
                 {lab(<span style={{ color: PINK }}>貸方－資金科目</span>, undefined, '自動表示')}
                 {lab('小切手No')}
               </div>
               <div className="pp-row" style={{ gridTemplateColumns: PCOLS }}>
-                <div className="pp-cell pp-num" style={valCell}><span className="pp-ro" style={{ fontSize: 14 }}>自動</span></div>
-                <div className="pp-cell" style={valCell}>
-                  {tools.viewOnly ? <span className="pp-ro pp-ro-s">{flags.shohyo ? '有' : '無'}</span> : <PaperToggle on={flags.shohyo} onLabel="有" offLabel="無" disabled={ro} title="証憑 有／無" onChange={(x) => setFlags((s) => ({ ...s, shohyo: x }))} />}
-                </div>
-                <div className="pp-cell" style={valCell}>
-                  {!tools.viewOnly && <FlagButtons shohyo={flags.shohyo} check={flags.check} fusen={flags.fusen} disabled={ro} showShohyo={false} onChange={(p) => setFlags((s) => ({ ...s, ...p }))} />}
-                </div>
+                <div className="pp-cell pp-auto" style={{ ...valCell, gridColumn: 'span 3' }} />
                 <div className="pp-cell pp-auto" style={{ ...valCell, minHeight: 36 }}><FundAccountLine name={f.kariKamoku} other={f.kashiKamoku} mode={fundMode} /></div>
                 <div className="pp-cell pp-auto" style={{ ...valCell, minHeight: 36 }}><FundAccountLine name={f.kashiKamoku} other={f.kariKamoku} mode={fundMode} /></div>
                 <div className="pp-cell ef-field" style={valCell}>

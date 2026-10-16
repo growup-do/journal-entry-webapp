@@ -10,11 +10,11 @@ import type { CSSProperties, ReactNode } from 'react';
 import { DivisionPicker } from './DivisionPicker';
 import { FiscalYearBanner } from './FiscalYearPage';
 import { AttachedStatementModal, BudgetGraphModal, BudgetHintLive, EntryConfirmModal, SpecialAmountModal, TorihikiBadge, useEntryTools } from './EntryExtras';
-import { ComboField, EntryStyles, isIme, FieldLabel, FundAccountLine, PAPER, PaperBox, PaperDate, PaperStyles, PaperTitle, PaperToggle, fieldMessage, fieldState, fmtNum, focusId, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, watchedStatement, type FundMode, type FusenColor, FusenTab, nextFusen } from './EntryCommon';
+import { ComboField, EntryStyles, isIme, FieldLabel, FundAccountLine, PAPER, PaperBox, PaperDate, PaperStyles, PaperTitle, fieldMessage, fieldState, fmtNum, focusId, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, watchedStatement, type FundMode, type FusenColor, FusenTab, VoucherMarks } from './EntryCommon';
 import { WIDE_TAB_SPACE, WIDE_WIDTH, WidePanel, useWidePanel } from './WidePanel';
 import { ToastView, useToast } from './Toast';
 import { judgeTorihiki } from '../lib/accounts';
-import { FUSEN_COLORS, addVoucher, getVouchers, updateVoucher, useVouchers } from '../store/journalStore';
+import { addVoucher, getVouchers, updateVoucher, useVouchers } from '../store/journalStore';
 import { canEdit, setSession, useSession, type JournalTemplate, type TemplateLine } from '../store/session';
 import { HeaderTools } from './HeaderTools';
 import { UserMenu } from './UserMenu';
@@ -473,19 +473,16 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                 ))}
               </div>
 
-              {/* 内部取引相手区分（最初から表示。中の「内部取引」スイッチがオンのときだけ入力できる。オフのときはグレー）。右側に伝票の印（Seq No・チェック・証憑・付箋）を横並び */}
-              <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0,320px) minmax(0,1fr)', gap: 16, alignItems: 'center', marginBottom: 12, padding: '10px 14px', border: '1px solid ' + (partner ? '#e0d6f3' : '#e2e8ee'), background: partner ? '#faf7ff' : '#f1f3f5', borderRadius: 12, transition: 'background .15s, border-color .15s' }}>
+              {/* 内部取引相手区分の枠と、伝票の印（Seq No・チェック・証憑・付箋）の枠を横並びに置く（別々の枠。10/16 鈴木さん指示） */}
+              <div style={{ display: 'flex', alignItems: 'stretch', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+              <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} style={{ flex: '1 1 480px', display: 'grid', gridTemplateColumns: 'auto minmax(0,320px)', gap: 16, alignItems: 'center', padding: '10px 14px', border: '1px solid ' + (partner ? '#e0d6f3' : '#e2e8ee'), background: partner ? '#faf7ff' : '#f1f3f5', borderRadius: 12, transition: 'background .15s, border-color .15s' }}>
                 <div style={{ alignSelf: 'center' }}>{tools.internalSwitch}</div>
                 <div style={{ opacity: partner ? 1 : 0.5, transition: 'opacity .15s' }}>
                   <FieldLabel color={partner ? '#6b3fb5' : '#8895a3'}>内部取引相手区分{partner ? '（必須）' : ''}</FieldLabel>
                   <ComboField id="fe-aite" title={!partner ? '左の「内部取引」スイッチをオンにすると入力できます（内部取引科目を選ぶと自動でオンになります）' : undefined} kind="service" value={aite} onChange={setAite} onCommit={() => focusId('fe-tek-0')} disabled={!editable || !partner} invalid={partner ? fieldState(issues, 'aite') : undefined} message={partner ? fieldMessage(issues, 'aite') : undefined} placeholder="コード・区分名・フリガナ" />
                 </div>
-                <div data-voucher-flags style={{ justifySelf: 'end', display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap', fontSize: 14, color: '#22303c' }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>Seq No</span><b className="pp-num">{nextSeq}</b></span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>チェック</span>{tools.viewOnly ? <span className="pp-ro pp-ro-s">{flags.check ? '☑' : '☐'}</span> : <PaperToggle on={flags.check} onLabel="☑" offLabel="☐" disabled={!editable} title="チェック（この伝票）" onChange={(v) => setFlags({ check: v })} />}</span>
-                  {inp.shohyo && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>証憑</span>{tools.viewOnly ? <span className="pp-ro pp-ro-s">{flags.shohyo ? '有' : '無'}</span> : <PaperToggle on={flags.shohyo} onLabel="有" offLabel="無" disabled={!editable} title="証憑 有／無（この伝票）" onChange={(v) => setFlags({ shohyo: v })} />}</span>}
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>付箋</span>{tools.viewOnly ? <span className="pp-ro pp-ro-s">{flags.fusen || 'なし'}</span> : <button type="button" tabIndex={-1} className="pp-toggle" disabled={!editable} title={`付箋：${flags.fusen || 'なし'}（クリックで 赤→青→黄→緑→なし）。伝票1枚につき1つ`} onClick={() => setFlags({ fusen: nextFusen(flags.fusen) })} style={{ background: flags.fusen ? FUSEN_COLORS[flags.fusen] : '#fff', color: flags.fusen ? '#fff' : '#8290a0', minWidth: 44 }}>{flags.fusen || 'なし'}</button>}</span>
-                </div>
+              </div>
+              <VoucherMarks variant="panel" seq={nextSeq} flags={flags} onChange={setFlags} disabled={!editable} viewOnly={tools.viewOnly} showShohyo={inp.shohyo} />
               </div>
 
               {/* 3段目：明細（コード｜摘要／業者｜金額｜行の操作）。空の罫線行を足して用紙らしく見せる */}

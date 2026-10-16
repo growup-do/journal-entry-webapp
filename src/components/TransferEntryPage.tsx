@@ -14,11 +14,11 @@ import { ToastView, useToast } from './Toast';
 import { DivisionDialog } from './DivisionPicker';
 import { BudgetGraphModal, BudgetHintLive, EntryConfirmModal, useEntryTools } from './EntryExtras';
 import { judgeTorihiki } from '../lib/accounts';
-import { ComboField, EntryStyles, isIme, FundAccountLine, PAPER, PaperBox, PaperDate, PaperFootItems, PaperStyles, PaperTitle, PaperToggle, fieldMessage, fieldState, fmtNum, focusId, hasError, hasWarn, isInternalAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor, type Issue, FusenTab, nextFusen } from './EntryCommon';
+import { ComboField, EntryStyles, isIme, FundAccountLine, PAPER, PaperBox, PaperDate, PaperStyles, PaperTitle, fieldMessage, fieldState, fmtNum, focusId, hasError, hasWarn, isInternalAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor, type Issue, FusenTab, VoucherMarks } from './EntryCommon';
 import { useWidePanel } from './WidePanel';
 import { makeSheetSeed } from '../data';
 import { applyMonth } from '../lib/format';
-import { FUSEN_COLORS, addVoucher, getVouchers, updateVoucher } from '../store/journalStore';
+import { addVoucher, getVouchers, updateVoucher } from '../store/journalStore';
 import { getSession, setSession, useSession, type TemplateLine } from '../store/session';
 import type { JournalEntry, MonthFilter } from '../types';
 
@@ -430,6 +430,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                     </div>
                   </PaperBox>
                 </div>
+                <VoucherMarks seq="自動" flags={flags} onChange={setFlags} disabled={ro} viewOnly={tools.viewOnly} />
                 {/* 資金モードの切替（自動資金⇄強制資金） */}
                 <div style={{ marginLeft: 'auto', alignSelf: 'center' }}>{tools.fundSwitch}</div>
               </div>
@@ -534,14 +535,8 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                       <span className="pp-val pp-grow pp-num"><span className="pp-ro pp-ro-fill" style={{ justifyContent: 'flex-end', fontSize: 17, fontWeight: 800, color: BLUE }}>{kariTotal.toLocaleString('ja-JP')}</span></span>
                     </div>
                   </div>
-                  <div className="pp-cell" style={{ padding: 0, gridColumn: 'span 2', background: PAPER.fill }}>
-                    <PaperFootItems
-                      seq="自動"
-                      check={tools.viewOnly ? <span className="pp-ro pp-ro-s">{flags.check ? '☑' : '☐'}</span> : <PaperToggle on={flags.check} onLabel="☑" offLabel="☐" disabled={ro} title="チェック（この伝票）" onChange={(x) => setFlags({ check: x })} />}
-                      shohyo={tools.viewOnly ? <span className="pp-ro pp-ro-s">{flags.shohyo ? '有' : '無'}</span> : <PaperToggle on={flags.shohyo} onLabel="有" offLabel="無" disabled={ro} title="証憑 有／無（この伝票）" onChange={(x) => setFlags({ shohyo: x })} />}
-                      note={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><span>付箋</span>{tools.viewOnly ? <span className="pp-ro pp-ro-s">{flags.fusen || 'なし'}</span> : <button type="button" tabIndex={-1} className="pp-toggle" disabled={ro} title={`付箋：${flags.fusen || 'なし'}（クリックで 赤→青→黄→緑→なし）。伝票1枚につき1つ`} onClick={() => setFlags({ fusen: nextFusen(flags.fusen) })} style={{ background: flags.fusen ? FUSEN_COLORS[flags.fusen] : '#fff', color: flags.fusen ? '#fff' : '#8290a0', minWidth: 44 }}>{flags.fusen || 'なし'}</button>}</span>}
-                      cheque={sess.input.cheque ? <span className="pp-ro pp-ro-s pp-num">{cheque || '—'}</span> : undefined}
-                    />
+                  <div className="pp-cell" style={{ padding: '6px 12px', gridColumn: 'span 2', background: PAPER.fill, display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {sess.input.cheque && <><span className="pp-lab" style={{ fontSize: 14 }}>小切手No</span><span className="pp-ro pp-ro-s pp-num">{cheque || '—'}</span></>}
                   </div>
                   <div className="pp-cell" style={{ padding: 0 }}>
                     <div className="pp-foot" style={{ width: '100%' }}>

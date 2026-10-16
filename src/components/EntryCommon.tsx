@@ -687,6 +687,25 @@ export function FusenTab({ color, offset = -30, top = '50%' }: { color: FusenCol
   );
 }
 
+/** 伝票の印：Seq No・チェック・証憑・付箋（伝票1枚につき1つ）。内部取引の枠と横並びに置く独立した枠（10/16 鈴木さん指示）。
+ *  variant 'paper'＝伝票用紙の PaperBox、'panel'＝仕訳伝票形式の内部取引と同じグレーの枠 */
+export function VoucherMarks({ seq, flags, onChange, disabled, viewOnly, showShohyo = true, variant = 'paper' }: { seq: ReactNode; flags: { check: boolean; fusen: FusenColor; shohyo: boolean }; onChange: (p: Partial<{ check: boolean; fusen: FusenColor; shohyo: boolean }>) => void; disabled?: boolean; viewOnly?: boolean; showShohyo?: boolean; variant?: 'paper' | 'panel' }) {
+  const lab: CSSProperties = { fontSize: 12, fontWeight: 700, color: '#8290a0', whiteSpace: 'nowrap' };
+  const item: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 8 };
+  const body = (
+    <div data-voucher-marks style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'nowrap', fontSize: 14, color: '#22303c', minHeight: 32, whiteSpace: 'nowrap' }}>
+      <span style={item}><span style={lab}>Seq No</span><b className="pp-num">{seq}</b></span>
+      <span style={item}><span style={lab}>チェック</span>{viewOnly ? <span className="pp-ro pp-ro-s">{flags.check ? '☑' : '☐'}</span> : <PaperToggle on={flags.check} onLabel="☑" offLabel="☐" disabled={disabled} title="チェック（この伝票）" onChange={(v) => onChange({ check: v })} />}</span>
+      {showShohyo && <span style={item}><span style={lab}>証憑</span>{viewOnly ? <span className="pp-ro pp-ro-s">{flags.shohyo ? '有' : '無'}</span> : <PaperToggle on={flags.shohyo} onLabel="有" offLabel="無" disabled={disabled} title="証憑 有／無（この伝票）" onChange={(v) => onChange({ shohyo: v })} />}</span>}
+      <span style={item}><span style={lab}>付箋</span>{viewOnly ? <span className="pp-ro pp-ro-s">{flags.fusen || 'なし'}</span> : <button type="button" tabIndex={-1} className="pp-toggle" disabled={disabled} title={`付箋：${fusenLabel(flags.fusen)}（クリックで 赤→青→黄→緑→なし）。伝票1枚につき1つ`} onClick={() => onChange({ fusen: nextFusen(flags.fusen) })} style={{ background: flags.fusen ? FUSEN_HEX[flags.fusen] : '#fff', color: flags.fusen ? '#fff' : '#8290a0', minWidth: 44 }}>{flags.fusen || 'なし'}</button>}</span>
+    </div>
+  );
+  if (variant === 'panel') {
+    return <div className="ef-field" data-voucher-marks-box style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', border: '1px solid #e2e8ee', background: '#f1f3f5', borderRadius: 12 }}>{body}</div>;
+  }
+  return <div className="ef-field" data-voucher-marks-box style={{ display: 'flex' }}><PaperBox label="伝票の印">{body}</PaperBox></div>;
+}
+
 export function FlagButtons({ shohyo, check, fusen, onChange, disabled, showShohyo = true }: { shohyo: boolean; check: boolean; fusen: FusenColor; onChange: (p: Partial<{ shohyo: boolean; check: boolean; fusen: FusenColor }>) => void; disabled?: boolean; showShohyo?: boolean }) {
   const dot: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: 6, border: '1px solid #dde4ea', background: '#fff', cursor: disabled ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 800, fontFamily: 'inherit', padding: 0 };
   return (
