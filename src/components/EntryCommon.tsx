@@ -693,7 +693,7 @@ export function VoucherMarks({ seq, flags, onChange, disabled, viewOnly, showSho
   const lab: CSSProperties = { fontSize: 12, fontWeight: 700, color: '#8290a0', whiteSpace: 'nowrap' };
   const item: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 8 };
   const body = (
-    <div data-voucher-marks style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'nowrap', fontSize: 14, color: '#22303c', minHeight: 32, whiteSpace: 'nowrap' }}>
+    <div data-voucher-marks style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'nowrap', fontSize: 14, color: '#22303c', minHeight: 32, whiteSpace: 'nowrap' }}>
       <span style={item}><span style={lab}>Seq No</span><b className="pp-num">{seq}</b></span>
       <span style={item}><span style={lab}>チェック</span>{viewOnly ? <span className="pp-ro pp-ro-s">{flags.check ? '☑' : '☐'}</span> : <PaperToggle on={flags.check} onLabel="☑" offLabel="☐" disabled={disabled} title="チェック（この伝票）" onChange={(v) => onChange({ check: v })} />}</span>
       {showShohyo && <span style={item}><span style={lab}>証憑</span>{viewOnly ? <span className="pp-ro pp-ro-s">{flags.shohyo ? '有' : '無'}</span> : <PaperToggle on={flags.shohyo} onLabel="有" offLabel="無" disabled={disabled} title="証憑 有／無（この伝票）" onChange={(v) => onChange({ shohyo: v })} />}</span>}
@@ -703,7 +703,14 @@ export function VoucherMarks({ seq, flags, onChange, disabled, viewOnly, showSho
   if (variant === 'panel') {
     return <div className="ef-field" data-voucher-marks-box style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', border: '1px solid #e2e8ee', background: '#f1f3f5', borderRadius: 12 }}>{body}</div>;
   }
-  return <div className="ef-field" data-voucher-marks-box style={{ display: 'flex' }}><PaperBox label="伝票の印">{body}</PaperBox></div>;
+  // 用紙の枠（見出しなし。Seq No／チェック／証憑／付箋 を1行に並べる）
+  return (
+    <div className="ef-field" data-voucher-marks-box style={{ display: 'flex' }}>
+      <div className="pp-row" style={{ gridTemplateColumns: 'minmax(0,1fr)', border: `1px solid ${PAPER.line}`, display: 'inline-grid', minWidth: 0 }}>
+        <div className="pp-cell" style={{ padding: '2px 12px', minHeight: 38, fontSize: 14, display: 'flex', alignItems: 'center' }}>{body}</div>
+      </div>
+    </div>
+  );
 }
 
 export function FlagButtons({ shohyo, check, fusen, onChange, disabled, showShohyo = true }: { shohyo: boolean; check: boolean; fusen: FusenColor; onChange: (p: Partial<{ shohyo: boolean; check: boolean; fusen: FusenColor }>) => void; disabled?: boolean; showShohyo?: boolean }) {

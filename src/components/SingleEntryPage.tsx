@@ -410,13 +410,13 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
           {/* 入力行（紙の単一式入力の配置：上に サービス区分、下に 4段の項目） */}
           <div style={{ margin: '14px 0 6px', fontSize: 14, color: PAPER.ink, fontWeight: 700 }}>令和 <b className="pp-num" style={{ padding: '0 3px' }}>8</b> 年　入力中の伝票</div>
           <div style={{ display: 'flex', alignItems: 'stretch', gap: 12, margin: '0 0 8px', flexWrap: 'wrap' }}>
-            <div className="ef-field" style={{ display: 'flex', width: 220 }}>
+            <div className="ef-field" style={{ display: 'flex', width: 210 }}>
               <PaperBox label="サービス区分" grow>
                 <ComboField id="se-service" kind="service" value={f.service} onChange={(x) => v.setField('service', x)} onCommit={() => focusId('se-month')} placeholder="コード・名称で指定" dropUp disabled={ro} padY={6} />
               </PaperBox>
             </div>
             {/* 内部取引相手区分（最初から表示。スイッチがオンのときだけ入力できる） */}
-            <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} style={{ display: 'flex', width: 400 }}>
+            <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} style={{ display: 'flex', flex: '1 1 280px', maxWidth: 400, minWidth: 280 }}>
               <PaperBox label={<span style={{ color: partner ? '#6b3fb5' : '#8895a3' }}>内部取引相手区分</span>} grow muted={!partner}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', minWidth: 0 }}>
                   {tools.internalSwitch}
