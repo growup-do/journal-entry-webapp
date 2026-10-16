@@ -49,12 +49,12 @@ export function InputSettingsModal({ open, onClose, accent }: { open: boolean; o
 }
 
 /* ---------------- 取引区分バッジ ---------------- */
-export function TorihikiBadge({ kari, kashi, force, blocked, right, stack }: { kari: string; kashi: string; force: boolean; /** 登録できない仕訳（赤で表示） */ blocked?: boolean; /** バッジの右側に置くもの（資金モードの切替） */ right?: ReactNode; /** 2行にする（上：取引区分のバッジ、下：資金モードの切替） */ stack?: boolean }) {
+export function TorihikiBadge({ kari, kashi, force, blocked, right }: { kari: string; kashi: string; force: boolean; /** 登録できない仕訳（赤で表示） */ blocked?: boolean; /** バッジの右側に置くもの（資金モードの切替） */ right?: ReactNode }) {
   const j = judgeTorihiki(kari, kashi, force);
   const c = blocked ? { bg: '#fdeee9', fg: '#c0392b', note: '登録できない仕訳です。科目の下の表示を確認してください' } : j.kind === '要確認' ? { bg: '#fff6dd', fg: '#7a5600', note: '確認のうえ登録できます' } : TORIHIKI_COLOR[j.kind];
   const text = blocked ? '登録できません' : j.kind === '要確認' ? `確認が必要${j.reason ? `（${j.reason}）` : ''}` : j.kind;
   return (
-    <div style={{ display: 'flex', alignItems: stack ? 'flex-end' : 'center', flexDirection: stack ? 'column' : 'row', gap: 8, flexWrap: stack ? 'nowrap' : 'wrap', justifyContent: 'flex-end' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
       <span title={c.note} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, background: c.bg, color: c.fg, fontSize: 14, fontWeight: 800, border: '1px solid ' + c.fg + '33', whiteSpace: 'nowrap' }}>
         <span style={{ width: 8, height: 8, borderRadius: '50%', background: c.fg }} />{text}
       </span>

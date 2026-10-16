@@ -427,16 +427,17 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
                 </div>
               </PaperBox>
             </div>
-            <VoucherMarks seq="自動" flags={flags} onChange={(p) => setFlags((st) => ({ ...st, ...p }))} disabled={ro} viewOnly={tools.viewOnly} />
+            {/* Seq No などの枠。その下に 取引区分のバッジ＋資金モードの切替 を1行で */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'stretch' }}>
+              <VoucherMarks seq="自動" flags={flags} onChange={(p) => setFlags((st) => ({ ...st, ...p }))} disabled={ro} viewOnly={tools.viewOnly} />
+              <TorihikiBadge kari={f.kariKamoku} kashi={f.kashiKamoku} force={fundMode === '強制資金'} blocked={blocked} right={tools.fundSwitch} />
+            </div>
             {queue && (
               <div style={{ alignSelf: 'center', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 8, background: '#eef4fb', border: '1px solid #c9dbf0', color: '#2c5f9e', fontSize: 14, fontWeight: 700 }}>
                 連続定型「{queue.name}」 {queue.i + 1}／{queue.lines.length} 枚目
                 <button type="button" className="ef-act" onClick={() => { setQueue(null); toast.show('連続定型を終了しました（入力中の内容は残っています）'); }} style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #c9dbf0', background: '#fff', color: '#2c5f9e', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>終了</button>
               </div>
             )}
-            <div style={{ marginLeft: 'auto', alignSelf: 'center' }}>
-              <TorihikiBadge kari={f.kariKamoku} kashi={f.kashiKamoku} force={fundMode === '強制資金'} blocked={blocked} right={tools.fundSwitch} stack />
-            </div>
           </div>
           <div className="pp-table" style={{ gridTemplateColumns: '1fr', borderWidth: 2 }}>
             {/* 4段（見出し行＋入力行） */}
