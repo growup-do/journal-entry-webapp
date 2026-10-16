@@ -416,11 +416,12 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
               </PaperBox>
             </div>
             {/* 内部取引相手区分（最初から表示。スイッチがオンのときだけ入力できる） */}
-            <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} style={{ display: 'flex', flex: '1 1 280px', maxWidth: 400, minWidth: 280 }}>
+            <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} style={{ display: 'flex', width: 400 }}>
               <PaperBox label={<span style={{ color: partner ? '#6b3fb5' : '#8895a3' }}>内部取引相手区分</span>} grow muted={!partner}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', minWidth: 0 }}>
-                  {tools.internalSwitch}
-                  <div style={{ flex: 1, minWidth: 0, opacity: partner ? 1 : 0.5 }}>
+                {/* 2行：上に 内部取引 のスイッチ、下に 相手先の区分 */}
+                <div style={{ display: 'grid', gap: 4, width: '100%', minWidth: 0, padding: '4px 0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>{tools.internalSwitch}</div>
+                  <div style={{ minWidth: 0, opacity: partner ? 1 : 0.5 }}>
                     <ComboField id="se-aite" title={!partner ? '左の「内部取引」スイッチをオンにすると入力できます（内部取引科目を選ぶと自動でオンになります）' : undefined} kind="service" value={aite} onChange={setAite} onCommit={() => focusId('se-tekiyo')} placeholder="相手先の区分を指定" dropUp disabled={ro || !partner} invalid={partner ? fieldState(issues, 'aite') : undefined} message={partner ? fieldMessage(issues, 'aite') : undefined} padY={6} />
                   </div>
                 </div>
@@ -434,7 +435,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
               </div>
             )}
             <div style={{ marginLeft: 'auto', alignSelf: 'center' }}>
-              <TorihikiBadge kari={f.kariKamoku} kashi={f.kashiKamoku} force={fundMode === '強制資金'} blocked={blocked} right={tools.fundSwitch} />
+              <TorihikiBadge kari={f.kariKamoku} kashi={f.kashiKamoku} force={fundMode === '強制資金'} blocked={blocked} right={tools.fundSwitch} stack />
             </div>
           </div>
           <div className="pp-table" style={{ gridTemplateColumns: '1fr', borderWidth: 2 }}>
