@@ -409,14 +409,15 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
 
           {/* 入力行（紙の単一式入力の配置：上に サービス区分、下に 4段の項目） */}
           <div style={{ margin: '14px 0 6px', fontSize: 14, color: PAPER.ink, fontWeight: 700 }}>令和 <b className="pp-num" style={{ padding: '0 3px' }}>8</b> 年　入力中の伝票</div>
-          <div style={{ display: 'flex', alignItems: 'stretch', gap: 12, margin: '0 0 8px', flexWrap: 'wrap' }}>
-            <div className="ef-field" style={{ display: 'flex', width: 210 }}>
+          <div style={{ display: 'flex', alignItems: 'stretch', gap: 12, margin: '0 0 8px', width: '100%' }}>
+            {/* サービス区分：残りの幅いっぱいに広げる（下の入力枠と同じ幅に揃える） */}
+            <div className="ef-field" style={{ display: 'flex', flex: '1 1 240px', minWidth: 240 }}>
               <PaperBox label="サービス区分" grow>
                 <ComboField id="se-service" kind="service" value={f.service} onChange={(x) => v.setField('service', x)} onCommit={() => focusId('se-month')} placeholder="コード・名称で指定" dropUp disabled={ro} padY={6} />
               </PaperBox>
             </div>
             {/* 内部取引相手区分（最初から表示。スイッチがオンのときだけ入力できる） */}
-            <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} style={{ display: 'flex', width: 400 }}>
+            <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} style={{ display: 'flex', width: 400, flex: 'none' }}>
               <PaperBox label={<span style={{ color: partner ? '#6b3fb5' : '#8895a3' }}>内部取引相手区分</span>} grow muted={!partner}>
                 {/* 2行：上に 内部取引 のスイッチ、下に 相手先の区分 */}
                 <div style={{ display: 'grid', gap: 4, width: '100%', minWidth: 0, padding: '4px 0' }}>
@@ -427,10 +428,10 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
                 </div>
               </PaperBox>
             </div>
-            {/* Seq No などの枠。その下に 取引区分のバッジ＋資金モードの切替 を1行で */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'stretch' }}>
-              <VoucherMarks seq="自動" flags={flags} onChange={(p) => setFlags((st) => ({ ...st, ...p }))} disabled={ro} viewOnly={tools.viewOnly} />
+            {/* 上に 取引区分のバッジ＋資金モードの切替（1行）、その下に Seq No などの枠 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'stretch', flex: 'none' }}>
               <TorihikiBadge kari={f.kariKamoku} kashi={f.kashiKamoku} force={fundMode === '強制資金'} blocked={blocked} right={tools.fundSwitch} />
+              <VoucherMarks seq="自動" flags={flags} onChange={(p) => setFlags((st) => ({ ...st, ...p }))} disabled={ro} viewOnly={tools.viewOnly} />
             </div>
             {queue && (
               <div style={{ alignSelf: 'center', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 8, background: '#eef4fb', border: '1px solid #c9dbf0', color: '#2c5f9e', fontSize: 14, fontWeight: 700 }}>
