@@ -10,11 +10,11 @@ import type { CSSProperties, ReactNode } from 'react';
 import { DivisionPicker } from './DivisionPicker';
 import { FiscalYearBanner } from './FiscalYearPage';
 import { AttachedStatementModal, BudgetGraphModal, BudgetHintLive, EntryConfirmModal, SpecialAmountModal, TorihikiBadge, useEntryTools } from './EntryExtras';
-import { ComboField, EntryStyles, isIme, FieldLabel, FlagButtons, FundAccountLine, PAPER, PaperBox, PaperDate, PaperFootItems, PaperStyles, PaperTitle, PaperToggle, fieldMessage, fieldState, fmtNum, focusId, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, watchedStatement, type FundMode, type FusenColor, FusenTab } from './EntryCommon';
+import { ComboField, EntryStyles, isIme, FieldLabel, FundAccountLine, PAPER, PaperBox, PaperDate, PaperFootItems, PaperStyles, PaperTitle, PaperToggle, fieldMessage, fieldState, fmtNum, focusId, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, watchedStatement, type FundMode, type FusenColor, FusenTab, nextFusen } from './EntryCommon';
 import { WIDE_TAB_SPACE, WIDE_WIDTH, WidePanel, useWidePanel } from './WidePanel';
 import { ToastView, useToast } from './Toast';
 import { judgeTorihiki } from '../lib/accounts';
-import { addVoucher, getVouchers, updateVoucher, useVouchers } from '../store/journalStore';
+import { FUSEN_COLORS, addVoucher, getVouchers, updateVoucher, useVouchers } from '../store/journalStore';
 import { canEdit, setSession, useSession, type JournalTemplate, type TemplateLine } from '../store/session';
 import { HeaderTools } from './HeaderTools';
 import { UserMenu } from './UserMenu';
@@ -138,9 +138,12 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
 /* 伝票入力（仕訳伝票形式）本体                                          */
 /*   ショートカット（Alt＋英字）を登録するため、この画面を表示しているときだけマウントする。 */
 /* ------------------------------------------------------------------ */
-interface Row { id: number; tekiyo: string; gyosha: string; /** 数字のみ。先頭が '+' のときは特殊金額入力の入力途中 */ amount: string; check: boolean; fusen: FusenColor; shohyo: boolean }
+interface Row { id: number; tekiyo: string; gyosha: string; /** 数字のみ。先頭が '+' のときは特殊金額入力の入力途中 */ amount: string }
+/** 証憑・チェック・付箋は伝票1枚につき1つ（10/16 鈴木さん決定。確認メモ #47） */
+interface VoucherFlags { check: boolean; fusen: FusenColor; shohyo: boolean }
+const DEFAULT_FLAGS: VoucherFlags = { check: false, fusen: '', shohyo: true };
 let rowSeq = 1;
-const blankRow = (p?: Partial<Row>): Row => ({ id: rowSeq++, tekiyo: '', gyosha: '', amount: '', check: false, fusen: '', shohyo: true, ...p });
+const blankRow = (p?: Partial<Row>): Row => ({ id: rowSeq++, tekiyo: '', gyosha: '', amount: '', ...p });
 const rowBlank = (r: Row) => !r.tekiyo.trim() && !r.gyosha && !r.amount;
 type LineGroup = { kari: string; kashi: string; lines: TemplateLine[] };
 /** 定型仕訳の行を、借方・貸方の科目が同じもの（＝伝票1枚分）ごとにまとめる */
@@ -182,6 +185,8 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
   const [internal, setInternal] = useState(false);
   const [fundMode, setFundMode] = useState<FundMode>('自動資金');
   const [rows, setRows] = useState<Row[]>(() => [blankRow()]);
+  const [flags, setFlagsState] = useState<VoucherFlags>(DEFAULT_FLAGS);
+  const setFlags = (p: Partial<VoucherFlags>) => setFlagsState((f) => ({ ...f, ...p }));
   const [cur, setCur] = useState(0);
   const [cheque, setCheque] = useState('');
   const [spare, setSpare] = useState(['', '']);
@@ -197,7 +202,6 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
   useEffect(() => { setErr(''); }, [month, day, manualNo, kari, kashi, aite, internal, fundMode, rows]);
 
   const curIdx = Math.min(cur, rows.length - 1);
-  const curRow = rows[curIdx];
   const total = rows.reduce((s, r) => s + toNum(r.amount), 0);
   const partner = needsPartner({ kari, kashi, internal });
   const issues = judgeEntry({ kari, kashi, amount: total, fundMode, internal, aite, division: sess.division }, sess.env);
@@ -270,7 +274,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
   const reset = (keepAccounts = false) => {
     if (!keepAccounts) { setKari(''); setKashi(''); }
     setAite(''); setInternal(false); setFundMode('自動資金');
-    setRows([blankRow()]); setCur(0); setCheque(''); setSpare(['', '']); setManualNo('');
+    setRows([blankRow()]); setCur(0); setCheque(''); setSpare(['', '']); setManualNo(''); setFlagsState(DEFAULT_FLAGS);
   };
   const finalize = () => {
     const list = rows.filter((r) => toNum(r.amount) > 0);
@@ -279,8 +283,8 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
     const seq = getVouchers().reduce((m, r) => Math.max(m, r.seq), 0) + 1;
     const no = manual && manualNo.trim() ? manualNo.trim() : `${parseInt(month, 10)}-${seq}`;
     const ids = list.map((r) => {
-      const vch = addVoucher({ kind: '伝票', seq, no, date, kari, kashi, tekiyo: r.tekiyo.trim(), amount: toNum(r.amount), service: sess.division, gyosha: r.gyosha || undefined, shohyo: inp.shohyo ? r.shohyo : true, cheque: cheque.trim() || undefined, spare1: spare[0].trim() || undefined, spare2: spare[1].trim() || undefined, internal: partner || undefined });
-      if (r.check || r.fusen) updateVoucher(vch.id, { check: r.check, fusen: r.fusen });
+      const vch = addVoucher({ kind: '伝票', seq, no, date, kari, kashi, tekiyo: r.tekiyo.trim(), amount: toNum(r.amount), service: sess.division, gyosha: r.gyosha || undefined, shohyo: inp.shohyo ? flags.shohyo : true, cheque: cheque.trim() || undefined, spare1: spare[0].trim() || undefined, spare2: spare[1].trim() || undefined, internal: partner || undefined });
+      if (flags.check || flags.fusen) updateVoucher(vch.id, { check: flags.check, fusen: flags.fusen });
       if (partner) setPartner(vch.id, aite);
       return vch.id;
     });
@@ -324,8 +328,8 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
     lines: rows.map((r) => ({ kari, kashi, tekiyo: r.tekiyo, gyosha: r.gyosha || undefined, amount: String(toNum(r.amount) || '') })),
     multiRow: true,
     rowLabel: `${curIdx + 1}行目`,
-    flags: { check: curRow.check, fusen: curRow.fusen, shohyo: curRow.shohyo },
-    onFlags: (p) => patchRow(curIdx, p),
+    flags,
+    onFlags: setFlags,
     fundMode,
     onFundMode: setFundMode,
     onSubmit: submit,
@@ -402,6 +406,8 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
           <div style={{ padding: '18px 22px 8px', background: '#eef1ef', borderBottom: '1px solid #e2e8ee' }}>
             {/* 伝票用紙 */}
             <div className="pp-sheet" style={{ padding: '16px 20px 18px' }}>
+              {/* 伝票に付けた付箋：用紙の右端に貼る（伝票1枚につき1つ） */}
+              <FusenTab color={flags.fusen} offset={-10} top={64} />
               {/* 表題行：仕訳伝票／拠点区分／取引区分（自動判定）／定型仕訳 */}
               <PaperTitle
                 title="仕訳伝票"
@@ -483,7 +489,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                   <div className="pp-lab">コード<span className="pp-sub">行</span></div>
                   <div className="pp-lab" style={{ fontSize: 14 }}>摘要／業者</div>
                   <div className="pp-lab" style={{ fontSize: 14 }}>金額</div>
-                  <div className="pp-lab"><span>{inp.shohyo ? '証憑・' : ''}チェック・付箋<span className="pp-sub">挿入／削除</span></span></div>
+                  <div className="pp-lab"><span>行の操作<span className="pp-sub">挿入／削除</span></span></div>
                 </div>
                 {rows.map((r, i) => {
                   const on = i === curIdx;
@@ -522,9 +528,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                           style={{ width: '100%', padding: '8px 10px', textAlign: 'right', fontSize: 16, fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderColor: plus ? '#6b3fb5' : 'transparent' }}
                         />
                       </div>
-                      <div className="pp-cell pp-col" style={{ padding: '4px 6px', gap: 4, alignItems: 'center', background: on ? '#f7fbf9' : undefined, position: 'relative' }}>
-                        <FusenTab color={r.fusen} />
-                        {!tools.viewOnly && <FlagButtons shohyo={r.shohyo} check={r.check} fusen={r.fusen} onChange={(p) => { setCur(i); patchRow(i, p); }} disabled={!editable} showShohyo={inp.shohyo} />}
+                      <div className="pp-cell pp-col" style={{ padding: '4px 6px', gap: 4, alignItems: 'center', justifyContent: 'center', background: on ? '#f7fbf9' : undefined }}>
                         {!tools.viewOnly && <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
                           <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={() => insertAt(i)} title={editable ? `${i + 1}行目の上に1行挿入` : tools.reason} style={rowBtn}>挿入</button>
                           <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={() => deleteAt(i)} title={editable ? `${i + 1}行目を削除` : tools.reason} style={{ ...rowBtn, color: '#c0392b', borderColor: '#f2c9c2' }}>削除</button>
@@ -554,10 +558,10 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                   <div className="pp-cell" style={{ padding: 0, background: PAPER.fill }}>
                     <PaperFootItems
                       seq={<span style={{ fontWeight: 700 }}>{nextSeq}</span>}
-                      check={tools.viewOnly ? <span className="pp-ro pp-ro-s">{curRow.check ? '☑' : '☐'}</span> : <PaperToggle on={curRow.check} onLabel="☑" offLabel="☐" disabled={!editable} title={`チェック（${curIdx + 1}行目）`} onChange={(v) => patchRow(curIdx, { check: v })} />}
-                      shohyo={inp.shohyo && tools.viewOnly ? <span className="pp-ro pp-ro-s">{curRow.shohyo ? '有' : '無'}</span> : inp.shohyo ? <PaperToggle on={curRow.shohyo} onLabel="有" offLabel="無" disabled={!editable} title={`証憑 有／無（${curIdx + 1}行目）`} onChange={(v) => patchRow(curIdx, { shohyo: v })} /> : <span className="pp-ro pp-ro-s">有</span>}
+                      check={tools.viewOnly ? <span className="pp-ro pp-ro-s">{flags.check ? '☑' : '☐'}</span> : <PaperToggle on={flags.check} onLabel="☑" offLabel="☐" disabled={!editable} title="チェック（この伝票）" onChange={(v) => setFlags({ check: v })} />}
+                      shohyo={inp.shohyo && tools.viewOnly ? <span className="pp-ro pp-ro-s">{flags.shohyo ? '有' : '無'}</span> : inp.shohyo ? <PaperToggle on={flags.shohyo} onLabel="有" offLabel="無" disabled={!editable} title="証憑 有／無（この伝票）" onChange={(v) => setFlags({ shohyo: v })} /> : <span className="pp-ro pp-ro-s">有</span>}
                       cheque={inp.cheque ? <label className="ef-field" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><input className="ef-input pp-input" disabled={!editable} value={cheque} onChange={(e) => setCheque(e.target.value)} placeholder="任意" style={{ ...smallInput, border: '1px solid transparent', background: 'transparent', width: 120 }} /></label> : undefined}
-                      note={<span>チェック・証憑は <b style={{ color: GREEN }}>{curIdx + 1}行目</b> が対象</span>}
+                      note={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><span>付箋</span>{tools.viewOnly ? <span className="pp-ro pp-ro-s">{flags.fusen || 'なし'}</span> : <button type="button" tabIndex={-1} className="pp-toggle" disabled={!editable} title={`付箋：${flags.fusen || 'なし'}（クリックで 赤→青→黄→緑→なし）。伝票1枚につき1つ`} onClick={() => setFlags({ fusen: nextFusen(flags.fusen) })} style={{ background: flags.fusen ? FUSEN_COLORS[flags.fusen] : '#fff', color: flags.fusen ? '#fff' : '#8290a0', minWidth: 44 }}>{flags.fusen || 'なし'}</button>}<span style={{ color: '#8290a0' }}>チェック・証憑・付箋は伝票1枚につき1つ</span></span>}
                     />
                   </div>
                   <div className="pp-cell" style={{ padding: 0 }}>
@@ -624,7 +628,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
           if (!kari || !kashi) { toast.show('先に借方・貸方の科目を選んでください'); focusId(kari ? 'fe-kashi' : 'fe-kari'); return; }
           const list = parts.filter((p) => p.amount > 0);
           const date = `${parseInt(month, 10) || 8}/${parseInt(day, 10) || 1}`;
-          const ids = list.map((p) => addVoucher({ kind: '伝票', date, kari, kashi, tekiyo: `${r.tekiyo.trim() || '特殊金額入力'}（${p.division.split(' ')[1] ?? p.division}）`, amount: p.amount, service: p.division, gyosha: r.gyosha || undefined, shohyo: inp.shohyo ? r.shohyo : true }).id);
+          const ids = list.map((p) => addVoucher({ kind: '伝票', date, kari, kashi, tekiyo: `${r.tekiyo.trim() || '特殊金額入力'}（${p.division.split(' ')[1] ?? p.division}）`, amount: p.amount, service: p.division, gyosha: r.gyosha || undefined, shohyo: inp.shohyo ? flags.shohyo : true }).id);
           setHi(ids);
           // 按分した行は登録済みになるので、入力中の伝票からは外す
           if (rows.length === 1) setRows([blankRow()]); else setRows((l) => l.filter((_, j) => j !== at));

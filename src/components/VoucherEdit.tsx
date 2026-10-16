@@ -11,7 +11,7 @@ import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { Field, Notice, btn, input, numInput, toInt, yen } from './ui';
 import { ActButton, ActDivider, ComboField, EntryStyles, FieldLabel, FlagButtons, FundAccountLine, IssueList, ReadOnlyBanner, fieldState, fmtNum, focusId, hasError, hasWarn, judgeEntry, needsPartner, onEnter, partnerOf, scopeStyle, setPartner, toNum, useShortcuts, type Issue, FusenTab } from './EntryCommon';
 import { SERVICES } from '../data';
-import { FUSEN_COLORS, FUSEN_CYCLE, addVoucher, cycleFusen, deleteVoucher, getVouchers, moveVoucher, updateVoucher, useVouchers, type Fusen, type Voucher } from '../store/journalStore';
+import { FUSEN_COLORS, FUSEN_CYCLE, addVoucher, cycleFusen, deleteVoucher, getVouchers, moveVoucher, setVoucherFlags, updateVoucher, useVouchers, type Fusen, type Voucher } from '../store/journalStore';
 import { judgeTorihiki, TORIHIKI_COLOR } from '../lib/accounts';
 import { canEdit, canReorder, editBlockReason, fusenLabel, useSession, isViewOnly } from '../store/session';
 import type { MonthFilter } from '../types';
@@ -35,7 +35,7 @@ export function groupVouchers(list: Voucher[]): VoucherGroup[] {
   return [...map.values()];
 }
 
-/* ---------------- 行のフラグ（証憑・チェック・付箋） ---------------- */
+/* ---------------- 伝票のフラグ（証憑・チェック・付箋。伝票1枚につき1つ：同じ伝票の全行に反映） ---------------- */
 export function FlagCell({ v, compact }: { v: Voucher; compact?: boolean }) {
   const s = useSession();
   const ok = canEdit(s);
@@ -43,8 +43,8 @@ export function FlagCell({ v, compact }: { v: Voucher; compact?: boolean }) {
   const dot: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: compact ? 20 : 24, height: compact ? 20 : 24, borderRadius: 6, border: '1px solid #dde4ea', background: '#fff', cursor: ok ? 'pointer' : 'not-allowed', fontSize: 12, fontWeight: 800, opacity: ok ? 1 : 0.7 };
   return (
     <div style={{ display: 'inline-flex', gap: 3 }} onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
-      <span title={ok ? '証憑 有／無（クリックで切替）' : '証憑 ' + (v.shohyo ? '有' : '無') + why} onClick={() => ok && updateVoucher(v.id, { shohyo: !v.shohyo })} style={{ ...dot, background: v.shohyo ? '#eaf5ef' : '#fff', color: v.shohyo ? '#1f7a52' : '#b3bcc5' }}>{v.shohyo ? '有' : '無'}</span>
-      <span title={ok ? 'チェック（クリックで切替）' : 'チェック' + why} onClick={() => ok && updateVoucher(v.id, { check: !v.check })} style={{ ...dot, background: v.check ? '#22303c' : '#fff', color: v.check ? '#fff' : '#b3bcc5' }}>✓</span>
+      <span title={ok ? '証憑 有／無（クリックで切替）' : '証憑 ' + (v.shohyo ? '有' : '無') + why} onClick={() => ok && setVoucherFlags(v.id, { shohyo: !v.shohyo })} style={{ ...dot, background: v.shohyo ? '#eaf5ef' : '#fff', color: v.shohyo ? '#1f7a52' : '#b3bcc5' }}>{v.shohyo ? '有' : '無'}</span>
+      <span title={ok ? 'チェック（クリックで切替）' : 'チェック' + why} onClick={() => ok && setVoucherFlags(v.id, { check: !v.check })} style={{ ...dot, background: v.check ? '#22303c' : '#fff', color: v.check ? '#fff' : '#b3bcc5' }}>✓</span>
       <span title={ok ? `付箋：${fusenLabel(v.fusen)}（クリックで 赤→青→黄→緑→なし）` : `付箋：${fusenLabel(v.fusen)}${why}`} onClick={() => ok && cycleFusen(v.id)} style={{ ...dot, background: v.fusen ? FUSEN_COLORS[v.fusen] : '#fff', color: v.fusen ? '#fff' : '#b3bcc5' }}>■</span>
     </div>
   );
@@ -168,10 +168,12 @@ export function VoucherPickerModal({ open, mode, onClose, onPick, accent }: { op
 }
 
 /* ---------------- 伝票の訂正モード（同じ伝票の行を同時に編集） ---------------- */
-interface EditRow { key: string; id: number | null; kari: string; kashi: string; tekiyo: string; gyosha: string; amount: string; shohyo: boolean; check: boolean; fusen: Fusen }
-interface EditState { base: Voucher; ids: number[]; shared: boolean; multi: boolean; service: string; month: string; day: string; no: string; kari: string; kashi: string; aite: string; internal: boolean; cheque: string; spare1: string; spare2: string; rows: EditRow[] }
+interface EditRow { key: string; id: number | null; kari: string; kashi: string; tekiyo: string; gyosha: string; amount: string }
+/** 証憑・チェック・付箋は伝票1枚につき1つ（確認メモ #47） */
+interface EditFlags { shohyo: boolean; check: boolean; fusen: Fusen }
+interface EditState { base: Voucher; ids: number[]; shared: boolean; multi: boolean; service: string; month: string; day: string; no: string; kari: string; kashi: string; aite: string; internal: boolean; cheque: string; spare1: string; spare2: string; flags: EditFlags; rows: EditRow[] }
 let rowKey = 0;
-const newRow = (p?: Partial<EditRow>): EditRow => ({ key: 'n' + rowKey++, id: null, kari: '', kashi: '', tekiyo: '', gyosha: '', amount: '', shohyo: true, check: false, fusen: '', ...p });
+const newRow = (p?: Partial<EditRow>): EditRow => ({ key: 'n' + rowKey++, id: null, kari: '', kashi: '', tekiyo: '', gyosha: '', amount: '', ...p });
 
 /** 同じ伝票の行を、指定した順に共有ストア上で並べ替える（同一日の中の入換だけを使う） */
 function applyOrder(ids: number[]) {
@@ -215,7 +217,8 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { vouch
       base: rows[0], ids: rows.map((r) => r.id), shared, multi: voucher.kind !== '単一' && voucher.kind !== '振単',
       service: rows[0].service, month: m ?? '', day: d ?? '', no: rows[0].no, kari: rows[0].kari, kashi: rows[0].kashi,
       aite: partnerOf(rows[0].id), internal: !!rows[0].internal, cheque: rows[0].cheque ?? '', spare1: rows[0].spare1 ?? '', spare2: rows[0].spare2 ?? '',
-      rows: rows.map((r) => ({ key: 'v' + r.id, id: r.id, kari: r.kari, kashi: r.kashi, tekiyo: r.tekiyo, gyosha: r.gyosha ?? '', amount: String(r.amount), shohyo: r.shohyo, check: r.check, fusen: r.fusen })),
+      flags: { shohyo: rows[0].shohyo, check: rows[0].check, fusen: rows[0].fusen },
+      rows: rows.map((r) => ({ key: 'v' + r.id, id: r.id, kari: r.kari, kashi: r.kashi, tekiyo: r.tekiyo, gyosha: r.gyosha ?? '', amount: String(r.amount) })),
     });
     setLoadedId(voucher.id);
     setActive(0);
@@ -225,15 +228,15 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { vouch
   }
 
   const set = (p: Partial<EditState>) => { setSt((s) => (s ? { ...s, ...p } : s)); setMsg(null); };
+  const setFlags = (p: Partial<EditFlags>) => { setSt((s) => (s ? { ...s, flags: { ...s.flags, ...p } } : s)); setMsg(null); };
   const setRow = (i: number, p: Partial<EditRow>) => { setSt((s) => (s ? { ...s, rows: s.rows.map((r, k) => (k === i ? { ...r, ...p } : r)) } : s)); setRowErr({}); setMsg(null); };
   const rowsN = st?.rows.length ?? 0;
   const act = Math.min(active, Math.max(0, rowsN - 1));
   const firstField = (i: number) => (st?.shared ? `ed-r${i}-tekiyo` : `ed-r${i}-kari`);
   const addRow = (at: number) => {
     if (!st || !editable || !st.multi) return;
-    const src = st.rows[Math.min(at, st.rows.length - 1)];
     const next = [...st.rows];
-    next.splice(at, 0, newRow({ shohyo: src?.shohyo ?? true }));
+    next.splice(at, 0, newRow());
     setSt({ ...st, rows: next });
     setActive(at);
     setRowErr({});
@@ -296,9 +299,9 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { vouch
     st.ids.filter((id) => !keep.includes(id)).forEach((id) => { deleteVoucher(id); setPartner(id, ''); });
     const ids: number[] = [];
     st.rows.forEach((r) => {
-      const body = { date, service: st.service, kari: st.shared ? st.kari : r.kari, kashi: st.shared ? st.kashi : r.kashi, tekiyo: r.tekiyo, gyosha: r.gyosha || undefined, amount: toNum(r.amount), shohyo: r.shohyo, cheque: st.cheque.trim() || undefined, spare1: st.spare1 || undefined, spare2: st.spare2 || undefined, internal: partner || undefined };
-      if (r.id != null) { updateVoucher(r.id, { ...body, no: st.no.trim(), check: r.check, fusen: r.fusen }); ids.push(r.id); }
-      else { const nv = addVoucher({ ...body, kind: st.base.kind, seq: st.base.seq, no: st.no.trim() }); updateVoucher(nv.id, { check: r.check, fusen: r.fusen }); ids.push(nv.id); }
+      const body = { date, service: st.service, kari: st.shared ? st.kari : r.kari, kashi: st.shared ? st.kashi : r.kashi, tekiyo: r.tekiyo, gyosha: r.gyosha || undefined, amount: toNum(r.amount), shohyo: st.flags.shohyo, cheque: st.cheque.trim() || undefined, spare1: st.spare1 || undefined, spare2: st.spare2 || undefined, internal: partner || undefined };
+      if (r.id != null) { updateVoucher(r.id, { ...body, no: st.no.trim(), check: st.flags.check, fusen: st.flags.fusen }); ids.push(r.id); }
+      else { const nv = addVoucher({ ...body, kind: st.base.kind, seq: st.base.seq, no: st.no.trim() }); updateVoucher(nv.id, { check: st.flags.check, fusen: st.flags.fusen }); ids.push(nv.id); }
     });
     applyOrder(ids);
     ids.forEach((id) => setPartner(id, partner ? st.aite : ''));
@@ -313,9 +316,9 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { vouch
       { key: 'N', label: '行追加', group: '行の操作', run: () => addRow(rowsN), disabled: !canRow },
       { key: 'I', label: '行挿入', group: '行の操作', run: () => addRow(act), disabled: !canRow },
       { key: 'D', label: '行削除', group: '行の操作', run: () => delRow(act), disabled: !canRow },
-      { key: 'C', label: 'チェック', group: '行の操作', run: () => st && setRow(act, { check: !st.rows[act].check }), disabled: !editable },
-      { key: 'F', label: '付箋', group: '行の操作', run: () => st && setRow(act, { fusen: FUSEN_CYCLE[(FUSEN_CYCLE.indexOf(st.rows[act].fusen) + 1) % FUSEN_CYCLE.length] }), disabled: !editable },
-      { key: 'V', label: '証憑', group: '行の操作', run: () => st && setRow(act, { shohyo: !st.rows[act].shohyo }), disabled: !editable },
+      { key: 'C', label: 'チェック（伝票）', group: '伝票の操作', run: () => st && setFlags({ check: !st.flags.check }), disabled: !editable },
+      { key: 'F', label: '付箋（伝票）', group: '伝票の操作', run: () => st && setFlags({ fusen: FUSEN_CYCLE[(FUSEN_CYCLE.indexOf(st.flags.fusen) + 1) % FUSEN_CYCLE.length] }), disabled: !editable },
+      { key: 'V', label: '証憑（伝票）', group: '伝票の操作', run: () => st && setFlags({ shohyo: !st.flags.shohyo }), disabled: !editable },
     ],
     'modal',
     !!voucher && !!st && !delOpen,
@@ -327,7 +330,7 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { vouch
   const ro = !editable;
   const viewOnly = isViewOnly(sess);
   const cell: CSSProperties = { ...input, padding: '7px 9px', fontSize: 14 };
-  const GRID = st.shared ? '34px minmax(0,1.5fr) minmax(0,1fr) 120px 84px 132px' : '34px minmax(0,1.1fr) minmax(0,1.1fr) minmax(0,1.2fr) minmax(0,.9fr) 112px 84px 132px';
+  const GRID = st.shared ? '34px minmax(0,1.5fr) minmax(0,1fr) 120px 132px' : '34px minmax(0,1.1fr) minmax(0,1.1fr) minmax(0,1.2fr) minmax(0,.9fr) 112px 132px';
   const afterHead = () => focusId(st.shared ? 'ed-kari' : firstField(0));
   const rowNext = (i: number) => (i + 1 < st.rows.length ? focusId(firstField(i + 1)) : focusId('ed-save'));
   const smallBtn: CSSProperties = { ...btn('#5b6773', false, true), padding: '3px 7px' };
@@ -384,29 +387,30 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { vouch
           )}
           {st.shared && <IssueList issues={pairIssues} onConfirm={ro ? undefined : () => save(true)} confirmId="ed-confirm" />}
 
-          <div style={{ border: '1px solid #e2e8ee', borderRadius: 10 }}>
+          <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, position: 'relative' }}>
+            {/* 伝票に付けた付箋：入力画面と同じく枠の右端に貼る */}
+            <FusenTab color={st.flags.fusen} offset={-12} top={22} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', borderBottom: '1px solid #eef2f5', background: '#fbfcfd', borderRadius: '10px 10px 0 0', flexWrap: 'wrap' }}>
               <span style={{ fontSize: 12, fontWeight: 800, color: '#8290a0', letterSpacing: '.05em' }}>行の操作</span>
               <span style={{ fontSize: 12, fontWeight: 700, color: accent }}>対象：{act + 1}行目</span>
               {!viewOnly && <><ActButton label="行追加" k="N" accent={accent} disabled={!canRow} title={!editable ? reason : !st.multi ? '1伝票1行の形式のため行は追加できません' : '最後に1行追加'} onClick={() => addRow(st.rows.length)} />
               <ActButton label="行挿入" k="I" accent={accent} disabled={!canRow} title={!editable ? reason : !st.multi ? '1伝票1行の形式のため行は挿入できません' : `${act + 1}行目の上に1行挿入`} onClick={() => addRow(act)} />
               <ActButton label="行削除" k="D" accent={accent} disabled={!canRow} title={!editable ? reason : !st.multi ? '1伝票1行の形式のため行は削除できません' : `${act + 1}行目を削除`} onClick={() => delRow(act)} />
-              <ActButton label="チェック" k="C" accent={accent} disabled={ro} title={ro ? reason : undefined} active={st.rows[act]?.check} onClick={() => setRow(act, { check: !st.rows[act].check })} />
-              <ActButton label="付箋" k="F" accent={accent} disabled={ro} title={ro ? reason : '赤→青→黄→緑→なし'} active={!!st.rows[act]?.fusen} onClick={() => setRow(act, { fusen: FUSEN_CYCLE[(FUSEN_CYCLE.indexOf(st.rows[act].fusen) + 1) % FUSEN_CYCLE.length] })} />
-              <ActButton label="証憑" k="V" accent={accent} disabled={ro} title={ro ? reason : '有／無'} active={st.rows[act]?.shohyo} onClick={() => setRow(act, { shohyo: !st.rows[act].shohyo })} /></>}
+              <span style={{ width: 1, height: 18, background: '#dde4ea', margin: '0 4px' }} />
+              <span style={{ fontSize: 12, fontWeight: 800, color: '#8290a0', letterSpacing: '.05em' }}>伝票の印</span>
+              <FlagButtons shohyo={st.flags.shohyo} check={st.flags.check} fusen={st.flags.fusen} disabled={ro} onChange={(p) => setFlags(p)} /></>}
+              {viewOnly && <><span style={{ width: 1, height: 18, background: '#dde4ea', margin: '0 4px' }} /><span style={{ fontSize: 12, fontWeight: 800, color: '#8290a0', letterSpacing: '.05em' }}>伝票の印</span><FlagCell v={{ ...voucher!, ...st.flags }} compact /></>}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 8, padding: '7px 10px', background: '#f6f8fa', fontSize: 12, fontWeight: 700, color: '#8290a0' }}>
               <div>行</div>
               {!st.shared && <div style={{ color: BLUE }}>借方科目</div>}
               {!st.shared && <div style={{ color: PINK }}>貸方科目</div>}
-              <div>摘要</div><div>業者</div><div style={{ textAlign: 'right' }}>金額</div><div>証憑 ✓ 付箋</div><div>並べ替え／削除</div>
+              <div>摘要</div><div>業者</div><div style={{ textAlign: 'right' }}>金額</div><div>並べ替え／削除</div>
             </div>
             {st.rows.map((r, i) => {
               const ri = issuesOfRow(r);
               return (
-                <div key={r.key} className="ef-row" onFocus={() => setActive(i)} style={{ borderTop: '1px solid #f1f4f6', padding: '7px 10px', background: i === act ? '#fbfdff' : 'transparent', position: 'relative' }}>
-                  {/* 入力画面と同じ：付箋を付けた行の右端に付箋 */}
-                  <FusenTab color={r.fusen} offset={-2} />
+                <div key={r.key} className="ef-row" onFocus={() => setActive(i)} style={{ borderTop: '1px solid #f1f4f6', padding: '7px 10px', background: i === act ? '#fbfdff' : 'transparent' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 8, alignItems: 'center' }}>
                     <div style={{ fontSize: 14, color: '#9aa5b1' }}><span className="ef-rowno">{i + 1}{r.id == null && <span style={{ color: accent, fontWeight: 700 }}> 新</span>}</span><span className="ef-rownow" style={{ fontSize: 12, fontWeight: 800, color: '#fff', background: accent, borderRadius: 6, padding: '1px 4px' }}>入力中</span></div>
                     {!st.shared && <ComboField id={`ed-r${i}-kari`} kind="account" value={r.kari} onChange={(v) => setRow(i, { kari: v })} onCommit={() => focusId(`ed-r${i}-kashi`)} placeholder="借方科目" disabled={ro} invalid={fieldState(ri, 'kari', 'pair')} fontSize={14} padY={7} listWidth={380} />}
@@ -414,7 +418,6 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { vouch
                     <ComboField id={`ed-r${i}-tekiyo`} kind="summary" freeText value={r.tekiyo} onChange={(v) => setRow(i, { tekiyo: v })} onCommit={() => focusId(`ed-r${i}-gyosha`)} placeholder="摘要" disabled={ro} fontSize={14} padY={7} listWidth={340} />
                     <ComboField id={`ed-r${i}-gyosha`} kind="vendor" value={r.gyosha} onChange={(v) => setRow(i, { gyosha: v })} onCommit={() => focusId(`ed-r${i}-amount`)} placeholder="業者" disabled={ro} fontSize={14} padY={7} listWidth={300} />
                     <input id={`ed-r${i}-amount`} className="ef-input" disabled={ro} value={fmtNum(r.amount)} onChange={(e) => setRow(i, { amount: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => rowNext(i))} inputMode="numeric" placeholder="0" style={{ ...numInput, padding: '7px 9px', fontWeight: 700, fontSize: 14, borderColor: rowErr[r.key]?.startsWith('金額') ? '#c0392b' : '#cfd8e0' }} />
-                    {viewOnly ? <FlagCell v={{ ...voucher!, check: r.check, fusen: r.fusen, shohyo: r.shohyo }} compact /> : <FlagButtons shohyo={r.shohyo} check={r.check} fusen={r.fusen} disabled={ro} onChange={(p) => setRow(i, p)} />}
                     {!viewOnly && <div style={{ display: 'flex', gap: 3 }}>
                       <button type="button" className="ef-act" disabled={ro || i === 0} title="この行を1つ上へ" onClick={() => moveRow(i, -1)} style={smallBtn}>▲</button>
                       <button type="button" className="ef-act" disabled={ro || i === st.rows.length - 1} title="この行を1つ下へ" onClick={() => moveRow(i, 1)} style={smallBtn}>▼</button>

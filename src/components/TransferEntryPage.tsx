@@ -14,11 +14,11 @@ import { ToastView, useToast } from './Toast';
 import { DivisionDialog } from './DivisionPicker';
 import { BudgetGraphModal, BudgetHintLive, EntryConfirmModal, useEntryTools } from './EntryExtras';
 import { judgeTorihiki } from '../lib/accounts';
-import { ComboField, EntryStyles, isIme, FlagButtons, FundAccountLine, PAPER, PaperBox, PaperDate, PaperFootItems, PaperStyles, PaperTitle, PaperToggle, fieldMessage, fieldState, fmtNum, focusId, hasError, hasWarn, isInternalAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor, type Issue, FusenTab } from './EntryCommon';
+import { ComboField, EntryStyles, isIme, FundAccountLine, PAPER, PaperBox, PaperDate, PaperFootItems, PaperStyles, PaperTitle, PaperToggle, fieldMessage, fieldState, fmtNum, focusId, hasError, hasWarn, isInternalAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor, type Issue, FusenTab, nextFusen } from './EntryCommon';
 import { useWidePanel } from './WidePanel';
 import { makeSheetSeed } from '../data';
 import { applyMonth } from '../lib/format';
-import { addVoucher, getVouchers, updateVoucher } from '../store/journalStore';
+import { FUSEN_COLORS, addVoucher, getVouchers, updateVoucher } from '../store/journalStore';
 import { getSession, setSession, useSession, type TemplateLine } from '../store/session';
 import type { JournalEntry, MonthFilter } from '../types';
 
@@ -37,11 +37,11 @@ interface Row {
   tax?: string;
   /** 税額の手入力（未指定＝自動計算。端数の調整用。確認メモ #55） */
   taxAmt?: string;
-  shohyo: boolean;
-  check: boolean;
-  fusen: FusenColor;
 }
-const emptyRow = (): Row => ({ kariAmt: '', kari: '', kashi: '', kashiAmt: '', tekiyo: '', shohyo: true, check: false, fusen: '' });
+const emptyRow = (): Row => ({ kariAmt: '', kari: '', kashi: '', kashiAmt: '', tekiyo: '' });
+/** 証憑・チェック・付箋は伝票1枚につき1つ（10/16 鈴木さん決定。確認メモ #47） */
+interface VoucherFlags { check: boolean; fusen: FusenColor; shohyo: boolean }
+const DEFAULT_FLAGS: VoucherFlags = { check: false, fusen: '', shohyo: true };
 const isUsed = (r: Row) => !!(r.kari || r.kashi || toNum(r.kariAmt) || toNum(r.kashiAmt));
 const isTouched = (r: Row) => isUsed(r) || !!r.tekiyo;
 /** 消費税対応の法人のみ使う税区分・税額（依頼書 2.4：振替伝票形式・振替単一形式の「税区分・税額の欄」。候補は税区分マスターに相当） */
@@ -80,6 +80,8 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
   const [month, setMonth] = useState('');
   const [day, setDay] = useState('');
   const [rows, setRows] = useState<Row[]>(() => Array.from({ length: rowCount }, emptyRow));
+  const [flags, setFlagsState] = useState<VoucherFlags>(DEFAULT_FLAGS);
+  const setFlags = (p: Partial<VoucherFlags>) => setFlagsState((f) => ({ ...f, ...p }));
   const [active, setActive] = useState(0);
   const [cheque, setCheque] = useState('');
   const [err, setErr] = useState('');
@@ -149,6 +151,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
     setErr('');
     setInternal(false);
     setAite('');
+    setFlagsState(DEFAULT_FLAGS);
   };
 
   const submit = (confirmed = false) => {
@@ -173,12 +176,12 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
     const entries: JournalEntry[] = used.map((r) => {
       const id = nextId.current++;
       ids.push(id);
-      const e: JournalEntry = { id, date, kari: r.kari || '諸口', kashi: r.kashi || '諸口', tekiyo: r.tekiyo, amount: toNum(r.kariAmt) || toNum(r.kashiAmt), shohyo: r.shohyo, cheque: cheque || undefined };
+      const e: JournalEntry = { id, date, kari: r.kari || '諸口', kashi: r.kashi || '諸口', tekiyo: r.tekiyo, amount: toNum(r.kariAmt) || toNum(r.kashiAmt), shohyo: flags.shohyo, cheque: cheque || undefined };
       // 共有の仕訳（参照パネル・残高・伝票訂正の対象）にも登録。同じ伝票の行は同じ伝票Noにまとめる
-      const stored = addVoucher({ kind: single ? '振単' : '振替', date, kari: e.kari, kashi: e.kashi, tekiyo: e.tekiyo, amount: e.amount, service, shohyo: r.shohyo, cheque: cheque || undefined, internal: partner || undefined, ...(no != null && seq != null ? { no, seq } : {}) });
+      const stored = addVoucher({ kind: single ? '振単' : '振替', date, kari: e.kari, kashi: e.kashi, tekiyo: e.tekiyo, amount: e.amount, service, shohyo: flags.shohyo, cheque: cheque || undefined, internal: partner || undefined, ...(no != null && seq != null ? { no, seq } : {}) });
       no = stored.no;
       seq = stored.seq;
-      if (r.check || r.fusen) updateVoucher(stored.id, { check: r.check, fusen: r.fusen });
+      if (flags.check || flags.fusen) updateVoucher(stored.id, { check: flags.check, fusen: flags.fusen });
       if (partner) setPartner(stored.id, aite);
       storeIds.push(stored.id);
       return e;
@@ -219,8 +222,8 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
     lines: rows.filter(isTouched).map((r) => ({ kari: r.kari, kashi: r.kashi, tekiyo: r.tekiyo, amount: r.kariAmt || r.kashiAmt })),
     multiRow: !single,
     rowLabel: single ? '入力中の伝票' : `${cur + 1}行目`,
-    flags: { check: rows[cur].check, fusen: rows[cur].fusen, shohyo: rows[cur].shohyo },
-    onFlags: (p) => setRow(cur, p),
+    flags,
+    onFlags: setFlags,
     fundMode,
     onFundMode: setFundMode,
     onSubmit: () => submit(),
@@ -319,7 +322,6 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
   const budgetTh = sess.env.budgetCheck ? sess.env.budgetThreshold : 101;
   const divisionName = service.replace(/^\d+\s*/, '');
   const fillerRows = single ? 0 : Math.max(0, ROW_COUNT - rows.length);
-  const curRow = rows[cur];
   const cell: CSSProperties = { padding: '6px 8px' };
   const bandCell: CSSProperties = { padding: '2px 8px 6px', minHeight: 32 };
 
@@ -380,6 +382,8 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
           <div style={{ padding: '18px 22px 12px', background: '#eef1ef', borderBottom: '1px solid #e2e8ee' }}>
             {/* 伝票用紙 */}
             <div className="pp-sheet" style={{ padding: '16px 20px 16px' }}>
+              {/* 伝票に付けた付箋：用紙の右端に貼る（伝票1枚につき1つ） */}
+              <FusenTab color={flags.fusen} offset={-10} top={64} />
               <PaperTitle
                 title={title}
                 division={`${divisionName} 拠点区分`}
@@ -458,15 +462,13 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                       <div className="pp-cell" style={{ ...cell, background: bg }}>
                         <input id={fid(i, 'sa')} className="ef-input pp-input" aria-label={`${i + 1}行目 貸方金額`} disabled={ro} value={fmtNum(r.kashiAmt)} onChange={(e) => setRow(i, { kashiAmt: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => afterKashiAmt())} inputMode="numeric" placeholder="0" autoComplete="off" style={amt} />
                       </div>
-                      <div className="pp-cell pp-center" style={{ ...cell, padding: '6px 4px', gap: 6, background: bg, position: 'relative' }}>
-                        <FusenTab color={r.fusen} />
+                      <div className="pp-cell pp-center" style={{ ...cell, padding: '6px 4px', gap: 6, background: bg }}>
                         {!single && (
                           <span style={{ fontSize: 14, color: '#9aa5b1', flex: 'none' }}>
                             <span className="ef-rowno pp-num" style={{ fontWeight: on ? 800 : 500, color: on ? accent : '#9aa5b1' }}>{i + 1}</span>
                             <span className="ef-rownow" style={{ padding: '1px 5px', borderRadius: 7, background: accent, color: '#fff', fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap' }}>入力中</span>
                           </span>
                         )}
-                        {!tools.viewOnly && <FlagButtons shohyo={r.shohyo} check={r.check} fusen={r.fusen} disabled={ro} onChange={(p) => setRow(i, p)} />}
                       </div>
                       {/* 2行目：資金（薄い帯）…率／予算残・資金科目 */}
                       <div className="pp-cell pp-auto pp-col" style={bandCell}>
@@ -535,8 +537,9 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                   <div className="pp-cell" style={{ padding: 0, gridColumn: 'span 2', background: PAPER.fill }}>
                     <PaperFootItems
                       seq="自動"
-                      check={tools.viewOnly ? <span className="pp-ro pp-ro-s">{curRow.check ? '☑' : '☐'}</span> : <PaperToggle on={curRow.check} onLabel="☑" offLabel="☐" disabled={ro} title={single ? 'チェック' : `チェック（${cur + 1}行目）`} onChange={(x) => setRow(cur, { check: x })} />}
-                      shohyo={tools.viewOnly ? <span className="pp-ro pp-ro-s">{curRow.shohyo ? '有' : '無'}</span> : <PaperToggle on={curRow.shohyo} onLabel="有" offLabel="無" disabled={ro} title={single ? '証憑 有／無' : `証憑 有／無（${cur + 1}行目）`} onChange={(x) => setRow(cur, { shohyo: x })} />}
+                      check={tools.viewOnly ? <span className="pp-ro pp-ro-s">{flags.check ? '☑' : '☐'}</span> : <PaperToggle on={flags.check} onLabel="☑" offLabel="☐" disabled={ro} title="チェック（この伝票）" onChange={(x) => setFlags({ check: x })} />}
+                      shohyo={tools.viewOnly ? <span className="pp-ro pp-ro-s">{flags.shohyo ? '有' : '無'}</span> : <PaperToggle on={flags.shohyo} onLabel="有" offLabel="無" disabled={ro} title="証憑 有／無（この伝票）" onChange={(x) => setFlags({ shohyo: x })} />}
+                      note={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><span>付箋</span>{tools.viewOnly ? <span className="pp-ro pp-ro-s">{flags.fusen || 'なし'}</span> : <button type="button" tabIndex={-1} className="pp-toggle" disabled={ro} title={`付箋：${flags.fusen || 'なし'}（クリックで 赤→青→黄→緑→なし）。伝票1枚につき1つ`} onClick={() => setFlags({ fusen: nextFusen(flags.fusen) })} style={{ background: flags.fusen ? FUSEN_COLORS[flags.fusen] : '#fff', color: flags.fusen ? '#fff' : '#8290a0', minWidth: 44 }}>{flags.fusen || 'なし'}</button>}</span>}
                       cheque={sess.input.cheque ? <span className="pp-ro pp-ro-s pp-num">{cheque || '—'}</span> : undefined}
                     />
                   </div>

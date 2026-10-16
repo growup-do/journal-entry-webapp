@@ -69,8 +69,17 @@ export function moveVoucher(id: number, dir: -1 | 1) {
   emit();
   return true;
 }
+/** 同じ伝票（伝票No・年月日が同じ）の行 */
+const sameVoucherRows = (id: number) => { const r = rows.find((x) => x.id === id); return r ? rows.filter((x) => x.no === r.no && x.date === r.date) : []; };
+/** 証憑・チェック・付箋は伝票1枚につき1つ（10/16 鈴木さん決定。確認メモ #47）。同じ伝票の全行にまとめて反映する */
+export function setVoucherFlags(id: number, patch: Partial<Pick<Voucher, 'check' | 'fusen' | 'shohyo'>>) {
+  const ids = new Set(sameVoucherRows(id).map((x) => x.id));
+  if (ids.size === 0) return;
+  rows = rows.map((r) => (ids.has(r.id) ? { ...r, ...patch } : r));
+  emit();
+}
 export function cycleFusen(id: number) {
   const r = rows.find((x) => x.id === id);
   if (!r) return;
-  updateVoucher(id, { fusen: FUSEN_CYCLE[(FUSEN_CYCLE.indexOf(r.fusen) + 1) % FUSEN_CYCLE.length] });
+  setVoucherFlags(id, { fusen: FUSEN_CYCLE[(FUSEN_CYCLE.indexOf(r.fusen) + 1) % FUSEN_CYCLE.length] });
 }
