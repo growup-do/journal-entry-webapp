@@ -62,8 +62,10 @@ function useFontScale(loggedIn: boolean) {
   const font = useSession().input.font;
   useEffect(() => {
     const small = loggedIn && font === '小さ目';
+    // 縮小しても画面の高さ（100vh）は縮まないので、各ページの最小高さは 100vh ÷ 倍率 で計算する（フッターをブラウザの下端に保つ）
     document.documentElement.style.setProperty('zoom', small ? '0.8' : '');
-    return () => { document.documentElement.style.removeProperty('zoom'); };
+    document.documentElement.style.setProperty('--app-zoom', small ? '0.8' : '1');
+    return () => { document.documentElement.style.removeProperty('zoom'); document.documentElement.style.removeProperty('--app-zoom'); };
   }, [loggedIn, font]);
 }
 

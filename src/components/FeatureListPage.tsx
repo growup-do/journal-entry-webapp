@@ -38,7 +38,7 @@ export function FeatureListPage() {
   const badge = (st: FeatureStatus): CSSProperties => ({ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: STATUS[st].bg, color: STATUS[st].fg, whiteSpace: 'nowrap' });
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f3f5f7', fontFamily: "'Noto Sans JP', sans-serif", color: '#22303c' }}>
+    <div style={{ minHeight: 'calc(100vh / var(--app-zoom, 1))', background: '#f3f5f7', fontFamily: "'Noto Sans JP', sans-serif", color: '#22303c' }}>
       <style>{`@media print { .no-print { display: none !important } body { background: #fff } .fl-card { box-shadow: none !important; break-inside: avoid } }`}</style>
       {/* ヘッダー */}
       <header className="no-print" style={{ position: 'sticky', top: 0, zIndex: 10, background: '#fff', borderBottom: '1px solid #dde4ea', padding: '12px 28px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>

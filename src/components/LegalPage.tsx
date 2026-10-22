@@ -25,7 +25,7 @@ const TERMS: { title: string; lead: string; sections: Section[] } = {
 export function LegalPage() {
   const doc = TERMS;
   return (
-    <div style={{ minHeight: '100vh', background: '#f3f5f7', fontFamily: "'Noto Sans JP', sans-serif", color: '#22303c', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: 'calc(100vh / var(--app-zoom, 1))', background: '#f3f5f7', fontFamily: "'Noto Sans JP', sans-serif", color: '#22303c', display: 'flex', flexDirection: 'column' }}>
       <header style={{ position: 'sticky', top: 0, zIndex: 10, background: '#fff', borderBottom: '1px solid #dde4ea', padding: '12px 28px', display: 'flex', alignItems: 'center', gap: 14 }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, background: '#1f7a52', color: '#fff', borderRadius: 8, fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700 }}>会</span>
         <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 17 }}>会計基準システム　{doc.title}</div>

@@ -63,7 +63,7 @@ export function IssueBoardPage() {
   const openEdit = () => { if (!cur) return; setEdit({ title: cur.title, body: cur.body, source: cur.source, screen: cur.screen, priority: cur.priority }); setEditOpen(true); };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#f3f5f7', fontFamily: "'Noto Sans JP', sans-serif", color: '#22303c' }}>
+    <div style={{ minHeight: 'calc(100vh / var(--app-zoom, 1))', display: 'flex', flexDirection: 'column', background: '#f3f5f7', fontFamily: "'Noto Sans JP', sans-serif", color: '#22303c' }}>
       {/* ヘッダー */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 18px', background: '#fff', borderBottom: '1px solid #dde4ea', flexWrap: 'wrap' }}>
         <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 17 }}>確認事項・やりとり</div>
