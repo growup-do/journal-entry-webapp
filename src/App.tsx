@@ -4,7 +4,7 @@
 // 元帳１／元帳２／残高照合は通常の画面として開く（入口は伝票入力の参照パネル・ホーム）。
 // 右下の「確認メモ」でクライアントとの確認事項を画面上に貼れる（Firestore で共有）。
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FormScreen } from './components/FormScreen';
 import { MemoLayer } from './memo/MemoLayer';
 import { getSession, setSession, useSession } from './store/session';
@@ -57,6 +57,16 @@ const labelOf = (key: string) => {
   return p ?? key;
 };
 
+/** 入力の変更「表示フォント」：小さ目のときは画面全体を 80% に縮小する（大き目が標準の大きさ）。ログイン画面は常に標準 */
+function useFontScale(loggedIn: boolean) {
+  const font = useSession().input.font;
+  useEffect(() => {
+    const small = loggedIn && font === '小さ目';
+    document.documentElement.style.setProperty('zoom', small ? '0.8' : '');
+    return () => { document.documentElement.style.removeProperty('zoom'); };
+  }, [loggedIn, font]);
+}
+
 export default function App() {
   // 静的ページ（フッターから同じタブで開く）：機能一覧／利用規約／個人情報保護方針
   const params = new URLSearchParams(window.location.search);
@@ -78,6 +88,7 @@ export default function App() {
       return false;
     }
   });
+  useFontScale(loggedIn);
   const login = (kind: 'standard' | 'review' = 'standard') => {
     // 確認用アカウントならプロトタイプ確認用の表示を出さないモードに（通常アカウントで解除）
     setReviewMode(kind === 'review');
