@@ -30,7 +30,7 @@ export interface JournalEntry {
   kashi: string;
   tekiyo: string;
   amount: number;
-  /** 業者（任意） */
+  /** 取引先（任意） */
   gyosha?: string;
   /** 証憑 有＝true（単一入力） */
   shohyo?: boolean;

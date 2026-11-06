@@ -289,7 +289,7 @@ export function ledgerLines(all: Voucher[], account: string, month: MonthFilter,
   });
   return { lines, carry };
 }
-export function LedgerTable({ account, month, editable, highlightIds, onEdit, vendor }: { account: string; month: MonthFilter; editable: boolean; highlightIds?: number[]; onEdit: (r: Voucher) => void; /** 業者元帳（業者で絞り込む） */ vendor?: boolean }) {
+export function LedgerTable({ account, month, editable, highlightIds, onEdit, vendor }: { account: string; month: MonthFilter; editable: boolean; highlightIds?: number[]; onEdit: (r: Voucher) => void; /** 取引先元帳（取引先で絞り込む） */ vendor?: boolean }) {
   const all = useVouchers();
   const { lines, carry } = ledgerLines(all, account, month, vendor);
   const isNew = (r: Voucher) => !!highlightIds?.includes(r.id);

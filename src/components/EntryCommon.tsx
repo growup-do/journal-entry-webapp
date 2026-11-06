@@ -97,7 +97,7 @@ export const fmtNum = (s: string) => {
 };
 
 /* ------------------------------------------------------------------ */
-/* 候補（科目・業者・摘要・区分）                                        */
+/* 候補（科目・取引先・摘要・区分）                                        */
 /* ------------------------------------------------------------------ */
 export type ComboKind = 'account' | 'vendor' | 'summary' | 'service';
 export interface Candidate { value: string; code: string; kana: string; group?: string }
@@ -541,7 +541,7 @@ export function useShortcuts(list: Shortcut[], scope: 'page' | 'modal' = 'page',
     return () => window.removeEventListener('keydown', h, true);
   }, [scope, enabled]);
 }
-/** フォーカス中の入力欄（科目・摘要・業者）の候補一覧を開く */
+/** フォーカス中の入力欄（科目・摘要・取引先）の候補一覧を開く */
 export function openCandidatesOfFocused(): boolean {
   const el = document.activeElement;
   if (el instanceof HTMLInputElement && el.getAttribute('role') === 'combobox') {

@@ -1,4 +1,4 @@
-// 予算入力（提案B）：資金収支予算（前年度／当初／補正（月別）／次年度）と業者別予算。
+// 予算入力（提案B）：資金収支予算（前年度／当初／補正（月別）／次年度）と取引先別予算。
 //   マニュアル 3.2 に相当。予算額の設定（年度×月の一覧）・次年度予算作成ウィザード・前期末支払資金残高の表示。
 
 import { useMemo, useState } from 'react';
@@ -14,8 +14,8 @@ import { VENDORS, displayName } from '../data';
 import { ScopeBadge } from './PrintCenter';
 import { setSession, useSession } from '../store/session';
 
-type YearTab = '前年度予算' | '当初予算' | '補正予算' | '次年度予算' | '業者別予算';
-const TABS: YearTab[] = ['前年度予算', '当初予算', '補正予算', '次年度予算', '業者別予算'];
+type YearTab = '前年度予算' | '当初予算' | '補正予算' | '次年度予算' | '取引先別予算';
+const TABS: YearTab[] = ['前年度予算', '当初予算', '補正予算', '次年度予算', '取引先別予算'];
 const MONTHS = ['初', ...FISCAL_MONTHS];
 
 interface BItem { code: string; name: string; side: '収入' | '支出'; level: number; leaf?: boolean }
@@ -108,29 +108,29 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
   const chip = (on: boolean): CSSProperties => ({ minWidth: 30, height: 26, padding: '0 8px', borderRadius: 6, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', border: '1px solid ' + (on ? accent : '#d3dbe3') });
 
   return (
-    <SettingsShell variant={variant} title={displayName('予算')} desc="資金収支計算書の予算（前年度／当初／補正／次年度）と業者別予算を入力します。補正予算は月ごとに入力でき、収支差額と期末支払資金残高を確認しながら設定できます。" badge="予算" actions={<>
+    <SettingsShell variant={variant} title={displayName('予算')} desc="資金収支計算書の予算（前年度／当初／補正／次年度）と取引先別予算を入力します。補正予算は月ごとに入力でき、収支差額と期末支払資金残高を確認しながら設定できます。" badge="予算" actions={<>
       <ScreenPrintMenu page="予算" accent={accent} />
       {tab === '次年度予算' && <button type="button" className="btn-outline" onClick={() => setWizard(true)} style={btn(accent)}>次年度予算作成</button>}
       <button type="button" className="btn-outline" onClick={() => setExplainOpen(true)} style={btn()}>説明</button>
       <button type="button" className="submit-btn" onClick={() => toast.show('予算を保存しました（プロトタイプ）')} style={btn(accent, true)}>保存</button>
     </>}>
       <ToastView msg={toast.msg} />
-      <ExplainModal open={explainOpen} onClose={() => setExplainOpen(false)} accent={accent} title="予算入力の説明" source="マニュアル 3.2 予算の入力（3.2.1 資金収支計算書の概要と設定／3.2.2 業者別予算の概要と設定）" sections={[
+      <ExplainModal open={explainOpen} onClose={() => setExplainOpen(false)} accent={accent} title="予算入力の説明" source="マニュアル 3.2 予算の入力（3.2.1 資金収支計算書の概要と設定／3.2.2 取引先別予算の概要と設定）" sections={[
         { h: '予算の種類（4種類）', body: <>資金収支計算書の予算には「前年度予算」「当年度当初予算」「補正予算」「次年度予算」の4種類があり、それぞれのタブで入力します。年度更新（処理年度の更新）をすると、前年度予算額→前々年度予算額、当年度予算額→前年度予算額、次年度予算額→当年度当初予算額へ自動的に移行されます。</>},
         { h: '前年度予算', body: <>前年度の予算額を入力します。参考用に前々年度予算額を表示し、当初予算／確定予算（3月末時点の最終予算額）の切替ができます。運用2年目以降は年度更新で自動移行されるため、通常は初年度のみ入力します。</>},
         { h: '当初予算', body: <>当年度の当初予算額を科目ごとに入力します。参考用に前年度予算額を表示します。予算対比・予算チェック（動作環境）の基準になります。</>},
         { h: '補正予算（月別）', body: <>補正予算は4月から3月まで毎月入力できます。入力方法は「補正額」（増減額）と「補正後予算額」（累計予算額）を切り替えられ、どちらで入力するかは「補正予算」タブの上部にある「入力方法」で切り替えます（以前は動作環境にあった設定です）。入力すると、その科目が属する資金収支差額（収入合計・支出合計）がどう変化するかを画面下で確認できます。</>},
         { h: '次年度予算', body: <>次年度の予算額を入力します。参考用に当年度予算（当初予算／確定予算）を表示します。「次年度予算作成」で当年度予算からの一括作成（率・端数単位の指定）ができ、年度更新時に当年度当初予算へ自動移行されます。</>},
         { h: '期末支払資金残高', body: <>「前期末決算額」は貸借対照表の繰越残高から「流動資産－流動負債」で計算した前期末支払資金残高です。「当期末予算額」は前期末決算額に資金収支差額合計を加算した当期末支払資金残高で、補正の結果を確認するための目安になります。</>},
-        { h: '業者別予算', body: <>業者コードごとの支払額に対する予算です。資金収支予算と同じく前年度／当年度当初／補正／次年度の4種類を持ち、年度更新で自動的に繰り下がります。業者推移・業者元帳で予算との対比に使います。</>},
+        { h: '取引先別予算', body: <>取引先コードごとの支払額に対する予算です。資金収支予算と同じく前年度／当年度当初／補正／次年度の4種類を持ち、年度更新で自動的に繰り下がります。取引先推移・取引先元帳で予算との対比に使います。</>},
         { h: '登録・キャンセル', body: <>画面右上の「保存」ボタンで入力を確定します。保存せずに別の画面へ移動すると、入力した内容は破棄されます。</>},
       ]} />
       <Tabs items={TABS} current={tab} onChange={(t) => { setTab(t as YearTab); setMonth('初'); }} accent={accent} />
-      {tab === '業者別予算' ? (
+      {tab === '取引先別予算' ? (
         <div style={{ padding: 22 }}>
-          <Notice>業者コードごとの支払額に対する予算です。資金収支予算と同じく、前年度／当年度当初／補正／次年度の4種類を持ち、年度更新で自動的に繰り下がります。</Notice>
+          <Notice>取引先コードごとの支払額に対する予算です。資金収支予算と同じく、前年度／当年度当初／補正／次年度の4種類を持ち、年度更新で自動的に繰り下がります。</Notice>
           <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 14 }}>
-            <thead><tr><th style={TH}>業者</th><th style={{ ...TH, textAlign: 'right' }}>前年度予算</th><th style={{ ...TH, textAlign: 'right' }}>当年度当初予算</th><th style={{ ...TH, textAlign: 'right' }}>補正予算（累計）</th><th style={{ ...TH, textAlign: 'right' }}>次年度予算</th><th style={{ ...TH, textAlign: 'right' }}>実績（8月まで）</th></tr></thead>
+            <thead><tr><th style={TH}>取引先</th><th style={{ ...TH, textAlign: 'right' }}>前年度予算</th><th style={{ ...TH, textAlign: 'right' }}>当年度当初予算</th><th style={{ ...TH, textAlign: 'right' }}>補正予算（累計）</th><th style={{ ...TH, textAlign: 'right' }}>次年度予算</th><th style={{ ...TH, textAlign: 'right' }}>実績（8月まで）</th></tr></thead>
             <tbody>
               {Object.entries(vendor).map(([v, arr]) => (
                 <tr key={v}>

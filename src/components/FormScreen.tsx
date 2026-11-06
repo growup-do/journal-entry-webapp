@@ -1,8 +1,8 @@
 // Screen 1: フォーム型（`仕訳伝票_フォーム型.dc.html`）
 // アプリバー + 横スクロールナビ + 中央フォームカード（仕訳伝票形式＝複数行） + 右端固定・折りたたみの参照パネル。
 // アクセント = 緑 #1f7a52。
-//   伝票入力（仕訳伝票形式）：借方・貸方の科目は伝票につき1組、その下に 摘要・業者・金額 の行を複数入力する（依頼書 5.3.1）。
-//   科目・業者・摘要は入力欄の中で候補を絞り込み（5.3.5）、登録できない仕訳と確認して続行できる警告を科目の直下に表示（5.3.2）。
+//   伝票入力（仕訳伝票形式）：借方・貸方の科目は伝票につき1組、その下に 摘要・取引先・金額 の行を複数入力する（依頼書 5.3.1）。
+//   科目・取引先・摘要は入力欄の中で候補を絞り込み（5.3.5）、登録できない仕訳と確認して続行できる警告を科目の直下に表示（5.3.2）。
 //   機能ボタンは性質ごとにまとめて常に表示し、Alt＋英字のショートカットで操作する（5.3.6）。
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -76,14 +76,18 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
         style={{
           background: '#fff',
           borderBottom: '1px solid #dde4ea',
-          height: 58,
+          minHeight: 58,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0 26px',
+          // 幅が足りないときは、左側（ロゴ・区分）と右側（調査・印刷／各種設定／ユーザー）を別の行に分ける（確認メモ #66）
+          flexWrap: 'wrap',
+          rowGap: 6,
+          columnGap: 12,
+          padding: '8px 26px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: '1 1 auto', maxWidth: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 'none' }}>
             <button type="button" data-menu="ホーム（ロゴ）" onClick={() => onNavigate('ホーム')} title="ホームへ" style={{ display: 'flex', alignItems: 'center', gap: 9, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: 'inherit', color: 'inherit' }}>
               <span style={logoStyle(GREEN, 28, 15)}>会</span>
@@ -96,7 +100,7 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
           <span style={{ color: '#c3ccd4' }}>｜</span>
           <DivisionPicker accent={GREEN} />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: '#68757f', flex: 'none', marginLeft: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: '#68757f', flex: 'none', marginLeft: 'auto' }}>
           <HeaderTools accent={GREEN} page={page} onNavigate={onNavigate} />
           <SettingsMenu accent={GREEN} active={page} onNavigate={onNavigate} />
           <UserMenu accent={GREEN} soft="#eef4f0" onNavigate={onNavigate} />
@@ -158,7 +162,7 @@ function groupLines(lines: TemplateLine[]): LineGroup[] {
 }
 
 const SUBMIT_ID = 'fe-submit';
-const ENTER_ORDER = '月 → 日 →（伝票No）→ 借方科目 → 貸方科目 → 内部取引スイッチ（Shift+Enter でオン／オフ）→（オンのとき：相手区分）→ 1行目の摘要 → 業者 → 金額 → 次の行の摘要 …　何も入力していない最後の行の摘要で Enter を押すと「伝票登録」へ移ります';
+const ENTER_ORDER = '月 → 日 →（伝票No）→ 借方科目 → 貸方科目 → 内部取引スイッチ（Shift+Enter でオン／オフ）→（オンのとき：相手区分）→ 1行目の摘要 → 取引先 → 金額 → 次の行の摘要 …　何も入力していない最後の行の摘要で Enter を押すと「伝票登録」へ移ります';
 const FE_CSS = `
 .fe-actions { background: #fff; }
 /* 機能ボタンの下部固定は縦に十分な余裕がある画面だけ（低い画面では入力欄が隠れるため通常配置）。下端はプロトタイプの切替バー／メモボタンと重ならないよう余白を取る */
@@ -262,7 +266,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
     if (plus >= 0) return `${plus + 1}行目：特殊金額入力（＋）は、金額欄で Enter を押して確定してください。`;
     const noAmt = rows.findIndex((r) => !rowBlank(r) && toNum(r.amount) <= 0);
     if (noAmt >= 0) return `${noAmt + 1}行目の金額が未入力です。`;
-    if (!rows.some((r) => toNum(r.amount) > 0)) return '金額を入力した行がありません。摘要・業者・金額を1行以上入力してください。';
+    if (!rows.some((r) => toNum(r.amount) > 0)) return '金額を入力した行がありません。摘要・取引先・金額を1行以上入力してください。';
     return '';
   };
   const applyGroup = (g: LineGroup) => {
@@ -359,7 +363,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
 
   const panelOpen = !wide.collapsed && !wide.narrow;
   const smallInput: CSSProperties = { padding: '4px 8px', border: '1px solid #cfd8e0', borderRadius: 7, fontSize: 14, fontFamily: 'inherit' };
-  /** 明細の列：コード（行番号）｜摘要・業者｜金額｜行の操作（証憑・チェック・付箋／挿入・削除） */
+  /** 明細の列：コード（行番号）｜摘要・取引先｜金額｜行の操作（証憑・チェック・付箋／挿入・削除） */
   const GRID = '52px minmax(0,1fr) 170px 158px';
   const rowBtn: CSSProperties = { padding: '3px 7px', borderRadius: 6, border: '1px solid #cfd8e0', background: '#fff', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', color: '#5b6773' };
   const paperDate: CSSProperties = { ...dateInput, border: '1px solid transparent', borderRadius: 4, background: 'transparent' };
@@ -485,11 +489,11 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
               <VoucherMarks variant="panel" seq={nextSeq} flags={flags} onChange={setFlags} disabled={!editable} viewOnly={tools.viewOnly} showShohyo={inp.shohyo} />
               </div>
 
-              {/* 3段目：明細（コード｜摘要／業者｜金額｜行の操作）。空の罫線行を足して用紙らしく見せる */}
+              {/* 3段目：明細（コード｜摘要／取引先｜金額｜行の操作）。空の罫線行を足して用紙らしく見せる */}
               <div className="pp-table" style={{ gridTemplateColumns: '1fr' }}>
                 <div className="pp-row" style={{ gridTemplateColumns: GRID }}>
                   <div className="pp-lab">コード<span className="pp-sub">行</span></div>
-                  <div className="pp-lab" style={{ fontSize: 14 }}>摘要／業者</div>
+                  <div className="pp-lab" style={{ fontSize: 14 }}>摘要／取引先</div>
                   <div className="pp-lab" style={{ fontSize: 14 }}>金額</div>
                   <div className="pp-lab"><span>行の操作<span className="pp-sub">挿入／削除</span></span></div>
                 </div>
@@ -510,7 +514,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                         </div>
                         <span aria-hidden style={{ flex: 'none', color: PAPER.lineSoft, fontSize: 16 }}>／</span>
                         <div style={{ flex: '1 1 0', minWidth: 0 }}>
-                          <ComboField id={`fe-gyo-${i}`} kind="vendor" value={r.gyosha} onChange={(v) => patchRow(i, { gyosha: v })} onCommit={() => focusId(`fe-amt-${i}`)} onFocusField={() => setCur(i)} disabled={!editable} placeholder="業者（任意）" padY={8} listWidth={300} />
+                          <ComboField id={`fe-gyo-${i}`} kind="vendor" value={r.gyosha} onChange={(v) => patchRow(i, { gyosha: v })} onCommit={() => focusId(`fe-amt-${i}`)} onFocusField={() => setCur(i)} disabled={!editable} placeholder="取引先（任意）" padY={8} listWidth={300} />
                         </div>
                       </div>
                       <div className="pp-cell" style={{ padding: '6px 8px', background: on ? '#f7fbf9' : undefined }}>

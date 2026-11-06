@@ -53,7 +53,7 @@ function weekdayOfDate(date: string): string {
   return weekdayOf(m ?? '', d ?? '');
 }
 
-const ENTER_ORDER = '月 → 日 → 借方科目 → 貸方科目 → 内部取引スイッチ（Shift+Enter でオン／オフ）→（オンのとき：相手区分）→ 摘要 → 業者 → 金額。金額で Enter を押すと登録し、次の伝票の借方科目へ移ります';
+const ENTER_ORDER = '月 → 日 → 借方科目 → 貸方科目 → 内部取引スイッチ（Shift+Enter でオン／オフ）→（オンのとき：相手区分）→ 摘要 → 取引先 → 金額。金額で Enter を押すと登録し、次の伝票の借方科目へ移ります';
 
 /** 一覧の行に付ける情報（チェック・付箋・内部取引相手区分・共有ストア側の id） */
 interface RowMeta { storeId?: number; check: boolean; fusen: FusenColor; aite: string }
@@ -354,7 +354,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
               {lab('証憑・印')}
               {lab(<span style={{ color: BLUE }}>借方 勘定科目</span>, undefined, '資金科目')}
               {lab(<span style={{ color: PINK }}>貸方 勘定科目</span>, undefined, '資金科目')}
-              {lab('摘要', undefined, '業者')}
+              {lab('摘要', undefined, '取引先')}
               {lab('金額')}
               {lab('操作')}
             </div>
@@ -393,7 +393,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
                   <div className="pp-cell pp-col" style={c}>
                     <div style={{ color: '#48565f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.tekiyo || '—'}</div>
                     <div style={{ fontSize: 12, color: '#9aa5b1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {e.gyosha || '業者なし'}
+                      {e.gyosha || '取引先なし'}
                       {e.cheque ? `　小切手 ${e.cheque}` : ''}
                     </div>
                   </div>
@@ -502,7 +502,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
               {/* 4段目 */}
               <div className="pp-row" style={{ gridTemplateColumns: PCOLS }}>
                 {lab(<span>摘要</span>, { gridColumn: 'span 4' })}
-                {lab(<span>業者</span>)}
+                {lab(<span>取引先</span>)}
                 {lab(<span>金額</span>)}
               </div>
               <div className="pp-row" style={{ gridTemplateColumns: PCOLS }}>
@@ -510,7 +510,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
                   <ComboField id="se-tekiyo" kind="summary" freeText value={f.tekiyo} onChange={(x) => v.setField('tekiyo', x)} onCommit={() => focusId('se-gyosha')} placeholder="摘要" dropUp listWidth={320} disabled={ro} />
                 </div>
                 <div className="pp-cell ef-field" style={valCell}>
-                  <ComboField id="se-gyosha" kind="vendor" value={f.gyosha} onChange={(x) => v.setField('gyosha', x)} onCommit={() => focusId('se-amount')} placeholder="業者" dropUp listWidth={280} disabled={ro} />
+                  <ComboField id="se-gyosha" kind="vendor" value={f.gyosha} onChange={(x) => v.setField('gyosha', x)} onCommit={() => focusId('se-amount')} placeholder="取引先" dropUp listWidth={280} disabled={ro} />
                 </div>
                 <div className="pp-cell ef-field" style={valCell}>
                   <input

@@ -49,7 +49,9 @@ function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
   return (
-    <div style={{ display: 'flex', alignItems: 'stretch', gap: 2, paddingRight: 150 }}>
+    <div style={{ display: 'flex', alignItems: 'stretch', flexWrap: 'wrap', gap: 2, flex: 1, minWidth: 0 }}>
+      {/* 左：メニュー。幅が足りないときは項目が折り返す。右側（お気に入りメニュー・機能から探す）は、最後の行に入れば同じ行の右端、入らなければ次の行の右端に置く（重ならない。確認メモ #66） */}
+      <div style={{ display: 'contents' }}>
       <HomeButton active={active === 'ホーム'} accent={accent} onClick={() => onSelect('ホーム')} />
       {MENU_GROUPS.map((g) => {
         const on = activeGroup === g.key;
@@ -108,8 +110,9 @@ function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
           </div>
         );
       })}
-      {/* 右端：お気に入り ▾（登録した画面をどの画面からも開く）＋ 機能から探す（全機能の一覧と検索） */}
-      <div style={{ position: 'absolute', right: 16, top: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
+      </div>
+      {/* 右端：お気に入り ▾（登録した画面をどの画面からも開く）＋ 機能から探す（全機能の一覧と検索）。幅が足りないときは次の行の右端へ */}
+      <div style={{ marginLeft: 'auto', flex: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
       <FavoritesMenu accent={accent} active={active} onNavigate={onSelect} />
       <button
         type="button"

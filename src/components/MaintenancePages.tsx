@@ -558,7 +558,7 @@ const GEN_SEED: BackupGen[] = [
 const RESTORE_ITEMS: { key: string; label: string; note: string }[] = [
   { key: 'voucher', label: '伝票データ', note: '登録済みの伝票（仕訳）' },
   { key: 'account', label: '科目マスター', note: '勘定科目・資金科目・費目・使用科目' },
-  { key: 'master', label: '業者・摘要マスター', note: '業者、摘要、摘要の自動補完候補' },
+  { key: 'master', label: '取引先・摘要マスター', note: '取引先、摘要、摘要の自動補完候補' },
   { key: 'budget', label: '予算・残高', note: '予算額、繰越残高、前年実績' },
   { key: 'setting', label: '設定条件', note: '動作環境、印刷設定、決算チェック設定' },
 ];

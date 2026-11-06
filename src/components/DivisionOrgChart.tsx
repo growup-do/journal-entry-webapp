@@ -8,7 +8,8 @@ const LINE = '#b3bfc9';
 const CARD_H = 44;
 const GAP = 8;
 /** 伝票を入力できる区分か、集計・参照用の親区分か */
-export const kindOf = (n: DivisionNode) => (!!n.entry && !(n.children ?? []).some((c) => c.entry && c.use !== false) ? '入力区分' : '親区分');
+/** 種類は区分を追加するときに決め、後から変わらない（配下の有無では切り替えない。確認メモ #69／#70） */
+export const kindOf = (n: DivisionNode) => (n.entry ? '入力区分' : '親区分');
 
 /** 凡例（入力区分／親区分） */
 export function OrgChartLegend() {

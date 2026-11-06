@@ -25,7 +25,7 @@ export const DEFAULT_TREE: DivisionNode = {
       { id: 'hoikuen', code: '', name: 'チャイルド保育園', kind: '拠点区分', children: [
         { id: 'hoiku', code: '002', name: '保育事業', kind: 'サービス区分', entry: true, use: true, color: '#eaf5ef', category: '保育事業', startYear: '令和6年度', children: [] },
         // 子育て支援は小サービス区分を持つ親区分（集計・参照用）の例。伝票は末端の入力区分で登録する
-        { id: 'kosodate', code: '003', name: '子育て支援', kind: 'サービス区分', entry: true, use: true, color: '#fdeef3', category: '子育て支援', startYear: '令和6年度', children: [
+        { id: 'kosodate', code: '003', name: '子育て支援', kind: 'サービス区分', children: [
           { id: 'ichiji', code: '004', name: '一時預かり', kind: '小サービス区分', entry: true, use: true, color: '#fff7e6', category: '子育て支援', startYear: '令和7年度' },
         ] },
         { id: 'chiiki', code: '005', name: '地域支援', kind: 'サービス区分', entry: true, use: false, color: '#f1f4f6', category: '地域支援', startYear: '令和8年度' },
@@ -181,7 +181,7 @@ let state: Session = (() => {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULT;
     const saved = JSON.parse(raw) as Partial<Session>;
-    return { ...DEFAULT, ...saved, env: { ...DEFAULT_ENV, ...(saved.env ?? {}) }, input: { ...DEFAULT_INPUT, ...(saved.input ?? {}) }, print: { ...DEFAULT_PRINT, ...(saved.print ?? {}) }, homeSections: { ...DEFAULT_HOME_SECTIONS, ...(saved.homeSections ?? {}) }, ledgerTarget: null, journalTarget: null };
+    return { ...DEFAULT, ...saved, tree: normalizeTree(saved.tree ?? DEFAULT.tree), env: { ...DEFAULT_ENV, ...(saved.env ?? {}) }, input: { ...DEFAULT_INPUT, ...(saved.input ?? {}) }, print: { ...DEFAULT_PRINT, ...(saved.print ?? {}) }, homeSections: { ...DEFAULT_HOME_SECTIONS, ...(saved.homeSections ?? {}) }, ledgerTarget: null, journalTarget: null };
   } catch {
     return DEFAULT;
   }
@@ -209,6 +209,11 @@ export function flattenDivisions(node: DivisionNode, path: string[] = []): { nod
   return out;
 }
 export const divisionLabel = (n: DivisionNode) => (n.code ? `${n.code} ${n.name}` : n.name);
+/** 入力区分は配下に区分を持てない（確認メモ #69／#70）。以前の保存データで配下を持つ入力区分は親区分に直す */
+export function normalizeTree(n: DivisionNode): DivisionNode {
+  const children = (n.children ?? []).map(normalizeTree);
+  return { ...n, entry: n.entry && children.length === 0 ? true : undefined, children };
+}
 
 /* ---------- 起動区分の種類と権限（依頼書 2.1） ---------- */
 /** 入力区分＝ツリー末端の伝票入力区分／親区分＝それらを集計する区分（法人・事業区分・拠点など）／合算区分＝任意の合算 */
@@ -217,8 +222,7 @@ export function startKindOf(s: Session): StartKind {
   if (s.merges.some((m) => m.name === s.division)) return '合算区分';
   const hit = flattenDivisions(s.tree).find((x) => divisionLabel(x.node) === s.division)?.node;
   if (!hit) return '入力区分';
-  const hasEntryChild = (hit.children ?? []).some((c) => c.entry && c.use !== false);
-  return hit.entry && !hasEntryChild ? '入力区分' : '親区分';
+  return hit.entry ? '入力区分' : '親区分';
 }
 /** 伝票の入力・訂正・削除ができるか（参照のみ権限、親区分・合算区分での起動では不可） */
 export const canEdit = (s: Session) => s.role === '入力可' && startKindOf(s) === '入力区分';

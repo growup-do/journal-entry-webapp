@@ -1,8 +1,8 @@
-// 元帳（総勘定元帳／資金元帳／業者元帳の共通部品）
-//   骨格は ReportShell 共通：集計期間（月）→ 指定科目（業者）→ 表示切替 → 一覧。
+// 元帳（総勘定元帳／資金元帳／取引先元帳の共通部品）
+//   骨格は ReportShell 共通：集計期間（月）→ 指定科目（取引先）→ 表示切替 → 一覧。
 //   試算表・決算書・推移表からドリルダウンで開いたときは、先頭に「← ○○に戻る」を表示する（依頼書 5.4.1）。
 //   行の操作（証憑／チェック／付箋・▲▼入換・訂正・削除）は RowActions で全一覧共通（依頼書 5.4.4）。
-//   表示切替＝摘要／業者・区分色・区分名・貸借の色付け・消費税表示（資金元帳のみ：税区分／税額の列を追加）。
+//   表示切替＝摘要／取引先・区分色・区分名・貸借の色付け・消費税表示（資金元帳のみ：税区分／税額の列を追加）。
 
 import { useEffect, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
@@ -84,7 +84,7 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
   const taxCols = isFund && showTax;
   // 印刷／Excel：表示中の明細（繰越・月計を含む）をそのまま出力
   const exportTable = () => {
-    const header = isVendor ? ['月日', 'Seq-No', '借方科目', '貸方科目', '摘要', '金額', '残高'] : ['月日', 'Seq-No', '相手科目', '摘要', '業者', ...(taxCols ? ['税区分', '税額'] : []), '借方', '貸方', '残高'];
+    const header = isVendor ? ['月日', 'Seq-No', '借方科目', '貸方科目', '摘要', '金額', '残高'] : ['月日', 'Seq-No', '相手科目', '摘要', '取引先', ...(taxCols ? ['税区分', '税額'] : []), '借方', '貸方', '残高'];
     const pad = taxCols ? ['', ''] : [];
     const body: (string | number)[][] = isVendor
       ? [['', '', '繰越金額', '', '', '', CARRY], ...lines.map((l) => [l.r.date, l.r.seq, l.r.kari, l.r.kashi, l.r.tekiyo, l.debit, l.bal]), ['月計', '', '', '', '', sumD, bal]]
@@ -109,10 +109,10 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
       variant={variant}
       accent={accent}
       title={title}
-      subtitle={isVendor ? '指定した業者の取引を日付順に表示します。行の右端の「訂正」「削除」、または行のダブルクリックで伝票を訂正できます。' : '指定した科目の仕訳を日付順に表示し、残高を計算します。行の右端の「訂正」「削除」、または行のダブルクリックで伝票を訂正できます。'}
+      subtitle={isVendor ? '指定した取引先の取引を日付順に表示します。行の右端の「訂正」「削除」、または行のダブルクリックで伝票を訂正できます。' : '指定した科目の仕訳を日付順に表示し、残高を計算します。行の右端の「訂正」「削除」、または行のダブルクリックで伝票を訂正できます。'}
       returnTo={from ? { from, onBack: () => onNavigate(from), here: `${target}　${m}月` } : null}
       extraTools={<ScreenPrintMenu page={kind === 'vendor' ? '業者元帳' : kind === 'fund' ? '資金元帳' : '勘定元帳'} accent={accent} data={exportTable()} />}
-      tools={[{ label: isVendor ? '業者検索' : '科目検索', onClick: () => assist.open('target', isVendor ? 'vendor' : 'account'), primary: true }, { label: 'Excel', onClick: () => openExport('excel') }, { label: '再計算', onClick: () => toast.show(`再計算しました（${lines.length} 件　残高 ${moneyText(bal, s.env)}）`) }]}
+      tools={[{ label: isVendor ? '取引先検索' : '科目検索', onClick: () => assist.open('target', isVendor ? 'vendor' : 'account'), primary: true }, { label: 'Excel', onClick: () => openExport('excel') }, { label: '再計算', onClick: () => toast.show(`再計算しました（${lines.length} 件　残高 ${moneyText(bal, s.env)}）`) }]}
       period={
         <>
           <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} range={range} onRange={setRange} />
@@ -125,12 +125,12 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
           <span style={{ fontSize: 14, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{st.value}</span>
         </div>
       ))}
-      targetLabel={isVendor ? '指定業者' : '指定科目'}
+      targetLabel={isVendor ? '指定取引先' : '指定科目'}
       target={
         <>
           <AssistField
             value={target}
-            placeholder={isVendor ? '業者を選択' : '科目を選択'}
+            placeholder={isVendor ? '取引先を選択' : '科目を選択'}
             open={assist.isOpen('target')}
             onOpen={() => assist.open('target', isVendor ? 'vendor' : 'account')}
             accent={accent}
@@ -181,7 +181,7 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
               <th style={{ ...TH, width: 70 }}>月日</th>
               <th style={{ ...TH, width: 60 }}>Seq-No</th>
               {dt.nameOn && <th style={{ ...TH, width: 130 }}>区分名</th>}
-              <th style={TH}>{isVendor ? '借方 ― 貸方 ／ 摘要' : `相手科目 ／ ${showBiz ? '業者' : '摘要'}`}</th>
+              <th style={TH}>{isVendor ? '借方 ― 貸方 ／ 摘要' : `相手科目 ／ ${showBiz ? '取引先' : '摘要'}`}</th>
               {taxCols && <th style={{ ...TH, width: 130 }}>税区分</th>}
               {taxCols && <th style={{ ...TH, width: 100, textAlign: 'right' }}>税額</th>}
               <th style={{ ...TH, width: 120, textAlign: 'right' }}>{isVendor ? '金額' : '借方'}</th>
@@ -198,7 +198,7 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
               <td style={{ ...NUM, fontWeight: 700 }}>{money(CARRY)}</td>
               <td style={TD} />
             </tr>
-            {!target && <tr><td colSpan={colCount} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>{isVendor ? '業者' : '科目'}を指定してください。</td></tr>}
+            {!target && <tr><td colSpan={colCount} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>{isVendor ? '取引先' : '科目'}を指定してください。</td></tr>}
             {target && lines.length === 0 && <tr><td colSpan={colCount} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>この月に該当する仕訳はありません。</td></tr>}
             {lines.map((l) => (
               <tr key={l.r.id} data-voucher={l.r.id} onDoubleClick={() => ra.openEdit(l.r)} title={ra.editable ? 'ダブルクリックで伝票を訂正' : undefined} style={{ cursor: ra.editable ? 'pointer' : 'default', background: dt.rowBg(l.r) }}>
@@ -208,7 +208,7 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
                 <td style={TD}>
                   <div style={{ fontWeight: 500 }}>{isVendor ? <><span style={{ color: colorDC ? '#2c5f9e' : undefined }}>{l.r.kari}</span> ― <span style={{ color: colorDC ? '#b0426a' : undefined }}>{l.r.kashi}</span></> : l.other}</div>
                   <div style={{ fontSize: 12, color: '#7a8794' }}>
-                    {!isVendor && showBiz ? (l.r.gyosha || '業者なし') : l.r.tekiyo}{!isVendor && !showBiz && l.r.gyosha ? `　／ ${l.r.gyosha}` : ''}
+                    {!isVendor && showBiz ? (l.r.gyosha || '取引先なし') : l.r.tekiyo}{!isVendor && !showBiz && l.r.gyosha ? `　／ ${l.r.gyosha}` : ''}
                     {!isVendor && opts.spare && (l.r.spare1 || l.r.spare2) ? <span style={{ marginLeft: 8, color: '#9aa5b1' }}>予備：{[l.r.spare1, l.r.spare2].filter(Boolean).join('／')}</span> : null}
                   </div>
                 </td>

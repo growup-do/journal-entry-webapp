@@ -1,7 +1,7 @@
 // 日記帳（仕訳一覧）＋ 訂正・削除・検索条件・行のフラグ
 //   骨格は ReportShell 共通：集計期間（月）→ 絞り込み → 表示切替 → 一覧。
 //   行の操作（証憑／チェック／付箋・▲▼入換・訂正・削除）は RowActions で全一覧共通（依頼書 5.4.4）。
-//   表示切替＝摘要／業者・区分色・区分名（区分色・区分名は合算区分・親区分で起動したときに有効）。
+//   表示切替＝摘要／取引先・区分色・区分名（区分色・区分名は合算区分・親区分で起動したときに有効）。
 //   CSV出力・検索条件・検索合計・貸借の色付けは画面上のボタン／表示（依頼書 5.4.3）。
 //   旧 伝票メニューの「インポート伝票一括削除」「自動按分伝票一括削除」は右上の「一括削除 ▾」（依頼書 2.3／6.4）。
 //   一括削除は年度内の全件が対象で、取込・按分の実行単位（GUID）ごとに消す（確認メモ #56）。
@@ -68,7 +68,7 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
   const compound = filtered && rows.some((r) => all.some((x) => x.id !== r.id && x.seq === r.seq && x.no === r.no));
   // 表示中（絞り込み後）の仕訳をそのまま出力用の表にする（CSV出力・印刷・プレビューで共用）
   const table = {
-    header: ['Seq', '日付', '伝票No', '種別', '借方科目', '貸方科目', '摘要', '業者', '金額', '区分'],
+    header: ['Seq', '日付', '伝票No', '種別', '借方科目', '貸方科目', '摘要', '取引先', '金額', '区分'],
     rows: rows.map((r) => [r.seq, `令和8年${r.date.replace('/', '月')}日`, r.no, r.kind, r.kari, r.kashi, r.tekiyo, r.gyosha ?? '', r.amount, r.service]) as (string | number)[][],
   };
   const periodLabel = range ? periodText(range) : month == null ? '令和8年 全期間' : day != null ? `令和8年 ${m}月${day}日` : `令和8年 ${m}月1日〜${m}月末日`;
@@ -125,7 +125,7 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
       listNote={<span>行の右端の「訂正」「削除」、または行のダブルクリックで伝票を訂正できます{selectable && '。行頭のチェックで複数行を選び、まとめて削除できます'}</span>}
       target={
         <>
-          <input className="search-input" value={kw} onChange={(e) => setKw(e.target.value)} placeholder="科目・摘要・業者で絞り込み" autoComplete="off" style={{ width: 240, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
+          <input className="search-input" value={kw} onChange={(e) => setKw(e.target.value)} placeholder="科目・摘要・取引先で絞り込み" autoComplete="off" style={{ width: 240, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
           {condActive(cond) && <button type="button" onClick={() => setCond(EMPTY_COND)} style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid ' + accent, background: '#fff', color: accent, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>検索条件で絞り込み中 ×解除</button>}
           <span style={{ fontSize: 12, color: '#9aa5b1' }}>金額・伝票No・付箋・区分などは右上の「検索条件」で指定します</span>
         </>
@@ -151,7 +151,7 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
               <th style={{ ...TH, width: 70 }}>日</th>
               <th style={{ ...TH, width: 70 }}>伝票</th>
               {dt.nameOn && <th style={{ ...TH, width: 130 }}>区分名</th>}
-              <th style={TH}>借方 ― 貸方 ／ {showBiz ? '業者' : '摘要'}</th>
+              <th style={TH}>借方 ― 貸方 ／ {showBiz ? '取引先' : '摘要'}</th>
               <th style={{ ...TH, width: 130, textAlign: 'right' }}>金額</th>
               <th style={ACTION_TH}>{ACTION_HEAD}</th>
             </tr>
@@ -173,7 +173,7 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
                     <span style={{ color: '#9aa5b1' }}>―</span>
                     <span style={{ color: colorDC ? '#b0426a' : '#48565f' }}>{r.kashi}</span>
                   </div>
-                  <div style={{ fontSize: 12, color: '#7a8794', marginTop: 2 }}>{showBiz ? (r.gyosha || '業者なし') : r.tekiyo}{!showBiz && r.gyosha ? `　／ ${r.gyosha}` : ''}{r.cheque ? `　小切手 ${r.cheque}` : ''}</div>
+                  <div style={{ fontSize: 12, color: '#7a8794', marginTop: 2 }}>{showBiz ? (r.gyosha || '取引先なし') : r.tekiyo}{!showBiz && r.gyosha ? `　／ ${r.gyosha}` : ''}{r.cheque ? `　小切手 ${r.cheque}` : ''}</div>
                 </td>
                 <td style={{ ...NUM, fontWeight: 700 }}>{money(r.amount)}</td>
                 <td style={{ ...TD, paddingTop: 5, paddingBottom: 5 }}>{ra.cell(r)}</td>

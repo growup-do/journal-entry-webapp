@@ -158,7 +158,7 @@ export function useEntryForm({ initialForm, seed, afterSubmit, keepAccounts = fa
     setJournal((arr) => [...arr, entry]);
     setLastAdded(id);
     setErr('');
-    // 借方・貸方・摘要・業者・金額をクリア（日付・取引区分・サービス区分は保持）
+    // 借方・貸方・摘要・取引先・金額をクリア（日付・取引区分・サービス区分は保持）
     setForm((s) => ({ ...s, ...(keepAccountsRef.current ? {} : { kariKamoku: '', kashiKamoku: '' }), tekiyo: '', gyosha: '', amount: '' }));
     // フィルターが特定月に絞られていて新規行の月と異なる場合は新規行の月へ自動切替
     setMonthFilter((mf) => (mf != null && mf !== month ? month : mf));
@@ -187,7 +187,7 @@ export function useEntryForm({ initialForm, seed, afterSubmit, keepAccounts = fa
       service: mkField(form.service, '選択'),
       kariKamoku: mkField(form.kariKamoku, '科目を選択'),
       kashiKamoku: mkField(form.kashiKamoku, '科目を選択'),
-      gyosha: mkField(form.gyosha, '業者を選択'),
+      gyosha: mkField(form.gyosha, '取引先を選択'),
     },
     amountFmt: useMemo(() => {
       const n = parseInt(form.amount.replace(/[^0-9]/g, ''), 10);

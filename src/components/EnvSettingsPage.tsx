@@ -112,7 +112,7 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
               <div style={{ fontSize: 14, color: '#7a8794' }}>意味を入れると、伝票入力・日記帳・元帳の付箋ボタンのツールチップと、検索条件・印刷の絞り込みに「赤（{v.fusenNames.赤 || '…'}）」のように表示します。空欄のときは色だけを表示します（既存では利用者が自由に使い分けているため、初期値は空です）。付箋の色は4色固定です。</div>
             </div></div>
             <div style={card}><div style={cardHead}>検索・日付の表記</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
-              {T('noFurigana', 'フリガナ検索を無効にする（科目・業者・摘要の検索でフリガナを使わない）')}
+              {T('noFurigana', 'フリガナ検索を無効にする（科目・取引先・摘要の検索でフリガナを使わない）')}
               {T('eraGannen', '和暦の1年を「元年」と表記する')}
             </div></div>
           </div>

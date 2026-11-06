@@ -55,7 +55,7 @@ interface Props {
   parts?: PartSpec;
   /** 2) 指定科目 */
   target?: ReactNode;
-  /** 指定科目の見出し（例：指定業者／絞り込み／科目検索）。既定は「指定科目」 */
+  /** 指定科目の見出し（例：指定取引先／絞り込み／科目検索）。既定は「指定科目」 */
   targetLabel?: string;
   /** 4) 一覧表の見出し行の右側に出す補足（件数など） */
   listNote?: ReactNode;

@@ -124,7 +124,7 @@ export function VoucherPickerModal({ open, mode, onClose, onPick, accent }: { op
               if (e.key === 'ArrowUp') { e.preventDefault(); setHi(Math.max(cur - 1, 0)); }
               if (e.key === 'Enter' && groups[cur]) { e.preventDefault(); onPick(groups[cur]); }
             }}
-            placeholder="伝票No・科目・摘要・業者・金額で絞り込み"
+            placeholder="伝票No・科目・摘要・取引先・金額で絞り込み"
             autoComplete="off"
             style={{ ...input, width: 300 }}
           />
@@ -405,7 +405,7 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { vouch
               <div>行</div>
               {!st.shared && <div style={{ color: BLUE }}>借方科目</div>}
               {!st.shared && <div style={{ color: PINK }}>貸方科目</div>}
-              <div>摘要</div><div>業者</div><div style={{ textAlign: 'right' }}>金額</div><div>並べ替え／削除</div>
+              <div>摘要</div><div>取引先</div><div style={{ textAlign: 'right' }}>金額</div><div>並べ替え／削除</div>
             </div>
             {st.rows.map((r, i) => {
               const ri = issuesOfRow(r);
@@ -416,7 +416,7 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { vouch
                     {!st.shared && <ComboField id={`ed-r${i}-kari`} kind="account" value={r.kari} onChange={(v) => setRow(i, { kari: v })} onCommit={() => focusId(`ed-r${i}-kashi`)} placeholder="借方科目" disabled={ro} invalid={fieldState(ri, 'kari', 'pair')} fontSize={14} padY={7} listWidth={380} />}
                     {!st.shared && <ComboField id={`ed-r${i}-kashi`} kind="account" value={r.kashi} onChange={(v) => setRow(i, { kashi: v })} onCommit={() => focusId(`ed-r${i}-tekiyo`)} placeholder="貸方科目" disabled={ro} invalid={fieldState(ri, 'kashi', 'pair')} fontSize={14} padY={7} listWidth={380} />}
                     <ComboField id={`ed-r${i}-tekiyo`} kind="summary" freeText value={r.tekiyo} onChange={(v) => setRow(i, { tekiyo: v })} onCommit={() => focusId(`ed-r${i}-gyosha`)} placeholder="摘要" disabled={ro} fontSize={14} padY={7} listWidth={340} />
-                    <ComboField id={`ed-r${i}-gyosha`} kind="vendor" value={r.gyosha} onChange={(v) => setRow(i, { gyosha: v })} onCommit={() => focusId(`ed-r${i}-amount`)} placeholder="業者" disabled={ro} fontSize={14} padY={7} listWidth={300} />
+                    <ComboField id={`ed-r${i}-gyosha`} kind="vendor" value={r.gyosha} onChange={(v) => setRow(i, { gyosha: v })} onCommit={() => focusId(`ed-r${i}-amount`)} placeholder="取引先" disabled={ro} fontSize={14} padY={7} listWidth={300} />
                     <input id={`ed-r${i}-amount`} className="ef-input" disabled={ro} value={fmtNum(r.amount)} onChange={(e) => setRow(i, { amount: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => rowNext(i))} inputMode="numeric" placeholder="0" style={{ ...numInput, padding: '7px 9px', fontWeight: 700, fontSize: 14, borderColor: rowErr[r.key]?.startsWith('金額') ? '#c0392b' : '#cfd8e0' }} />
                     {!viewOnly && <div style={{ display: 'flex', gap: 3 }}>
                       <button type="button" className="ef-act" disabled={ro || i === 0} title="この行を1つ上へ" onClick={() => moveRow(i, -1)} style={smallBtn}>▲</button>
@@ -445,7 +445,7 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { vouch
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
             <Field label="小切手No"><input className="ef-input" disabled={ro} value={st.cheque} onChange={(e) => set({ cheque: e.target.value })} style={cell} /></Field>
             <Field label="予備入力1（摘要予備）"><input className="ef-input" disabled={ro} value={st.spare1} onChange={(e) => set({ spare1: e.target.value })} style={cell} /></Field>
-            <Field label="予備入力2（業者予備）"><input className="ef-input" disabled={ro} value={st.spare2} onChange={(e) => set({ spare2: e.target.value })} style={cell} /></Field>
+            <Field label="予備入力2（取引先予備）"><input className="ef-input" disabled={ro} value={st.spare2} onChange={(e) => set({ spare2: e.target.value })} style={cell} /></Field>
           </div>
 
           {msg && <div role={msg.tone === 'error' ? 'alert' : 'status'} style={{ padding: '8px 12px', borderRadius: 9, fontSize: 14, fontWeight: 700, background: msg.tone === 'error' ? '#fdeee9' : '#eef4fb', color: msg.tone === 'error' ? '#a5281b' : '#2c5f9e', border: '1px solid ' + (msg.tone === 'error' ? '#f0b9ae' : '#c9dcf2') }}>{msg.text}</div>}
@@ -510,7 +510,7 @@ export function AdvancedSearchModal({ open, onClose, cond, onApply, accent }: { 
           <Field label="金額（範囲）"><div style={{ display: 'flex', gap: 4, alignItems: 'center' }}><input className="field-input" value={c.amountMin} onChange={(e) => set({ amountMin: e.target.value.replace(/[^0-9]/g, '') })} placeholder="下限" inputMode="numeric" style={numInput} />〜<input className="field-input" value={c.amountMax} onChange={(e) => set({ amountMax: e.target.value.replace(/[^0-9]/g, '') })} placeholder="上限" inputMode="numeric" style={numInput} /></div><label style={{ fontSize: 12, display: 'flex', gap: 4, marginTop: 4 }}><input type="checkbox" checked={c.beforeAlloc} onChange={(e) => set({ beforeAlloc: e.target.checked })} />按分前の金額で検索する</label></Field>
           <Field label="摘要コード"><input className="field-input" value={c.tekiyoCode} onChange={(e) => set({ tekiyoCode: e.target.value })} style={input} /></Field>
           <Field label="摘要文字（部分一致）"><input className="field-input ring" value={c.tekiyo} onChange={(e) => set({ tekiyo: e.target.value })} style={input} /></Field>
-          <Field label="業者"><ComboField id="search-gyosha" kind="vendor" value={c.gyosha} onChange={(v) => set({ gyosha: v === '（なし）' ? '' : v })} placeholder="コード・名称・フリガナで絞り込み" listWidth={300} padY={7} fontSize={14} /></Field>
+          <Field label="取引先"><ComboField id="search-gyosha" kind="vendor" value={c.gyosha} onChange={(v) => set({ gyosha: v === '（なし）' ? '' : v })} placeholder="コード・名称・フリガナで絞り込み" listWidth={300} padY={7} fontSize={14} /></Field>
           <Field label="伝票No"><input className="field-input" value={c.no} onChange={(e) => set({ no: e.target.value })} style={input} /></Field>
           <Field label="小切手No"><input className="field-input" value={c.cheque} onChange={(e) => set({ cheque: e.target.value })} style={input} /></Field>
           <Field label="部門（親区分で起動時）">{sel(c.dept, (v) => set({ dept: v }), ['（親区分）チャイルド保育園', ...SERVICES])}</Field>

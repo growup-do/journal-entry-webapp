@@ -8,7 +8,7 @@ export const SUPPORT_URL = 'https://www.child.co.jp/';
 
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { SETTINGS_GROUPS, SETTINGS_MENU, displayName, type SettingsGroup } from '../data';
+import { SETTINGS_GROUPS, SETTINGS_MENU, settingsMenuName, type SettingsGroup } from '../data';
 import { startKindOf, useSession } from '../store/session';
 
 interface Props {
@@ -50,7 +50,7 @@ export function SettingsMenu({ accent, active, onNavigate }: Props) {
     const style: CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, width: '100%', textAlign: 'left', padding: '7px 10px', border: 'none', background: on ? '#eef2f6' : 'transparent', borderRadius: 7, fontSize: 14, fontFamily: 'inherit', color, fontWeight: on || g.danger ? 700 : 500, cursor: off ? 'not-allowed' : 'pointer' };
     return (
       <button key={label} type="button" className="menu-sub" data-menu={label} aria-disabled={off} title={off ? `${kind}で起動中は利用できません（入力区分ごとの設定です）` : undefined} onClick={off ? undefined : () => { setOpen(false); onNavigate(label); }} style={style}>
-        <span style={{ flex: 1 }}>{displayName(label)}</span>
+        <span style={{ flex: 1 }}>{settingsMenuName(label)}</span>
         {off && <span style={{ fontSize: 12, fontWeight: 700, padding: '1px 6px', borderRadius: 8, background: '#f1f4f6', color: '#9aa5b1' }}>利用不可</span>}
       </button>
     );
@@ -91,15 +91,15 @@ export function SettingsMenu({ accent, active, onNavigate }: Props) {
             <span style={{ fontSize: 14, fontWeight: 800 }}>各種設定</span>
             <span style={{ fontSize: 12, color: '#9aa5b1' }}>起動中の区分：{session.division}（{kind}）</span>
           </div>
-          {/* 3列で高さをそろえる：左＝マスター設定（11項目）、中＝保守・運用＋登録機能、右＝ユーザー・権限＋年度更新（警告色。右下に離して置く） */}
+          {/* 3列：左＝マスター設定＋登録機能、中＝各種設定、右＝保守・運用＋年度更新（警告色。右下に離して置く） */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12, alignItems: 'start' }}>
-            {group(by('master'))}
             <div style={{ display: 'grid', gap: 12 }}>
-              {group(by('maint'))}
+              {group(by('master'))}
               {group(by('register'))}
             </div>
+            {group(by('config'))}
             <div style={{ display: 'grid', gap: 12 }}>
-              {group(by('users'))}
+              {group(by('maint'))}
               {group(by('update'))}
             </div>
           </div>

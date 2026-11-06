@@ -1,6 +1,6 @@
-// 推移表（科目推移表／資金推移表／業者推移表の共通部品）
-//   骨格は ReportShell 共通：指定科目（業者）→ 表示切替（当年度／前年度・金額単位）→ 一覧。
-//   指定した科目（業者）の月ごとの実績・累計（資金・業者は予算と残高も）を年度で一覧。値はサンプル。
+// 推移表（科目推移表／資金推移表／取引先推移表の共通部品）
+//   骨格は ReportShell 共通：指定科目（取引先）→ 表示切替（当年度／前年度・金額単位）→ 一覧。
+//   指定した科目（取引先）の月ごとの実績・累計（資金・取引先は予算と残高も）を年度で一覧。値はサンプル。
 //   月の行から元帳へドリルダウン：画面遷移せず右側の元帳パネルにその月の元帳を表示。全画面の元帳はパネルの「元帳の画面で開く」から（「← 戻る」で同じ科目・表示に戻る）。
 
 import { useState } from 'react';
@@ -82,8 +82,8 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
       asideWidth={drawer.asideWidth}
       extraTools={isVendor ? <ScreenPrintMenu page="業者推移" accent={accent} /> : undefined}
       title={title}
-      subtitle={<>{isVendor ? '指定した業者' : '指定した科目'}の月ごとの推移を年度で一覧します。月の行の「元帳」ボタン（または行のダブルクリック）で、右側にその月の元帳を表示します。全画面で見たいときはパネルの「元帳の画面で開く」を使います。<span style={{ color: '#b7791f' }}>（表示中の値はサンプルです）</span></>}
-      tools={[{ label: isVendor ? '業者検索' : '科目検索', onClick: () => assist.open('target', isVendor ? 'vendor' : 'account') }, { label: 'グラフ作成', onClick: () => setGraphOpen(true), primary: true }]}
+      subtitle={<>{isVendor ? '指定した取引先' : '指定した科目'}の月ごとの推移を年度で一覧します。月の行の「元帳」ボタン（または行のダブルクリック）で、右側にその月の元帳を表示します。全画面で見たいときはパネルの「元帳の画面で開く」を使います。<span style={{ color: '#b7791f' }}>（表示中の値はサンプルです）</span></>}
+      tools={[{ label: isVendor ? '取引先検索' : '科目検索', onClick: () => assist.open('target', isVendor ? 'vendor' : 'account') }, { label: 'グラフ作成', onClick: () => setGraphOpen(true), primary: true }]}
       period={
         <>
           <span style={{ fontSize: 14, color: '#48565f' }}><b style={{ color: isPrev ? '#b7791f' : '#22303c' }}>{yearLabel}</b>（4月〜3月）</span>
@@ -96,12 +96,12 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
         </>
       }
       notice={isPrev ? <span>前年度（{yearLabel}）の実績を表示しています。前年度の月からは元帳を開けません（当年度に切り替えると開けます）。</span> : undefined}
-      targetLabel={isVendor ? '指定業者' : '指定科目'}
+      targetLabel={isVendor ? '指定取引先' : '指定科目'}
       target={
         <>
           <AssistField
             value={target}
-            placeholder={isVendor ? '業者を選択' : '科目を選択'}
+            placeholder={isVendor ? '取引先を選択' : '科目を選択'}
             open={assist.isOpen('target')}
             onOpen={() => assist.open('target', isVendor ? 'vendor' : 'account')}
             accent={accent}

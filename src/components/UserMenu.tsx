@@ -1,4 +1,4 @@
-// 右上のユーザーアイコン → メニュー（事業者設定／ユーザー設定／メンバーの追加、管理／ログアウト）
+// 右上のユーザーアイコン → メニュー（事業者設定／ユーザー設定／ログアウト）
 // 設定系はプレースホルダ画面へ遷移。ログアウトはプロトタイプでは案内のみ。
 
 import { useEffect, useRef, useState } from 'react';
@@ -81,8 +81,6 @@ function MenuIcon({ kind }: { kind: string }) {
       return <svg {...p}><path d="M3 21h18M5 21V7l7-4 7 4v14" /><path d="M9 21v-6h6v6" /></svg>;
     case 'ユーザー設定':
       return <svg {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>;
-    case 'メンバーの追加、管理':
-      return <svg {...p}><circle cx="9" cy="8" r="3.5" /><path d="M2 20a7 7 0 0 1 14 0" /><path d="M19 8v6M16 11h6" /></svg>;
     default:
       return <svg {...p}><path d="M10 17l5-5-5-5" /><path d="M15 12H3" /><path d="M13 4h6v16h-6" /></svg>;
   }

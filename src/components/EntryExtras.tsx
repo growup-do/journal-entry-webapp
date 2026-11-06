@@ -37,7 +37,7 @@ export function InputSettingsModal({ open, onClose, accent }: { open: boolean; o
           <Toggle on={v.shohyo} onChange={(x) => set({ shohyo: x })} accent={accent} label="証憑の入力をする（有／無）" />
           <Toggle on={v.cheque} onChange={(x) => set({ cheque: x })} accent={accent} label="小切手Noの入力をする" />
           <Toggle on={v.tekiyoCode} onChange={(x) => set({ tekiyoCode: x })} accent={accent} label="摘要コードの入力をする（摘要辞書から検索）" />
-          <Toggle on={v.gyoshaCode} onChange={(x) => set({ gyoshaCode: x })} accent={accent} label="業者コードの入力をする（取引先から検索）" />
+          <Toggle on={v.gyoshaCode} onChange={(x) => set({ gyoshaCode: x })} accent={accent} label="取引先コードの入力をする（取引先から検索）" />
           <Toggle on={v.spare1} onChange={(x) => set({ spare1: x })} accent={accent} label="入力予備１を入力する（用途は自由）" />
           <Toggle on={v.spare2} onChange={(x) => set({ spare2: x })} accent={accent} label="入力予備２を入力する" />
           <Toggle on={v.keepLast} onChange={(x) => set({ keepLast: x })} accent={accent} label="登録後も直前の借方・貸方科目を残す（日付は常に残ります。続けて同じ科目で入力するとき）" />
@@ -215,8 +215,8 @@ export function TemplatePickerModal({ open, onClose, accent, onPick, onNew, mode
           <span style={lbl}>内容</span>
           {!t ? <div style={{ color: '#9aa5b1', fontSize: 14, padding: 20, border: '1px dashed #dde4ea', borderRadius: 10 }}>左の一覧から定型仕訳を選ぶと内容を表示します。</div> : (
             <>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}><thead><tr><th style={TH}>借方</th><th style={TH}>貸方</th><th style={TH}>摘要／業者</th><th style={{ ...TH, textAlign: 'right' }}>金額</th></tr></thead><tbody>{t.lines.map((l, i) => <tr key={i}><td style={TD}>{l.kari}</td><td style={TD}>{l.kashi}</td><td style={TD}>{l.tekiyo}{l.gyosha ? `／${l.gyosha}` : ''}</td><td style={NUM}>{l.amount ? yen(Number(l.amount)) : <span style={{ color: '#9aa5b1' }}>入力</span>}</td></tr>)}</tbody></table>
-              <div style={{ marginTop: 10 }}><Notice>{mode === '定型' ? '呼び出すと、入力中の伝票に科目・摘要・業者・金額が入ります。日付と金額を入力（または訂正）して登録してください。' : '呼び出すと、定型の1行目が入力欄に入ります。登録すると次の行を順に呼び出し、複数の伝票を続けて登録できます。'}</Notice></div>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}><thead><tr><th style={TH}>借方</th><th style={TH}>貸方</th><th style={TH}>摘要／取引先</th><th style={{ ...TH, textAlign: 'right' }}>金額</th></tr></thead><tbody>{t.lines.map((l, i) => <tr key={i}><td style={TD}>{l.kari}</td><td style={TD}>{l.kashi}</td><td style={TD}>{l.tekiyo}{l.gyosha ? `／${l.gyosha}` : ''}</td><td style={NUM}>{l.amount ? yen(Number(l.amount)) : <span style={{ color: '#9aa5b1' }}>入力</span>}</td></tr>)}</tbody></table>
+              <div style={{ marginTop: 10 }}><Notice>{mode === '定型' ? '呼び出すと、入力中の伝票に科目・摘要・取引先・金額が入ります。日付と金額を入力（または訂正）して登録してください。' : '呼び出すと、定型の1行目が入力欄に入ります。登録すると次の行を順に呼び出し、複数の伝票を続けて登録できます。'}</Notice></div>
             </>
           )}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
@@ -421,7 +421,7 @@ export function useEntryTools(o: EntryToolsOptions) {
     const t = blankTemplate(lines[0], TEMPLATE_FORM[o.format]);
     setWiz({ step: 0, t: { ...t, lines: lines.length ? lines : t.lines } });
   };
-  const candidates = () => { if (!openCandidatesOfFocused()) o.toast('科目・摘要・業者の入力欄で使えます（入力欄で文字を打つと候補が出ます）'); };
+  const candidates = () => { if (!openCandidatesOfFocused()) o.toast('科目・摘要・取引先の入力欄で使えます（入力欄で文字を打つと候補が出ます）'); };
 
   const G1 = '伝票の操作', G2 = '行の操作', G3 = '入力補助', G4 = '参照';
   const shortcuts: Shortcut[] = [
@@ -436,7 +436,7 @@ export function useEntryTools(o: EntryToolsOptions) {
     { key: 'C', label: 'チェック（伝票1枚につき1つ）', group: G1, run: () => o.onFlags({ check: !o.flags.check }), disabled: ro },
     { key: 'F', label: '付箋（赤→青→黄→緑→なし。伝票1枚につき1つ）', group: G1, run: () => o.onFlags({ fusen: nextFusen(o.flags.fusen) }), disabled: ro },
     { key: 'V', label: '証憑（有／無。伝票1枚につき1つ）', group: G1, run: () => o.onFlags({ shohyo: !o.flags.shohyo }), disabled: ro },
-    { key: 'J', label: '候補一覧を開く（科目・摘要・業者・区分の検索）', group: G3, run: candidates, disabled: ro },
+    { key: 'J', label: '候補一覧を開く（科目・摘要・取引先・区分の検索）', group: G3, run: candidates, disabled: ro },
     { key: 'K', label: 'カレンダー', group: G3, run: () => setDlg('カレンダー'), disabled: ro },
     { key: 'T', label: '定型仕訳', group: G3, run: () => setDlg('定型'), disabled: ro },
     { key: 'R', label: '連続定型', group: G3, run: () => setDlg('連続'), disabled: ro },

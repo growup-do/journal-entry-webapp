@@ -9,7 +9,7 @@ import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
-import { ACCOUNTS, SUMMARIES, VENDORS } from '../data';
+import { ACCOUNTS, SUMMARIES, VENDORS, displayName } from '../data';
 import { Tabs, Toggle } from './ui';
 import { setSession, useSession } from '../store/session';
 import { DivisionTreeEditor } from './DivisionTreeEditor';
@@ -101,11 +101,11 @@ const MASTERS: Record<string, MasterConfig> = {
   税区分: { title: '税区分', desc: '消費税の区分と税率。仕訳入力時の既定値として使われます。', addLabel: '税区分を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '名称' }, { key: 'rate', label: '税率', type: 'number', width: 90, align: 'right' }, { key: 'kind', label: '課税区分', type: 'select', options: ['課税', '非課税', '不課税', '免税'], width: 120 }], rows: [{ code: '10', name: '課税売上 10%', rate: '10', kind: '課税' }, { code: '11', name: '課税仕入 10%', rate: '10', kind: '課税' }, { code: '08', name: '軽減税率 8%', rate: '8', kind: '課税' }, { code: '20', name: '非課税', rate: '0', kind: '非課税' }, { code: '30', name: '不課税', rate: '0', kind: '不課税' }, { code: '40', name: '免税', rate: '0', kind: '免税' }] },
   摘要辞書: { title: '摘要辞書', desc: 'よく使う摘要の候補。入力時のドロップダウンに表示されます。', addLabel: '摘要を追加', fields: [{ key: 'name', label: '摘要' }, { key: 'acct', label: 'よく使う科目', type: 'select', options: ACCOUNTS.flatMap((g) => g.items) }, { key: 'key', label: 'ショートカット', width: 120 }], rows: SUMMARIES.map((s, i) => ({ name: s, acct: ['法定福利費', '法定福利費', '法定福利費', '職員俸給', '委託費収益', '通信運搬費', '水道光熱費（事業）', 'その他の利用料収益', '印刷製本費', '保育材料費', '手数料'][i] ?? '', key: `;${i + 1}` })) },
   仕訳辞書: { title: '仕訳辞書', desc: '定型仕訳のひな形。単一入力・伝票入力で呼び出して金額だけ入力できます（既存の「連続定型」に相当）。', addLabel: '定型仕訳を追加', fields: [{ key: 'name', label: '名称' }, { key: 'kari', label: '借方科目', type: 'select', options: ACCOUNTS.flatMap((g) => g.items) }, { key: 'kashi', label: '貸方科目', type: 'select', options: ACCOUNTS.flatMap((g) => g.items) }, { key: 'tekiyo', label: '摘要' }, { key: 'amount', label: '金額（任意）', type: 'number', width: 110, align: 'right' }], rows: [{ name: '電話料金', kari: '通信運搬費', kashi: '普通預金（保育園）', tekiyo: '電話料金', amount: '' }, { name: '給与支給（本俸）', kari: '職員俸給', kashi: '普通預金（保育園）', tekiyo: '職員俸給', amount: '' }, { name: '副食費 保護者より', kari: '現金（収入）', kashi: 'その他の利用料収益', tekiyo: '副食費ー保護者より', amount: '4500' }, { name: 'コピー機リース', kari: '賃借料（事業）', kashi: '普通預金（保育園）', tekiyo: 'コピー機リース代', amount: '10995' }] },
-  '業者（合算集計用）': { title: '業者（合算集計用）', desc: '合算区分（法人全体・事業区分）で業者元帳・業者推移表を集計するときに、各区分の業者をまとめて扱うための名簿です。区分ごとの業者コードが違っていても、ここで同じ業者として対応づけます。', addLabel: '合算用の業者を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '業者名' }, { key: 'kana', label: 'フリガナ' }, { key: 'map', label: '対応する区分の業者（区分：コード）' }], rows: [{ code: '901', name: 'みどり電力', kana: 'ミドリデンリョク', map: '001：101 ／ 002：103 ／ 004：101' }, { code: '902', name: '山田文具', kana: 'ヤマダブング', map: '001：102 ／ 002：105' }, { code: '903', name: 'さくら給食サービス', kana: 'サクラキュウショクサービス', map: '002：104 ／ 003：104 ／ 004：102' }] },
-  取引先: { title: '取引先', desc: '業者・保護者・行政などの取引先。仕訳の「業者」欄と業者元帳に使われます。', addLabel: '取引先を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '取引先名' }, { key: 'kind', label: '種別', type: 'select', options: ['業者', '保護者', '行政', 'その他'], width: 100 }, { key: 'tel', label: '連絡先' }, { key: 'note', label: '備考' }], rows: VENDORS.filter((v) => v !== '（なし）').map((v, i) => ({ code: String(101 + i), name: v, kind: v === '保護者' ? '保護者' : v === '市役所' ? '行政' : '業者', tel: v === '保護者' ? '—' : `03-0000-00${10 + i}`, note: '' })) },
+  '取引先（合算集計用）': { title: '取引先（合算集計用）', desc: '合算区分（法人全体・事業区分）で取引先元帳・取引先推移表を集計するときに、各区分の取引先をまとめて扱うための名簿です。区分ごとの取引先コードが違っていても、ここで同じ取引先として対応づけます。', addLabel: '合算用の取引先を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '取引先名' }, { key: 'kana', label: 'フリガナ' }, { key: 'map', label: '対応する区分の取引先（区分：コード）' }], rows: [{ code: '901', name: 'みどり電力', kana: 'ミドリデンリョク', map: '001：101 ／ 002：103 ／ 004：101' }, { code: '902', name: '山田文具', kana: 'ヤマダブング', map: '001：102 ／ 002：105' }, { code: '903', name: 'さくら給食サービス', kana: 'サクラキュウショクサービス', map: '002：104 ／ 003：104 ／ 004：102' }] },
+  取引先: { title: '取引先', desc: '仕入先・保護者・行政などの取引先。仕訳の「取引先」欄と取引先元帳に使われます。', addLabel: '取引先を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '取引先名' }, { key: 'kind', label: '種別', type: 'select', options: ['仕入先', '保護者', '行政', 'その他'], width: 100 }, { key: 'tel', label: '連絡先' }, { key: 'note', label: '備考' }], rows: VENDORS.filter((v) => v !== '（なし）').map((v, i) => ({ code: String(101 + i), name: v, kind: v === '保護者' ? '保護者' : v === '市役所' ? '行政' : '仕入先', tel: v === '保護者' ? '—' : `03-0000-00${10 + i}`, note: '' })) },
 };
 
-function MasterPage({ variant, accent, label, tabs }: { variant: 'form' | 'sheet'; accent: string; label: string; tabs?: ReactNode }) {
+function MasterPage({ variant, accent, label, tabs, title }: { variant: 'form' | 'sheet'; accent: string; label: string; tabs?: ReactNode; /** 画面タイトル（省略時は表示名） */ title?: string }) {
   const cfg = MASTERS[label];
   const sess = useSession();
   const [rows, setRows] = useState<Row[]>(() => cfg.rows.map((r, i) => ({ ...r, _id: String(i + 1), _on: '1' })));
@@ -151,7 +151,7 @@ function MasterPage({ variant, accent, label, tabs }: { variant: 'form' | 'sheet
     setEdit(null);
   };
   return (
-    <Shell variant={variant} title={cfg.title} desc={cfg.desc} actions={<>
+    <Shell variant={variant} title={title ?? displayName(cfg.title)} desc={cfg.desc} actions={<>
       {/* CSV取込・出力：部門は簡単に変更できない項目のため不要（チャイルド社回答 2026/10/2）。税区分は検討中のため暫定で表示 */}
       {label === '税区分' && <ScreenPrintMenu page="税区分" accent={accent} />}
       {label !== '部門' && <button type="button" className="btn-outline" onClick={() => setImp({ open: true, name: '', rows: [], byHeader: false, error: '' })} style={btn()}>CSV取込</button>}
@@ -234,54 +234,12 @@ function MasterPage({ variant, accent, label, tabs }: { variant: 'form' | 'sheet
   );
 }
 
-/* ---------------- 事業者 ---------------- */
+/* ---------------- 法人・区分（画面キーは「事業者」） ---------------- */
+/** 「法人情報」タブは廃止（確認メモ #67）。法人名は区分階層の法人のカードを選んで変更する */
 function OrgPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: string }) {
-  const toast = useToast();
-  const [f, setF] = useState({ name: '社会福祉法人 チャイルド保育園', kana: 'シャカイフクシホウジン チャイルドホイクエン', no: '1234567890123', zip: '100-0001', addr: '東京都千代田区千代田1-1-1', tel: '03-0000-0000', rep: '園長 太郎', fyStart: '4月1日', fyEnd: '3月31日', std: '社会福祉法人会計基準（令和8年度）', rounding: '切り捨て', tax: '税込経理' });
-  const [sites, setSites] = useState([{ code: '01', name: '本部', kind: '法人本部' }, { code: '02', name: 'チャイルド保育園', kind: '保育所' }]);
-  const [tab, setTab] = useState('法人情報');
-  const set = (k: keyof typeof f, v: string) => setF({ ...f, [k]: v });
-  const card: CSSProperties = { border: '1px solid #e2e8ee', borderRadius: 12, overflow: 'hidden' };
-  const h: CSSProperties = { padding: '10px 14px', background: '#f6f8fa', fontSize: 14, fontWeight: 700, borderBottom: '1px solid #eef2f5' };
   return (
-    <Shell variant={variant} title="事業者" desc="法人の基本情報・会計期間・区分階層（事業区分／拠点区分／サービス区分／小サービス区分）・合算区分を管理します。" actions={<button type="button" className="submit-btn" onClick={() => toast.show('事業者情報を保存しました（プロトタイプ）')} style={btn(accent, true)}>保存</button>}>
-      <ToastView msg={toast.msg} />
-      <Tabs items={['法人情報', '区分階層・合算区分']} current={tab} onChange={setTab} accent={accent} />
-      {tab === '区分階層・合算区分' && <DivisionTreeEditor accent={accent} />}
-      {tab === '法人情報' && <div style={{ padding: 22, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 18, alignItems: 'start' }}>
-        <div style={card}>
-          <div style={h}>法人情報</div>
-          <div style={{ padding: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div style={{ gridColumn: 'span 2' }}><span style={lbl}>法人名</span><input className="field-input ring" value={f.name} onChange={(e) => set('name', e.target.value)} style={input} /></div>
-            <div style={{ gridColumn: 'span 2' }}><span style={lbl}>法人名（カナ）</span><input className="field-input ring" value={f.kana} onChange={(e) => set('kana', e.target.value)} style={input} /></div>
-            <div><span style={lbl}>法人番号</span><input className="field-input ring" value={f.no} onChange={(e) => set('no', e.target.value)} style={input} /></div>
-            <div><span style={lbl}>代表者</span><input className="field-input ring" value={f.rep} onChange={(e) => set('rep', e.target.value)} style={input} /></div>
-            <div><span style={lbl}>郵便番号</span><input className="field-input ring" value={f.zip} onChange={(e) => set('zip', e.target.value)} style={input} /></div>
-            <div><span style={lbl}>電話番号</span><input className="field-input ring" value={f.tel} onChange={(e) => set('tel', e.target.value)} style={input} /></div>
-            <div style={{ gridColumn: 'span 2' }}><span style={lbl}>所在地</span><input className="field-input ring" value={f.addr} onChange={(e) => set('addr', e.target.value)} style={input} /></div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <div style={card}>
-            <div style={h}>会計期間・会計方針</div>
-            <div style={{ padding: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div><span style={lbl}>期首</span><input className="field-input" value={f.fyStart} onChange={(e) => set('fyStart', e.target.value)} style={input} /></div>
-              <div><span style={lbl}>期末</span><input className="field-input" value={f.fyEnd} onChange={(e) => set('fyEnd', e.target.value)} style={input} /></div>
-              <div style={{ gridColumn: 'span 2' }}><span style={lbl}>適用する会計基準</span><select value={f.std} onChange={(e) => set('std', e.target.value)} style={input}><option>社会福祉法人会計基準（令和8年度）</option><option>社会福祉法人会計基準（令和7年度）</option></select></div>
-              <div><span style={lbl}>端数処理</span><select value={f.rounding} onChange={(e) => set('rounding', e.target.value)} style={input}>{['切り捨て', '四捨五入', '切り上げ'].map((o) => <option key={o}>{o}</option>)}</select></div>
-              <div><span style={lbl}>消費税の経理方式</span><select value={f.tax} onChange={(e) => set('tax', e.target.value)} style={input}>{['税込経理', '税抜経理'].map((o) => <option key={o}>{o}</option>)}</select></div>
-            </div>
-          </div>
-          <div style={card}>
-            <div style={{ ...h, display: 'flex', alignItems: 'center' }}>拠点区分 <button type="button" className="btn-outline" onClick={() => setSites([...sites, { code: String(sites.length + 1).padStart(2, '0'), name: '', kind: '保育所' }])} style={{ ...btn(), marginLeft: 'auto', padding: '4px 10px', fontSize: 12 }}>＋ 追加</button></div>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead><tr><th style={{ ...TH, width: 70 }}>コード</th><th style={TH}>拠点名</th><th style={{ ...TH, width: 140 }}>種別</th><th style={{ ...TH, width: 60 }} /></tr></thead>
-              <tbody>{sites.map((s, i) => <tr key={i}><td style={TD}>{s.code}</td><td style={TD}><input className="field-input" value={s.name} onChange={(e) => setSites(sites.map((x, k) => (k === i ? { ...x, name: e.target.value } : x)))} placeholder="拠点名" style={{ ...input, padding: '5px 8px' }} /></td><td style={TD}><select value={s.kind} onChange={(e) => setSites(sites.map((x, k) => (k === i ? { ...x, kind: e.target.value } : x)))} style={{ ...input, padding: '5px 8px' }}>{['法人本部', '保育所', '認定こども園', '子育て支援', 'その他'].map((o) => <option key={o}>{o}</option>)}</select></td><td style={TD}><button type="button" className="btn-outline" onClick={() => setSites(sites.filter((_, k) => k !== i))} style={{ ...btn('#c0392b'), padding: '3px 8px', fontSize: 12 }}>削除</button></td></tr>)}</tbody>
-            </table>
-            <div style={{ padding: '8px 14px', fontSize: 12, color: '#9aa5b1' }}>区分の階層と伝票入力区分の詳細は「区分階層・合算区分」タブで設定します。</div>
-          </div>
-        </div>
-      </div>}
+    <Shell variant={variant} title={displayName('事業者')} desc="区分階層（法人 › 事業区分 › 拠点区分 › サービス区分 › 小サービス区分）と合算区分を管理します。法人名は、区分階層で法人のカードを選んで変更します。">
+      <DivisionTreeEditor accent={accent} />
     </Shell>
   );
 }
@@ -368,12 +326,12 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
   );
 }
 
-/* ---------------- 業者（業者＋合算集計用） ---------------- */
+/* ---------------- 取引先（取引先＋合算集計用） ---------------- */
 function VendorPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: string }) {
-  const [tab, setTab] = useState('業者');
-  const tabs = <Tabs items={['業者', '業者（合算集計用）']} current={tab} onChange={setTab} accent={accent} />;
-  if (tab === '業者') return <MasterPage key="取引先" variant={variant} accent={accent} label="取引先" tabs={tabs} />;
-  return <MasterPage key="業者（合算集計用）" variant={variant} accent={accent} label="業者（合算集計用）" tabs={tabs} />;
+  const [tab, setTab] = useState('取引先');
+  const tabs = <Tabs items={['取引先', '取引先（合算集計用）']} current={tab} onChange={setTab} accent={accent} />;
+  if (tab === '取引先') return <MasterPage key="取引先" variant={variant} accent={accent} label="取引先" tabs={tabs} />;
+  return <MasterPage key="取引先（合算集計用）" variant={variant} accent={accent} label="取引先（合算集計用）" tabs={tabs} title={displayName('取引先')} />;
 }
 
 /* ---------------- 摘要辞書（辞書＋自動補完候補） ---------------- */
@@ -381,7 +339,7 @@ function SummaryDictPage({ variant, accent }: { variant: 'form' | 'sheet'; accen
   const [tab, setTab] = useState('摘要辞書');
   if (tab === '摘要辞書') return <MasterPage key="摘要辞書" variant={variant} accent={accent} label="摘要辞書" tabs={<Tabs items={['摘要辞書', '自動補完候補']} current={tab} onChange={setTab} accent={accent} />} />;
   return (
-    <Shell variant={variant} title="摘要辞書" desc="摘要の自動補完候補を管理します（伝票入力時に過去の摘要から候補を表示）。">
+    <Shell variant={variant} title={displayName('摘要辞書')} desc="摘要の自動補完候補を管理します（伝票入力時に過去の摘要から候補を表示）。">
       <Tabs items={['摘要辞書', '自動補完候補']} current={tab} onChange={setTab} accent={accent} />
       <SummaryAutoCompleteTab accent={accent} />
     </Shell>

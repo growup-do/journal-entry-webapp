@@ -23,7 +23,8 @@ export function DivisionInfoDialog({ open, onClose, accent }: { open: boolean; o
   const [snap] = useState(() => { const g = getSession(); return { tree: g.tree, corpStartDate: g.corpStartDate, corpTax: g.corpTax }; });
   const all = flattenDivisions(s.tree);
   const entries = all.filter((x) => x.node.entry);
-  const parents = all.filter((x) => x.node.kind === '事業区分' || x.node.kind === '拠点区分' || x.node.kind === 'サービス区分');
+  // 集計区分（格納先）に選べるのは親区分だけ（入力区分の配下には区分を置けない。確認メモ #69）
+  const parents = all.filter((x) => !x.node.entry && (x.node.kind === '事業区分' || x.node.kind === '拠点区分' || x.node.kind === 'サービス区分'));
   const parentOf = (id: string) => all.find((x) => x.node.id === id)?.path.slice(-2, -1)[0] ?? '';
   const update = (id: string, patch: Partial<DivisionNode>) => setSession({ tree: mapTree(s.tree, (n) => (n.id === id ? { ...n, ...patch } : n))! });
   /** 集計区分の変更＝階層上の移動（元の親から外し、新しい親の末尾に追加） */
@@ -47,7 +48,7 @@ export function DivisionInfoDialog({ open, onClose, accent }: { open: boolean; o
   };
   const cancel = () => { setSession({ tree: snap.tree, corpStartDate: snap.corpStartDate, corpTax: snap.corpTax }); onClose(); };
   const ok = () => {
-    if (!/^\d{4}0401$/.test(s.corpStartDate)) { toast.show('データ開始年月日は 西暦8桁で、下4桁は必ず「0401」です（例：20240401）'); setTab('法人情報の設定'); return; }
+    if (!/^\d{4}0401$/.test(s.corpStartDate)) { toast.show('データ開始年は 西暦4桁で入力してください（例：2024）'); setTab('法人情報の設定'); return; }
     if (entries.some((x) => !x.node.code || !x.node.name.trim())) { toast.show('区分コードと名称が空の伝票入力区分があります'); setTab('伝票入力区分の設定'); return; }
     onClose();
     toast.show('法人および区分の設定を保存しました');
@@ -75,13 +76,16 @@ export function DivisionInfoDialog({ open, onClose, accent }: { open: boolean; o
             <input className="field-input ring" value={s.tree.name} onChange={(e) => update(s.tree.id, { name: e.target.value })} style={input} />
             <div style={{ fontSize: 12, color: '#7a8794', marginTop: 6 }}>最初のスペースの前を「法人種別」、後を「法人名称」として区分選択画面に表示します → 法人種別 <b style={{ color: '#22303c' }}>{corpKind}</b>／法人名称 <b style={{ color: '#22303c' }}>{corpName || '（未設定）'}</b></div>
           </Field>
-          <Field label="データ開始年月日（西暦8桁・下4桁は 0401）">
-            <input className="field-input ring" value={s.corpStartDate} onChange={(e) => setSession({ corpStartDate: e.target.value.replace(/[^0-9]/g, '').slice(0, 8) })} placeholder="20240401" style={{ ...input, fontVariantNumeric: 'tabular-nums', borderColor: /^\d{4}0401$/.test(s.corpStartDate) ? '#cfd8e0' : '#e0997c' }} />
+          <Field label="データ開始年（西暦4桁。会計年度は4月1日から）">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input className="field-input ring" value={s.corpStartDate.slice(0, 4)} inputMode="numeric" onChange={(e) => setSession({ corpStartDate: e.target.value.replace(/[^0-9]/g, '').slice(0, 4) + '0401' })} placeholder="2024" style={{ ...input, width: 110, fontVariantNumeric: 'tabular-nums', borderColor: /^\d{4}0401$/.test(s.corpStartDate) ? '#cfd8e0' : '#e0997c' }} />
+              <span style={{ fontSize: 14, color: '#5b6773' }}>年</span>
+            </div>
           </Field>
           <Field label="法人税納税の有無">
             <select value={s.corpTax} onChange={(e) => setSession({ corpTax: e.target.value })} style={input}>{['非課税', '税効果会計を適用しない', '税効果会計を適用する'].map((o) => <option key={o}>{o}</option>)}</select>
           </Field>
-          <div style={{ gridColumn: 'span 2' }}><Notice>会計年度は 4月1日〜3月31日に限定されます。大部分の社会福祉法人では「非課税」を選択します（運用指針 20(5)）。法人番号・所在地などは設定「事業者」で管理します。</Notice></div>
+          <div style={{ gridColumn: 'span 2' }}><Notice>会計年度は 4月1日〜3月31日に限定されます。大部分の社会福祉法人では「非課税」を選択します（運用指針 20(5)）。</Notice></div>
         </div>
       )}
 

@@ -22,7 +22,7 @@ const HIMOKU_FUND = [[1, '事業活動収入計 (1)'], [2, '事業活動支出�
 
 type Cls = AccountMeta['cls'];
 /** 項目（集計上の見出し）。top＝大項目、name＝中項目。科目のコードはこの項目から自動設定する */
-interface GroupDef { name: string; top: string; cls: Cls; himoku: string; fundHimoku: string; prefix: string; fixed?: boolean }
+interface GroupDef { name: string; top: string; cls: Cls; himoku: string; fundHimoku: string; prefix: string; fixed?: boolean; /** 以下は項目の編集で設定する内容（確認メモ #83）。未設定なら name／自動のコードを使う */ printName?: string; dispName?: string; kana?: string; kubun?: string; /** 画面から追加した項目 */ custom?: boolean }
 const GROUPS: GroupDef[] = [
   { name: '現金及び預金', top: '流動資産', cls: '現預金', himoku: '50', fundHimoku: '', prefix: '11' },
   { name: '事業未収金', top: '流動資産', cls: '資産', himoku: '50', fundHimoku: '', prefix: '12' },
@@ -44,7 +44,11 @@ const groupDef = (g: string) => GROUPS.find((x) => x.name === g) ?? GROUPS[0];
 const groupIdx = (g: string) => GROUPS.findIndex((x) => x.name === g);
 /** 区分コード（3-2-2-2-2 桁）：表示コードの上2桁＝項目、下2桁＝項目内の連番 */
 const kubunOf = (code: string) => `${code.slice(0, 2).padEnd(2, '0')}0-${code.slice(2, 4).padEnd(2, '0')}-00-00-00`;
-const headKubun = (g: GroupDef) => `${g.prefix}0-00-00-00-00`;
+const headKubun = (g: GroupDef) => g.kubun ?? `${g.prefix}0-00-00-00-00`;
+/** 項目の表示名（表示用科目名称。未設定なら項目名） */
+const gLabel = (g: GroupDef) => g.dispName || g.name;
+/** 大項目（項目の親）の一覧 */
+const topsOf = () => GROUPS.map((g) => g.top).filter((t, i, a) => a.indexOf(t) === i);
 
 /** 社会福祉法人会計基準の標準科目（サンプル）。「科目を追加」でチェックして一覧へ追加する */
 interface StdItem { name: string; kana: string; group: string; desc: string; noFund?: boolean }
@@ -122,6 +126,7 @@ const COLOR_PRESETS: { label: string; fg: string; bg: string }[] = [{ label: '�
 interface AcctRow extends AccountMeta {
   group: string; himoku: string; kubun: string; printName: string; dispName: string; siteNames: Record<string, string>;
   a: '1' | '2'; b: string; c: '0' | '1'; d: '0' | '1'; e: string; f: string; internal: string; partner: string; fundHimoku: string; fundKubun: string; key: number;
+  /** 対応する資金科目（貸方側）。借方側は fund（確認メモ #85） */ fundCr: string;
   desc: string; manualCode: boolean; color: { fg: string; bg: string } | null; depr: boolean; oneYear: boolean; meisai: string;
 }
 const fundOf = (name: string, cls: Cls, noFund?: boolean) => (noFund ? '—' : cls === '費用' ? name.replace(/（.*）/, '') + '支出' : cls === '収益' ? name.replace(/収益$/, '収入') : cls === '現預金' ? '（支払資金）' : '—');
@@ -132,6 +137,7 @@ const makeRow = (m: AccountMeta, group: string, key: number, desc = ''): AcctRow
     a: m.cls === '収益' || m.cls === '負債' ? '2' : '1', b: m.cls === '現預金' ? (m.name.includes('現金') ? B_OPTS[1] : B_OPTS[2]) : B_OPTS[0], c: /手当|俸給/.test(m.name) ? '1' : '0', d: '1',
     e: pl ? (noFund ? E_OPTS[3] : m.cls === '費用' ? E_OPTS[2] : E_OPTS[1]) : m.cls === '現預金' || g.top === '流動資産' || g.name === '流動負債' ? E_OPTS[4] : E_OPTS[0],
     f: '0', internal: INTERNAL_OPTS[0], partner: '', fundHimoku: pl && !noFund ? g.fundHimoku : '', fundKubun: pl && !noFund ? kubunOf(m.code) : '', key,
+    fundCr: m.fund,
     desc: desc || DESC[m.name] || `「${g.name}」に属する科目です。`, manualCode: false, color: null, depr: !!g.fixed && m.name !== '土地' && !/貸付金|引当資産/.test(m.name), oneYear: /1年以内/.test(m.name),
     meisai: /借入金$/.test(m.name) ? MEISAI_OPTS[1] : g.fixed ? MEISAI_OPTS[2] : /引当金$/.test(m.name) ? MEISAI_OPTS[3] : /補助金/.test(m.name) ? MEISAI_OPTS[4] : '',
   };
@@ -199,6 +205,12 @@ const CLS_CHIPS: Cls[] = ['現預金', '資産', '負債', '収益', '費用'];
 export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: string }) {
   const toast = useToast();
   const [tab, setTab] = useState('勘定科目');
+  /** 選択中の項目（中項目）。項目を選ぶと右側で項目の内容を編集できる（確認メモ #83） */
+  const [selGroup, setSelGroup] = useState<string | null>(null);
+  /** 項目の定義（GROUPS）を書き換えたときに再描画するためのカウンタ */
+  const [, setGv] = useState(0);
+  /** 項目を追加 */
+  const [gAdd, setGAdd] = useState<null | { top: string; name: string; disp: string; kana: string }>(null);
   const [rows, setRows] = useState<AcctRow[]>(initRows);
   const [selKey, setSelKey] = useState<number | null>(null);
   const [q, setQ] = useState('');
@@ -239,6 +251,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
   /** 初期状態に戻す：区分の事業区分（事業種別）に従って使用科目を初期化する（旧【使用科目設定更新】は更新ではなく初期化の動き。確認メモ #52） */
   const resetUse = () => {
     const next = { ...use };
+    Object.keys(next).forEach((k) => { if (k.startsWith('#') && useCols.some((sv) => k.endsWith('|' + sv))) delete next[k]; });
     let n = 0;
     initRows().forEach((m) => useCols.forEach((sv) => {
       const def = !(sv.startsWith('005') && m.cls !== '現預金') && m.name !== '立替金' && m.name !== 'その他手当';
@@ -265,7 +278,48 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
   const fundTab = tab === '資金科目';
   const sel = rows.find((r) => r.key === selKey) ?? null;
   const usedCount = (r: AcctRow) => SERVICES.filter((s) => use[r.name + '|' + s]).length;
-  const pick = (key: number | null) => { setSelKey(key); setDescEdit(false); };
+  const pick = (key: number | null) => { setSelKey(key); setDescEdit(false); if (key != null) setSelGroup(null); };
+  const pickGroup = (name: string | null) => { setSelGroup(name); if (name) { setSelKey(null); setDescEdit(false); } };
+  const selG = selGroup ? GROUPS.find((g) => g.name === selGroup) ?? null : null;
+  const updGroup = (p: Partial<GroupDef>) => { if (!selG) return; GROUPS[GROUPS.indexOf(selG)] = { ...selG, ...p }; setGv((v) => v + 1); };
+  /** 項目の親（大項目）を変える：新しい親の末尾へ移し、貸借・費目は新しい親に合わせる */
+  const moveGroupTop = (g: GroupDef, top: string) => {
+    const ref = GROUPS.find((x) => x.top === top);
+    if (g.top === top || !ref) return;
+    GROUPS.splice(GROUPS.indexOf(g), 1);
+    let j = -1; GROUPS.forEach((x, k) => { if (x.top === top) j = k; });
+    GROUPS.splice(j + 1, 0, { ...g, top, cls: ref.cls, himoku: ref.himoku, fundHimoku: ref.fundHimoku, fixed: ref.fixed });
+    setRows((rs) => sortRows(rs.map((r) => (r.group === g.name ? { ...r, cls: ref.cls, kind: ref.cls === '費用' || ref.cls === '収益' ? 'PL' : 'BS', himoku: r.manualCode ? r.himoku : ref.himoku } : r))));
+    setGv((v) => v + 1);
+  };
+  const openGroupAdd = () => setGAdd({ top: (selG ?? (sel ? groupDef(sel.group) : GROUPS[0])).top, name: '', disp: '', kana: '' });
+  const addGroup = () => {
+    if (!gAdd || !gAdd.name.trim()) return;
+    const name = gAdd.name.trim();
+    if (GROUPS.some((g) => g.name === name)) { toast.show('同じ名称の項目がすでにあります'); return; }
+    const ref = GROUPS.find((x) => x.top === gAdd.top)!;
+    const used = GROUPS.map((g) => g.prefix);
+    let p = Number(ref.prefix); while (used.includes(String(p))) p += 1;
+    let j = -1; GROUPS.forEach((x, k) => { if (x.top === gAdd.top) j = k; });
+    GROUPS.splice(j + 1, 0, { name, top: gAdd.top, cls: ref.cls, himoku: ref.himoku, fundHimoku: ref.fundHimoku, prefix: String(p), fixed: ref.fixed, printName: name, dispName: gAdd.disp.trim() || name, kana: gAdd.kana.trim(), custom: true });
+    setGAdd(null); setQ(''); setClsF(null); setUseF(null); if (fundTab) setTab('勘定科目');
+    setBlankGroup(name); pickGroup(name);
+    toast.show(`項目「${name}」を「${gAdd.top}」の下に追加しました（費目・区分コードは親から自動で設定）`);
+  };
+  const deleteGroup = (g: GroupDef) => {
+    if (rows.some((r) => r.group === g.name)) { toast.show('配下に科目がある項目は削除できません'); return; }
+    if (!confirm(`項目「${gLabel(g)}」を削除しますか？`)) return;
+    GROUPS.splice(GROUPS.indexOf(g), 1); pickGroup(null); setGv((v) => v + 1); toast.show(`項目「${gLabel(g)}」を削除しました`);
+  };
+  /** 対応する資金科目の候補（登録済みの資金科目） */
+  const fundNames = Array.from(new Set(rows.flatMap((r) => [r.fund, r.fundCr]).filter((f) => f && f !== '—')));
+  /** 使用科目設定：項目のチェック（未設定のときは、配下に使用する科目があれば使用とみなす）。確認メモ #89 */
+  const groupUsed = (g: string, svc: string) => use['#' + g + '|' + svc] ?? rows.some((m) => m.group === g && use[m.name + '|' + svc]);
+  const toggleGroupUse = (g: string, svc: string) => {
+    const v = !groupUsed(g, svc);
+    const svcs = link === '横一列' ? SERVICES : [svc];
+    setUse((u) => { const n = { ...u }; svcs.forEach((sv) => { n['#' + g + '|' + sv] = v; rows.forEach((m) => { if (m.group === g) n[m.name + '|' + sv] = v; }); }); return n; });
+  };
   const openSwap = () => { if (!sel) return; const keys = rows.filter((r) => r.group === sel.group).map((r) => r.key); setSwap({ group: sel.group, keys, cur: keys.indexOf(sel.key), drag: null }); };
   const moveSwap = (from: number, to: number) => setSwap((sw) => { if (!sw || to < 0 || to >= sw.keys.length || from === to) return sw; const keys = [...sw.keys]; const [k] = keys.splice(from, 1); keys.splice(to, 0, k); return { ...sw, keys, cur: to }; });
   const applySwap = () => {
@@ -295,12 +349,14 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
   // 階層表示：大項目 ＞ 中項目 ＞ 科目（rows は項目順に並んでいる）
   type Item = { t: 'top'; name: string; count: number } | { t: 'group'; g: GroupDef; count: number } | { t: 'row'; r: AcctRow };
   const items: Item[] = [];
-  { let lastTop = ''; let lastGroup = '';
-    visible.forEach((r) => {
-      const g = groupDef(r.group);
-      if (g.top !== lastTop) { items.push({ t: 'top', name: g.top, count: visible.filter((x) => groupDef(x.group).top === g.top).length }); lastTop = g.top; lastGroup = ''; }
-      if (g.name !== lastGroup) { items.push({ t: 'group', g, count: visible.filter((x) => x.group === g.name).length }); lastGroup = g.name; }
-      if (filtering || !collapsed.includes(g.name)) items.push({ t: 'row', r });
+  { let lastTop = '';
+    GROUPS.forEach((g) => {
+      const rs = visible.filter((r) => r.group === g.name);
+      // 絞り込み中・資金科目タブでは、該当する科目のある項目だけを出す。それ以外は、科目のない項目（追加したばかりの項目）も出す
+      if (!rs.length && (filtering || fundTab)) return;
+      if (g.top !== lastTop) { items.push({ t: 'top', name: g.top, count: visible.filter((x) => groupDef(x.group).top === g.top).length }); lastTop = g.top; }
+      items.push({ t: 'group', g, count: rs.length });
+      if (filtering || !collapsed.includes(g.name)) rs.forEach((r) => items.push({ t: 'row', r }));
     });
   }
 
@@ -331,7 +387,8 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
   const runRecalc = () => { setRecalc(0); const t0 = Date.now(); const id = window.setInterval(() => { const p = Math.min(100, Math.round((Date.now() - t0) / 30)); setRecalc(p); if (p >= 100) { window.clearInterval(id); setTimeout(() => { setRecalc(null); toast.show('仕訳の更新が完了しました（全伝票の勘定科目と資金科目の連動を整理）'); }, 400); } }, 100); };
   const toggleUse = (name: string, svc: string) => {
     const k = name + '|' + svc; const v = !use[k];
-    setUse((u) => { const n = { ...u, [k]: v }; if (link === '区分内') rows.forEach((m) => { n[m.name + '|' + svc] = v; }); if (link === '横一列') SERVICES.forEach((s) => { n[name + '|' + s] = v; }); return n; });
+    const grp = rows.find((m) => m.name === name)?.group;
+    setUse((u) => { const n = { ...u, [k]: v }; if (link === '区分内') rows.forEach((m) => { n[m.name + '|' + svc] = v; }); if (link === '横一列') SERVICES.forEach((s) => { n[name + '|' + s] = v; }); if (v && grp) (link === '横一列' ? SERVICES : [svc]).forEach((sv) => { n['#' + grp + '|' + sv] = true; }); return n; });
   };
   const small: CSSProperties = { ...input, padding: '6px 8px', fontSize: 14 };
   const ro: CSSProperties = { ...small, background: '#f5f7f9', color: '#48565f', fontVariantNumeric: 'tabular-nums' };
@@ -355,29 +412,30 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
   };
 
   const listTab = tab === '勘定科目' || fundTab;
-  const cols = sel ? 'minmax(230px, 1fr) 76px 132px 48px 50px' : 'minmax(280px, 1.4fr) 84px 140px 56px minmax(150px, 1fr) 150px 60px';
+  const panelOpen = !!sel || !!selG;
+  const cols = panelOpen ? 'minmax(230px, 1fr) 76px 132px 48px 50px' : 'minmax(280px, 1.4fr) 84px 140px 56px minmax(150px, 1fr) 150px 60px';
   const cell: CSSProperties = { padding: '0 10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
   const mono: CSSProperties = { ...cell, fontVariantNumeric: 'tabular-nums', color: '#48565f' };
   const hcell: CSSProperties = { ...cell, fontSize: 12, fontWeight: 700, color: '#6b7783' };
   const scrollH = 'calc(100vh - 330px)';
 
   return (
-    <SettingsShell variant={variant} title={displayName('勘定科目')} desc="科目の一覧（項目＝集計上の見出し／科目＝伝票に入力する科目）を縦に大きく表示し、行を選ぶと右側に詳細を表示します。科目の追加は標準科目にチェックを入れるだけで、コードは自動設定されます。既存の【科目設定】【費目入力】【使用科目設定】に相当します。" actions={<>
-      <button type="button" className="btn-outline" onClick={() => setPreview(true)} style={btn()}>プレビュー</button>
-      <button type="button" className="btn-outline" onClick={() => exportList('excel')} style={btn()}>Excel出力</button>
-      <button type="button" className="btn-outline" onClick={() => exportList('csv')} style={btn()}>ファイル（CSV）</button>
-      <ScreenPrintMenu accent={accent} actions={[{ items: [{ name: fundTab ? '資金科目一覧' : '勘定科目一覧', onClick: () => exportList('print') }] }]} />
+    <SettingsShell variant={variant} title={displayName('勘定科目')} desc="科目の一覧（項目＝集計上の見出し／科目＝伝票に入力する科目）を縦に大きく表示し、行を選ぶと右側に詳細を表示します。項目か科目かは追加するときに選び（「＋ 項目を追加」「＋ 科目を追加」）、追加した後は変更できません。科目の追加は標準科目にチェックを入れるだけで、コードは自動設定されます。既存の【科目設定】【費目入力】【使用科目設定】に相当します。" actions={<>
+      {/* プレビュー／Excel出力／ファイル（CSV）は「印刷」を押してから選ぶ（確認メモ #84） */}
+      <ScreenPrintMenu accent={accent} actions={[{ label: fundTab ? '資金科目一覧' : '勘定科目一覧', items: [{ name: '印刷', onClick: () => exportList('print') }, { name: 'プレビュー', onClick: () => setPreview(true) }, { name: 'Excel出力', onClick: () => exportList('excel') }, { name: 'ファイル（CSV）', onClick: () => exportList('csv') }] }]} />
       <button type="button" className="btn-outline" onClick={() => setCautionOpen(true)} style={btn()}>注意事項</button>
       <button type="button" className="btn-outline" onClick={() => { if (confirm('仕訳更新を開始します。1年分の全伝票を対象に、勘定科目と資金科目の連動を整理・更新します。途中で中断はできません。よろしいですか？')) runRecalc(); }} style={btn('#b7791f')}>仕訳の再集計</button>
+      {listTab && !fundTab && <button type="button" className="btn-outline" onClick={openGroupAdd} style={btn(accent)} data-group-add>＋ 項目を追加</button>}
       {listTab && <button type="button" className="submit-btn" onClick={openAdd} style={btn(accent, true)}>＋ 科目を追加</button>}
     </>}>
       <ToastView msg={toast.msg} />
-      <Tabs items={['勘定科目', '資金科目', '費目', '使用科目設定', '補助簿（明細表）']} current={tab} onChange={setTab} accent={accent} />
+      {/* 勘定科目の設定で資金科目を指定するため、資金科目を先（左）に置く（確認メモ #82） */}
+      <Tabs items={['資金科目', '勘定科目', '費目', '使用科目設定', '補助簿（明細表）']} current={tab} onChange={(t) => { setTab(t); pickGroup(null); }} accent={accent} />
 
       {listTab && (
-        <div style={{ display: 'grid', gridTemplateColumns: sel ? 'minmax(0, 1fr) minmax(400px, 460px)' : 'minmax(0, 1fr)', minHeight: 520 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: panelOpen ? 'minmax(0, 1fr) minmax(400px, 460px)' : 'minmax(0, 1fr)', minHeight: 520 }}>
           {/* ---- 科目一覧（縦長・階層表示） ---- */}
-          <div style={{ minWidth: 0, borderRight: sel ? '1px solid #e2e8ee' : 'none' }}>
+          <div style={{ minWidth: 0, borderRight: panelOpen ? '1px solid #e2e8ee' : 'none' }}>
             <div style={{ padding: '10px 14px', borderBottom: '1px solid #eef2f5', display: 'grid', gap: 8 }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                 <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="名称・コード・フリガナで検索" aria-label="科目を検索" style={{ ...input, width: 250 }} />
@@ -405,7 +463,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
             <div style={{ overflow: 'auto', maxHeight: scrollH }}>
               <div role="row" style={{ display: 'grid', gridTemplateColumns: cols, alignItems: 'center', height: 32, background: '#f6f8fa', borderBottom: '1px solid #e2e8ee', position: 'sticky', top: 0, zIndex: 1 }}>
                 <span style={hcell}>{fundTab ? '資金科目' : '科目名称'}</span><span style={hcell}>表示コード</span><span style={hcell}>区分コード</span><span style={hcell}>貸借</span>
-                {!sel && <><span style={hcell}>{fundTab ? '勘定科目' : '対応する資金科目'}</span><span style={hcell}>関連する設定</span></>}
+                {!panelOpen && <><span style={hcell}>{fundTab ? '勘定科目' : '対応する資金科目'}</span><span style={hcell}>関連する設定</span></>}
                 <span style={hcell}>使用</span>
               </div>
               {items.length === 0 && <div style={{ padding: 28, color: '#9aa5b1', fontSize: 14, textAlign: 'center' }}>条件に合う科目がありません。検索語やフィルタを変更してください。</div>}
@@ -415,14 +473,14 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                     <Badge kind="項目" />{it.name}<span style={{ fontSize: 12, fontWeight: 500, color: '#6b7783' }}>{it.count} 科目</span>
                   </div>
                 );
-                if (it.t === 'group') { const open = filtering || !collapsed.includes(it.g.name); return (
-                  <div key={'g' + it.g.name} role="button" tabIndex={0} aria-expanded={open} onClick={() => setCollapsed((c) => (c.includes(it.g.name) ? c.filter((x) => x !== it.g.name) : [...c, it.g.name]))} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) setCollapsed((c) => (c.includes(it.g.name) ? c.filter((x) => x !== it.g.name) : [...c, it.g.name])); }}
-                    style={{ display: 'grid', gridTemplateColumns: cols, alignItems: 'center', height: 36, background: '#f3f6f9', borderBottom: '1px solid #e6ebf0', cursor: 'pointer', fontSize: 14 }}>
-                    <span style={{ ...cell, paddingLeft: 24, display: 'flex', alignItems: 'center', gap: 7, fontWeight: 800 }}>
-                      <span style={{ width: 12, color: '#6b7783', fontSize: 12 }}>{open ? '▼' : '▶'}</span><Badge kind="項目" /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.g.name}</span><span style={{ fontSize: 12, fontWeight: 500, color: '#6b7783' }}>{it.count} 科目</span>
+                if (it.t === 'group') { const open = filtering || !collapsed.includes(it.g.name); const gOn = selGroup === it.g.name; const toggle = () => setCollapsed((c) => (c.includes(it.g.name) ? c.filter((x) => x !== it.g.name) : [...c, it.g.name])); return (
+                  <div key={'g' + it.g.name} role="button" tabIndex={0} aria-pressed={gOn} data-group-row={it.g.name} title={fundTab ? undefined : '押すと、右側でこの項目の内容を編集できます'} onClick={() => pickGroup(gOn ? null : it.g.name)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) pickGroup(it.g.name); }}
+                    style={{ display: 'grid', gridTemplateColumns: cols, alignItems: 'center', height: 36, background: gOn ? '#eaf1f8' : '#f3f6f9', boxShadow: gOn ? `inset 3px 0 0 ${accent}` : 'none', borderBottom: '1px solid #e6ebf0', cursor: 'pointer', fontSize: 14 }}>
+                    <span style={{ ...cell, paddingLeft: 16, display: 'flex', alignItems: 'center', gap: 7, fontWeight: 800 }}>
+                      <button type="button" aria-expanded={open} aria-label={open ? '科目をたたむ' : '科目を開く'} title={open ? '科目をたたむ' : '科目を開く'} onClick={(e) => { e.stopPropagation(); toggle(); }} style={{ flex: 'none', width: 22, height: 22, border: 'none', background: 'transparent', color: '#6b7783', fontSize: 12, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>{open ? '▼' : '▶'}</button><Badge kind="項目" /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{gLabel(it.g)}</span><span style={{ fontSize: 12, fontWeight: 500, color: '#6b7783' }}>{it.count} 科目</span>
                     </span>
                     <span style={mono} /><span style={{ ...mono, fontSize: 14 }}>{headKubun(it.g)}</span><span style={cell} />
-                    {!sel && <><span style={{ ...cell, fontSize: 14, color: '#8290a0' }}>費目 {it.g.himoku}</span><span style={cell} /></>}
+                    {!panelOpen && <><span style={{ ...cell, fontSize: 14, color: '#8290a0' }}>費目 {it.g.himoku}</span><span style={cell} /></>}
                     <span style={cell} />
                   </div>
                 ); }
@@ -438,8 +496,8 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                     <span style={mono}>{r.code}</span>
                     <span style={{ ...mono, fontSize: 14 }}>{fundTab ? r.fundKubun : r.kubun}</span>
                     <span style={{ ...cell, fontSize: 14 }}>{r.a === '1' ? '借方' : '貸方'}</span>
-                    {!sel && <>
-                      <span style={{ ...cell, fontSize: 14, color: r.fund === '—' ? '#b7c2cc' : '#48565f' }}>{fundTab ? r.dispName : r.fund}</span>
+                    {!panelOpen && <>
+                      <span style={{ ...cell, fontSize: 14, color: r.fund === '—' ? '#b7c2cc' : '#48565f' }}>{fundTab ? r.dispName : r.fundCr !== r.fund ? `借 ${r.fund}／貸 ${r.fundCr}` : r.fund}</span>
                       <span style={{ ...cell, display: 'flex', gap: 4, alignItems: 'center' }}>
                         {r.color && <Swatch c={r.color} />}{r.depr && <Mark title="減価償却連動">償却</Mark>}{r.oneYear && <Mark title="1年基準科目">1年</Mark>}{r.meisai && <Mark title={`決算附属明細書：${r.meisai}`}>明細</Mark>}{!r.internal.startsWith('0') && <Mark title={`内部取引：${r.internal}`}>内部</Mark>}
                       </span>
@@ -458,7 +516,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                 <Badge kind="科目" /><b style={{ fontSize: 16, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fundTab ? `${sel.fund}（${sel.dispName}）` : sel.dispName}</b>
                 <button type="button" aria-label="詳細パネルを閉じる" onClick={() => pick(null)} style={{ ...btn('#5b6773', false, true), marginLeft: 'auto' }}>× 閉じる</button>
               </div>
-              <div style={{ fontSize: 12, color: '#8290a0', marginTop: 4 }}>{groupDef(sel.group).top} ＞ {sel.group}　／　キーコード {sel.key}（登録順に自動付与・変更不可）</div>
+              <div style={{ fontSize: 12, color: '#8290a0', marginTop: 4 }}>{groupDef(sel.group).top} ＞ {gLabel(groupDef(sel.group))}　／　キーコード {sel.key}（登録順に自動付与・変更不可）</div>
 
               <Section title="科目の説明" right={<button type="button" onClick={() => setDescEdit(!descEdit)} style={btn(descEdit ? accent : '#5b6773', descEdit, true)}>{descEdit ? '編集を終了' : '編集'}</button>}>
                 {descEdit
@@ -468,9 +526,9 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
 
               <Section title="項目とコード" note="親の項目から自動設定">
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  <Field label="所属する項目（親）" span={2}><select value={sel.group} onChange={(e) => changeGroup(e.target.value)} style={small}>{GROUPS.map((g) => <option key={g.name} value={g.name}>{g.top} ＞ {g.name}</option>)}</select></Field>
-                  <div><span style={lbl}>表示コード（1〜9桁）<AutoTag manual={sel.manualCode} /></span>{sel.manualCode ? <input className="field-input ring" value={sel.code} onChange={(e) => upd({ code: e.target.value.replace(/[^0-9]/g, '').slice(0, 9) })} style={small} /> : <div style={ro}>{sel.code}</div>}</div>
-                  <div><span style={lbl}>費目コード<AutoTag manual={sel.manualCode} /></span>{sel.manualCode ? <select value={sel.himoku} onChange={(e) => upd({ himoku: e.target.value })} style={small}>{HIMOKU_BS.map(([n, l]) => <option key={n} value={String(n)}>{n} {l}</option>)}</select> : <div style={ro}>{sel.himoku}　{HIMOKU_BS.find(([n]) => String(n) === sel.himoku)?.[1] ?? ''}</div>}</div>
+                  <Field label="所属する項目（親）" span={2}><select value={sel.group} onChange={(e) => changeGroup(e.target.value)} style={small}>{GROUPS.map((g) => <option key={g.name} value={g.name}>{g.top} ＞ {gLabel(g)}</option>)}</select></Field>
+                  {!fundTab && <div><span style={lbl}>表示コード（1〜9桁）<AutoTag manual={sel.manualCode} /></span>{sel.manualCode ? <input className="field-input ring" value={sel.code} onChange={(e) => upd({ code: e.target.value.replace(/[^0-9]/g, '').slice(0, 9) })} style={small} /> : <div style={ro}>{sel.code}</div>}</div>}
+                  <div style={{ gridColumn: fundTab ? 'span 2' : undefined }}><span style={lbl}>費目コード<AutoTag manual={sel.manualCode} /></span>{sel.manualCode ? <select value={sel.himoku} onChange={(e) => upd({ himoku: e.target.value })} style={small}>{HIMOKU_BS.map(([n, l]) => <option key={n} value={String(n)}>{n} {l}</option>)}</select> : <div style={ro}>{sel.himoku}　{HIMOKU_BS.find(([n]) => String(n) === sel.himoku)?.[1] ?? ''}</div>}</div>
                   <div style={{ gridColumn: 'span 2' }}><span style={lbl}>区分コード（3-2-2-2-2 桁）<AutoTag manual={sel.manualCode} /></span>{sel.manualCode ? <input className="field-input ring" value={sel.kubun} onChange={(e) => upd({ kubun: e.target.value.replace(/[^0-9-]/g, '').slice(0, 15) })} style={{ ...small, fontVariantNumeric: 'tabular-nums' }} /> : <div style={ro}>{sel.kubun}</div>}</div>
                 </div>
                 <div style={{ marginTop: 10 }}>
@@ -493,7 +551,13 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                 </div>
               </Section>
 
-              <Section title="属性">
+              <Section title="属性" note={fundTab ? '資金科目で設定するのは事業種別と内部取引です' : undefined}>
+                {fundTab ? (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }} data-fund-attrs>
+                  <Field label="事業種別" span={2}><select value={sel.f} onChange={(e) => upd({ f: e.target.value })} style={small}>{F_OPTS.map((o) => <option key={o} value={o.split('：')[0]}>{o}</option>)}</select></Field>
+                  <Field label="内部取引" span={2}><select value={sel.internal} onChange={(e) => upd({ internal: e.target.value, partner: e.target.value.startsWith('0') ? '' : sel.partner })} style={small}>{INTERNAL_OPTS.map((o) => <option key={o}>{o}</option>)}</select></Field>
+                </div>
+                ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   <Field label="貸借区分"><select value={sel.a} onChange={(e) => upd({ a: e.target.value as '1' | '2' })} style={small}><option value="1">1：借方</option><option value="2">2：貸方</option></select></Field>
                   <Field label="特質指定"><select value={sel.b} onChange={(e) => upd({ b: e.target.value })} style={small}>{B_OPTS.map((o) => <option key={o}>{o}</option>)}</select></Field>
@@ -504,11 +568,19 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                   <Field label="内部取引指定" span={2}><select value={sel.internal} onChange={(e) => upd({ internal: e.target.value, partner: e.target.value.startsWith('0') ? '' : sel.partner })} style={small}>{INTERNAL_OPTS.map((o) => <option key={o}>{o}</option>)}</select></Field>
                   <Field label="相手区分（内部取引の相手先）" span={2}><select value={sel.partner} onChange={(e) => upd({ partner: e.target.value })} style={{ ...small, background: sel.internal.startsWith('0') ? '#f5f7f9' : '#fff' }} disabled={sel.internal.startsWith('0')}><option value="">伝票入力時に指定</option>{SERVICES.map((s) => <option key={s}>{s}</option>)}</select></Field>
                 </div>
+                )}
               </Section>
 
               <Section title="対応する資金科目" note="資金収支計算書の科目">
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  {fundTab ? (
                   <Field label="資金科目（借方／貸方）" span={2}><div style={{ ...ro, color: sel.fund === '—' ? '#9aa5b1' : '#22303c' }}>{sel.fund === '—' ? '対応する資金科目はありません' : sel.fund}</div></Field>
+                  ) : (
+                    <>
+                      <Field label="資金科目（借方）" span={2}><select value={sel.fund} onChange={(e) => upd({ fund: e.target.value })} style={small} data-fund-dr><option value="—">（対応する資金科目なし）</option>{fundNames.map((f) => <option key={f} value={f}>{f}</option>)}</select></Field>
+                      <Field label="資金科目（貸方）" span={2}><select value={sel.fundCr} onChange={(e) => upd({ fundCr: e.target.value })} style={small} data-fund-cr><option value="—">（対応する資金科目なし）</option>{fundNames.map((f) => <option key={f} value={f}>{f}</option>)}</select></Field>
+                    </>
+                  )}
                   <Field label="費目"><select value={sel.fundHimoku} onChange={(e) => upd({ fundHimoku: e.target.value })} style={small}><option value="">—</option>{HIMOKU_FUND.map(([n, l]) => <option key={n} value={String(n)}>{n} {l}</option>)}</select></Field>
                   <Field label="区分コード"><input className="field-input" value={sel.fundKubun} onChange={(e) => upd({ fundKubun: e.target.value })} style={{ ...small, fontVariantNumeric: 'tabular-nums' }} /></Field>
                 </div>
@@ -534,6 +606,41 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                 <button type="button" className="submit-btn" onClick={() => toast.show(`「${sel.dispName}」を登録／更新しました`)} style={{ ...btn(accent, true), marginLeft: 'auto' }}>登録 / 更新</button>
               </div>
               <div style={{ marginTop: 10 }}><Notice tone="warn">設定されている科目を変更する前に、担当者またはカスタマーセンターへご相談ください。変更の影響は各帳票の計算結果・印刷順に及びます。</Notice></div>
+            </aside>
+          )}
+
+          {/* ---- 項目の詳細パネル：項目（集計上の見出し）の内容を編集する（確認メモ #83） ---- */}
+          {selG && !sel && (
+            <aside aria-label="項目の詳細" data-group-panel style={{ padding: '14px 16px 18px', overflow: 'auto', maxHeight: 'calc(100vh - 250px)', background: '#fcfdfe' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Badge kind="項目" /><b style={{ fontSize: 16, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{gLabel(selG)}</b>
+                <button type="button" aria-label="詳細パネルを閉じる" onClick={() => pickGroup(null)} style={{ ...btn('#5b6773', false, true), marginLeft: 'auto' }}>× 閉じる</button>
+              </div>
+              <div style={{ fontSize: 12, color: '#8290a0', marginTop: 4 }}>{selG.top} の下の項目　／　配下の科目 {rows.filter((r) => r.group === selG.name).length} 件</div>
+
+              <Section title="名称">
+                <div style={{ display: 'grid', gap: 10 }}>
+                  <Field label="印刷用科目名称（40文字まで）"><input className="field-input ring" data-group-print value={selG.printName ?? selG.name} onChange={(e) => { const v = e.target.value.slice(0, 40); updGroup({ printName: v, dispName: gLabel(selG) === (selG.printName ?? selG.name) ? v : selG.dispName }); }} style={small} /></Field>
+                  <Field label="表示用科目名称（画面に表示する名称）"><input className="field-input ring" data-group-disp value={selG.dispName ?? selG.name} onChange={(e) => updGroup({ dispName: e.target.value })} style={small} /></Field>
+                  <Field label="フリガナ（検索用）"><input className="field-input" value={selG.kana ?? ''} onChange={(e) => updGroup({ kana: e.target.value })} style={small} /></Field>
+                </div>
+              </Section>
+
+              <Section title="項目とコード">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <Field label="所属する項目（親）" span={2}><select value={selG.top} onChange={(e) => moveGroupTop(selG, e.target.value)} style={small} data-group-top>{topsOf().map((t) => <option key={t} value={t}>{t}</option>)}</select></Field>
+                  <Field label="費目コード" span={2}><select value={selG.himoku} onChange={(e) => updGroup({ himoku: e.target.value })} style={small}>{HIMOKU_BS.map(([n, l]) => <option key={n} value={String(n)}>{n} {l}</option>)}</select></Field>
+                  <Field label="区分コード（3-2-2-2-2 桁）" span={2}><input className="field-input ring" value={headKubun(selG)} onChange={(e) => updGroup({ kubun: e.target.value.replace(/[^0-9-]/g, '').slice(0, 15) })} style={{ ...small, fontVariantNumeric: 'tabular-nums' }} /></Field>
+                </div>
+              </Section>
+
+              <div style={{ marginTop: 12 }}><Notice>項目は集計上の見出しです。伝票には入力しません。項目か科目かは作成するときに決まり、作成した後で変更することはできません。</Notice></div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+                {selG.custom && rows.every((r) => r.group !== selG.name) && <button type="button" onClick={() => deleteGroup(selG)} style={btn('#c0392b')}>この項目を削除</button>}
+                <button type="button" onClick={() => { setBlankGroup(selG.name); openAdd(); }} style={btn()}>この項目に科目を追加</button>
+                <button type="button" className="submit-btn" onClick={() => toast.show(`項目「${gLabel(selG)}」を登録／更新しました`)} style={{ ...btn(accent, true), marginLeft: 'auto' }}>登録 / 更新</button>
+              </div>
+              <div style={{ marginTop: 10 }}><Notice tone="warn">設定されている項目を変更する前に、担当者またはカスタマーセンターへご相談ください。変更の影響は各帳票の計算結果・印刷順に及びます。</Notice></div>
             </aside>
           )}
         </div>
@@ -570,12 +677,18 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setResetOpen(false)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={resetUse} style={btn(accent, true)} data-use-reset-run>初期状態に戻す</button></div>
               </div>
             </Modal>
-            <span style={{ marginLeft: 'auto', fontSize: 14, color: '#7a8794' }}>区分ごとに使用する科目をチェック（帳票の表示／非表示にも使います）</span>
+            <span style={{ marginLeft: 'auto', fontSize: 14, color: '#7a8794' }}>区分ごとに使用する項目・科目をチェック（帳票の表示／非表示にも使います）。項目のチェックを切り替えると、配下の科目もまとめて切り替わります</span>
           </div>
           <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 380px)' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead><tr><th style={TH}>科目</th>{useCols.map((s) => <th key={s} style={{ ...TH, textAlign: 'center', width: 110 }}>{s}</th>)}</tr></thead>
-              <tbody>{useRows.length === 0 && <tr><td colSpan={useCols.length + 1} style={{ ...TD, color: '#9aa5b1', textAlign: 'center', padding: 28 }}>内部取引科目として設定された科目はありません。勘定科目タブで科目を選び「関連する設定 › 内部取引科目と相手区分」で指定します。</td></tr>}{useRows.map((m) => <tr key={m.key}><td style={{ ...TD, fontWeight: 500 }}>{m.dispName}<span style={{ fontSize: 12, color: '#9aa5b1', marginLeft: 6 }}>{m.group}</span>{!m.internal.startsWith('0') && <span style={{ fontSize: 12, fontWeight: 800, marginLeft: 6, padding: '0 5px', borderRadius: 4, background: '#eef2f6', color: '#3d4a56' }}>内部</span>}</td>{useCols.map((s) => <td key={s} style={{ ...TD, textAlign: 'center' }}><input type="checkbox" aria-label={`${m.dispName}を${s}で使用`} checked={!!use[m.name + '|' + s]} onChange={() => toggleUse(m.name, s)} /></td>)}</tr>)}</tbody>
+              <thead><tr><th style={TH}>項目・科目</th>{useCols.map((s) => <th key={s} style={{ ...TH, textAlign: 'center', width: 110 }}>{s}</th>)}</tr></thead>
+              <tbody>{useRows.length === 0 && <tr><td colSpan={useCols.length + 1} style={{ ...TD, color: '#9aa5b1', textAlign: 'center', padding: 28 }}>内部取引科目として設定された科目はありません。勘定科目タブで科目を選び「関連する設定 › 内部取引科目と相手区分」で指定します。</td></tr>}{GROUPS.filter((g) => useRows.some((m) => m.group === g.name)).flatMap((g) => [
+                <tr key={'#' + g.name} data-use-group={g.name} style={{ background: '#f3f6f9' }}>
+                  <td style={{ ...TD, fontWeight: 800 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, verticalAlign: 'middle' }}><Badge kind="項目" />{gLabel(g)}</span><span style={{ fontSize: 12, fontWeight: 500, color: '#9aa5b1', marginLeft: 8 }}>{g.top}</span></td>
+                  {useCols.map((sv) => <td key={sv} style={{ ...TD, textAlign: 'center' }}><input type="checkbox" aria-label={`項目 ${gLabel(g)} を${sv}で使用`} checked={groupUsed(g.name, sv)} onChange={() => toggleGroupUse(g.name, sv)} /></td>)}
+                </tr>,
+                ...useRows.filter((m) => m.group === g.name).map((m) => <tr key={m.key}><td style={{ ...TD, fontWeight: 500, paddingLeft: 30 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, verticalAlign: 'middle' }}><Badge kind="科目" />{m.dispName}</span>{!m.internal.startsWith('0') && <span style={{ fontSize: 12, fontWeight: 800, marginLeft: 6, padding: '0 5px', borderRadius: 4, background: '#eef2f6', color: '#3d4a56' }}>内部</span>}</td>{useCols.map((s) => <td key={s} style={{ ...TD, textAlign: 'center' }}><input type="checkbox" aria-label={`${m.dispName}を${s}で使用`} checked={!!use[m.name + '|' + s]} onChange={() => toggleUse(m.name, s)} /></td>)}</tr>),
+              ])}</tbody>
             </table>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}><button type="button" onClick={() => exportUse('fund')} style={btn()}>資金科目ファイル出力</button><button type="button" onClick={() => exportUse('bs')} style={btn()}>貸借・事業科目ファイル出力</button><button type="button" className="submit-btn" onClick={() => toast.show('使用科目設定を保存しました')} style={{ ...btn(accent, true), marginLeft: 'auto' }}>OK</button></div>
@@ -584,7 +697,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
 
       {tab === '補助簿（明細表）' && (
         <div style={{ padding: 22, display: 'grid', gap: 12 }} data-subledger>
-          <Notice>補助簿（明細表）を作る科目を指定します。黄色の行が対象です。対象にした科目は、帳票の印刷の「補助簿」で相手先・業者ごとの明細を印刷できます（既存の【補助簿（明細表）設定】に相当）。</Notice>
+          <Notice>補助簿（明細表）を作る科目を指定します。黄色の行が対象です。対象にした科目は、帳票の印刷の「補助簿」で相手先・取引先ごとの明細を印刷できます（既存の【補助簿（明細表）設定】に相当）。</Notice>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, alignItems: 'start' }}>
             {([['資産（流動資産・固定資産）', (c: string) => c === '現預金' || c === '資産'], ['負債', (c: string) => c === '負債']] as const).map(([title, f]) => {
               const list = rows.filter((r) => f(r.cls));
@@ -734,6 +847,23 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
               <Notice>内部取引科目にすると、法人全体の集計で相手区分の科目と相殺（内部取引消去）されます。相手区分を固定しない場合は伝票入力時に指定します。</Notice>
             </>}
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" className="submit-btn" onClick={() => { setRel(null); toast.show(`${REL_TITLE[rel]}を更新しました`); }} style={btn(accent, true)}>OK</button></div>
+          </div>
+        )}
+      </Modal>
+
+      {/* ---- 項目を追加：項目（集計上の見出し）を作る。項目か科目かは作成するときに決まり、後から変更できない（確認メモ #83） ---- */}
+      <Modal open={!!gAdd} onClose={() => setGAdd(null)} width={560} title="項目を追加">
+        {gAdd && (
+          <div style={{ padding: '16px 22px 20px', display: 'grid', gap: 12 }}>
+            <Notice>項目は集計上の見出しです（伝票には入力しません）。費目コード・区分コードは、親の項目から自動で設定されます。項目として作成したものを、後から科目に変更することはできません。</Notice>
+            <Field label="所属する項目（親）"><select value={gAdd.top} onChange={(e) => setGAdd({ ...gAdd, top: e.target.value })} style={input} data-gadd-top>{topsOf().map((t) => <option key={t} value={t}>{t}</option>)}</select></Field>
+            <Field label="印刷用科目名称（40文字まで）"><input className="field-input ring" autoFocus data-gadd-name value={gAdd.name} onChange={(e) => setGAdd({ ...gAdd, name: e.target.value.slice(0, 40) })} placeholder="項目の名称" style={input} /></Field>
+            <Field label="表示用科目名称（空欄のときは印刷用と同じ）"><input className="field-input ring" value={gAdd.disp} onChange={(e) => setGAdd({ ...gAdd, disp: e.target.value })} placeholder={gAdd.name} style={input} /></Field>
+            <Field label="フリガナ（検索用）"><input className="field-input" value={gAdd.kana} onChange={(e) => setGAdd({ ...gAdd, kana: e.target.value })} style={input} /></Field>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
+              <button type="button" onClick={() => setGAdd(null)} style={btn()}>キャンセル</button>
+              <button type="button" className="submit-btn" data-gadd-ok disabled={!gAdd.name.trim()} onClick={addGroup} style={{ ...btn(accent, true), opacity: gAdd.name.trim() ? 1 : 0.45, cursor: gAdd.name.trim() ? 'pointer' : 'not-allowed' }}>項目を追加</button>
+            </div>
           </div>
         )}
       </Modal>

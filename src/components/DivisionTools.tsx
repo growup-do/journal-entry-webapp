@@ -88,7 +88,7 @@ export function ColorSwitch({ on, onChange, accent }: { on: boolean; onChange: (
   return <SwitchPill label="区分色" on={on} onChange={onChange} accent={accent} />;
 }
 
-/** 摘要／業者の表示切替スイッチ */
+/** 摘要／取引先の表示切替スイッチ */
 export function BizSwitch({ on, onChange, accent }: { on: boolean; onChange: (v: boolean) => void; accent: string }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 10px', border: '1px solid #e2e8ee', borderRadius: 20, background: '#fff' }}>
@@ -96,7 +96,7 @@ export function BizSwitch({ on, onChange, accent }: { on: boolean; onChange: (v:
       <span role="switch" aria-checked={on} onClick={() => onChange(!on)} style={{ display: 'inline-block', width: 36, height: 20, borderRadius: 10, background: on ? accent : '#cfd8e0', position: 'relative', flex: 'none', cursor: 'pointer' }}>
         <span style={{ position: 'absolute', top: 2, left: on ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left .15s' }} />
       </span>
-      <span onClick={() => onChange(true)} style={{ fontSize: 14, fontWeight: on ? 800 : 500, color: on ? accent : '#9aa5b1', cursor: 'pointer' }}>業者</span>
+      <span onClick={() => onChange(true)} style={{ fontSize: 14, fontWeight: on ? 800 : 500, color: on ? accent : '#9aa5b1', cursor: 'pointer' }}>取引先</span>
     </span>
   );
 }

@@ -7,7 +7,6 @@ import { DepreciationPage } from './DepreciationPage';
 import { ReceiptsPaymentsPage } from './ReceiptsPaymentsPage';
 import { GraphPage } from './GraphPage';
 import { HomePage } from './HomePage';
-import { MembersPage } from './MembersPage';
 import { UserSettingsPage } from './UserSettingsPage';
 import { SufficiencyPage } from './SufficiencyPage';
 import { JournalListPage } from './JournalListPage';
@@ -49,8 +48,6 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
     case '別紙（注記・明細書・財産目録）':
       return <AppendixPrintPage variant={variant} accent={accent} onNavigate={onNavigate} />;
   }
-  // メンバー管理は各種設定（ユーザー・権限）にあるが専用画面を使う
-  if (page === 'メンバーの追加、管理') return <MembersPage variant={variant} accent={accent} />;
   if (SETTINGS_MENU.includes(page)) return renderSettingsPage(page, variant, accent, onNavigate);
   switch (page) {
     case 'ホーム':
@@ -59,8 +56,6 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
       return <FunctionFinderPage accent={accent} onNavigate={onNavigate} />;
     case 'ユーザー設定':
       return <UserSettingsPage variant={variant} accent={accent} />;
-    case 'メンバーの追加、管理':
-      return <MembersPage variant={variant} accent={accent} />;
     case '単一入力':
       return <SingleEntryPage variant={variant} accent={accent} accentRgb={accentRgb} onNavigate={onNavigate} />;
     case '振替入力':

@@ -55,7 +55,7 @@ a:hover {
    アクセント色は各オプションのラッパで --accent / --accent-rgb を切替
    --------------------------------------------------------- */
 
-/* フィールドボタン（科目・区分・業者） */
+/* フィールドボタン（科目・区分・取引先） */
 .field-btn {
   transition: border-color 0.12s, box-shadow 0.12s;
 }
@@ -186,4 +186,10 @@ a:hover {
 [data-tip]:hover::before {
   content: ''; position: absolute; right: 12px; top: calc(100% - 4px);
   border: 5px solid transparent; border-bottom-color: #000; z-index: 400; pointer-events: none;
+}
+
+/* 右から出る設定パネル（法人・区分の区分設定） */
+@keyframes drawer-in {
+  from { transform: translateX(48px); opacity: 0; }
+  to { transform: none; opacity: 1; }
 }

@@ -98,7 +98,7 @@ export function UserSettingsPage({ variant, accent }: Props) {
               <div><span style={label}>フリガナ</span><input className="field-input ring" value={profile.kana} onChange={(e) => setProfile({ ...profile, kana: e.target.value })} style={input} /></div>
               <div style={{ gridColumn: 'span 2' }}><span style={label}>メールアドレス（ログインID）</span><input className="field-input ring" value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} style={input} /></div>
               <div><span style={label}>所属</span><input className="field-input ring" value={profile.dept} onChange={(e) => setProfile({ ...profile, dept: e.target.value })} style={input} /></div>
-              <div><span style={label}>権限</span><div style={{ ...input, background: '#f5f7f9', color: '#5b6773' }}>{profile.role}</div><div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 4 }}>権限の変更は管理者が「メンバーの追加、管理」で行います</div></div>
+              <div><span style={label}>権限</span><div style={{ ...input, background: '#f5f7f9', color: '#5b6773' }}>{profile.role}</div><div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 4 }}>権限の変更は管理者が行います</div></div>
               <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end' }}>
                 <button type="button" className="submit-btn" onClick={() => toast.show('プロフィールを保存しました（プロトタイプ）')} style={btn(true)}>保存</button>
               </div>
