@@ -1,21 +1,24 @@
 // 推移表（科目推移表／資金推移表／取引先推移表の共通部品）
 //   骨格は ReportShell 共通：指定科目（取引先）→ 表示切替（当年度／前年度・金額単位）→ 一覧。
+//   指定科目は伝票入力と同じコンボ（コード入力・候補にコード表示。確認メモ #94）。
+//   行は現行と同じく「当初」（期首）→ 4月〜3月 → 「決算月」（確認メモ #95／#96／#101／#102）。資金推移表は「達成率」列も表示（確認メモ #100）。
 //   指定した科目（取引先）の月ごとの実績・累計（資金・取引先は予算と残高も）を年度で一覧。値はサンプル。
 //   月の行から元帳へドリルダウン：画面遷移せず右側の元帳パネルにその月の元帳を表示。全画面の元帳はパネルの「元帳の画面で開く」から（「← 戻る」で同じ科目・表示に戻る）。
+//   前年度の表示中は元帳パネルを使えない（確認メモ #99）。前年度のグラフの比較は「前々年度」になる（確認メモ #97）。
 
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
-import { AssistField } from './AssistField';
+import { ComboField, EntryStyles, scopeStyle } from './EntryCommon';
 import { Modal } from './Modal';
 import { btn } from './ui';
 import { FISCAL_MONTHS } from './FiscalMonthTabs';
 import { LABEL, NUM, ReportShell, Segmented, TD, TH, useMoney, useViewState } from './ReportShell';
-import { useAssist } from '../hooks/useAssist';
 import { seededSeries } from '../lib/hier';
 import { displayName } from '../data';
 import { useSession } from '../store/session';
 import { LedgerDrawer, useLedgerDrawer } from './LedgerDrawer';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
+import type { MonthFilter } from '../types';
 
 export type TrendKind = 'account' | 'fund' | 'vendor';
 /** 画面キー（ルーティング・確認メモで使用。表示名は displayName で現行の用語に合わせる） */
@@ -23,7 +26,24 @@ const KEY: Record<TrendKind, string> = { account: '科目推移', fund: '資金�
 const YEARS = ['当年度', '前年度'] as const;
 const UNITS = ['円', '千円'] as const;
 /** 令和N年度 → 前年度の表記 */
-const prevYearOf = (y: string) => y.replace(/(\d+)/, (d) => String(Math.max(1, Number(d) - 1)));
+const prevYearOf = (y: string, back = 1) => y.replace(/(\d+)/, (d) => String(Math.max(1, Number(d) - back)));
+
+/** 推移表の1行。当初（期首）／月／決算月 */
+interface Row {
+  kind: 'opening' | 'month' | 'closing';
+  /** 元帳を開く月（当初は開けないので null） */
+  m: MonthFilter;
+  label: string;
+  d: number;
+  c: number;
+  accD: number;
+  b: number;
+  /** 予算累計（当初行は無し） */
+  accB: number | null;
+  bal: number;
+  /** 達成率（実績累計 ÷ 予算累計。資金推移表） */
+  rate: number | null;
+}
 
 interface Props {
   kind: TrendKind;
@@ -33,8 +53,10 @@ interface Props {
   onNavigate: (label: string) => void;
 }
 
-export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Props) {
+export function TrendPage({ kind, variant, accent, onNavigate }: Props) {
   const isVendor = kind === 'vendor';
+  const isAcct = kind === 'account';
+  const isFund = kind === 'fund';
   const s = useSession();
   const money = useMoney();
   const title = displayName(KEY[kind]);
@@ -47,9 +69,8 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
   const amt = (n: number) => money(view.unit === '千円' ? Math.round(n / 1000) : n);
   const [graphOpen, setGraphOpen] = useState(false);
   const [mode, setMode] = useState<'月次' | '累計'>('月次');
-  const [compare, setCompare] = useState<'なし' | '予算' | '前年度'>(kind === 'account' ? '前年度' : '予算');
+  const [compare, setCompare] = useState<'なし' | '予算' | '前年度'>(isAcct ? '前年度' : '予算');
   const [chart, setChart] = useState<'棒' | '折れ線'>('棒');
-  const assist = useAssist();
   const months = FISCAL_MONTHS.filter((m) => m !== '決');
   const debit = seededSeries(target + 'd', 12, isVendor ? 30000 : 120000);
   const credit = seededSeries(target + 'c', 12, isVendor ? 0 : 20000);
@@ -57,22 +78,39 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
   const prevYear = seededSeries(target + 'p', 12, isVendor ? 28000 : 110000);
   const prevCredit = seededSeries(target + 'q', 12, isVendor ? 0 : 18000);
   const prevBudget = seededSeries(target + 'r', 12, isVendor ? 33000 : 125000);
+  /** 前々年度（前年度を表示しているときのグラフの比較用。確認メモ #97） */
+  const prev2Year = seededSeries(target + 'pp', 12, isVendor ? 26000 : 100000);
   // 当年度は8月までが実績（9月以降は未到来として 0）。前年度は12か月すべて実績
   const done = isPrev ? months.length - 1 : months.indexOf('8');
-  let accD = 0, accB = 0;
-  const rows = months.map((m, i) => {
+  const budgetArr = isPrev ? prevBudget : budget;
+  /** 当初（期首）：科目推移表は期首残高（サンプル）。資金・取引先は当初予算（年額） */
+  const opening = isAcct ? seededSeries(target + 'o', 1, 600000)[0] : 0;
+  const yearBudget = budgetArr.reduce((a, v) => a + v, 0);
+  /** 決算月（決算整理）：当年度は未到来のため 0、前年度はサンプル */
+  const closingD = isPrev ? seededSeries(target + 'kd', 1, isVendor ? 20000 : 80000)[0] : 0;
+  const closingC = isPrev && !isVendor ? seededSeries(target + 'kc', 1, 30000)[0] : 0;
+  let accD = opening, accB = 0;
+  const monthRows: Row[] = months.map((m, i) => {
     const d = isPrev ? prevYear[i] : i <= done ? debit[i] : 0;
     const c = isPrev ? prevCredit[i] : i <= done ? credit[i] : 0;
     accD += d - c;
-    const b = isPrev ? prevBudget[i] : budget[i];
+    const b = budgetArr[i];
     accB += b;
-    return { m, d, c, accD, b, accB, bal: accB - accD };
+    return { kind: 'month', m, label: `${m}月`, d, c, accD, b, accB, bal: accB - accD, rate: accB ? accD / accB : null };
   });
+  accD += closingD - closingC;
+  const closingRow: Row = { kind: 'closing', m: '決', label: '決算月', d: closingD, c: closingC, accD, b: 0, accB, bal: accB - accD, rate: accB ? accD / accB : null };
+  const openingRow: Row = { kind: 'opening', m: null, label: '当初', d: isAcct ? opening : 0, c: 0, accD: opening, b: isAcct ? 0 : yearBudget, accB: null, bal: isAcct ? opening : yearBudget, rate: null };
+  const rows: Row[] = [openingRow, ...monthRows, closingRow];
+  const pct = (r: number | null) => (r == null ? '—' : `${(r * 100).toFixed(1)}%`);
   // 元帳へのドリルダウン：右側の元帳パネルにその月の元帳を出す
   const drawer = useLedgerDrawer(KEY[kind], kind);
-  const openLedger = (month: string) => drawer.open({ account: target, month, kind, from: KEY[kind] });
-  const picked = (month: string) => !drawer.collapsed && !!drawer.target && drawer.target.account === target && drawer.target.month === month;
-  const fieldBtn: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, width: 260, boxSizing: 'border-box', padding: '7px 10px', background: '#fff', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left', color: 'inherit' };
+  const openLedger = (month: MonthFilter) => drawer.open({ account: target, month, kind, from: KEY[kind] });
+  const picked = (month: MonthFilter) => !drawer.collapsed && !!drawer.target && drawer.target.account === target && drawer.target.month === month;
+  const prevNote = '前年度の表示中は元帳パネルを使えません（当年度に切り替えると使えます）';
+  /** グラフの比較の表示名：前年度を表示しているときは「前年度」＝前々年度（確認メモ #97） */
+  const cmpLabel = (o: string) => (o === '前年度' && isPrev ? '前々年度' : o);
+  const cmpYears = isPrev ? prev2Year : prevYear;
 
   return (
     <>
@@ -82,8 +120,8 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
       asideWidth={drawer.asideWidth}
       extraTools={isVendor ? <ScreenPrintMenu page="業者推移" accent={accent} /> : undefined}
       title={title}
-      subtitle={<>{isVendor ? '指定した取引先' : '指定した科目'}の月ごとの推移を年度で一覧します。月の行の「元帳」ボタン（または行のダブルクリック）で、右側にその月の元帳を表示します。全画面で見たいときはパネルの「元帳の画面で開く」を使います。<span style={{ color: '#b7791f' }}>（表示中の値はサンプルです）</span></>}
-      tools={[{ label: isVendor ? '取引先検索' : '科目検索', onClick: () => assist.open('target', isVendor ? 'vendor' : 'account') }, { label: 'グラフ作成', onClick: () => setGraphOpen(true), primary: true }]}
+      subtitle={<>{isVendor ? '指定した取引先' : '指定した科目'}の月ごとの推移を年度で一覧します。行は「当初」（期首）から各月、「決算月」の順です。月の行の「元帳」ボタン（または行のダブルクリック）で、右側にその月の元帳を表示します。全画面で見たいときはパネルの「元帳の画面で開く」を使います。<span style={{ color: '#b7791f' }}>（表示中の値はサンプルです）</span></>}
+      tools={[{ label: isVendor ? '取引先検索' : '科目検索', onClick: () => document.getElementById('trend-target')?.focus() }, { label: 'グラフ作成', onClick: () => setGraphOpen(true), primary: true }]}
       period={
         <>
           <span style={{ fontSize: 14, color: '#48565f' }}><b style={{ color: isPrev ? '#b7791f' : '#22303c' }}>{yearLabel}</b>（4月〜3月）</span>
@@ -95,28 +133,18 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
           <Segmented label="金額単位" items={UNITS} value={view.unit} onChange={(u) => setView({ unit: u })} accent={accent} />
         </>
       }
-      notice={isPrev ? <span>前年度（{yearLabel}）の実績を表示しています。前年度の月からは元帳を開けません（当年度に切り替えると開けます）。</span> : undefined}
+      notice={isPrev ? <span>前年度（{yearLabel}）の実績を表示しています。{prevNote}。</span> : undefined}
       targetLabel={isVendor ? '指定取引先' : '指定科目'}
       target={
         <>
-          <AssistField
-            value={target}
-            placeholder={isVendor ? '取引先を選択' : '科目を選択'}
-            open={assist.isOpen('target')}
-            onOpen={() => assist.open('target', isVendor ? 'vendor' : 'account')}
-            accent={accent}
-            accentRgb={accentRgb}
-            buttonStyle={fieldBtn}
-            panelStyle={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, width: 260, zIndex: 60 }}
-            groups={assist.groups}
-            query={assist.query}
-            empty={assist.empty}
-            onInput={assist.setQuery}
-            onPick={(v) => {
-              setTarget(v === '（なし）' ? '' : v);
-              assist.close();
-            }}
-          />
+          {/* 伝票入力と同じコンボ：コード・名称・フリガナで絞り込み、候補にコードを表示（確認メモ #94） */}
+          <div className="ef-scope" style={{ ...scopeStyle(accent), flex: '0 1 380px', minWidth: 240 }}>
+            <EntryStyles />
+            <div className="ef-field">
+              <ComboField id="trend-target" kind={isVendor ? 'vendor' : 'account'} value={target} onChange={setTarget} placeholder={isVendor ? 'コード・取引先名で指定' : 'コード・科目名・フリガナで指定'} listWidth={400} fontSize={14} padY={7} />
+            </div>
+          </div>
+          <span style={{ fontSize: 12, color: '#8290a0' }}>コードを入力するか、候補から選びます</span>
           <span style={{ marginLeft: 'auto', fontSize: 14, color: '#7a8794' }}>単位：{view.unit}</span>
         </>
       }
@@ -126,9 +154,10 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
           <thead>
             <tr>
               <th style={{ ...TH, width: 150 }} rowSpan={2}>月</th>
-              <th style={{ ...TH, textAlign: 'center', borderLeft: '1px solid #e6ecf1' }} colSpan={kind === 'account' ? 3 : isVendor ? 2 : 3}>実績</th>
-              {kind !== 'account' && <th style={{ ...TH, textAlign: 'center', borderLeft: '1px solid #e6ecf1' }} colSpan={2}>予算</th>}
-              {kind !== 'account' && <th style={{ ...TH, textAlign: 'right', borderLeft: '1px solid #e6ecf1' }} rowSpan={2}>残高</th>}
+              <th style={{ ...TH, textAlign: 'center', borderLeft: '1px solid #e6ecf1' }} colSpan={isAcct ? 3 : isVendor ? 2 : 3}>実績</th>
+              {!isAcct && <th style={{ ...TH, textAlign: 'center', borderLeft: '1px solid #e6ecf1' }} colSpan={2}>予算</th>}
+              {!isAcct && <th style={{ ...TH, textAlign: 'right', borderLeft: '1px solid #e6ecf1' }} rowSpan={2}>残高</th>}
+              {isFund && <th style={{ ...TH, textAlign: 'right', borderLeft: '1px solid #e6ecf1', width: 90 }} rowSpan={2} title="実績累計 ÷ 予算累計">達成率</th>}
             </tr>
             <tr>
               {isVendor ? (
@@ -143,7 +172,7 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
                   <th style={{ ...TH, textAlign: 'right' }}>累計</th>
                 </>
               )}
-              {kind !== 'account' && (
+              {!isAcct && (
                 <>
                   <th style={{ ...TH, textAlign: 'right', borderLeft: '1px solid #e6ecf1' }}>月次</th>
                   <th style={{ ...TH, textAlign: 'right' }}>累計</th>
@@ -152,36 +181,41 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
             </tr>
           </thead>
           <tbody>
-            {rows.map((r, i) => {
-              const future = i > done;
+            {rows.map((r) => {
+              const i = months.indexOf(r.m ?? '');
+              const future = r.kind === 'closing' ? !isPrev : r.kind === 'month' && i > done;
               const dim: CSSProperties = future ? { color: '#b3bcc5' } : {};
-              const canOpen = !future && !isPrev && !!target;
+              const canOpen = r.kind !== 'opening' && !future && !isPrev && !!target;
               const current = !isPrev && r.m === '8';
+              const isOpening = r.kind === 'opening';
+              const rowTitle = isOpening ? (isAcct ? '期首の残高（当初）' : '当初予算（年額）') : r.kind === 'closing' ? (future ? '決算整理の分。決算が確定すると表示されます' : '決算整理の分') : canOpen ? 'ダブルクリックでこの月の元帳を開く' : undefined;
+              const isSel = picked(r.m);
               return (
-                <tr key={r.m} data-month={r.m} onDoubleClick={() => { if (canOpen) openLedger(r.m); }} title={canOpen ? 'ダブルクリックでこの月の元帳を開く' : undefined} data-picked={picked(r.m) || undefined} style={{ background: picked(r.m) ? '#eaf5ef' : current ? '#fff8d6' : 'transparent', boxShadow: picked(r.m) ? `inset 3px 0 0 ${accent}` : undefined, cursor: canOpen ? 'pointer' : 'default' }}>
-                  <td style={{ ...TD, fontWeight: 700, whiteSpace: 'nowrap' }}>
-                    {r.m}月{current && <span style={{ marginLeft: 6, fontSize: 12, color: '#b7791f' }}>当月</span>}
+                <tr key={r.label} data-month={r.m ?? '当初'} data-row-kind={r.kind} onDoubleClick={() => { if (canOpen) openLedger(r.m); }} title={rowTitle} data-picked={isSel || undefined} style={{ background: isSel ? '#eaf5ef' : current ? '#fff8d6' : isOpening || r.kind === 'closing' ? '#f8fafc' : 'transparent', boxShadow: isSel ? `inset 3px 0 0 ${accent}` : undefined, cursor: canOpen ? 'pointer' : 'default', borderTop: r.kind === 'closing' ? '2px solid #e2e8ee' : undefined, borderBottom: isOpening ? '2px solid #e2e8ee' : undefined }}>
+                  <td style={{ ...TD, fontWeight: 700, whiteSpace: 'nowrap', color: isOpening ? '#5b6773' : undefined }}>
+                    {r.label}{current && <span style={{ marginLeft: 6, fontSize: 12, color: '#b7791f' }}>当月</span>}
                     {canOpen && <button type="button" className="btn-outline" data-action="元帳" onClick={(e) => { e.stopPropagation(); openLedger(r.m); }} style={{ marginLeft: 10, padding: '1px 8px', borderRadius: 6, border: '1px solid #dde4ea', background: '#fff', color: accent, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>元帳 ›</button>}
                   </td>
                   {isVendor ? (
                     <>
-                      <td style={{ ...NUM, ...dim, borderLeft: '1px solid #f1f4f6' }}>{amt(r.d)}</td>
-                      <td style={{ ...NUM, ...dim }}>{amt(r.accD)}</td>
+                      <td style={{ ...NUM, ...dim, borderLeft: '1px solid #f1f4f6' }}>{isOpening ? '' : amt(r.d)}</td>
+                      <td style={{ ...NUM, ...dim }}>{isOpening ? '' : amt(r.accD)}</td>
                     </>
                   ) : (
                     <>
-                      <td style={{ ...NUM, ...dim, borderLeft: '1px solid #f1f4f6' }}>{amt(r.d)}</td>
-                      <td style={{ ...NUM, ...dim }}>{amt(r.c)}</td>
-                      <td style={{ ...NUM, ...dim, fontWeight: 700 }}>{amt(r.accD)}</td>
+                      <td style={{ ...NUM, ...dim, borderLeft: '1px solid #f1f4f6' }}>{isOpening && !isAcct ? '' : amt(r.d)}</td>
+                      <td style={{ ...NUM, ...dim }}>{isOpening && !isAcct ? '' : amt(r.c)}</td>
+                      <td style={{ ...NUM, ...dim, fontWeight: 700 }}>{isOpening && !isAcct ? '' : amt(r.accD)}</td>
                     </>
                   )}
-                  {kind !== 'account' && (
+                  {!isAcct && (
                     <>
-                      <td style={{ ...NUM, borderLeft: '1px solid #f1f4f6' }}>{amt(r.b)}</td>
-                      <td style={NUM}>{amt(r.accB)}</td>
+                      <td style={{ ...NUM, borderLeft: '1px solid #f1f4f6' }} title={isOpening ? '当初予算（年額）' : undefined}>{amt(r.b)}</td>
+                      <td style={NUM}>{r.accB == null ? '' : amt(r.accB)}</td>
                       <td style={{ ...NUM, ...dim, fontWeight: 700, borderLeft: '1px solid #f1f4f6' }}>{amt(r.bal)}</td>
                     </>
                   )}
+                  {isFund && <td style={{ ...NUM, ...dim, borderLeft: '1px solid #f1f4f6' }} data-rate>{pct(r.rate)}</td>}
                 </tr>
               );
             })}
@@ -194,25 +228,25 @@ export function TrendPage({ kind, variant, accent, accentRgb, onNavigate }: Prop
         <div style={{ padding: '12px 22px 18px' }}>
           <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12, fontSize: 14 }}>
             <span style={{ display: 'flex', gap: 4, alignItems: 'center' }}><span style={LABEL}>表示</span>{(['月次', '累計'] as const).map((o) => <button key={o} type="button" onClick={() => setMode(o)} style={btn(mode === o ? accent : '#5b6773', mode === o, true)}>{o}</button>)}</span>
-            <span style={{ display: 'flex', gap: 4, alignItems: 'center' }}><span style={LABEL}>比較</span>{(['なし', ...(kind === 'account' ? [] : ['予算' as const]), '前年度'] as const).map((o) => <button key={o} type="button" onClick={() => setCompare(o)} style={btn(compare === o ? accent : '#5b6773', compare === o, true)}>{o}</button>)}</span>
+            <span style={{ display: 'flex', gap: 4, alignItems: 'center' }}><span style={LABEL}>比較</span>{(['なし', ...(isAcct ? [] : ['予算' as const]), '前年度'] as const).map((o) => <button key={o} type="button" onClick={() => setCompare(o)} style={btn(compare === o ? accent : '#5b6773', compare === o, true)}>{cmpLabel(o)}</button>)}</span>
             <span style={{ display: 'flex', gap: 4, alignItems: 'center' }}><span style={LABEL}>種類</span>{(['棒', '折れ線'] as const).map((o) => <button key={o} type="button" onClick={() => setChart(o)} style={btn(chart === o ? accent : '#5b6773', chart === o, true)}>{o}</button>)}</span>
           </div>
           <TrendChart
             labels={months.map((m) => m + '月')}
-            primary={{ name: `実績（${mode}）`, values: rows.map((r) => (mode === '月次' ? r.d - r.c : r.accD)), color: accent }}
-            secondary={compare === 'なし' ? null : compare === '予算' ? { name: `予算（${mode}）`, values: rows.map((r) => (mode === '月次' ? r.b : r.accB)), color: '#b7791f' } : { name: `前年度（${mode}）`, values: prevYear.reduce<number[]>((acc, v, i) => { acc.push(mode === '月次' ? v : (acc[i - 1] ?? 0) + v); return acc; }, []), color: '#2c5f9e' }}
+            primary={{ name: `実績（${mode}）${isPrev ? `　${yearLabel}` : ''}`, values: monthRows.map((r) => (mode === '月次' ? r.d - r.c : r.accD)), color: accent }}
+            secondary={compare === 'なし' ? null : compare === '予算' ? { name: `予算（${mode}）`, values: monthRows.map((r) => (mode === '月次' ? r.b : r.accB ?? 0)), color: '#b7791f' } : { name: `${cmpLabel('前年度')}（${mode}）　${prevYearOf(s.fiscalYear, isPrev ? 2 : 1)}`, values: cmpYears.reduce<number[]>((acc, v, i) => { acc.push(mode === '月次' ? v : (acc[i - 1] ?? 0) + v); return acc; }, []), color: '#2c5f9e' }}
             doneIndex={done}
             line={chart === '折れ線'}
             onPick={(i) => { if (i <= done && !isPrev && target) { setGraphOpen(false); openLedger(months[i]); } }}
           />
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10, fontSize: 12, color: '#9aa5b1' }}>
-            <span>{isPrev ? '前年度の実績です（元帳は当年度のみ開けます）。' : '9月以降は未到来のため実績は0です。棒（または折れ線）をクリックするとその月の元帳を開きます。'}</span>
+            <span>{isPrev ? `前年度（${yearLabel}）の実績です。比較の「前々年度」は ${prevYearOf(s.fiscalYear, 2)} の値です（元帳は当年度のみ開けます）。` : '9月以降は未到来のため実績は0です。棒（または折れ線）をクリックするとその月の元帳を開きます。'}</span>
             <button type="button" onClick={() => setGraphOpen(false)} style={{ ...btn(accent, true, true), marginLeft: 'auto' }}>閉じる</button>
           </div>
         </div>
       </Modal>
     </ReportShell>
-    <LedgerDrawer state={drawer} accent={accent} onNavigate={onNavigate} />
+    <LedgerDrawer state={drawer} accent={accent} onNavigate={onNavigate} disabled={isPrev} disabledNote={prevNote} />
     </>
   );
 }

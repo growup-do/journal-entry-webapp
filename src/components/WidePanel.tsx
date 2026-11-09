@@ -13,6 +13,7 @@ import { EditVoucherModal } from './VoucherEdit';
 import { yen } from './ui';
 import { BALANCE_ACCOUNTS } from '../data';
 import { metaOf } from '../lib/accounts';
+import { inPeriod, type Period } from '../lib/period';
 import { FUSEN_COLORS, useVouchers, type Voucher } from '../store/journalStore';
 import { canEdit, useSession } from '../store/session';
 import type { MonthFilter } from '../types';
@@ -276,8 +277,9 @@ export function WidePanel({ accent, layout, state, top = 0, highlightIds, return
 }
 
 /* ---------------- 元帳の表（参照パネルと、試算表・推移表の元帳パネルで共用） ---------------- */
-export function ledgerLines(all: Voucher[], account: string, month: MonthFilter, vendor = false) {
-  const inMonth = (r: Voucher) => month == null || r.date.split('/')[0] === month;
+export function ledgerLines(all: Voucher[], account: string, month: MonthFilter, vendor = false, range: Period | null = null) {
+  // range（月の範囲・日付の範囲）があればそちらを優先。なければ月タブの単月（null＝全月）
+  const inMonth = (r: Voucher) => (range ? inPeriod(r.date, range) : month == null || r.date.split('/')[0] === month);
   const rows = all.filter((r) => inMonth(r) && account && (vendor ? r.gyosha === account : r.kari === account || r.kashi === account));
   const carry = !vendor && metaOf(account)?.cls === '現預金' ? 5_000_000 : 0;
   let bal = carry;
@@ -289,9 +291,9 @@ export function ledgerLines(all: Voucher[], account: string, month: MonthFilter,
   });
   return { lines, carry };
 }
-export function LedgerTable({ account, month, editable, highlightIds, onEdit, vendor }: { account: string; month: MonthFilter; editable: boolean; highlightIds?: number[]; onEdit: (r: Voucher) => void; /** 取引先元帳（取引先で絞り込む） */ vendor?: boolean }) {
+export function LedgerTable({ account, month, range, editable, highlightIds, onEdit, vendor }: { account: string; month: MonthFilter; /** 期間の範囲（元帳パネルの「期間を指定」）。あれば month より優先 */ range?: Period | null; editable: boolean; highlightIds?: number[]; onEdit: (r: Voucher) => void; /** 取引先元帳（取引先で絞り込む） */ vendor?: boolean }) {
   const all = useVouchers();
-  const { lines, carry } = ledgerLines(all, account, month, vendor);
+  const { lines, carry } = ledgerLines(all, account, month, vendor, range ?? null);
   const isNew = (r: Voucher) => !!highlightIds?.includes(r.id);
   const flags = (r: Voucher) => (
     <span style={{ display: 'inline-flex', gap: 2, marginLeft: 4, verticalAlign: 'middle' }}>

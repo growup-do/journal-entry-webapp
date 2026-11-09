@@ -4,7 +4,7 @@
 //   決算附属明細書・内部取引）を詳細パネルにまとめて表示。勘定科目／資金科目／費目／使用科目設定タブ、Excel／CSV／印刷、注意事項、▲入換▼。
 //   摘要辞書の自動補完候補もここ（SummaryAutoCompleteTab）。
 
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { ExplainModal } from './ExplainModal';
 import { ExportDialog, type ExportKind, type ExportSpec } from './ExportDialog';
@@ -244,7 +244,9 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
   const [bulkVal, setBulkVal] = useState(EMPTY_BULK);
   /** 補助簿（明細表）を作る科目（旧【補助簿（明細表）設定】） */
   // 既定で対象にする科目はない（確認メモ #52）
+  // 補助簿は2種類（確認メモ #90）：subLedger＝黄色「指定した勘定科目の伝票を、印刷時に明細として指定する」（科目名、項目は '#'+項目名）／subBlue＝水色「項目以下の勘定科目を明細とする」（項目名）
   const [subLedger, setSubLedger] = useState<Record<string, boolean>>({});
+  const [subBlue, setSubBlue] = useState<Record<string, boolean>>({});
   const session = useSession();
   const useCols = divView === '起動区分のみ' ? (SERVICES.includes(session.division) ? [session.division] : [SERVICES[1]]) : SERVICES;
   const useRows = acctView === '内部取引科目' ? rows.filter((m) => !m.internal.startsWith('0')) : rows;
@@ -571,11 +573,10 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                 )}
               </Section>
 
-              <Section title="対応する資金科目" note="資金収支計算書の科目">
+              {/* 資金科目の編集には「対応する資金科目」は出さない（自分自身が資金科目のため。確認メモ #86）。費目・区分コードだけ */}
+              <Section title={fundTab ? '費目・区分コード' : '対応する資金科目'} note={fundTab ? '資金収支計算書での集計先' : '資金収支計算書の科目'}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  {fundTab ? (
-                  <Field label="資金科目（借方／貸方）" span={2}><div style={{ ...ro, color: sel.fund === '—' ? '#9aa5b1' : '#22303c' }}>{sel.fund === '—' ? '対応する資金科目はありません' : sel.fund}</div></Field>
-                  ) : (
+                  {!fundTab && (
                     <>
                       <Field label="資金科目（借方）" span={2}><select value={sel.fund} onChange={(e) => upd({ fund: e.target.value })} style={small} data-fund-dr><option value="—">（対応する資金科目なし）</option>{fundNames.map((f) => <option key={f} value={f}>{f}</option>)}</select></Field>
                       <Field label="資金科目（貸方）" span={2}><select value={sel.fundCr} onChange={(e) => upd({ fundCr: e.target.value })} style={small} data-fund-cr><option value="—">（対応する資金科目なし）</option>{fundNames.map((f) => <option key={f} value={f}>{f}</option>)}</select></Field>
@@ -697,29 +698,59 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
 
       {tab === '補助簿（明細表）' && (
         <div style={{ padding: 22, display: 'grid', gap: 12 }} data-subledger>
-          <Notice>補助簿（明細表）を作る科目を指定します。黄色の行が対象です。対象にした科目は、帳票の印刷の「補助簿」で相手先・取引先ごとの明細を印刷できます（既存の【補助簿（明細表）設定】に相当）。</Notice>
+          <Notice>
+            補助簿（明細表）を作る科目を指定します（既存の【補助簿（明細表）設定】に相当）。補助簿は2種類あり、印刷のしかたが異なります。
+            <span style={{ display: 'block', marginTop: 4 }}><b style={{ color: '#1b6fa8' }}>水色</b>＝「項目以下の勘定科目を明細とする」…項目にだけ付けられます（現金預金・預り金など）。</span>
+            <span style={{ display: 'block' }}><b style={{ color: '#9a6a00' }}>黄色</b>＝「指定した勘定科目の伝票を、印刷時に明細として指定する」…項目にも科目にも付けられます（未払金・未収金など）。</span>
+          </Notice>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, alignItems: 'start' }}>
             {([['資産（流動資産・固定資産）', (c: string) => c === '現預金' || c === '資産'], ['負債', (c: string) => c === '負債']] as const).map(([title, f]) => {
-              const list = rows.filter((r) => f(r.cls));
+              const groups = GROUPS.filter((g) => f(g.cls));
+              const blueN = groups.filter((g) => subBlue[g.name]).length;
+              const yellowN = groups.reduce((n, g) => n + (subLedger['#' + g.name] ? 1 : 0) + rows.filter((r) => r.group === g.name && subLedger[r.name]).length, 0);
               return (
-                <div key={title} style={card}><div style={cardHead}>{title}<span style={{ fontSize: 12, fontWeight: 600, color: '#5b6773', marginLeft: 6 }}>対象 {list.filter((r) => subLedger[r.name]).length} 科目</span></div>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}><thead><tr><th style={TH}>科目・項目</th><th style={{ ...TH, textAlign: 'right', width: 150 }}>令和7年度末残高</th><th style={{ ...TH, width: 110, textAlign: 'center' }}>補助簿を作る</th></tr></thead>
+                <div key={title} style={card}><div style={cardHead}>{title}<span style={{ fontSize: 12, fontWeight: 600, color: '#5b6773', marginLeft: 6 }}>水色 {blueN} 項目／黄色 {yellowN} 件</span></div>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead><tr>
+                      <th style={TH}>項目・科目</th>
+                      <th style={{ ...TH, textAlign: 'right', width: 120 }}>令和7年度末残高</th>
+                      <th style={{ ...TH, width: 118, textAlign: 'center', lineHeight: 1.4 }}>項目以下の科目を明細とする<br /><span style={{ fontWeight: 500, color: '#1b6fa8' }}>水色・項目のみ</span></th>
+                      <th style={{ ...TH, width: 118, textAlign: 'center', lineHeight: 1.4 }}>伝票を印刷時に明細として指定<br /><span style={{ fontWeight: 500, color: '#9a6a00' }}>黄色</span></th>
+                    </tr></thead>
                     <tbody>
-                      {list.length === 0 && <tr><td colSpan={3} style={{ ...TD, color: '#9aa5b1', textAlign: 'center', padding: 24 }}>該当する科目がありません</td></tr>}
-                      {list.map((r) => { const on = !!subLedger[r.name]; const bal = ((r.key * 48271) % 1200) * 1000; return (
-                        <tr key={r.key} style={{ background: on ? '#fff7cc' : '#fff' }}>
-                          <td style={TD}>{r.dispName}<span style={{ fontSize: 12, color: '#9aa5b1', marginLeft: 6 }}>{r.group}</span></td>
-                          <td style={{ ...TD, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{bal.toLocaleString('ja-JP')}</td>
-                          <td style={{ ...TD, textAlign: 'center' }}><input type="checkbox" checked={on} onChange={() => setSubLedger((x) => ({ ...x, [r.name]: !on }))} aria-label={`${r.dispName}の補助簿を作る`} /></td>
-                        </tr>
-                      ); })}
+                      {groups.length === 0 && <tr><td colSpan={4} style={{ ...TD, color: '#9aa5b1', textAlign: 'center', padding: 24 }}>該当する項目がありません</td></tr>}
+                      {groups.map((g) => {
+                        const list = rows.filter((r) => r.group === g.name);
+                        const blue = !!subBlue[g.name];
+                        const gy = !!subLedger['#' + g.name];
+                        const gBal = list.reduce((s, r) => s + ((r.key * 48271) % 1200) * 1000, 0);
+                        const bg = blue && gy ? 'linear-gradient(90deg, #dff1fb 50%, #fff7cc 50%)' : blue ? '#dff1fb' : gy ? '#fff7cc' : '#f8fafc';
+                        return (
+                          <Fragment key={g.name}>
+                            <tr style={{ background: bg }} data-sub-group={g.name}>
+                              <td style={{ ...TD, fontWeight: 700 }}>{gLabel(g)}<span style={{ fontSize: 12, color: '#9aa5b1', marginLeft: 6, fontWeight: 500 }}>項目・{list.length} 科目</span></td>
+                              <td style={{ ...TD, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{gBal.toLocaleString('ja-JP')}</td>
+                              <td style={{ ...TD, textAlign: 'center' }}><input type="checkbox" checked={blue} onChange={() => setSubBlue((x) => ({ ...x, [g.name]: !blue }))} aria-label={`${g.name}：項目以下の科目を明細とする`} /></td>
+                              <td style={{ ...TD, textAlign: 'center' }}><input type="checkbox" checked={gy} onChange={() => setSubLedger((x) => ({ ...x, ['#' + g.name]: !gy }))} aria-label={`${g.name}：伝票を印刷時に明細として指定`} /></td>
+                            </tr>
+                            {list.map((r) => { const on = !!subLedger[r.name]; const bal = ((r.key * 48271) % 1200) * 1000; return (
+                              <tr key={r.key} style={{ background: on ? '#fff7cc' : blue ? '#eef8fd' : '#fff' }}>
+                                <td style={{ ...TD, paddingLeft: 28 }}>{r.dispName}</td>
+                                <td style={{ ...TD, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{bal.toLocaleString('ja-JP')}</td>
+                                <td style={{ ...TD, textAlign: 'center', color: '#b3bcc5' }} title="項目にだけ付けられます">{blue ? <span style={{ fontSize: 12, color: '#1b6fa8', fontWeight: 700 }}>項目に含む</span> : '—'}</td>
+                                <td style={{ ...TD, textAlign: 'center' }}><input type="checkbox" checked={on} onChange={() => setSubLedger((x) => ({ ...x, [r.name]: !on }))} aria-label={`${r.dispName}の伝票を印刷時に明細として指定`} /></td>
+                              </tr>
+                            ); })}
+                          </Fragment>
+                        );
+                      })}
                     </tbody></table>
                 </div>
               );
             })}
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <span style={{ fontSize: 14, color: '#5b6773' }}>対象 {Object.values(subLedger).filter(Boolean).length} 科目　残高は前年度末（令和7年度末）のサンプルです</span>
+            <span style={{ fontSize: 14, color: '#5b6773' }}>水色 {Object.values(subBlue).filter(Boolean).length} 項目／黄色 {Object.values(subLedger).filter(Boolean).length} 件　残高は前年度末（令和7年度末）のサンプルです</span>
             <button type="button" className="submit-btn" onClick={() => toast.show('補助簿（明細表）の設定を保存しました')} style={{ ...btn(accent, true), marginLeft: 'auto' }}>保存して終了</button>
           </div>
         </div>
@@ -921,20 +952,39 @@ export function SummaryAutoCompleteTab({ accent }: { accent: string }) {
   const [cands, setCands] = useState<string[]>([...SUMMARIES, '電気代ー７月分', '園児おやつ代', '保護者会費']);
   const [text, setText] = useState('');
   const [checked, setChecked] = useState<Set<string>>(new Set());
+  const [exp, setExp] = useState<ExportSpec | null>(null);
   const add = () => { const t = text.trim(); if (!t) return; if (!cands.includes(t)) setCands([...cands, t]); setText(''); };
+  /** インポート（CSV・テキスト）：1列目を候補として読み込む。見出し行「摘要」は読み飛ばす（確認メモ #93） */
+  const importFile = (file: File) => {
+    const fr = new FileReader();
+    fr.onload = () => {
+      const lines = String(fr.result ?? '').split(/\r?\n/).map((l) => l.split(',')[0].replace(/^"|"$/g, '').trim()).filter((l) => l && l !== '摘要');
+      const news = [...new Set(lines.filter((l) => !cands.includes(l)))];
+      setCands([...cands, ...news]);
+      toast.show(news.length ? `${news.length} 件を取り込みました` : '新しい候補はありませんでした');
+    };
+    fr.onerror = () => toast.show('ファイルを読み込めませんでした');
+    fr.readAsText(file, 'utf-8');
+  };
   return (
     <div style={{ padding: 22, display: 'grid', gap: 12, maxWidth: 760 }}>
-      <Notice>伝票入力時に過去に入力した摘要から候補を自動表示します（環境設定「摘要自動補完入力機能を有効にする」）。「入力された摘要を候補に追加する」が有効なら、登録した摘要がここに自動で溜まります。</Notice>
+      <Notice>伝票入力時に過去に入力した摘要から候補を自動表示します（環境設定「摘要自動補完入力機能を有効にする」）。「入力された摘要を候補に追加する」が有効なら、登録した摘要がここに自動で溜まります。候補は CSV で取り込み・書き出しができます。</Notice>
       <div style={{ display: 'flex', gap: 8 }}><input className="field-input ring" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) add(); }} placeholder="摘要文字列を入力して Enter で追加" style={input} /><button type="button" onClick={add} style={btn(accent, true)}>追加</button></div>
       <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: 320, overflow: 'auto' }}>
         {cands.map((c) => <label key={c} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', borderBottom: '1px solid #f1f4f6', fontSize: 14 }}><input type="checkbox" checked={checked.has(c)} onChange={(e) => { const n = new Set(checked); if (e.target.checked) n.add(c); else n.delete(c); setChecked(n); }} /><span style={{ flex: 1 }}>{c}</span></label>)}
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
         <button type="button" onClick={() => { if (!checked.size) return toast.show('削除する候補をチェックしてください'); if (confirm(`${checked.size} 件の候補を削除しますか？`)) { setCands(cands.filter((c) => !checked.has(c))); setChecked(new Set()); } }} style={btn('#c0392b')}>削除</button>
-        <button type="button" onClick={() => { setCands([...new Set([...cands, '委託費ー７月分', '委託費ー６月分', 'ガス代ー６月分'])]); toast.show('前年度の候補をコピーしました'); }} style={btn()}>前年度のデータをコピー</button>
+        {/* 旧「前年度のデータをコピー」は廃止し、CSV の取込・出力に置き換え（確認メモ #93） */}
+        <label style={{ ...btn(), display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }} title="CSV（1列目が摘要）またはテキスト（1行1件）を読み込んで候補に追加します" data-summary-import>
+          インポート（CSV）
+          <input type="file" accept=".csv,.txt,text/csv,text/plain" onChange={(e) => { const f = e.target.files?.[0]; if (f) importFile(f); e.target.value = ''; }} style={{ display: 'none' }} />
+        </label>
+        <button type="button" onClick={() => setExp({ kind: 'csv', title: '摘要自動補完候補', fileName: '摘要自動補完候補', meta: `${cands.length} 件`, header: ['摘要'], rows: cands.map((c) => [c]) })} style={btn()} data-summary-export>エクスポート（CSV）</button>
         <button type="button" className="submit-btn" onClick={() => toast.show('追加修正を保存しました')} style={{ ...btn(accent, true), marginLeft: 'auto' }}>追加修正を保存して閉じる</button>
       </div>
       <ToastView msg={toast.msg} />
+      <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
     </div>
   );
 }

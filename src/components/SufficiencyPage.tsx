@@ -26,7 +26,10 @@ const HISTORY = [
   { y: '令和7年度', usable: 12_100_000, deduct: 40_100_000 },
 ];
 
-type Step = 'confirm' | 'method' | 'main';
+/** 起動の流れ：確認画面 → 入力方式の選択 → （実績を使う方式で貸借が合わないときは）警告画面 → 本体 */
+type Step = 'confirm' | 'method' | 'warn' | 'main';
+/** 警告画面のサンプル値（確認メモ #111）：貸借対照表 決算額の借方合計・貸方合計が一致していない例 */
+const WARN = { debit: 48_436_500, credit: 48_400_000 };
 const METHODS = [
   { key: 'actual', label: '実績額方式（入力された実績金額から算出する方式）', hint: 'ご使用例　決算手続き完了後、決算伝票入力後から求めたい' },
   { key: 'add', label: '追加額方式（入力された実績金額から追加して算出する方式）', hint: 'ご使用例　期中時に残額を入力して求めたい' },
@@ -135,8 +138,31 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
             <button type="button" onClick={() => setManualOpen(true)} style={btn()}>ⓘ マニュアル</button>
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="button" onClick={() => onNavigate('伝票入力')} style={btn()}>キャンセル</button>
-              <button type="button" disabled={!method} onClick={() => setStep('main')} style={{ ...btn(true), opacity: method ? 1 : 0.5 }}>OK</button>
+              <button type="button" disabled={!method} onClick={() => setStep(method === 'direct' ? 'main' : 'warn')} style={{ ...btn(true), opacity: method ? 1 : 0.5 }} title={method && method !== 'direct' ? '実績を使う方式では、実績の貸借が一致していないと警告画面を表示します' : undefined}>OK</button>
             </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ③ 警告画面（確認メモ #111）：実績額方式・追加額方式では、貸借対照表 決算額の借方合計と貸方合計が一致していないと警告する。値はサンプル */}
+      <Modal open={step === 'warn'} onClose={() => setStep('main')} width={640} strict title="警告画面">
+        <div style={{ padding: '18px 28px 22px' }} data-sufficiency-warn>
+          <div style={{ border: '1px solid #c0392b', borderRadius: 10, padding: '16px 18px', fontSize: 14.5, lineHeight: 1.9, display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+            <span aria-hidden style={{ fontSize: 26, lineHeight: 1 }}>⚠️</span>
+            <div>
+              <div style={{ fontWeight: 700, color: '#c0392b' }}>貸借対照表 決算額の借方合計と貸方合計が一致しておりません。</div>
+              <div style={{ fontVariantNumeric: 'tabular-nums', marginTop: 4 }}>
+                借方合計 ＝ ¥{yen(WARN.debit)}<br />
+                貸方合計 ＝ ¥{yen(WARN.credit)}<br />
+                差　　額 ＝ ¥{yen(WARN.debit - WARN.credit)}
+              </div>
+              <div style={{ marginTop: 4 }}>残高入力や当年度仕訳を見直してください。</div>
+            </div>
+          </div>
+          <div style={{ fontSize: 12, color: '#8290a0', marginTop: 8, lineHeight: 1.7 }}>実績額方式・追加額方式は実績の金額から算出するため、貸借が一致していないと予想額が正しく計算できません。プロトタイプでは常にこの例を表示します。</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 18 }}>
+            <button type="button" onClick={() => setExportSpec({ kind: 'csv', title: '警告画面', fileName: '充実残額_警告_令和8年度', meta: '貸借対照表 決算額の借方合計と貸方合計が一致しておりません', header: ['項目', '金額（円）'], rows: [['借方合計', WARN.debit], ['貸方合計', WARN.credit], ['差額', WARN.debit - WARN.credit]] })} style={btn()}>ファイル出力</button>
+            <button type="button" onClick={() => setStep('main')} style={btn(true)}>閉じる</button>
           </div>
         </div>
       </Modal>
