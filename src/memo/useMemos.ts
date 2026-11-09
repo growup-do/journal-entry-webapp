@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { collection, deleteDoc, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
+import type { MemoAnchor, UiCtx } from './uiContext';
 
 export type MemoStatus = 'open' | 'resolved';
 
@@ -22,6 +23,12 @@ export interface Memo {
   status: MemoStatus;
   createdAt: number;
   resolvedAt: number | null;
+  /** 置いたときの画面の状態（開いていたモーダル・タブ・パネル）。無い古いメモは常に表示する */
+  ctx?: UiCtx;
+  /** その状態に至る操作の列（一覧から選んだときに再生する） */
+  path?: string[];
+  /** モーダル・パネルの中に置いたときの、その要素からの相対位置 */
+  anchor?: MemoAnchor;
 }
 
 const uid = () => (crypto?.randomUUID?.() ?? 'm-' + Math.random().toString(36).slice(2) + Date.now().toString(36));
@@ -56,6 +63,9 @@ export function useMemos() {
             status: (r.status ?? 'open') as MemoStatus,
             createdAt: r.createdAt ?? 0,
             resolvedAt: r.resolvedAt ?? null,
+            ctx: r.ctx,
+            path: r.path,
+            anchor: r.anchor,
           };
         });
         list.sort((a, b) => a.createdAt - b.createdAt);
@@ -71,10 +81,12 @@ export function useMemos() {
     return unsub;
   }, []);
 
-  const add = useCallback(async (m: Pick<Memo, 'screen' | 'x' | 'y' | 'text' | 'author'>) => {
+  const add = useCallback(async (m: Pick<Memo, 'screen' | 'x' | 'y' | 'text' | 'author'> & Partial<Pick<Memo, 'ctx' | 'path' | 'anchor'>>) => {
     const id = uid();
     try {
-      await setDoc(doc(db, 'protoMemos', id), { ...m, reply: '', status: 'open', createdAt: Date.now(), resolvedAt: null });
+      // Firestore は undefined を受け付けないので、値のない項目は除く
+      const body = Object.fromEntries(Object.entries(m).filter(([, v]) => v !== undefined));
+      await setDoc(doc(db, 'protoMemos', id), { ...body, reply: '', status: 'open', createdAt: Date.now(), resolvedAt: null });
     } catch (e) {
       setError(fbErr(e));
     }

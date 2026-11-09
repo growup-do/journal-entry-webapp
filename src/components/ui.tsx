@@ -20,7 +20,7 @@ export function Tabs({ items, current, onChange, accent, small }: { items: strin
       {items.map((t) => {
         const on = t === current;
         return (
-          <button key={t} type="button" className="tab" data-tab={t} onClick={() => onChange(t)} style={{ padding: small ? '10px 14px' : '13px 20px', border: 'none', borderBottom: '3px solid ' + (on ? accent : 'transparent'), background: 'transparent', color: on ? accent : '#5b6773', fontSize: small ? 14 : 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', marginBottom: -1 }}>
+          <button key={t} type="button" role="tab" aria-selected={on} className="tab" data-tab={t} onClick={() => onChange(t)} style={{ padding: small ? '10px 14px' : '13px 20px', border: 'none', borderBottom: '3px solid ' + (on ? accent : 'transparent'), background: 'transparent', color: on ? accent : '#5b6773', fontSize: small ? 14 : 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', marginBottom: -1 }}>
             {t}
           </button>
         );

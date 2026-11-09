@@ -235,7 +235,7 @@ export function DivisionTreeEditor({ accent, compact }: { accent: string; compac
 
       {/* 区分の設定パネル：伝票入力の参照パネルと同じく、画面の右側に固定して表示する（スクロールせずに設定できる。確認メモ #74）。閉じるのは「閉じる」ボタンだけ */}
       {panelOpen && sel && (
-        <aside data-division-panel aria-label="区分の設定" style={{ position: 'fixed', top, right: 0, bottom: 0, width: WIDE_WIDTH, maxWidth: '94vw', background: '#fff', borderLeft: '1px solid #dde4ea', boxShadow: '-8px 0 28px rgba(30,50,70,.12)', display: 'flex', flexDirection: 'column', zIndex: 90, animation: 'drawer-in .28s ease', fontFamily: "'Noto Sans JP', sans-serif" }}>
+        <aside data-division-panel aria-label="区分の設定" data-memo-panel="区分の設定" data-memo-anchor="区分の設定" style={{ position: 'fixed', top, right: 0, bottom: 0, width: WIDE_WIDTH, maxWidth: '94vw', background: '#fff', borderLeft: '1px solid #dde4ea', boxShadow: '-8px 0 28px rgba(30,50,70,.12)', display: 'flex', flexDirection: 'column', zIndex: 90, animation: 'drawer-in .28s ease', fontFamily: "'Noto Sans JP', sans-serif" }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: '1px solid #eef2f5', background: '#f6f8fa' }}>
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>{sel.kind}の設定</div>

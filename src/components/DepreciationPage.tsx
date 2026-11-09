@@ -579,7 +579,7 @@ export function DepreciationPage({ variant, accent }: Props) {
           {TABS.map((t) => {
             const on = tab === t.key;
             return (
-              <button key={t.key} type="button" className="menu-item-h" data-tab={t.key} onClick={() => setTab(t.key)} title={t.hint} style={{ padding: '10px 14px', border: 'none', borderBottom: '2px solid ' + (on ? accent : 'transparent'), background: 'transparent', color: on ? accent : '#5b6773', fontSize: 14, fontWeight: on ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              <button key={t.key} type="button" role="tab" aria-selected={on} className="menu-item-h" data-tab={t.label} onClick={() => setTab(t.key)} title={t.hint} style={{ padding: '10px 14px', border: 'none', borderBottom: '2px solid ' + (on ? accent : 'transparent'), background: 'transparent', color: on ? accent : '#5b6773', fontSize: 14, fontWeight: on ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                 {t.label}
                 {t.key === 'closing' && vouchers.length > 0 && <span style={{ marginLeft: 6, fontSize: 12, fontWeight: 800, color: '#fff', background: accent, borderRadius: 8, padding: '1px 6px' }}>{vouchers.length}</span>}
                 {t.key === 'disposal' && disposals.length > 0 && <span style={{ marginLeft: 6, fontSize: 12, fontWeight: 800, color: '#fff', background: '#8a6d00', borderRadius: 8, padding: '1px 6px' }}>{disposals.length}</span>}

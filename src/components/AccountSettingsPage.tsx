@@ -511,7 +511,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
 
           {/* ---- 詳細パネル（右側） ---- */}
           {sel && (
-            <aside aria-label="科目の詳細" style={{ padding: '14px 16px 18px', overflow: 'auto', maxHeight: 'calc(100vh - 250px)', background: '#fcfdfe' }}>
+            <aside aria-label="科目の詳細" data-memo-panel="科目の詳細" style={{ padding: '14px 16px 18px', overflow: 'auto', maxHeight: 'calc(100vh - 250px)', background: '#fcfdfe' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Badge kind="科目" /><b style={{ fontSize: 16, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fundTab ? `${sel.fund}（${sel.dispName}）` : sel.dispName}</b>
                 <button type="button" aria-label="詳細パネルを閉じる" onClick={() => pick(null)} style={{ ...btn('#5b6773', false, true), marginLeft: 'auto' }}>× 閉じる</button>
@@ -611,7 +611,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
 
           {/* ---- 項目の詳細パネル：項目（集計上の見出し）の内容を編集する（確認メモ #83） ---- */}
           {selG && !sel && (
-            <aside aria-label="項目の詳細" data-group-panel style={{ padding: '14px 16px 18px', overflow: 'auto', maxHeight: 'calc(100vh - 250px)', background: '#fcfdfe' }}>
+            <aside aria-label="項目の詳細" data-group-panel data-memo-panel="項目の詳細" style={{ padding: '14px 16px 18px', overflow: 'auto', maxHeight: 'calc(100vh - 250px)', background: '#fcfdfe' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Badge kind="項目" /><b style={{ fontSize: 16, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{gLabel(selG)}</b>
                 <button type="button" aria-label="詳細パネルを閉じる" onClick={() => pickGroup(null)} style={{ ...btn('#5b6773', false, true), marginLeft: 'auto' }}>× 閉じる</button>

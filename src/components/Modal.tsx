@@ -44,6 +44,7 @@ export function Modal({ open, onClose, width = 720, title, children, dismissible
       style={{ position: 'fixed', inset: 0, zIndex: 260, background: 'rgba(20,30,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
     >
       <div
+        data-memo-anchor="modal"
         style={{
           width: width === 'auto' ? 'fit-content' : width,
           minWidth: width === 'auto' ? 620 : undefined,
@@ -60,9 +61,9 @@ export function Modal({ open, onClose, width = 720, title, children, dismissible
       >
         {title && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 22px', borderBottom: '1px solid #eef2f5' }}>
-            <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16, flex: 1 }}>{title}</div>
+            <div data-modal-title style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16, flex: 1 }}>{title}</div>
             {closable && (
-              <button type="button" onClick={onClose} title="閉じる" style={{ border: 'none', background: 'transparent', fontSize: 20, color: '#8290a0', cursor: 'pointer', lineHeight: 1 }}>
+              <button type="button" onClick={onClose} title="閉じる" data-modal-close style={{ border: 'none', background: 'transparent', fontSize: 20, color: '#8290a0', cursor: 'pointer', lineHeight: 1 }}>
                 ×
               </button>
             )}
