@@ -1,13 +1,13 @@
-// メニュー
-//   横（フォーム型ナビ）… 大メニュー7つ。マウスオーバー（またはクリック）でその階層の項目をドロップダウン表示
-//   縦（スプレッドシート型サイドバー）… 大メニューをアコーディオンで開閉。開いている階層の項目を表示
+// 左メニュー（大メニュー6分類＋ホーム）
+//   展開（full）… 大メニューをアコーディオンで開閉し、開いている分類の項目を縦に並べる（当初のスプレッドシート型サイドバーと同じ）
+//   折りたたみ（compact）… アイコンだけの細い列。マウスオーバー（またはクリック）で、その分類の項目を右側にフライアウト表示
 // 出納・資産・決裁（旧オプション）階層は他の階層と同じ見た目（最後尾に配置するのみ）。
+// 1600×768 の画面で使う人が多いため、上部のメニューバーをやめて左側に置き、縦のスペースを本文に使う（11/10）。
 
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { MENU_GROUPS, displayName, groupOf, isOptionMenu, type MenuGroup } from '../data';
 import { startKindOf, useSession, type Session } from '../store/session';
-import { FavoritesMenu } from './FavoritesMenu';
 import { Chevron } from './ui';
 
 /** メニュー項目の状態（依頼書 5.1.1／5.1.4）：起動区分の種類で変わる。使えない項目は隠さず、グレーアウトの無効表示にする（理由はツールチップのみ。確認事項 10/9 回答） */
@@ -19,119 +19,20 @@ function itemState(label: string, s: Session): { disabled?: string; tag?: string
   return {};
 }
 
-
 interface Props {
-  orientation: 'h' | 'v';
   accent: string;
   active: string;
   onSelect: (label: string) => void;
+  /** 折りたたみ（アイコンだけ） */
+  compact?: boolean;
 }
 
-export function Menu({ orientation, accent, active, onSelect }: Props) {
-  return orientation === 'h' ? <HMenu accent={accent} active={active} onSelect={onSelect} /> : <VMenu accent={accent} active={active} onSelect={onSelect} />;
+export function SideMenu({ accent, active, onSelect, compact }: Props) {
+  return compact ? <CompactMenu accent={accent} active={active} onSelect={onSelect} /> : <FullMenu accent={accent} active={active} onSelect={onSelect} />;
 }
 
-/* ---------------- 横：大メニュー＋ドロップダウン ---------------- */
-function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
-  const session = useSession();
-  const [open, setOpen] = useState<string | null>(null);
-  const timer = useRef<number | undefined>(undefined);
-  const activeGroup = groupOf(active)?.key;
-
-  const enter = (k: string) => {
-    window.clearTimeout(timer.current);
-    setOpen(k);
-  };
-  const leave = () => {
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setOpen(null), 160);
-  };
-  useEffect(() => () => window.clearTimeout(timer.current), []);
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'stretch', flexWrap: 'wrap', gap: 2, flex: 1, minWidth: 0 }}>
-      {/* 左：メニュー。幅が足りないときは項目が折り返す。右側（お気に入りメニュー・機能から探す）は、最後の行に入れば同じ行の右端、入らなければ次の行の右端に置く（重ならない。確認メモ #66） */}
-      <div style={{ display: 'contents' }}>
-      <HomeButton active={active === 'ホーム'} accent={accent} onClick={() => onSelect('ホーム')} />
-      {MENU_GROUPS.map((g) => {
-        const on = activeGroup === g.key;
-        const isOpen = open === g.key;
-        const color = on ? accent : '#3d4a56';
-        return (
-          <div key={g.key} style={{ position: 'relative' }} onMouseEnter={() => enter(g.key)} onMouseLeave={leave}>
-            <button
-              type="button"
-              className="menu-item-h"
-              data-group={g.key}
-              onClick={() => setOpen(isOpen ? null : g.key)}
-              aria-expanded={isOpen}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 7,
-                padding: '10px 15px',
-                fontSize: 14,
-                fontWeight: on ? 700 : 500,
-                fontFamily: 'inherit',
-                cursor: 'pointer',
-                background: isOpen ? '#f4f6f8' : 'transparent',
-                border: 'none',
-                borderRadius: 8,
-                borderBottom: '2px solid ' + (on ? accent : 'transparent'),
-                color,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <Icon kind={g.icon} color={color} />
-              {g.label}
-              <Chevron open={isOpen} color="#9aa5b1" />
-            </button>
-            {isOpen && (
-              <div
-                role="menu"
-                style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 2px)',
-                  left: 0,
-                  minWidth: 220,
-                  background: '#fff',
-                  border: '1px solid #dde4ea',
-                  borderRadius: 10,
-                  boxShadow: '0 12px 32px rgba(24,42,62,.16)',
-                  padding: 6,
-                  zIndex: 120,
-                }}
-              >
-                {g.items.map((label) => (
-                  <SubItem key={label} label={label} state={itemState(label, session)} active={label === active} accent={accent} onClick={() => { onSelect(label); setOpen(null); }} />
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })}
-      </div>
-      {/* 右端：お気に入り ▾（登録した画面をどの画面からも開く）＋ 機能から探す（全機能の一覧と検索）。幅が足りないときは次の行の右端へ */}
-      <div style={{ marginLeft: 'auto', flex: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
-      <FavoritesMenu accent={accent} active={active} onNavigate={onSelect} />
-      <button
-        type="button"
-        className="menu-item-h"
-        data-menu="機能から探す"
-        onClick={() => onSelect('機能から探す')}
-        title="すべての機能を分類ごとに見る・キーワードで探す"
-        style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 15px', fontSize: 14, fontWeight: active === '機能から探す' ? 700 : 600, fontFamily: 'inherit', cursor: 'pointer', background: 'transparent', border: 'none', borderRadius: 8, borderBottom: '2px solid ' + (active === '機能から探す' ? accent : 'transparent'), color: active === '機能から探す' ? accent : '#3d4a56', whiteSpace: 'nowrap' }}
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none' }}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
-        機能から探す
-      </button>
-      </div>
-    </div>
-  );
-}
-
-/* ---------------- 縦：アコーディオン ---------------- */
-function VMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
+/* ---------------- 展開：アコーディオン ---------------- */
+function FullMenu({ accent, active, onSelect }: Omit<Props, 'compact'>) {
   const session = useSession();
   const activeGroup = groupOf(active)?.key;
   const [opened, setOpened] = useState<Set<string>>(() => new Set(activeGroup ? [activeGroup] : []));
@@ -142,8 +43,8 @@ function VMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
   const toggle = (k: string) => setOpened((s) => { const n = new Set(s); n.has(k) ? n.delete(k) : n.add(k); return n; });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <HomeButton active={active === 'ホーム'} accent={accent} onClick={() => onSelect('ホーム')} vertical />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+      <HomeButton active={active === 'ホーム'} accent={accent} onClick={() => onSelect('ホーム')} />
       {MENU_GROUPS.map((g) => {
         const on = activeGroup === g.key;
         const isOpen = opened.has(g.key);
@@ -156,29 +57,14 @@ function VMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
               data-group={g.key}
               onClick={() => toggle(g.key)}
               aria-expanded={isOpen}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 9,
-                width: '100%',
-                textAlign: 'left',
-                padding: '9px 10px',
-                fontSize: 14,
-                fontWeight: 700,
-                fontFamily: 'inherit',
-                cursor: 'pointer',
-                background: 'transparent',
-                border: 'none',
-                borderRadius: 8,
-                color,
-              }}
+              style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', textAlign: 'left', padding: '8px 10px', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: 'transparent', border: 'none', borderRadius: 8, color, whiteSpace: 'nowrap' }}
             >
               <Icon kind={g.icon} color={color} />
-              <span style={{ flex: 1 }}>{g.label}</span>
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.label}</span>
               <Chevron open={isOpen} color="#9aa5b1" />
             </button>
             {isOpen && (
-              <div style={{ padding: '0 4px 6px 4px' }}>
+              <div style={{ padding: '0 2px 6px 2px' }}>
                 {g.items.map((label) => (
                   <SubItem key={label} label={label} state={itemState(label, session)} active={label === active} accent={accent} indent onClick={() => onSelect(label)} />
                 ))}
@@ -191,42 +77,80 @@ function VMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
   );
 }
 
-/* ---------------- 部品 ---------------- */
-function HomeButton({ active, accent, onClick, vertical }: { active: boolean; accent: string; onClick: () => void; vertical?: boolean }) {
-  const color = active ? accent : '#3d4a56';
+/* ---------------- 折りたたみ：アイコン＋フライアウト ---------------- */
+function CompactMenu({ accent, active, onSelect }: Omit<Props, 'compact'>) {
+  const session = useSession();
+  const [open, setOpen] = useState<string | null>(null);
+  const timer = useRef<number | undefined>(undefined);
+  const activeGroup = groupOf(active)?.key;
+  const enter = (k: string) => { window.clearTimeout(timer.current); setOpen(k); };
+  const leave = () => { window.clearTimeout(timer.current); timer.current = window.setTimeout(() => setOpen(null), 160); };
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+
   return (
-    <button
-      type="button"
-      className={vertical ? 'menu-item-v' : 'menu-item-h'}
-      data-menu="ホーム"
-      onClick={onClick}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: vertical ? 9 : 7,
-        width: vertical ? '100%' : undefined,
-        textAlign: 'left',
-        padding: vertical ? '9px 10px' : '8px 13px',
-        marginBottom: vertical ? 4 : 0,
-        fontSize: 14,
-        fontWeight: 700,
-        fontFamily: 'inherit',
-        cursor: 'pointer',
-        background: active ? (vertical ? '#eef2f6' : 'transparent') : 'transparent',
-        border: 'none',
-        borderRadius: 8,
-        borderBottom: vertical ? 'none' : '2px solid ' + (active ? accent : 'transparent'),
-        color,
-        whiteSpace: 'nowrap',
-      }}
-    >
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none' }}><path d="M3 11l9-8 9 8" /><path d="M5 10v10h5v-6h4v6h5V10" /></svg>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'stretch' }}>
+      <HomeButton active={active === 'ホーム'} accent={accent} onClick={() => onSelect('ホーム')} compact />
+      {MENU_GROUPS.map((g) => {
+        const on = activeGroup === g.key;
+        const isOpen = open === g.key;
+        const color = on ? accent : '#3d4a56';
+        return (
+          <div key={g.key} style={{ position: 'relative' }} onMouseEnter={() => enter(g.key)} onMouseLeave={leave}>
+            <button
+              type="button"
+              className="menu-item-v"
+              data-group={g.key}
+              onClick={() => setOpen(isOpen ? null : g.key)}
+              aria-expanded={isOpen}
+              aria-label={g.label}
+              title={g.label}
+              style={{ ...iconBtn, background: isOpen ? '#f4f6f8' : on ? '#eef2f6' : 'transparent', color }}
+            >
+              <Icon kind={g.icon} color={color} size={20} />
+            </button>
+            {isOpen && (
+              <Flyout title={g.label}>
+                {g.items.map((label) => (
+                  <SubItem key={label} label={label} state={itemState(label, session)} active={label === active} accent={accent} onClick={() => { onSelect(label); setOpen(null); }} />
+                ))}
+              </Flyout>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** 折りたたみ時のアイコンボタン（44×44） */
+export const iconBtn: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, margin: '0 auto', padding: 0, border: 'none', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', background: 'transparent' };
+
+/** 折りたたみ時に右へ出すメニュー（分類名の見出し＋項目） */
+export function Flyout({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div role="menu" data-flyout style={{ position: 'absolute', top: 0, left: 'calc(100% + 8px)', minWidth: 230, background: '#fff', border: '1px solid #dde4ea', borderRadius: 10, boxShadow: '0 12px 32px rgba(24,42,62,.16)', padding: 6, zIndex: 130 }}>
+      <div style={{ padding: '5px 12px 6px', fontSize: 12, fontWeight: 800, color: '#8290a0', letterSpacing: '.03em', whiteSpace: 'nowrap' }}>{title}</div>
+      {children}
+    </div>
+  );
+}
+
+/* ---------------- 部品 ---------------- */
+function HomeButton({ active, accent, onClick, compact }: { active: boolean; accent: string; onClick: () => void; compact?: boolean }) {
+  const color = active ? accent : '#3d4a56';
+  const icon = <svg width={compact ? 20 : 17} height={compact ? 20 : 17} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none' }}><path d="M3 11l9-8 9 8" /><path d="M5 10v10h5v-6h4v6h5V10" /></svg>;
+  if (compact) {
+    return <button type="button" className="menu-item-v" data-menu="ホーム" onClick={onClick} aria-label="ホーム" title="ホーム" style={{ ...iconBtn, background: active ? '#eef2f6' : 'transparent' }}>{icon}</button>;
+  }
+  return (
+    <button type="button" className="menu-item-v" data-menu="ホーム" onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', textAlign: 'left', padding: '8px 10px', marginBottom: 2, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: active ? '#eef2f6' : 'transparent', border: 'none', borderRadius: 8, color, whiteSpace: 'nowrap' }}>
+      {icon}
       ホーム
     </button>
   );
 }
 
-function SubItem({ label, active, accent, indent, onClick, state = {} }: { label: string; active: boolean; accent: string; indent?: boolean; onClick: () => void; state?: { disabled?: string; tag?: string } }) {
+export function SubItem({ label, active, accent, indent, onClick, state = {} }: { label: string; active: boolean; accent: string; indent?: boolean; onClick: () => void; state?: { disabled?: string; tag?: string } }) {
   const off = !!state.disabled;
   const style: CSSProperties = {
     display: 'flex',
@@ -234,7 +158,7 @@ function SubItem({ label, active, accent, indent, onClick, state = {} }: { label
     gap: 6,
     width: '100%',
     textAlign: 'left',
-    padding: indent ? '9px 12px 9px 36px' : '10px 14px',
+    padding: indent ? '7px 10px 7px 34px' : '8px 14px',
     fontSize: 14,
     fontFamily: 'inherit',
     cursor: off ? 'not-allowed' : 'pointer',
@@ -255,10 +179,9 @@ function SubItem({ label, active, accent, indent, onClick, state = {} }: { label
   );
 }
 
-
 /** 大メニューのアイコン（線画） */
-function Icon({ kind, color }: { kind: MenuGroup['icon']; color: string }): ReactNode {
-  const p = { width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none', stroke: color, strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, style: { flex: 'none' } };
+function Icon({ kind, color, size = 17 }: { kind: MenuGroup['icon']; color: string; size?: number }): ReactNode {
+  const p = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: color, strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, style: { flex: 'none' } };
   switch (kind) {
     case 'input':
       return <svg {...p}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-9" /><path d="M14 3v5h5" /><path d="M9 14h6M12 11v6" /></svg>;

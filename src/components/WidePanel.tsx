@@ -1,7 +1,7 @@
 // 参照パネル（現行「ワイド画面」の Web 版。依頼書 5.1.3）
 //   伝票入力の横（または下）に、日記帳（当年／前年を切替）／元帳１／元帳２／残高照合 を切り替えて表示する。
 //   当年／前年の切替と元帳１・２・残高照合は、以前はヘッダーにあったもの（ヘッダーからは外し、このパネルに集約）。
-//   画面サイズによる機能の有無は設けず、幅が狭いときは折りたたんで重ねて表示する（3.3）。
+//   画面サイズによる機能の有無は設けず、常に本文の右に重ねて表示する（本文を押し出さない。1600×768 の画面で収まるようにするため。11/10）。幅が狭いときは初期状態を折りたたみにする（3.3）。
 //   選んだ表示・開閉・元帳の科目は localStorage に覚える。行のダブルクリック、または「訂正」ボタンで伝票の訂正を開く。
 
 import { useEffect, useRef, useState } from 'react';
@@ -22,10 +22,10 @@ export const WIDE_VIEWS = ['日記帳', '前年度日記帳', '元帳１', '元�
 export type WideView = (typeof WIDE_VIEWS)[number];
 /** タブとして並べる表示。前年度日記帳は「日記帳」タブの中の 当年／前年 切替で開く */
 const WIDE_TABS = ['日記帳', '元帳１', '元帳２', '残高照合'] as const;
-/** この幅より狭いときは、横のパネルを折りたたんで重ねて表示する */
+/** この幅より狭いときは、パネルを初期状態で折りたたむ（狭くなったときも折りたたむ） */
 export const WIDE_NARROW = 1240;
 export const WIDE_WIDTH = 440;
-/** 開閉タブ（幅32px）の分として、本文の右側に空ける余白。本文の右余白の合計がこの値になるようにする（タブ32px＋すき間16px） */
+/** 開閉タブ（幅32px）の分として、本文の右側に空ける余白。本文の右余白の合計がこの値になるようにする（タブ32px＋すき間16px）。パネル本体は本文に重ねるので、この分だけ空ける */
 export const WIDE_TAB_SPACE = 48;
 
 const read = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
@@ -42,7 +42,8 @@ export interface WidePanelState {
   setView: (v: WideView) => void;
   narrow: boolean;
 }
-export function useWidePanel(storageKey: string, defaultCollapsed = false): WidePanelState {
+/** パネルの開閉状態。初期状態は折りたたみ（本文に重ねて出すため、見たいときに開く）。一度開閉すればその状態を覚える */
+export function useWidePanel(storageKey: string, defaultCollapsed = true): WidePanelState {
   const sess = useSession();
   const [narrow, setNarrow] = useState(() => window.innerWidth < WIDE_NARROW);
   const [collapsed, setC] = useState(() => {
@@ -101,7 +102,7 @@ export function WidePanel({ accent, layout, state, top = 0, highlightIds, return
   const [acc2, setAcc2] = useState(() => read(state.storageKey + ':ledger2') ?? sess.env.ledger2Init);
   const [edit, setEdit] = useState<Voucher | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { view, collapsed, narrow } = state;
+  const { view, collapsed } = state;
 
   // 登録直後は一覧の最下部（新しい行）を見せる
   const hiKey = (highlightIds ?? []).join(',');
@@ -268,7 +269,8 @@ export function WidePanel({ accent, layout, state, top = 0, highlightIds, return
           <span aria-hidden={collapsed} style={{ gridArea: '1 / 1', writingMode: 'vertical-rl', letterSpacing: '.1em', visibility: collapsed ? 'hidden' : 'visible' }}>たたむ</span>
         </span>
       </button>
-      <aside aria-label="参照パネル" aria-hidden={collapsed} data-memo-panel="参照パネル" data-memo-anchor="参照パネル" style={{ position: 'fixed', top, right: 0, bottom: 0, width: WIDE_WIDTH, maxWidth: '94vw', background: '#fff', borderLeft: '1px solid #dde4ea', boxShadow: narrow ? '-14px 0 40px rgba(30,50,70,.22)' : '-8px 0 28px rgba(30,50,70,.07)', display: 'flex', flexDirection: 'column', zIndex: 90, transition: 'transform .28s ease', transform: collapsed ? `translateX(${WIDE_WIDTH + 20}px)` : 'translateX(0)', visibility: collapsed ? 'hidden' : 'visible' }}>
+      {/* 本文に重ねて表示するので、影を付けて浮いていることを示す */}
+      <aside aria-label="参照パネル" aria-hidden={collapsed} data-memo-panel="参照パネル" data-memo-anchor="参照パネル" style={{ position: 'fixed', top, right: 0, bottom: 0, width: WIDE_WIDTH, maxWidth: '94vw', background: '#fff', borderLeft: '1px solid #dde4ea', boxShadow: '-14px 0 40px rgba(30,50,70,.22)', display: 'flex', flexDirection: 'column', zIndex: 90, transition: 'transform .28s ease', transform: collapsed ? `translateX(${WIDE_WIDTH + 20}px)` : 'translateX(0)', visibility: collapsed ? 'hidden' : 'visible' }}>
         {body}
       </aside>
       {modal}

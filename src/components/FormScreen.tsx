@@ -1,5 +1,6 @@
-// Screen 1: フォーム型（`仕訳伝票_フォーム型.dc.html`）
-// アプリバー + 横スクロールナビ + 中央フォームカード（仕訳伝票形式＝複数行） + 右端固定・折りたたみの参照パネル。
+// 画面の骨組み（フォーム型）
+// 左にメニュー列（折りたたみ可）＋ 本文列（上部に薄いアプリバー〔区分・年度／調査・印刷／各種設定／ユーザー〕、中央に各画面、下にフッター）。
+// 伝票入力の参照パネル・試算表などの元帳パネルは本文の右に重ねて表示する（本文を押し出さない）。1600×768 の画面で使う人が多いための構成（11/10）。
 // アクセント = 緑 #1f7a52。
 //   伝票入力（仕訳伝票形式）：借方・貸方の科目は伝票につき1組、その下に 摘要・取引先・金額 の行を複数入力する（依頼書 5.3.1）。
 //   科目・取引先・摘要は入力欄の中で候補を絞り込み（5.3.5）、登録できない仕訳と確認して続行できる警告を科目の直下に表示（5.3.2）。
@@ -11,7 +12,7 @@ import { DivisionPicker } from './DivisionPicker';
 import { FiscalYearBanner } from './FiscalYearPage';
 import { AttachedStatementModal, BudgetGraphModal, BudgetHintLive, EntryConfirmModal, SpecialAmountModal, TorihikiBadge, useEntryTools } from './EntryExtras';
 import { ComboField, EntryStyles, isIme, FieldLabel, FundAccountLine, PAPER, PaperBox, PaperDate, PaperStyles, PaperTitle, fieldMessage, fieldState, fmtNum, focusId, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, watchedStatement, type FundMode, type FusenColor, FusenTab, VoucherMarks } from './EntryCommon';
-import { WIDE_TAB_SPACE, WIDE_WIDTH, WidePanel, useWidePanel } from './WidePanel';
+import { WIDE_TAB_SPACE, WidePanel, useWidePanel } from './WidePanel';
 import { ToastView, useToast } from './Toast';
 import { judgeTorihiki } from '../lib/accounts';
 import { addVoucher, getVouchers, updateVoucher, useVouchers } from '../store/journalStore';
@@ -19,8 +20,7 @@ import { canEdit, setSession, useSession, type JournalTemplate, type TemplateLin
 import { HeaderTools } from './HeaderTools';
 import { UserMenu } from './UserMenu';
 import { SettingsMenu } from './SettingsMenu';
-import { VersionBadge } from './VersionBadge';
-import { Menu } from './Menu';
+import { SideNav, useSideNav } from './SideNav';
 import { renderPage } from './pages';
 import { Footer } from './Footer';
 
@@ -48,10 +48,11 @@ interface Props {
 }
 
 export function FormScreen({ page, onNavigate, onLogout }: Props) {
-  const [topOffset, setTopOffset] = useState(102);
+  const [topOffset, setTopOffset] = useState(52);
   const headerRef = useRef<HTMLDivElement>(null);
+  const nav = useSideNav();
 
-  // アプリバー＋ナビの合計高さを実測（ナビ折返しに追従）
+  // アプリバー（＋年度の帯）の高さを実測（折返しに追従）。右に重ねるパネルの上端に使う
   useLayoutEffect(() => {
     const measure = () => {
       const o = headerRef.current?.offsetHeight ?? 0;
@@ -69,71 +70,50 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
   }, []);
 
   return (
-    <div style={{ minHeight: 'calc(100vh / var(--app-zoom, 1))', display: 'flex', flexDirection: 'column' }}>
-      {/* アプリバー＋年度帯＋ナビ：まとめて上部に固定（スクロールしない） */}
-      <div ref={headerRef} data-app-top style={{ position: 'sticky', top: 0, zIndex: 100 }}>
-      <header
-        style={{
-          background: '#fff',
-          borderBottom: '1px solid #dde4ea',
-          minHeight: 58,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          // 幅が足りないときは、左側（ロゴ・区分）と右側（調査・印刷／各種設定／ユーザー）を別の行に分ける（確認メモ #66）
-          flexWrap: 'wrap',
-          rowGap: 6,
-          columnGap: 12,
-          padding: '8px 26px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: '1 1 auto', maxWidth: '100%' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 'none' }}>
-            <button type="button" data-menu="ホーム（ロゴ）" onClick={() => onNavigate('ホーム')} title="ホームへ" style={{ display: 'flex', alignItems: 'center', gap: 9, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: 'inherit', color: 'inherit' }}>
-              <span style={logoStyle(GREEN, 28, 15)}>会</span>
-              <span style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16, whiteSpace: 'nowrap' }}>
-                会計基準システム
-              </span>
-            </button>
-            <VersionBadge accent={GREEN} />
-          </div>
-          <span style={{ color: '#c3ccd4' }}>｜</span>
-          <DivisionPicker accent={GREEN} />
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: '#68757f', flex: 'none', marginLeft: 'auto' }}>
-          <HeaderTools accent={GREEN} page={page} onNavigate={onNavigate} />
-          <SettingsMenu accent={GREEN} active={page} onNavigate={onNavigate} />
-          <UserMenu accent={GREEN} soft="#eef4f0" onNavigate={onNavigate} />
-        </div>
-      </header>
-      <FiscalYearBanner />
+    <div style={{ minHeight: 'calc(100vh / var(--app-zoom, 1))', display: 'flex', alignItems: 'stretch' }}>
+      {/* 左：メニュー列（画面の高さに固定。折りたたみ可） */}
+      <SideNav accent={GREEN} active={page} onSelect={onNavigate} collapsed={nav.collapsed} onToggle={nav.toggle} />
 
-      {/* ナビ（折返し・固定） */}
-      <nav
-        style={{
-          background: '#fff',
-          borderBottom: '1px solid #eef2f5',
-          padding: '3px 20px',
-          display: 'flex',
-          flexWrap: 'wrap',
-          overflow: 'visible',
-          alignItems: 'stretch',
-          position: 'relative',
-          zIndex: 99,
-        }}
-      >
-        <Menu orientation="h" accent={GREEN} active={page} onSelect={onNavigate} />
-      </nav>
+      {/* 右：本文列 */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        {/* アプリバー＋年度帯：上部に固定（スクロールしない） */}
+        <div ref={headerRef} data-app-top style={{ position: 'sticky', top: 0, zIndex: 100 }}>
+          <header
+            style={{
+              background: '#fff',
+              borderBottom: '1px solid #dde4ea',
+              minHeight: 50,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              // 幅が足りないときは、左側（区分・年度）と右側（調査・印刷／各種設定／ユーザー）を別の行に分ける（確認メモ #66）
+              flexWrap: 'wrap',
+              rowGap: 6,
+              columnGap: 12,
+              padding: '6px 20px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: '1 1 auto', maxWidth: '100%' }}>
+              <DivisionPicker accent={GREEN} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: '#68757f', flex: 'none', marginLeft: 'auto' }}>
+              <HeaderTools accent={GREEN} page={page} onNavigate={onNavigate} />
+              <SettingsMenu accent={GREEN} active={page} onNavigate={onNavigate} />
+              <UserMenu accent={GREEN} soft="#eef4f0" onNavigate={onNavigate} />
+            </div>
+          </header>
+          <FiscalYearBanner />
+        </div>
+
+        {page === '伝票入力' ? (
+          <VoucherEntry onNavigate={onNavigate} topOffset={topOffset} />
+        ) : page === '単一入力' || page === '振替入力' || page === '振替単一' ? (
+          <EntryWithPanel page={page} topOffset={topOffset} onNavigate={onNavigate}>{renderPage(page, 'form', GREEN, GREEN_RGB, onNavigate, onLogout)}</EntryWithPanel>
+        ) : (
+          renderPage(page, 'form', GREEN, GREEN_RGB, onNavigate, onLogout)
+        )}
+        <Footer />
       </div>
-
-      {page === '伝票入力' ? (
-        <VoucherEntry onNavigate={onNavigate} topOffset={topOffset} />
-      ) : page === '単一入力' || page === '振替入力' || page === '振替単一' ? (
-        <EntryWithPanel page={page} topOffset={topOffset} onNavigate={onNavigate}>{renderPage(page, 'form', GREEN, GREEN_RGB, onNavigate, onLogout)}</EntryWithPanel>
-      ) : (
-        renderPage(page, 'form', GREEN, GREEN_RGB, onNavigate, onLogout)
-      )}
-      <Footer />
     </div>
   );
 }
@@ -361,7 +341,6 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
     enterOrder: ENTER_ORDER,
   });
 
-  const panelOpen = !wide.collapsed && !wide.narrow;
   const smallInput: CSSProperties = { padding: '4px 8px', border: '1px solid #cfd8e0', borderRadius: 7, fontSize: 14, fontFamily: 'inherit' };
   /** 明細の列：コード（行番号）｜摘要・取引先｜金額｜行の操作（証憑・チェック・付箋／挿入・削除） */
   const GRID = '52px minmax(0,1fr) 170px 158px';
@@ -377,13 +356,12 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
         style={{
           flex: 1,
           padding: 28,
-          // 右側は参照パネルの開閉タブと重ならないよう、タブの幅の分も空ける
-          paddingRight: (panelOpen ? WIDE_WIDTH : 0) + WIDE_TAB_SPACE,
+          // 右側は参照パネルの開閉タブと重ならないよう、タブの幅の分だけ空ける（パネル自体は本文に重ねて出すので、開いても本文は動かない）
+          paddingRight: WIDE_TAB_SPACE,
           display: 'flex',
           gap: 24,
           alignItems: 'flex-start',
           justifyContent: 'center',
-          transition: 'padding-right .28s ease',
           minWidth: 0,
         }}
       >
@@ -646,32 +624,13 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
   );
 }
 
-function logoStyle(bg: string, size: number, font: number): CSSProperties {
-  return {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: size,
-    height: size,
-    background: bg,
-    color: '#fff',
-    borderRadius: 8,
-    fontFamily: "'Zen Kaku Gothic New', sans-serif",
-    fontWeight: 700,
-    fontSize: font,
-  };
-}
-
-
-
 /** 単一形式／振替伝票形式／振替単一形式：仕訳伝票形式と同じ右側の参照パネル（日記帳〔当年／前年〕／元帳１・２／残高照合）を付ける。
- *  パネルの状態（表示内容・開閉）は4形式で共有（storageKey 'form-entry'）。 */
+ *  パネルの状態（表示内容・開閉）は4形式で共有（storageKey 'form-entry'）。パネルは本文に重ねて出す（開閉タブの分だけ右を空ける） */
 function EntryWithPanel({ page, topOffset, onNavigate, children }: { page: string; topOffset: number; onNavigate: (label: string) => void; children: ReactNode }) {
   const wide = useWidePanel('form-entry');
-  const panelOpen = !wide.collapsed && !wide.narrow;
   return (
     <>
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', paddingRight: (panelOpen ? WIDE_WIDTH : 0) + (WIDE_TAB_SPACE - 28), transition: 'padding-right .28s ease' }}>{children}</div>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', paddingRight: WIDE_TAB_SPACE - 28 }}>{children}</div>
       <WidePanel accent={GREEN} layout="side" state={wide} top={topOffset} returnTo={page} onNavigate={onNavigate} />
     </>
   );
