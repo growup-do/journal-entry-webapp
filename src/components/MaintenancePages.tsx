@@ -11,7 +11,8 @@ import { ToastView, useToast } from './Toast';
 import { Field, Notice, SettingsShell, Steps, Tabs, Toggle, btn, card, cardHead, input, lbl, numInput } from './ui';
 import { ACCOUNT_META } from '../lib/accounts';
 import { AUDIT_ITEMS, SERVICES, displayName } from '../data';
-import { setSession, useSession } from '../store/session';
+import { isViewOnly, setSession, useSession } from '../store/session';
+import { AuditItemDialog, useAuditSummary } from './AuditItemDialog';
 
 export interface MaintenancePageProps { variant: 'form' | 'sheet'; accent: string; /** 関連画面へ移動する（未指定のときは案内のみ表示） */ onNavigate?: (page: string) => void }
 
@@ -267,39 +268,21 @@ const AUDIT_GROUPS: { label: string; note: string; nos: number[] }[] = [
   { label: '減価償却システムとの比較', note: '減価償却システムのデータと会計システムのデータを比較します（15〜17）', nos: [15, 16, 17] },
   { label: '★印の項目', note: '期中残高・内部取引・予算などの追加チェック（20〜28）', nos: [20, 21, 22, 23, 24, 25, 26, 27, 28] },
 ];
-const AUDIT_PARAMS: Record<number, { label: string; unit: string; def: number }> = {
-  14: { label: '抽出する金額（この金額以上の費用を一覧にします）', unit: '円', def: 100000 },
-  26: { label: '予備費の予算額の上限（事業活動支出の予算に対する割合）', unit: '％', def: 3 },
-  27: { label: '支払資金残高率の上限', unit: '％', def: 30 },
-};
-const auditDefaultAccts = (no: number) => ACCOUNT_META.filter((m, i) => (no >= 20 ? m.kind === 'BS' : m.kind === 'BS' || (i + no) % 3 === 0)).map((m) => m.name);
 const no2 = (n: number) => String(n).padStart(2, '0');
 
 export function AuditSettingsPage({ variant, accent, onNavigate }: MaintenancePageProps) {
   const s = useSession();
   const toast = useToast();
+  const viewOnly = isViewOnly(s);
   const [mode, setMode] = useState<'区分' | '法人'>('区分');
-  const [corpEnabled, setCorpEnabled] = useState<Record<number, boolean>>({ 21: false, 22: false });
-  const [accts, setAccts] = useState<Record<string, string[]>>({});
-  const [params, setParams] = useState<Record<string, number>>({});
-  const [dlg, setDlg] = useState<null | { no: number; picked: string[]; param: string; q: string }>(null);
+  const [dlg, setDlg] = useState<number | null>(null);
   const [help, setHelp] = useState(false);
-  const isOn = (no: number) => (mode === '区分' ? s.auditEnabled[no] !== false : corpEnabled[no] !== false);
-  const setOn = (no: number, v: boolean) => (mode === '区分' ? setSession({ auditEnabled: { ...s.auditEnabled, [no]: v } }) : setCorpEnabled((c) => ({ ...c, [no]: v })));
-  const setAll = (v: boolean) => { const all = Object.fromEntries(AUDIT_ITEMS.map((a) => [a.no, v])); if (mode === '区分') setSession({ auditEnabled: all }); else setCorpEnabled(all); toast.show(`28 項目をすべて${v ? '有効' : '無効'}にしました`); };
-  const k = (no: number) => `${mode}:${no}`;
-  const acctsOf = (no: number) => accts[k(no)] ?? auditDefaultAccts(no);
-  const paramOf = (no: number) => params[k(no)] ?? AUDIT_PARAMS[no]?.def;
-  const open = (no: number) => setDlg({ no, picked: acctsOf(no), param: AUDIT_PARAMS[no] ? String(paramOf(no)) : '', q: '' });
-  const saveDlg = () => {
-    if (!dlg) return;
-    setAccts((a) => ({ ...a, [k(dlg.no)]: ACCOUNT_META.filter((m) => dlg.picked.includes(m.name)).map((m) => m.name) }));
-    if (AUDIT_PARAMS[dlg.no]) setParams((p) => ({ ...p, [k(dlg.no)]: parseInt(digits(dlg.param) || '0', 10) }));
-    toast.show(`${no2(dlg.no)}. ${AUDIT_ITEMS.find((a) => a.no === dlg.no)?.name ?? ''} の設定を保存しました`);
-    setDlg(null);
-  };
+  const summary = useAuditSummary(mode);
+  // 区分の設定と法人全体の設定は別に保持する（確認メモ #124。決算調査から開く設定画面と共通）
+  const isOn = (no: number) => (mode === '区分' ? s.auditEnabled[no] !== false : s.auditCorpEnabled[no] !== false);
+  const setOn = (no: number, v: boolean) => (mode === '区分' ? setSession({ auditEnabled: { ...s.auditEnabled, [no]: v } }) : setSession({ auditCorpEnabled: { ...s.auditCorpEnabled, [no]: v } }));
+  const setAll = (v: boolean) => { const all = Object.fromEntries(AUDIT_ITEMS.map((a) => [a.no, v])); setSession(mode === '区分' ? { auditEnabled: all } : { auditCorpEnabled: all }); toast.show(`28 項目をすべて${v ? '有効' : '無効'}にしました`); };
   const onCount = AUDIT_ITEMS.filter((a) => isOn(a.no)).length;
-  const dlgItem = dlg ? AUDIT_ITEMS.find((a) => a.no === dlg.no) : undefined;
   const seg = (on: boolean): CSSProperties => ({ padding: '8px 16px', border: '1px solid ' + (on ? accent : '#cfd8e0'), background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
 
   return (
@@ -314,10 +297,12 @@ export function AuditSettingsPage({ variant, accent, onNavigate }: MaintenancePa
           <button type="button" role="tab" aria-selected={mode === '法人'} onClick={() => setMode('法人')} style={{ ...seg(mode === '法人'), borderRadius: '0 8px 8px 0', borderLeft: 'none' }}>法人決算チェック設定（法人全体）</button>
         </div>
         <span style={{ fontSize: 14, color: '#5b6773' }}>有効 <b style={{ fontSize: 16, fontVariantNumeric: 'tabular-nums' }}>{onCount}</b> ／ 28 項目</span>
-        <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
-          <button type="button" onClick={() => setAll(true)} style={btn('#5b6773', false, true)}>すべて有効</button>
-          <button type="button" onClick={() => setAll(false)} style={btn('#5b6773', false, true)}>すべて無効</button>
-        </span>
+        {viewOnly
+          ? <span data-view-only style={{ marginLeft: 'auto', fontSize: 14, color: '#b7791f', fontWeight: 700 }}>参照のみの権限のため、設定の変更はできません</span>
+          : <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+              <button type="button" onClick={() => setAll(true)} style={btn('#5b6773', false, true)}>すべて有効</button>
+              <button type="button" onClick={() => setAll(false)} style={btn('#5b6773', false, true)}>すべて無効</button>
+            </span>}
       </div>
       <div style={{ margin: '12px 22px 0', borderRadius: 10, overflow: 'hidden', border: '1px solid #eef2f5' }}>
         {mode === '区分'
@@ -334,18 +319,17 @@ export function AuditSettingsPage({ variant, accent, onNavigate }: MaintenancePa
                 const it = AUDIT_ITEMS.find((a) => a.no === no);
                 if (!it) return null;
                 const on = isOn(no);
-                const pr = AUDIT_PARAMS[no];
                 return (
                   <div key={no} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderBottom: '1px solid #f1f4f6', borderRight: '1px solid #f1f4f6', background: on ? '#fff' : '#fafbfc' }}>
                     <span style={{ width: 26, fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: on ? '#22303c' : '#9aa5b1' }}>{no2(no)}</span>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: on ? accent : '#9aa5b1', fontWeight: 700, cursor: 'pointer', width: 62, flex: 'none' }}>
-                      <input type="checkbox" checked={on} onChange={(e) => setOn(no, e.target.checked)} aria-label={`${no2(no)} ${it.name} を有効にする`} style={{ width: 17, height: 17 }} />{on ? '有効' : '無効'}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: on ? accent : '#9aa5b1', fontWeight: 700, cursor: viewOnly ? 'default' : 'pointer', width: 62, flex: 'none' }}>
+                      <input type="checkbox" checked={on} disabled={viewOnly} onChange={(e) => setOn(no, e.target.checked)} aria-label={`${no2(no)} ${it.name} を有効にする`} style={{ width: 17, height: 17 }} />{on ? '有効' : '無効'}
                     </label>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 14, fontWeight: 600, color: on ? '#22303c' : '#9aa5b1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.name}</div>
-                      <div style={sub}>対象科目 {acctsOf(no).length} 件{pr ? `　／　${pr.unit === '円' ? paramOf(no).toLocaleString('ja-JP') + ' 円以上' : paramOf(no) + ' ％'}` : ''}</div>
+                      <div style={sub}>{summary(no)}</div>
                     </div>
-                    <button type="button" className="btn-outline" onClick={() => open(no)} style={btn('#5b6773', false, true)}>設定</button>
+                    <button type="button" className="btn-outline" onClick={() => setDlg(no)} style={btn('#5b6773', false, true)}>{viewOnly ? '表示' : '設定'}</button>
                   </div>
                 );
               })}
@@ -355,52 +339,10 @@ export function AuditSettingsPage({ variant, accent, onNavigate }: MaintenancePa
         <Notice>減価償却システムのデータの指定（15〜17）は「法人・区分」の設定で行います。各項目で使っている科目の区分コードを変更した場合は、その項目の「設定」で対象科目を選び直してください。</Notice>
       </div>
 
-      <Modal open={!!dlg} onClose={() => setDlg(null)} width={640} title={dlg ? `${no2(dlg.no)}. ${dlgItem?.name ?? ''} の設定` : ''}>
-        {dlg && (
-          <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 14, color: '#5b6773' }}>
-              <ScopeBadge scope={mode === '区分' ? 'この区分のみ' : '全区分共通'} note={mode === '区分' ? s.division : '法人全体'} />
-              診断の条件式を構成する勘定科目を、チェックで有効／無効に切り替えます。
-            </div>
-            {AUDIT_PARAMS[dlg.no] && (
-              <Field label={AUDIT_PARAMS[dlg.no].label}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <input className="field-input ring" inputMode="numeric" value={dlg.param ? parseInt(dlg.param, 10).toLocaleString('ja-JP') : ''} onChange={(e) => setDlg({ ...dlg, param: digits(e.target.value).slice(0, 10) })} onKeyDown={onEnter(saveDlg)} style={{ ...numInput, width: 160 }} />
-                  <span style={{ fontSize: 14, color: '#7a8794' }}>{AUDIT_PARAMS[dlg.no].unit}</span>
-                </div>
-              </Field>
-            )}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <input className="search-input" value={dlg.q} onChange={(e) => setDlg({ ...dlg, q: e.target.value })} placeholder="科目名・コードで絞り込み" aria-label="科目の絞り込み" style={{ ...input, width: 240 }} />
-              <span style={{ fontSize: 14, color: '#7a8794' }}>{dlg.picked.length} 科目を選択中</span>
-              <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
-                <button type="button" onClick={() => setDlg({ ...dlg, picked: auditDefaultAccts(dlg.no) })} style={btn('#5b6773', false, true)}>標準に戻す</button>
-                <button type="button" onClick={() => setDlg({ ...dlg, picked: [] })} style={btn('#5b6773', false, true)}>すべて外す</button>
-              </span>
-            </div>
-            <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: 320, overflow: 'auto' }}>
-              {ACCOUNT_META.filter((m) => !dlg.q.trim() || m.name.includes(dlg.q.trim()) || m.code.startsWith(dlg.q.trim())).map((m) => {
-                const on = dlg.picked.includes(m.name);
-                return (
-                  <label key={m.name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 14px', borderBottom: '1px solid #f1f4f6', fontSize: 14, cursor: 'pointer', background: on ? '#f7fbf9' : '#fff' }}>
-                    <input type="checkbox" checked={on} onChange={() => setDlg({ ...dlg, picked: on ? dlg.picked.filter((n) => n !== m.name) : [...dlg.picked, m.name] })} style={{ width: 16, height: 16 }} />
-                    <span style={{ width: 46, color: '#8290a0', fontVariantNumeric: 'tabular-nums', fontSize: 14 }}>{m.code}</span>
-                    <span style={{ flex: 1, fontWeight: on ? 700 : 400 }}>{m.name}</span>
-                    <span style={{ fontSize: 12, color: '#9aa5b1' }}>{m.cls}</span>
-                  </label>
-                );
-              })}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button type="button" onClick={() => setDlg(null)} style={btn()}>キャンセル</button>
-              <button type="button" className="submit-btn" onClick={saveDlg} style={btn(accent, true)}>OK</button>
-            </div>
-          </div>
-        )}
-      </Modal>
-      <ExplainModal open={help} onClose={() => setHelp(false)} accent={accent} title="決算チェック設定の説明" source="現行画面【決算チェックシステム - 設定】" sections={[
+      <AuditItemDialog no={dlg} scope={mode} onClose={() => setDlg(null)} onSaved={toast.show} accent={accent} />
+      <ExplainModal open={help} onClose={() => setHelp(false)} accent={accent} support={false} title="決算チェック設定の説明" source="現行画面【決算チェックシステム - 設定】" sections={[
         { h: '有効／無効', body: <>チェックを外した項目は、決算チェック（決算調査）の実行時に調査しません。結果一覧では「対象外」として表示します。</> },
-        { h: '項目ごとの設定', body: <>各行の「設定」から、その項目の診断に使う勘定科目を選びます。金額や割合で判定する項目（14・26・27）は、しきい値もここで設定します。</> },
+        { h: '項目ごとの設定', body: <>各行の「設定」を押すと、設定先の区分を確認する画面のあとに、その項目の診断用条件式と、条件式の要素ごとの勘定科目の一覧を表示します。科目はチェックで有効／無効に切り替えます。予算や残高率で判定する項目（26・27）は、しきい値もここで設定します。14 の抽出する金額（10 万円以上）は変更できません。</> },
         { h: '適用範囲', body: <>「決算チェック設定（この区分）」は起動中の区分のみに適用されます。「法人決算チェック設定（法人全体）」は法人全体の決算チェックに使う設定で、区分ごとの設定とは別に保持します。</> },
         { h: '項目の分類', body: <>01〜14・18〜19 は会計システムのデータ同士を比較します。15〜17 は減価償却システムのデータと会計システムのデータを比較します。★印（20〜28）は期中残高や内部取引などの追加チェックです。</> },
       ]} />

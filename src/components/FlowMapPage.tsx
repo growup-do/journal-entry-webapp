@@ -91,10 +91,12 @@ const NODES: Node[] = [
   N('auditm', '決算チェック（決算調査）', 'modal', 'audit', { open: '決算調査', note: '28項目・5状態' }),
   N('auditexp', '説明／結果詳細／トレース', 'dialog', 'audit', { open: '決算調査' }),
   N('auditset', '決算チェック設定', 'page', 'audit', { open: '決算チェック設定' }),
+  N('auditrange', 'データ範囲確認 → 項目ごとの設定', 'dialog', 'audit', { open: '決算チェック設定', note: '設定先の区分を確認 → 条件式と要素ごとの科目' }),
   // グラフ
   N('ygraph', '経年グラフ', 'page', 'trend', { open: '経年グラフ' }),
   N('agraph', '分析グラフ', 'page', 'trend', { open: '分析グラフ' }),
   N('suff', '社会福祉充実残額', 'page', 'trend', { open: '充実残額', note: '算定方式の選択 → シミュレーター' }),
+  N('suffhist', '過去年推移（表示年数の選択 → 推移）', 'dialog', 'trend', { open: '充実残額', note: '2〜8 年を選択／Excel出力' }),
   // 帳票・印刷
   N('printc', '帳票の印刷', 'page', 'print', { open: '印刷センター' }),
   N('appendix', '別紙（注記・明細書・財産目録）', 'page', 'print', { open: '別紙（注記・明細書・財産目録）' }),
@@ -154,8 +156,8 @@ const EDGES: Edge[] = [
   E('ledger', 'vedit', '訂正'), E('ledger', 'printflow', '印刷', true), E('journal', 'printflow', '印刷 ▾', true), E('trial', 'printflow', '印刷 ▾', true), E('closing', 'printflow', '印刷 ▾', true), E('e-voucher', 'printflow', '印刷 ▾', true), E('s-budget', 'printflow', '印刷 ▾', true), E('s-tax', 'printflow', '印刷 ▾', true), E('receipt', 'printflow', '印刷', true),
   E('daily', 'journal', '伝票表示（不一致の日）'), E('journal', 'daily', '← 戻る', true),
   E('trial', 'ledgerpanel', '科目 → 元帳'), E('closing', 'ledgerpanel', '科目 → 元帳'), E('trend', 'ledgerpanel', '月 → 元帳', true), E('ledgerpanel', 'ledger', '元帳の画面で開く'), E('ledgerpanel', 'vedit', '訂正', true), E('ledger', 'trial', '← 戻る', true),
-  E('trend', 'trendgraph', 'グラフ作成', true), E('closing', 'balgraph', '残高グラフ', true), E('closing', 'analysis', '収支分析', true), E('closing', 'suff', '充実残額', true),
-  E('auditm', 'auditexp', '説明／結果詳細', true), E('auditm', 'auditset', '決算チェック設定'), E('auditm', 'printflow', '結果印刷', true),
+  E('trend', 'trendgraph', 'グラフ作成', true), E('closing', 'balgraph', '残高グラフ', true), E('closing', 'analysis', '収支分析', true), E('closing', 'suff', '充実残額', true), E('suff', 'suffhist', '過去年推移'),
+  E('auditm', 'auditexp', '説明／結果詳細', true), E('auditm', 'auditset', '決算チェック設定'), E('auditset', 'auditrange', '設定／表示'), E('auditm', 'auditrange', '項目名', true), E('auditm', 'printflow', '結果印刷', true),
   E('printc', 'printflow', '帳票を選ぶ'), E('printflow', 'preview', 'プレビュー', true), E('printflow', 'saveas', 'CSV／Excel／PDF', true), E('printc', 'preview', 'まとめて印刷', true), E('appendix', 'printflow', '印刷', true),
   E('s-update', 'division', '完了後：会計期間を開く', true), E('s-update', 's-backup', 'バックアップの確認', true),
   E('s-acct', 's-attached', '関連する設定', true), E('s-carry', 'printflow', '収支分析表を印刷', true), E('s-deprlink', 's-acct', '科目設定で確認', true), E('s-deprlink', 'dep', '減価償却を開く', true), E('s-env', 'commonprint', '印刷の詳細設定を開く', true), E('auditset', 's-attached', '1年基準科目', true),

@@ -4,15 +4,15 @@
 //   見出しの「決算チェック設定」から、項目のON/OFFと項目ごとの勘定科目選択を開く。
 //   「説明」は項目ごとの解説ページ（表示中は「一覧に戻る」のみ）。結果詳細＝トレース情報（コピー可）、結果印刷＝プレビュー。
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
 import { PreviewModal } from './PrintCenter';
 import { Notice, btn as uiBtn } from './ui';
 import { AUDIT_EXPLANATIONS, AUDIT_ITEMS, displayName } from '../data';
-import { ACCOUNT_META } from '../lib/accounts';
-import { setSession, useSession } from '../store/session';
+import { isViewOnly, setSession, useSession } from '../store/session';
+import { AuditItemDialog } from './AuditItemDialog';
 
 type Status = '未調査' | '調査中' | 'OK' | '要調査' | 'スキップ';
 const STATES: Status[] = ['未調査', '調査中', 'OK', '要調査', 'スキップ'];
@@ -26,8 +26,8 @@ const STATE_STYLE: Record<Status, { icon: string; bg: string; fg: string; bd: st
 };
 /** サンプルとして「要調査」になる項目（構造確認用） */
 const NEEDS_CHECK = new Set([3, 14, 20]);
-/** オプション連動（減価償却 15〜17／小口現金 28）。プロトタイプでは有効扱い */
-const OPTION_ITEMS = new Set([15, 16, 17, 28]);
+/** オプション連動（小口現金 28）。減価償却 15〜17 は標準機能になるため表示しない（確認メモ #122） */
+const OPTION_ITEMS = new Set([28]);
 
 interface Props {
   open: boolean;
@@ -52,8 +52,22 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
   const timer = useRef<number | undefined>(undefined);
   const toast = useToast();
   const enabled = (no: number) => s.auditEnabled[no] !== false;
+  const viewOnly = isViewOnly(s);
+  /** 設定ダイアログで表示中のタブ（区分／法人）の有効・無効 */
+  const cfgOn = (no: number) => (corpTab === '区分' ? s.auditEnabled[no] !== false : s.auditCorpEnabled[no] !== false);
+  const setCfgOn = (no: number, v: boolean) => setSession(corpTab === '区分' ? { auditEnabled: { ...s.auditEnabled, [no]: v } } : { auditCorpEnabled: { ...s.auditCorpEnabled, [no]: v } });
 
   useEffect(() => () => window.clearInterval(timer.current), []);
+  // 開き直したときは調査前の状態に戻す（確認メモ #123：調査終了で閉じたあとに結果が残らない）
+  useEffect(() => {
+    if (!open) return;
+    window.clearInterval(timer.current);
+    setStatus({}); setRunning(false); setDone(false); setOnlyNg(false); setExplain(null); setTrace(null); setPrint(false);
+  }, [open]);
+  // 「要調査のみ」で件数が減ってもモーダルの大きさを変えない（確認メモ #125）
+  const listRef = useRef<HTMLDivElement>(null);
+  const [listH, setListH] = useState(0);
+  useLayoutEffect(() => { if (open && explain == null && !onlyNg && listRef.current) setListH(listRef.current.offsetHeight); });
 
   const start = () => {
     if (running) return;
@@ -133,7 +147,7 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
       title={
         <span style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <span>{displayName('決算調査')}</span>
-          <span style={{ fontSize: 14, fontWeight: 500, color: '#7a8794' }}>{s.fiscalYear}　4月1日 〜 3月31日　{corpTab === '法人' ? '法人全体' : s.division}</span>
+          <span style={{ fontSize: 14, fontWeight: 500, color: '#7a8794' }}>{s.fiscalYear}　4月1日 〜 3月31日　{s.division}</span>
           {explain == null && (
             <button type="button" className="btn-outline" data-action="決算チェック設定" onClick={() => setSettings(true)} title="チェックする項目と、項目ごとの条件（勘定科目）を設定します" style={{ marginLeft: 'auto', padding: '6px 14px', borderRadius: 8, border: '1px solid #1f7a52', background: '#fff', color: '#1f7a52', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
               決算チェック設定
@@ -159,6 +173,7 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
               要調査のみ
             </label>
           </div>
+          <div ref={listRef} style={{ minHeight: onlyNg && listH ? listH : undefined }}>
           {onlyNg && shown.length === 0 && (
             <div style={{ padding: '28px 12px', textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>{done ? '要調査の項目はありません。' : '要調査の項目はまだありません（「調査開始」で調査します）。'}</div>
           )}
@@ -175,6 +190,7 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
                 ))}
               </div>
             )}
+          </div>
           </div>
           <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <div style={{ fontSize: 14, color: '#7a8794', minHeight: 18 }}>
@@ -228,37 +244,35 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
       )}
     </Modal>
 
-    {/* 決算チェック設定 */}
+    {/* 決算チェック設定：表示中の区分／法人全体で、それぞれの設定を表示・変更する（確認メモ #124）。参照のみ権限は表示だけ（#118） */}
     <Modal open={settings} onClose={() => setSettings(false)} width={760} title="決算チェック設定">
-      <div style={{ padding: '12px 22px 18px' }}>
-        <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>{(['区分', '法人'] as const).map((t) => <button key={t} type="button" onClick={() => setCorpTab(t)} style={uiBtn(corpTab === t ? '#1f7a52' : '#5b6773', corpTab === t, true)}>{t === '区分' ? '決算チェック設定（表示中の区分）' : '法人決算チェック設定（法人全体）'}</button>)}</div>
-        <div style={{ fontSize: 14, color: '#7a8794', marginBottom: 8 }}>チェックする項目を有効／無効に切り替え、項目名をクリックすると診断用条件式を構成する勘定科目を選択できます。</div>
+      <div style={{ padding: '12px 22px 18px' }} data-audit-settings={corpTab}>
+        <div role="tablist" style={{ display: 'flex', gap: 4, marginBottom: 10 }}>{(['区分', '法人'] as const).map((t) => <button key={t} type="button" role="tab" aria-selected={corpTab === t} onClick={() => setCorpTab(t)} style={uiBtn(corpTab === t ? '#1f7a52' : '#5b6773', corpTab === t, true)}>{t === '区分' ? '決算チェック設定（表示中の区分）' : '法人決算チェック設定（法人全体）'}</button>)}</div>
+        <div style={{ fontSize: 14, color: '#7a8794', marginBottom: 8 }}>
+          <b style={{ color: '#3d4a56', marginRight: 6 }}>{corpTab === '区分' ? `この区分のみ：${s.division}` : '法人全体'}</b>
+          {viewOnly ? '参照のみの権限のため、設定の変更はできません。項目名をクリックすると設定内容を表示します。' : 'チェックする項目を有効／無効に切り替え、項目名をクリックすると診断用条件式を構成する勘定科目を選択できます。'}
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px', maxHeight: 400, overflow: 'auto' }}>
-          {AUDIT_ITEMS.map((it) => (
-            <div key={it.no} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid #f1f4f6' }}>
-              <span style={{ width: 24, fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{String(it.no).padStart(2, '0')}</span>
-              <input type="checkbox" checked={enabled(it.no)} onChange={(e) => setSession({ auditEnabled: { ...s.auditEnabled, [it.no]: e.target.checked } })} />
-              <button type="button" onClick={() => setItemCfg(it.no)} style={{ flex: 1, textAlign: 'left', border: '1px solid #e2e8ee', background: '#fff', borderRadius: 7, padding: '5px 10px', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', color: enabled(it.no) ? '#22303c' : '#9aa5b1' }}>{it.name}</button>
-            </div>
-          ))}
+          {AUDIT_ITEMS.map((it) => {
+            const on = cfgOn(it.no);
+            return (
+              <div key={it.no} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid #f1f4f6' }}>
+                <span style={{ width: 24, fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{String(it.no).padStart(2, '0')}</span>
+                <input type="checkbox" checked={on} disabled={viewOnly} aria-label={`${String(it.no).padStart(2, '0')} ${it.name} を有効にする`} onChange={(e) => setCfgOn(it.no, e.target.checked)} />
+                <button type="button" onClick={() => setItemCfg(it.no)} style={{ flex: 1, textAlign: 'left', border: '1px solid #e2e8ee', background: '#fff', borderRadius: 7, padding: '5px 10px', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', color: on ? '#22303c' : '#9aa5b1' }}>{it.name}</button>
+              </div>
+            );
+          })}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
           {onNavigate && <button type="button" data-action="設定画面で開く" onClick={() => { setSettings(false); onClose(); onNavigate('決算チェック設定'); }} title="決算調査を閉じて、各種設定の「決算チェック設定」画面へ移動します" style={uiBtn('#1f7a52')}>各種設定の「決算チェック設定」画面で開く ›</button>}
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}><button type="button" onClick={() => setSettings(false)} style={uiBtn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { setSettings(false); toast.show('決算チェック設定を保存しました'); }} style={uiBtn('#1f7a52', true)}>OK</button></div>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>{viewOnly ? <button type="button" onClick={() => setSettings(false)} style={uiBtn('#1f7a52', true)}>閉じる</button> : <><button type="button" onClick={() => setSettings(false)} style={uiBtn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { setSettings(false); toast.show('決算チェック設定を保存しました'); }} style={uiBtn('#1f7a52', true)}>OK</button></>}</div>
         </div>
       </div>
     </Modal>
 
-    {/* 項目ごとの勘定科目選択 */}
-    <Modal open={itemCfg != null} onClose={() => setItemCfg(null)} width={620} title={`決算チェック設定 - ${itemCfg != null ? String(itemCfg).padStart(2, '0') + '. ' + (AUDIT_ITEMS.find((a) => a.no === itemCfg)?.name ?? '') : ''}`}>
-      <div style={{ padding: '12px 22px 18px' }}>
-        <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 8 }}>診断用条件式の各要素を構成する勘定科目を、チェックにより有効／無効に切り替えます。</div>
-        <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: 320, overflow: 'auto' }}>
-          {ACCOUNT_META.map((m, i) => <label key={m.name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderBottom: '1px solid #f1f4f6', fontSize: 14 }}><input type="checkbox" defaultChecked={m.kind === 'BS' || i % 3 === 0} /><span style={{ width: 120, color: '#8290a0', fontVariantNumeric: 'tabular-nums' }}>{m.code.slice(0, 3)}-{m.code.slice(3)}-00-00-00</span><span>{m.name}</span></label>)}
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}><button type="button" onClick={() => setItemCfg(null)} style={uiBtn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => setItemCfg(null)} style={uiBtn('#1f7a52', true)}>OK</button></div>
-      </div>
-    </Modal>
+    {/* 項目ごとの設定（データ範囲確認 → 条件式と要素ごとの科目。確認メモ #117） */}
+    <AuditItemDialog no={itemCfg} scope={corpTab} onClose={() => setItemCfg(null)} onSaved={toast.show} />
 
     {/* 結果詳細（トレース情報） */}
     <Modal open={trace != null} onClose={() => setTrace(null)} width={760} title={traceItem ? `結果詳細 - ${String(traceItem.no).padStart(2, '0')}. ${traceItem.name}` : '結果詳細（決算チェックトレース情報）'}>

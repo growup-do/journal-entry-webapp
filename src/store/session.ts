@@ -141,6 +141,8 @@ export interface Session {
   journalTarget: { month: string; day: number; from: string } | null;
   /** 決算チェック設定（項目番号→有効） */
   auditEnabled: Record<number, boolean>;
+  /** 法人決算チェック設定（法人全体。項目番号→有効）。区分ごとの設定とは別に保持する（確認メモ #124） */
+  auditCorpEnabled: Record<number, boolean>;
   /** 法人情報（部門情報の変更）：データ開始年月日（西暦8桁）・法人税納税の有無 */
   corpStartDate: string;
   corpTax: string;
@@ -172,7 +174,7 @@ const DEFAULT: Session = {
   fiscalYear: '令和8年度', currentYear: '令和8年度', tree: DEFAULT_TREE, merges: [{ name: '合算_001（保育園＋子育て支援）', members: ['002 保育事業', '003 子育て支援'] }],
   favorites: ['単一入力', '伝票入力', '仕訳一覧', '勘定元帳', '月次試算', '日次調査'],
   env: DEFAULT_ENV, input: DEFAULT_INPUT, print: DEFAULT_PRINT, templates: DEFAULT_TEMPLATES, allocations: DEFAULT_ALLOCATIONS, specialRates: DEFAULT_SPECIAL_RATES,
-  ledgerTarget: null, journalTarget: null, auditEnabled: {}, corpStartDate: '20240401', corpTax: '非課税',
+  ledgerTarget: null, journalTarget: null, auditEnabled: {}, auditCorpEnabled: { 21: false, 22: false }, corpStartDate: '20240401', corpTax: '非課税',
   role: '入力可', startScreen: '伝票入力', homeSections: DEFAULT_HOME_SECTIONS, taxEntry: false,
 };
 

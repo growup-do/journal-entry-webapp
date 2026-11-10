@@ -18,8 +18,11 @@ const DEFAULT_MAP: Record<string, string[]> = Object.fromEntries(LINE_KEYS.map((
 DEFAULT_MAP['資産(a)'] = ACCOUNT_META.filter((m) => m.cls === '現預金' || m.cls === '資産').filter((m) => m.name !== '現金（収入）').map((m) => m.name);
 DEFAULT_MAP['事業未収金'] = ['事業未収金'];
 DEFAULT_MAP['未収補助金'] = ['未収金'];
-/** 過去年推移のサンプル（令和4〜7年度）。令和8年度は画面の入力値から算出 */
+/** 過去年推移のサンプル（令和元〜7年度）。令和8年度は画面の入力値から算出 */
 const HISTORY = [
+  { y: '令和元年度', usable: 7_200_000, deduct: 37_100_000 },
+  { y: '令和2年度', usable: 7_900_000, deduct: 37_600_000 },
+  { y: '令和3年度', usable: 8_700_000, deduct: 38_200_000 },
   { y: '令和4年度', usable: 9_800_000, deduct: 38_900_000 },
   { y: '令和5年度', usable: 10_900_000, deduct: 39_400_000 },
   { y: '令和6年度', usable: 11_600_000, deduct: 39_800_000 },
@@ -40,6 +43,8 @@ const METHODS = [
   { key: 'add', label: '追加額方式（入力された実績金額から追加して算出する方式）', hint: 'ご使用例　期中時に残額を入力して求めたい' },
   { key: 'direct', label: '直接入力方式（全てを直接入力して算出する方式）', hint: 'ご使用例　実績とは異なる金額を入力して求めたい' },
 ];
+/** 過去年推移の表示年数の選択肢（今年度を含む。確認メモ #114） */
+const YEAR_CHOICES = [2, 3, 4, 5, 6, 7, 8];
 const yen = (n: number) => n.toLocaleString('ja-JP');
 const num = (s: string) => parseInt(s.replace(/[^0-9-]/g, ''), 10) || 0;
 
@@ -63,18 +68,35 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
   const [mapping, setMapping] = useState<Record<string, string[]>>(DEFAULT_MAP);
   const [mapDraft, setMapDraft] = useState<Record<string, string[]>>(DEFAULT_MAP);
   const [histOpen, setHistOpen] = useState(false);
+  const [yearsOpen, setYearsOpen] = useState(false);
+  const [years, setYears] = useState(5);
+  const [yearsDraft, setYearsDraft] = useState(5);
   const [exportSpec, setExportSpec] = useState<ExportSpec | null>(null);
   const toast = useToast();
 
   const usable = a - b - c - d;
   const deductSum = deduct.reduce((s, v) => s + v, 0);
   const result = usable - deductSum;
+  /** 金額を手入力できるのは直接入力方式のときだけ（確認メモ #112） */
+  const direct = method === 'direct';
+  const zero = () => {
+    setA(0); setB(0); setC(0); setDd(0); setDeduct(D.deduct.map(() => 0));
+    toast.show('すべての金額を 0 円にしました');
+  };
   const reset = () => {
     setA(D.assets); setB(D.liabilities); setC(D.kihonkin); setDd(D.kokko); setDeduct(D.deduct.map((x) => x.v));
     toast.show('初期値に戻しました');
   };
 
-  const history = [...HISTORY.map((h) => ({ ...h, result: h.usable - h.deduct })), { y: '令和8年度', usable, deduct: deductSum, result }];
+  const history = [...HISTORY.slice(Math.max(0, HISTORY.length - (years - 1))).map((h) => ({ ...h, result: h.usable - h.deduct })), { y: '令和8年度', usable, deduct: deductSum, result }];
+  const historySpec = (): ExportSpec => ({
+    kind: 'excel',
+    title: '充実残額の過去年推移',
+    fileName: '充実残額_過去年推移_' + years + '年度分',
+    meta: '表示年数：' + years + ' 年度（' + history[0].y + '〜令和8年度）',
+    header: ['年度', '活用可能な財産（円）', '控除対象資産（円）', '充実残額（円）'],
+    rows: history.map((h, i) => [h.y + (i === history.length - 1 ? '（今回のシミュレーション）' : ''), h.usable, h.deduct, h.result]),
+  });
   const excelSpec = (): ExportSpec => ({
     kind: 'excel',
     title: '簡易充実残額シミュレーター',
@@ -97,7 +119,7 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
   const row = (label: string, value: number, set: (n: number) => void, odd: boolean, sub?: boolean) => (
     <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 18px', paddingLeft: sub ? 34 : 18, background: odd ? '#fffbea' : '#f2fbfd' }}>
       <span style={{ flex: 1, fontSize: 14 }}>{label}</span>
-      <input className="field-input ring" value={yen(value)} onChange={(e) => set(num(e.target.value))} inputMode="numeric" style={input} />
+      <input className="field-input ring" value={yen(value)} onChange={(e) => set(num(e.target.value))} inputMode="numeric" readOnly={!direct} tabIndex={direct ? undefined : -1} title={direct ? undefined : '金額は実績から表示します。手入力できるのは直接入力方式のときだけです'} style={direct ? input : { ...input, background: '#f1f4f6', color: '#5b6773', border: '1px solid #e2e8ee', cursor: 'default' }} />
       <span style={{ fontSize: 14, color: '#5b6773', width: 16 }}>円</span>
     </div>
   );
@@ -201,14 +223,15 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
           <div>
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21 }}>簡易充実残額シミュレーター</div>
             <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>
-              入力方式：<b style={{ color: '#22303c' }}>{METHODS.find((m) => m.key === method)?.label.split('（')[0] ?? '未選択'}</b>　金額を編集すると予想額が再計算されます。<span style={{ color: '#b7791f' }}>（値はサンプルです）</span>
+              入力方式：<b style={{ color: '#22303c' }}>{METHODS.find((m) => m.key === method)?.label.split('（')[0] ?? '未選択'}</b>　{direct ? '金額を編集すると予想額が再計算されます。' : '金額は実績から表示します（手入力できるのは直接入力方式のときだけです）。'}<span style={{ color: '#b7791f' }}>（値はサンプルです）</span>
             </div>
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             <button type="button" className="btn-outline" onClick={() => { setMapDraft(mapping); setMapOpen(true); }} style={btn()}>科目設定</button>
             <button type="button" className="btn-outline" onClick={reset} style={btn()}>初期化</button>
+            {direct && <button type="button" className="btn-outline" data-action="0円にする" onClick={zero} title="すべての金額を 0 円にして、一から入力します（直接入力方式のみ）" style={btn()}>0円にする</button>}
             <button type="button" className="btn-outline" onClick={() => setStep('method')} style={btn()}>入力方式</button>
-            <button type="button" className="btn-outline" onClick={() => setHistOpen(true)} style={btn()}>過去年推移</button>
+            <button type="button" className="btn-outline" onClick={() => { setYearsDraft(years); setYearsOpen(true); }} style={btn()}>過去年推移</button>
             <button type="button" className="btn-outline" onClick={() => setExportSpec(excelSpec())} style={btn()}>Excel出力</button>
             <button type="button" className="btn-outline" onClick={() => onNavigate('伝票入力')} style={btn()}>閉じる</button>
           </div>
@@ -301,8 +324,27 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
         </div>
       </Modal>
 
+      {/* 過去年推移の表示年数 選択画面（確認メモ #114） */}
+      <Modal open={yearsOpen} onClose={() => setYearsOpen(false)} width={460} title="過去年推移の表示年数 選択画面">
+        <div style={{ padding: '18px 24px 20px' }} data-sufficiency-years>
+          <div style={{ fontSize: 14, color: '#22303c', marginBottom: 12 }}>過去年推移に表示する年数を選択してください（今年度を含みます）。</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+            {YEAR_CHOICES.map((n) => (
+              <label key={n} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 10px', border: '1px solid ' + (yearsDraft === n ? accent : '#cfd8e0'), borderRadius: 8, background: yearsDraft === n ? '#f3f8fd' : '#fff', fontSize: 14, fontWeight: yearsDraft === n ? 700 : 500, cursor: 'pointer' }}>
+                <input type="radio" name="suf-years" checked={yearsDraft === n} onChange={() => setYearsDraft(n)} />{n} 年
+              </label>
+            ))}
+          </div>
+          <div style={{ fontSize: 12, color: '#8290a0', marginTop: 10 }}>{HISTORY[Math.max(0, HISTORY.length - (yearsDraft - 1))].y}〜令和8年度を表示します。</div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
+            <button type="button" onClick={() => setYearsOpen(false)} style={btn()}>キャンセル</button>
+            <button type="button" className="submit-btn" onClick={() => { setYears(yearsDraft); setYearsOpen(false); setHistOpen(true); }} style={btn(true)}>OK</button>
+          </div>
+        </div>
+      </Modal>
+
       {/* 過去年推移 */}
-      <Modal open={histOpen} onClose={() => setHistOpen(false)} width={760} title="充実残額の推移（過去5年度）">
+      <Modal open={histOpen} onClose={() => setHistOpen(false)} width={760} title={'充実残額の推移（' + years + '年度分）'}>
         <div style={{ padding: '12px 22px 18px' }}>
           {(() => {
             const W = 700, H = 240, padL = 70, padR = 16, padT = 26, padB = 34;
@@ -362,7 +404,11 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
             </tbody>
           </table>
           <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 8 }}>※ 過去年度の値はサンプルです。本番では各年度の決算データ（財産目録）から算出した値を表示します。</div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}><button type="button" onClick={() => setHistOpen(false)} style={btn()}>閉じる</button></div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+            <button type="button" className="btn-outline" onClick={() => { setYearsDraft(years); setHistOpen(false); setYearsOpen(true); }} style={{ ...btn(), marginRight: 'auto' }}>表示年数の変更</button>
+            <button type="button" className="btn-outline" data-action="推移Excel出力" onClick={() => setExportSpec(historySpec())} style={btn()}>Excel出力</button>
+            <button type="button" onClick={() => setHistOpen(false)} style={btn()}>閉じる</button>
+          </div>
         </div>
       </Modal>
 
