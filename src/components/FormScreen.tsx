@@ -12,7 +12,10 @@ import { DivisionPicker } from './DivisionPicker';
 import { FiscalYearBanner } from './FiscalYearPage';
 import { AttachedStatementModal, BudgetGraphModal, BudgetHintLive, EntryConfirmModal, SpecialAmountModal, TorihikiBadge, useEntryTools } from './EntryExtras';
 import { ComboField, EntryStyles, isIme, FieldLabel, FundAccountLine, PAPER, PaperBox, PaperDate, PaperStyles, PaperTitle, fieldMessage, fieldState, fmtNum, focusId, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, watchedStatement, type FundMode, type FusenColor, FusenTab, VoucherMarks } from './EntryCommon';
-import { WIDE_TAB_SPACE, WidePanel, useWidePanel } from './WidePanel';
+import { WIDE_TAB_SPACE, WIDE_WIDTH, WidePanel, useWidePanel } from './WidePanel';
+import { Menu as ClassicMenu } from './classic/ClassicMenu';
+import { VersionBadge } from './VersionBadge';
+import { useLayoutMode } from '../store/layout';
 import { ToastView, useToast } from './Toast';
 import { judgeTorihiki } from '../lib/accounts';
 import { addVoucher, getVouchers, updateVoucher, useVouchers } from '../store/journalStore';
@@ -51,6 +54,7 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
   const [topOffset, setTopOffset] = useState(52);
   const headerRef = useRef<HTMLDivElement>(null);
   const nav = useSideNav();
+  const classic = useLayoutMode() === 'classic';
 
   // アプリバー（＋年度の帯）の高さを実測（折返しに追従）。右に重ねるパネルの上端に使う
   useLayoutEffect(() => {
@@ -67,7 +71,49 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
       clearTimeout(t2);
       window.removeEventListener('resize', measure);
     };
-  }, []);
+  }, [classic]);
+
+  const body = page === '伝票入力' ? (
+    <VoucherEntry onNavigate={onNavigate} topOffset={topOffset} />
+  ) : page === '単一入力' || page === '振替入力' || page === '振替単一' ? (
+    <EntryWithPanel page={page} topOffset={topOffset} onNavigate={onNavigate}>{renderPage(page, 'form', GREEN, GREEN_RGB, onNavigate, onLogout)}</EntryWithPanel>
+  ) : (
+    renderPage(page, 'form', GREEN, GREEN_RGB, onNavigate, onLogout)
+  );
+
+  // 旧レイアウト（プロトタイプ確認用。11/10 より前の構成）：上部にアプリバー＋年度帯＋メニューバー。確認メモの位置を確かめるために残している
+  if (classic) {
+    return (
+      <div style={{ minHeight: 'calc(100vh / var(--app-zoom, 1))', display: 'flex', flexDirection: 'column' }}>
+        <div ref={headerRef} data-app-top style={{ position: 'sticky', top: 0, zIndex: 100 }}>
+          <header style={{ background: '#fff', borderBottom: '1px solid #dde4ea', minHeight: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', rowGap: 6, columnGap: 12, padding: '8px 26px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: '1 1 auto', maxWidth: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 'none' }}>
+                <button type="button" data-menu="ホーム（ロゴ）" onClick={() => onNavigate('ホーム')} title="ホームへ" style={{ display: 'flex', alignItems: 'center', gap: 9, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: 'inherit', color: 'inherit' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, background: GREEN, color: '#fff', borderRadius: 8, fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 15 }}>会</span>
+                  <span style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16, whiteSpace: 'nowrap' }}>会計基準システム</span>
+                </button>
+                <VersionBadge accent={GREEN} />
+              </div>
+              <span style={{ color: '#c3ccd4' }}>｜</span>
+              <DivisionPicker accent={GREEN} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: '#68757f', flex: 'none', marginLeft: 'auto' }}>
+              <HeaderTools accent={GREEN} page={page} onNavigate={onNavigate} />
+              <SettingsMenu accent={GREEN} active={page} onNavigate={onNavigate} />
+              <UserMenu accent={GREEN} soft="#eef4f0" onNavigate={onNavigate} />
+            </div>
+          </header>
+          <FiscalYearBanner />
+          <nav style={{ background: '#fff', borderBottom: '1px solid #eef2f5', padding: '3px 20px', display: 'flex', flexWrap: 'wrap', overflow: 'visible', alignItems: 'stretch', position: 'relative', zIndex: 99 }}>
+            <ClassicMenu orientation="h" accent={GREEN} active={page} onSelect={onNavigate} />
+          </nav>
+        </div>
+        {body}
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: 'calc(100vh / var(--app-zoom, 1))', display: 'flex', alignItems: 'stretch' }}>
@@ -105,13 +151,7 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
           <FiscalYearBanner />
         </div>
 
-        {page === '伝票入力' ? (
-          <VoucherEntry onNavigate={onNavigate} topOffset={topOffset} />
-        ) : page === '単一入力' || page === '振替入力' || page === '振替単一' ? (
-          <EntryWithPanel page={page} topOffset={topOffset} onNavigate={onNavigate}>{renderPage(page, 'form', GREEN, GREEN_RGB, onNavigate, onLogout)}</EntryWithPanel>
-        ) : (
-          renderPage(page, 'form', GREEN, GREEN_RGB, onNavigate, onLogout)
-        )}
+        {body}
         <Footer />
       </div>
     </div>
@@ -341,6 +381,8 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
     enterOrder: ENTER_ORDER,
   });
 
+  // 旧レイアウト（プロトタイプ確認用）では、参照パネルを開くと本文を左に押し出す（以前の動き）
+  const pushOut = useLayoutMode() === 'classic' && !wide.collapsed && !wide.narrow;
   const smallInput: CSSProperties = { padding: '4px 8px', border: '1px solid #cfd8e0', borderRadius: 7, fontSize: 14, fontFamily: 'inherit' };
   /** 明細の列：コード（行番号）｜摘要・取引先｜金額｜行の操作（証憑・チェック・付箋／挿入・削除） */
   const GRID = '52px minmax(0,1fr) 170px 158px';
@@ -357,11 +399,12 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
           flex: 1,
           padding: 28,
           // 右側は参照パネルの開閉タブと重ならないよう、タブの幅の分だけ空ける（パネル自体は本文に重ねて出すので、開いても本文は動かない）
-          paddingRight: WIDE_TAB_SPACE,
+          paddingRight: (pushOut ? WIDE_WIDTH : 0) + WIDE_TAB_SPACE,
           display: 'flex',
           gap: 24,
           alignItems: 'flex-start',
           justifyContent: 'center',
+          transition: 'padding-right .28s ease',
           minWidth: 0,
         }}
       >
@@ -628,9 +671,10 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
  *  パネルの状態（表示内容・開閉）は4形式で共有（storageKey 'form-entry'）。パネルは本文に重ねて出す（開閉タブの分だけ右を空ける） */
 function EntryWithPanel({ page, topOffset, onNavigate, children }: { page: string; topOffset: number; onNavigate: (label: string) => void; children: ReactNode }) {
   const wide = useWidePanel('form-entry');
+  const pushOut = useLayoutMode() === 'classic' && !wide.collapsed && !wide.narrow;
   return (
     <>
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', paddingRight: WIDE_TAB_SPACE - 28 }}>{children}</div>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', paddingRight: (pushOut ? WIDE_WIDTH : 0) + (WIDE_TAB_SPACE - 28), transition: 'padding-right .28s ease' }}>{children}</div>
       <WidePanel accent={GREEN} layout="side" state={wide} top={topOffset} returnTo={page} onNavigate={onNavigate} />
     </>
   );

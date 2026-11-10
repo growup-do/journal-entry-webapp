@@ -16,6 +16,7 @@ import { metaOf } from '../lib/accounts';
 import { inPeriod, type Period } from '../lib/period';
 import { FUSEN_COLORS, useVouchers, type Voucher } from '../store/journalStore';
 import { canEdit, useSession } from '../store/session';
+import { getLayoutMode } from '../store/layout';
 import type { MonthFilter } from '../types';
 
 export const WIDE_VIEWS = ['日記帳', '前年度日記帳', '元帳１', '元帳２', '残高照合'] as const;
@@ -42,8 +43,8 @@ export interface WidePanelState {
   setView: (v: WideView) => void;
   narrow: boolean;
 }
-/** パネルの開閉状態。初期状態は折りたたみ（本文に重ねて出すため、見たいときに開く）。一度開閉すればその状態を覚える */
-export function useWidePanel(storageKey: string, defaultCollapsed = true): WidePanelState {
+/** パネルの開閉状態。初期状態は折りたたみ（本文に重ねて出すため、見たいときに開く。旧レイアウトでは以前どおり開いた状態）。一度開閉すればその状態を覚える */
+export function useWidePanel(storageKey: string, defaultCollapsed = getLayoutMode() !== 'classic'): WidePanelState {
   const sess = useSession();
   const [narrow, setNarrow] = useState(() => window.innerWidth < WIDE_NARROW);
   const [collapsed, setC] = useState(() => {

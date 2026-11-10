@@ -9,7 +9,8 @@ import { useEffect, useState } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { ComboField, EntryStyles, scopeStyle } from './EntryCommon';
 import { EditVoucherModal } from './VoucherEdit';
-import { LedgerTable, WIDE_TAB_SPACE, ledgerLines } from './WidePanel';
+import { LedgerTable, WIDE_NARROW, WIDE_TAB_SPACE, ledgerLines } from './WidePanel';
+import { useLayoutMode } from '../store/layout';
 import { displayName } from '../data';
 import { periodLabel, type Period } from '../lib/period';
 import { useVouchers, type Voucher } from '../store/journalStore';
@@ -40,7 +41,16 @@ export interface LedgerDrawerState {
 export function useLedgerDrawer(defaultFrom: string, defaultKind: LedgerKind = 'account'): LedgerDrawerState {
   const [target, setTarget] = useState<LedgerDrawerTarget | null>(null);
   const [collapsed, setCollapsed] = useState(true);
-  return { target, collapsed, open: (t) => { setTarget(t); setCollapsed(false); }, toggle: () => setCollapsed((c) => !c), close: () => setCollapsed(true), asideWidth: WIDE_TAB_SPACE - 28, defaultKind, defaultFrom };
+  // 旧レイアウト（プロトタイプ確認用）では、幅に余裕があるとき本文を左に押し出す（以前の動き）
+  const classic = useLayoutMode() === 'classic';
+  const [wide, setWide] = useState(() => window.innerWidth >= WIDE_NARROW + 160);
+  useEffect(() => {
+    const on = () => setWide(window.innerWidth >= WIDE_NARROW + 160);
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  const pushOut = classic && !collapsed && wide;
+  return { target, collapsed, open: (t) => { setTarget(t); setCollapsed(false); }, toggle: () => setCollapsed((c) => !c), close: () => setCollapsed(true), asideWidth: (pushOut ? LEDGER_DRAWER_WIDTH : 0) + (WIDE_TAB_SPACE - 28), defaultKind, defaultFrom };
 }
 
 export function LedgerDrawer({ state, accent, onNavigate, disabled, disabledNote }: { state: LedgerDrawerState; accent: string; onNavigate: (label: string) => void; /** 使えない画面の状態（前年度の表示中など）。開いていれば閉じ、開閉タブも押せなくする */ disabled?: boolean; /** 使えない理由（開閉タブの説明に出す） */ disabledNote?: string }) {
