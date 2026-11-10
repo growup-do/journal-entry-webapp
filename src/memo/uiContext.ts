@@ -107,6 +107,8 @@ export function anchorPos(a: MemoAnchor): { left: number; top: number } | null {
 interface Step {
   /** 状態を変えた操作（クリックした要素の識別子）。キーボードなどで変わって分からなければ '' */
   key: string;
+  /** その操作の前に行った、状態を変えない操作（同意のチェック・方式のラジオボタンなど）。これが無いと「次へ」「OK」が押せない */
+  pre?: string[];
   /** その操作の後の状態（JSON） */
   after: string;
 }
@@ -114,6 +116,14 @@ interface Step {
 let history: Step[] = [];
 let currentJson = '';
 let pending: { key: string; at: number } | null = null;
+/** 状態を変えない入力操作（チェックボックス・ラジオボタン）。次に状態が変わったときの操作の前提として記録する */
+let preps: string[] = [];
+let lastPrep: { key: string; at: number } | null = null;
+/** チェックボックス・ラジオボタンの操作か（ラベルを押した場合も含む） */
+const isPrepTarget = (t: Element) => {
+  if (t instanceof HTMLInputElement) return t.type === 'checkbox' || t.type === 'radio';
+  return !!t.closest('label')?.querySelector('input[type="checkbox"], input[type="radio"]');
+};
 let timer = 0;
 let started = false;
 const listeners = new Set<() => void>();
@@ -152,10 +162,12 @@ function check() {
   currentJson = json;
   const key = pending && Date.now() - pending.at <= 1500 ? pending.key : '';
   pending = null;
+  const pre = preps;
+  preps = [];
   // 前にあった状態に戻った（モーダルを閉じた、タブを戻した）なら、そこまで巻き戻す
   const i = history.findIndex((s) => s.after === json);
   if (i >= 0) history = history.slice(0, i + 1);
-  else history.push({ key, after: json });
+  else history.push({ key, pre: pre.length ? pre : undefined, after: json });
   listeners.forEach((f) => f());
 }
 function schedule() {
@@ -173,7 +185,12 @@ function start() {
       if (!t || inMemoLayer(t)) return;
       const el = t.closest(CLICKABLE);
       const key = el ? fullKey(el) : null;
-      if (key) pending = { key, at: Date.now() };
+      if (key && isPrepTarget(t)) {
+        // ラベルを押すと、ラベルと中の入力欄の2回クリックが届くので、続けて届いた同じものは1回に数える
+        const now = Date.now();
+        if (!(lastPrep && lastPrep.key === key && now - lastPrep.at < 300)) preps.push(key);
+        lastPrep = { key, at: now };
+      } else if (key) pending = { key, at: Date.now() };
       schedule();
     },
     true,
@@ -189,6 +206,7 @@ export function resetHistory() {
   window.setTimeout(() => {
     currentJson = JSON.stringify(readCtx());
     history = [{ key: '', after: currentJson }];
+    preps = [];
     listeners.forEach((f) => f());
   }, 120);
 }
@@ -205,7 +223,7 @@ export function subscribeCtx(fn: () => void): () => void {
 /** いまの状態に至る操作の列（メモに保存する） */
 export function currentPath(): string[] {
   start();
-  return history.map((s) => s.key).filter(Boolean);
+  return history.flatMap((s) => [...(s.pre ?? []), s.key]).filter(Boolean);
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -219,18 +237,22 @@ async function waitFor<T>(fn: () => T | null, ms: number): Promise<T | null> {
   }
 }
 
-/** 覚えた状態を再現する。開いているモーダルを閉じてから、記録した操作を順にクリックする。最後に一致したかを返す */
+/** 覚えた状態を再現する。記録した最初の操作がその場で押せるならそのまま再生する。
+ *  押せないときは、開いているモーダルを手前から1枚ずつ閉じ、押せるようになった（または状態が一致した）時点で止めて再生する。
+ *  （画面を開くと最初にモーダルが出る画面では、そのモーダルの × が「画面を閉じる」になっていることがあるため、むやみに閉じない） */
 export async function restoreCtx(saved: UiCtx | undefined, path: string[] | undefined): Promise<boolean> {
   if (ctxMatches(saved, readCtx())) return true;
-  // 先に、いま開いているモーダルを手前から閉じる（× が無いものは閉じられないので中止）
-  for (let guard = 0; guard < 6 && document.querySelector('[data-modal-root]'); guard++) {
+  const steps = path ?? [];
+  const ready = () => steps.length > 0 && !!findByKey(steps[0]);
+  for (let guard = 0; guard < 6 && !ready() && document.querySelector('[data-modal-root]'); guard++) {
     const roots = document.querySelectorAll('[data-modal-root]');
     const close = roots[roots.length - 1].querySelector<HTMLElement>('[data-modal-close]');
     if (!close) return false;
     close.click();
     await sleep(150);
+    if (ctxMatches(saved, readCtx())) return true;
   }
-  for (const key of path ?? []) {
+  for (const key of steps) {
     const el = await waitFor(() => findByKey(key), 2500);
     if (!el) return false;
     el.click();

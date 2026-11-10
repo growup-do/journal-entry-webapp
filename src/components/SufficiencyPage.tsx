@@ -26,10 +26,15 @@ const HISTORY = [
   { y: '令和7年度', usable: 12_100_000, deduct: 40_100_000 },
 ];
 
-/** 起動の流れ：確認画面 → 入力方式の選択 → （実績を使う方式で貸借が合わないときは）警告画面 → 本体 */
-type Step = 'confirm' | 'method' | 'warn' | 'main';
-/** 警告画面のサンプル値（確認メモ #111）：貸借対照表 決算額の借方合計・貸方合計が一致していない例 */
+/** 起動の流れ：確認画面 → 入力方式の選択 →（実績を使う方式のとき）科目警告画面 → 警告画面（貸借が合わないとき）→ 本体 */
+type Step = 'confirm' | 'method' | 'acctWarn' | 'warn' | 'main';
+/** 警告画面のサンプル値（確認メモ #111 ①）：貸借対照表 決算額の借方合計・貸方合計が一致していない例 */
 const WARN = { debit: 48_436_500, credit: 48_400_000 };
+/** 科目警告画面のサンプル（確認メモ #111 ② ／ #240）：【財務諸表等入力シート】の標準科目名と結び付かなかった科目（費目・印刷科目名） */
+const ACCT_WARN: [string, string][] = [
+  ['50', '医薬品'], ['50', '診療・療養費等材料'], ['50', '給食用材料'], ['50', '商品・製品'], ['50', '仕掛品'], ['50', '原材料'],
+  ['50', '１年以内回収予定長期貸付金'], ['50', '短期貸付金'], ['52', '建設仮勘定減価償却累計額'], ['52', '長期貸付金'], ['52', '長期預り金積立資産'], ['52', '差入保証金'],
+];
 const METHODS = [
   { key: 'actual', label: '実績額方式（入力された実績金額から算出する方式）', hint: 'ご使用例　決算手続き完了後、決算伝票入力後から求めたい' },
   { key: 'add', label: '追加額方式（入力された実績金額から追加して算出する方式）', hint: 'ご使用例　期中時に残額を入力して求めたい' },
@@ -138,13 +143,36 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
             <button type="button" onClick={() => setManualOpen(true)} style={btn()}>ⓘ マニュアル</button>
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="button" onClick={() => onNavigate('伝票入力')} style={btn()}>キャンセル</button>
-              <button type="button" disabled={!method} onClick={() => setStep(method === 'direct' ? 'main' : 'warn')} style={{ ...btn(true), opacity: method ? 1 : 0.5 }} title={method && method !== 'direct' ? '実績を使う方式では、実績の貸借が一致していないと警告画面を表示します' : undefined}>OK</button>
+              <button type="button" disabled={!method} onClick={() => setStep(method === 'direct' ? 'main' : 'acctWarn')} style={{ ...btn(true), opacity: method ? 1 : 0.5 }} title={method && method !== 'direct' ? '実績を使う方式では、標準科目名と結び付かない科目があると科目警告画面を、実績の貸借が一致していないと警告画面を表示します' : undefined}>OK</button>
             </div>
           </div>
         </div>
       </Modal>
 
-      {/* ③ 警告画面（確認メモ #111）：実績額方式・追加額方式では、貸借対照表 決算額の借方合計と貸方合計が一致していないと警告する。値はサンプル */}
+      {/* ③ 科目警告画面（確認メモ #111 ②／#240）：シミュレーターの参照科目は【財務諸表等入力シート】の標準科目名と結び付けているため、
+             会計システムに無い・名前が違う科目を一覧で知らせる。「次へ」で先へ進む。値（科目の一覧）はサンプル */}
+      <Modal open={step === 'acctWarn'} onClose={() => setStep('warn')} width={680} strict title="科目警告画面">
+        <div style={{ padding: '18px 28px 22px' }} data-sufficiency-acct-warn>
+          <div style={{ border: '1px solid #cfd8e0', borderRadius: 10, padding: '14px 18px', fontSize: 14.5, lineHeight: 1.85, maxHeight: '52vh', overflowY: 'auto' }}>
+            <p style={{ margin: 0 }}>簡易充実残額シミュレーターの参照科目ですが、「社会福祉法人の財務諸表等電子開示システム」【財務諸表等入力シート】の標準科目名と結び付けております。</p>
+            <p style={{ margin: '12px 0 0' }}>下記に表示されました科目は、会計システムに作成されていないか、科目名が異なっている場合があります。</p>
+            <table style={{ margin: '10px 0 0', borderCollapse: 'collapse', fontSize: 14 }}>
+              <thead><tr><th style={{ textAlign: 'left', padding: '4px 16px 4px 0', fontSize: 12, color: '#7a8794', fontWeight: 700 }}>費目</th><th style={{ textAlign: 'left', padding: '4px 0', fontSize: 12, color: '#7a8794', fontWeight: 700 }}>印刷科目名</th></tr></thead>
+              <tbody>
+                {ACCT_WARN.map(([h, n]) => <tr key={n}><td style={{ padding: '2px 16px 2px 0', fontVariantNumeric: 'tabular-nums' }}>{h}</td><td style={{ padding: '2px 0' }}>{n}</td></tr>)}
+              </tbody>
+            </table>
+            <p style={{ margin: '12px 0 0' }}>なお、表示されました科目を使用されていない場合には問題ありませんが、<span style={{ color: '#c0392b', fontWeight: 700 }}>使用されている場合には、会計システムで科目名称を変更していただくか、簡易充実残額シミュレーターの科目設定ボタンより、該当される科目にチェックをつけていただきますと控除対象資産として計算できます。</span></p>
+          </div>
+          <div style={{ fontSize: 12, color: '#8290a0', marginTop: 8, lineHeight: 1.7 }}>実績額方式・追加額方式で表示します。プロトタイプでは常にこの例を表示します。</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 18 }}>
+            <button type="button" onClick={() => setExportSpec({ kind: 'csv', title: '科目警告画面', fileName: '充実残額_科目警告_令和8年度', meta: '財務諸表等入力シートの標準科目名と結び付かなかった科目', header: ['費目', '印刷科目名'], rows: ACCT_WARN.map(([h, n]) => [h, n]) })} style={btn()}>ファイル出力</button>
+            <button type="button" onClick={() => setStep('warn')} style={btn(true)}>次へ</button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ④ 警告画面（確認メモ #111 ①）：実績額方式・追加額方式では、貸借対照表 決算額の借方合計と貸方合計が一致していないと警告する。値はサンプル */}
       <Modal open={step === 'warn'} onClose={() => setStep('main')} width={640} strict title="警告画面">
         <div style={{ padding: '18px 28px 22px' }} data-sufficiency-warn>
           <div style={{ border: '1px solid #c0392b', borderRadius: 10, padding: '16px 18px', fontSize: 14.5, lineHeight: 1.9, display: 'flex', gap: 14, alignItems: 'flex-start' }}>
