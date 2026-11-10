@@ -1,4 +1,4 @@
-// ホーム：銀行の預金残高／調査・チェック／お気に入りメニュー／FAQ／お知らせ／バナースペース
+// ホーム：機能から探す（検索ボックス＋全機能の一覧）／銀行の預金残高／調査・チェック／お気に入りメニュー／FAQ／お知らせ／バナースペース
 //   右上の「ダッシュボード表示オプション」で、表示するメニューと最初に表示する画面（ホーム／伝票入力）を選ぶ。
 //   年度更新の時期には、上部に年度更新を促す案内を表示する。
 
@@ -6,7 +6,7 @@ import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { ToastView, useToast } from './Toast';
 import { HOME_BANKS, HOME_CHECKS, HOME_FAQ, HOME_NOTICES, displayName } from '../data';
-import { FinderSearch } from './FunctionFinder';
+import { FinderPanel } from './FunctionFinder';
 import { Modal } from './Modal';
 import { FavoritesEditModal } from './FavoritesEditModal';
 import { HOME_SECTIONS, setSession, startKindOf, useSession } from '../store/session';
@@ -101,11 +101,13 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
             </button>
         </div>
 
+        {/* 機能から探す：検索ボックス＋全機能の一覧。別画面に飛ばさず、最初からダッシュボードに表示する（確認メモ #147／#148）。
+            分類が多いので、2列の上に横幅いっぱいで置く */}
+        <FinderPanel accent={accent} onNavigate={onNavigate} />
+
         <div style={{ display: 'grid', gridTemplateColumns: hasRight ? 'minmax(0,1.6fr) minmax(280px,1fr)' : 'minmax(0,1fr)', gap: 20, alignItems: 'start' }}>
         {/* 左列 */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
-          {/* 機能から探す（検索窓。横幅は下の預金残高と同じ。一覧はメニュー右端の「機能から探す」） */}
-          <FinderSearch accent={accent} onNavigate={onNavigate} full />
 
           {/* 銀行の預金残高 */}
           {show.bank && <section style={card}>
@@ -260,7 +262,7 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
           </div>
           <div>
             <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>ダッシュボードに表示するメニュー</div>
-            <div style={{ fontSize: 12, color: '#7a8794', marginBottom: 8 }}>チェックを外したメニューは、ホーム画面に表示しません。「伝票入力をはじめる」と検索窓は常に表示します。</div>
+            <div style={{ fontSize: 12, color: '#7a8794', marginBottom: 8 }}>チェックを外したメニューは、ホーム画面に表示しません。「伝票入力をはじめる」と「機能から探す」（検索ボックスと機能の一覧）は常に表示します。</div>
             <div style={{ border: '1px solid #e2e8ee', borderRadius: 10 }}>
               {HOME_SECTIONS.map((sec, i) => (
                 <label key={sec.key} data-home-section={sec.key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderTop: i ? '1px solid #f1f4f6' : 'none', cursor: 'pointer', fontSize: 14 }}>
