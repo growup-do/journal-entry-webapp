@@ -15,6 +15,17 @@ import type { JournalEntry } from '../types';
 /** 会計年度内の月順（4〜3） */
 const ORDER: string[] = ['4', '5', '6', '7', '8', '9', '10', '11', '12', '1', '2', '3'];
 const monthIdx = (m: string) => ORDER.indexOf(m);
+/** 伝票入力のカレンダーで選べる月の並び（確認メモ #184）。当年度の 4〜3月のあとに、決算月（99）と翌年4〜6月の予備月（13〜15）を続ける */
+const ORDER_EXT: string[] = [...ORDER, '99', '13', '14', '15'];
+/** 月欄の値から、暦の年月と注記を返す（99＝決算月、13〜15＝翌年4〜6月の予備月） */
+const calOf = (v: string): { y: number; m: number; tag: string } => {
+  const n = parseInt(v, 10);
+  if (n === 99) return { y: 2027, m: 3, tag: '決算月' };
+  if (n >= 13 && n <= 15) return { y: 2027, m: n - 9, tag: '翌年・予備月' };
+  return { y: n >= 4 ? 2026 : 2027, m: n, tag: '' };
+};
+/** 伝票がどの月欄の値に属するか（決算月の伝票は 99、予備月の伝票は 13〜15） */
+const viewKeyOf = (e: JournalEntry) => { const t = (e as { term?: string }).term; return t === '決算' ? '99' : t === '予備' ? String(parseInt(monthOf(e), 10) + 9) : monthOf(e); };
 const monthOf = (e: JournalEntry) => e.date.split('/')[0] ?? '';
 const dayOf = (e: JournalEntry) => parseInt(e.date.split('/')[1] ?? '0', 10);
 
@@ -159,37 +170,37 @@ export function CashBalanceModal({ open, onClose, accent, entries, month, focus 
 
 /* ---------------- カレンダー ---------------- */
 const WEEK = ['日', '月', '火', '水', '木', '金', '土'];
-/** 令和8年度（2026/4〜2027/3）の祝日（年/月/日）※固定テーブル */
-const HOLIDAYS = new Set(['2026/4/29', '2026/5/3', '2026/5/4', '2026/5/5', '2026/5/6', '2026/7/20', '2026/8/11', '2026/9/21', '2026/9/22', '2026/9/23', '2026/10/12', '2026/11/3', '2026/11/23', '2027/1/1', '2027/1/11', '2027/2/11', '2027/2/23', '2027/3/22']);
+/** 令和8年度（2026/4〜2027/3）と、翌年4〜6月（予備月）の祝日（年/月/日）※固定テーブル */
+const HOLIDAYS = new Set(['2027/4/29', '2027/5/3', '2027/5/4', '2027/5/5', '2026/4/29', '2026/5/3', '2026/5/4', '2026/5/5', '2026/5/6', '2026/7/20', '2026/8/11', '2026/9/21', '2026/9/22', '2026/9/23', '2026/10/12', '2026/11/3', '2026/11/23', '2027/1/1', '2027/1/11', '2027/2/11', '2027/2/23', '2027/3/22']);
 export const yearOfMonth = (m: string) => (parseInt(m, 10) >= 4 ? 2026 : 2027);
 
-export function CalendarModal({ open, onClose, accent, entries, month, day, onPick, compact }: { open: boolean; onClose: () => void; accent: string; entries: JournalEntry[]; month: string; day: string; onPick: (month: string, day: string) => void; /** 日付を選ぶだけの最小表示（集計期間の指定など。件数・金額は出さない） */ compact?: boolean }) {
-  const [view, setView] = useState(month || '8');
+export function CalendarModal({ open, onClose, accent, entries, month, day, onPick, compact, extended }: { open: boolean; onClose: () => void; accent: string; entries: JournalEntry[]; month: string; day: string; onPick: (month: string, day: string) => void; /** 日付を選ぶだけの最小表示（集計期間の指定など。件数・金額は出さない） */ compact?: boolean; /** 伝票入力用：3月のあとに決算月（99）と翌年4〜6月の予備月（13〜15）も選べる。onPick の月は月欄に入れる値（99／13〜15）で返す */ extended?: boolean }) {
+  const order = extended ? ORDER_EXT : ORDER;
+  const [view, setView] = useState(() => (order.includes(month) ? month : '8'));
   const [cur, setCur] = useState(() => parseInt(day, 10) || 1);
-  const y = yearOfMonth(view);
-  const m = parseInt(view, 10);
+  const { y, m, tag } = calOf(view);
   const first = new Date(y, m - 1, 1).getDay();
   const days = new Date(y, m, 0).getDate();
   const per = useMemo(() => {
     const map = new Map<number, { n: number; amt: number }>();
-    entries.filter((e) => monthOf(e) === view).forEach((e) => { const d = dayOf(e); const b = map.get(d) ?? { n: 0, amt: 0 }; b.n += 1; b.amt += e.amount; map.set(d, b); });
+    entries.filter((e) => (extended ? viewKeyOf(e) : monthOf(e)) === view).forEach((e) => { const d = dayOf(e); const b = map.get(d) ?? { n: 0, amt: 0 }; b.n += 1; b.amt += e.amount; map.set(d, b); });
     return map;
-  }, [entries, view]);
-  const vi = monthIdx(view);
+  }, [entries, view, extended]);
+  const vi = order.indexOf(view);
   const cells: (number | null)[] = [...Array(first).fill(null), ...Array.from({ length: days }, (_, i) => i + 1)];
   while (cells.length % 7) cells.push(null);
   const isSel = (d: number) => view === month && String(d) === day;
   const monthTotal = [...per.values()].reduce((a, b) => ({ n: a.n + b.n, amt: a.amt + b.amt }), { n: 0, amt: 0 });
   const cursor = Math.min(Math.max(cur, 1), days);
-  const shiftMonth = (d: 1 | -1) => { const n = vi + d; if (n >= 0 && n < ORDER.length) setView(ORDER[n]); };
+  const shiftMonth = (d: 1 | -1) => { const n = vi + d; if (n >= 0 && n < order.length) setView(order[n]); };
   const onKey = (e: React.KeyboardEvent) => {
     if (e.nativeEvent.isComposing || e.altKey) return;
     const step: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
     if (e.key in step) {
       e.preventDefault();
       const n = cursor + step[e.key];
-      if (n < 1) { if (vi > 0) { const pd = new Date(yearOfMonth(ORDER[vi - 1]), parseInt(ORDER[vi - 1], 10), 0).getDate(); setView(ORDER[vi - 1]); setCur(pd + n); } }
-      else if (n > days) { if (vi < ORDER.length - 1) { setView(ORDER[vi + 1]); setCur(n - days); } }
+      if (n < 1) { if (vi > 0) { const pv = calOf(order[vi - 1]); const pd = new Date(pv.y, pv.m, 0).getDate(); setView(order[vi - 1]); setCur(pd + n); } }
+      else if (n > days) { if (vi < order.length - 1) { setView(order[vi + 1]); setCur(n - days); } }
       else setCur(n);
     } else if (e.key === 'PageUp') { e.preventDefault(); shiftMonth(-1); }
     else if (e.key === 'PageDown') { e.preventDefault(); shiftMonth(1); }
@@ -199,9 +210,9 @@ export function CalendarModal({ open, onClose, accent, entries, month, day, onPi
     <Modal open={open} onClose={onClose} width={compact ? 340 : 640} title={compact ? '日付を選ぶ' : 'カレンダー'}>
       <div tabIndex={0} ref={(el) => { if (el && !el.dataset.f) { el.dataset.f = '1'; el.focus(); } }} onKeyDown={onKey} style={{ padding: compact ? '10px 14px 12px' : '12px 22px 18px', outline: 'none' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          <button type="button" className="btn-outline" disabled={vi <= 0} onClick={() => setView(ORDER[vi - 1])} style={{ ...btn(), opacity: vi <= 0 ? 0.4 : 1 }}>‹ 前月</button>
-          <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: compact ? 14 : 17, flex: 1, textAlign: 'center' }}>令和{y - 2018}年 {m}月 {!compact && <span style={{ fontSize: 12, fontWeight: 500, color: '#7a8794' }}>（{y}年）</span>}</div>
-          <button type="button" className="btn-outline" disabled={vi >= ORDER.length - 1} onClick={() => setView(ORDER[vi + 1])} style={{ ...btn(), opacity: vi >= ORDER.length - 1 ? 0.4 : 1 }}>翌月 ›</button>
+          <button type="button" className="btn-outline" disabled={vi <= 0} onClick={() => setView(order[vi - 1])} style={{ ...btn(), opacity: vi <= 0 ? 0.4 : 1 }}>‹ 前月</button>
+          <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: compact ? 14 : 17, flex: 1, textAlign: 'center' }}>令和{y - 2018}年 {m}月 {!compact && <span style={{ fontSize: 12, fontWeight: 500, color: '#7a8794' }}>（{y}年）</span>}{tag && <span data-cal-tag style={{ marginLeft: 8, padding: '2px 9px', borderRadius: 10, fontSize: 12, fontWeight: 800, verticalAlign: 'middle', background: tag === '決算月' ? '#efe7fa' : '#e6f0fb', color: tag === '決算月' ? '#6b3fb5' : '#2c5f9e', border: '1px solid ' + (tag === '決算月' ? '#d6c4f0' : '#c9dbf0') }}>{tag}</span>}</div>
+          <button type="button" className="btn-outline" disabled={vi >= order.length - 1} onClick={() => setView(order[vi + 1])} style={{ ...btn(), opacity: vi >= order.length - 1 ? 0.4 : 1 }}>翌月 ›</button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
           {WEEK.map((w, i) => <div key={w} style={{ textAlign: 'center', fontSize: 12, fontWeight: 700, color: i === 0 ? '#c0392b' : i === 6 ? '#2c5f9e' : '#8290a0', padding: '4px 0' }}>{w}</div>)}
@@ -222,7 +233,7 @@ export function CalendarModal({ open, onClose, accent, entries, month, day, onPi
         </div>
         {!compact && <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10, fontSize: 12, color: '#7a8794' }}>
           <span>当月 <b style={{ color: '#22303c' }}>{monthTotal.n}</b> 件　<b style={{ color: '#22303c', fontVariantNumeric: 'tabular-nums' }}>{yen(monthTotal.amt)}</b> 円</span>
-          <span style={{ marginLeft: 'auto' }}>←→↑↓ で日を選び Enter で決定（PageUp／PageDown で月を移動）。クリックでも選べます</span>
+          <span style={{ marginLeft: 'auto' }}>←→↑↓ で日を選び Enter で決定（PageUp／PageDown で月を移動）。クリックでも選べます{extended && '。3月の次は決算月、その次は翌年4〜6月（予備月）です'}</span>
         </div>}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: compact ? 8 : 12 }}><button type="button" onClick={onClose} style={btn('#5b6773', false, compact)}>閉じる</button></div>
       </div>

@@ -8,16 +8,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { ToastView, useToast } from './Toast';
-import { BudgetGraphModal, BudgetHintLive, EntryConfirmModal, TorihikiBadge, useEntryTools, type EntryFlags } from './EntryExtras';
-import { ComboField, ConfirmModal, EntryStyles, FundAccountLine, PAPER, PaperBox, PaperStyles, PaperTitle, fieldMessage, fieldState, focusId, hasError, hasWarn, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor, FusenTab, VoucherMarks } from './EntryCommon';
+import { BudgetGraphModal, BudgetHintLive, EntryConfirmModal, EntryDivisionField, TorihikiBadge, useEntryTools, type EntryFlags } from './EntryExtras';
+import { ComboField, ConfirmModal, ENTRY_MONTH_HELP, EntryMonthNote, EntryStyles, entryYearOf, parseEntryMonth, termMark, FundAccountLine, PAPER, PaperBox, PaperStyles, PaperTitle, fieldMessage, fieldState, focusId, hasError, hasWarn, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor, FusenTab, VoucherMarks } from './EntryCommon';
 import { useWidePanel } from './WidePanel';
-import { yearOfMonth } from './SingleEntryTools';
 import { judgeTorihiki } from '../lib/accounts';
 import { makeSingleSeed } from '../data';
 import { useEntryForm } from '../hooks/useEntryForm';
 import { applyMonth } from '../lib/format';
 import { FUSEN_COLORS, addVoucher, deleteVoucher, getVouchers, updateVoucher } from '../store/journalStore';
 import { useSession, type TemplateLine, setSession } from '../store/session';
+import { useEntryDivision } from '../lib/entryDivision';
 import type { FormState, JournalEntry } from '../types';
 
 const PINK = '#b0426a';
@@ -39,21 +39,25 @@ const initialForm: FormState = {
 };
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
-/** 令和8年＝2026年として曜日を求める（月/日が不正なら空） */
+/** 令和8年＝2026年として曜日を求める（月/日が不正なら空）。month は月欄の値（99＝決算月、13〜15＝翌年4〜6月の予備月も受ける） */
 function weekdayOf(month: string, day: string): string {
-  const m = parseInt(month, 10);
+  const em = parseEntryMonth(month);
   const d = parseInt(day, 10);
-  if (!m || !d) return '';
-  const dt = new Date(yearOfMonth(month), m - 1, d);
-  if (dt.getMonth() !== m - 1) return '';
+  if (!em.ok || !d) return '';
+  const dt = new Date(em.nextYear ? 2027 : 2026, em.month - 1, d);
+  if (dt.getMonth() !== em.month - 1) return '';
   return WEEKDAYS[dt.getDay()];
 }
-function weekdayOfDate(date: string): string {
+/** 伝票の日付（暦の月）と月の扱いから、月欄の値に戻す（決算月は 99、予備月は 13〜15） */
+const monthFieldOf = (month: string, term?: '決算' | '予備') => (term === '決算' ? '99' : term === '予備' ? String((parseInt(month, 10) || 4) + 9) : month);
+function weekdayOfDate(date: string, term?: '決算' | '予備'): string {
   const [m, d] = date.split('/');
-  return weekdayOf(m ?? '', d ?? '');
+  return weekdayOf(monthFieldOf(m ?? '', term), d ?? '');
 }
+/** 入力区分を持たないサンプル伝票の区分 */
+const SEED_DIVISION = '001 本部';
 
-const ENTER_ORDER = '月 → 日 → 借方科目 → 貸方科目 → 内部取引スイッチ（Shift+Enter でオン／オフ）→（オンのとき：相手区分）→ 摘要 → 取引先 → 金額。金額で Enter を押すと登録し、次の伝票の借方科目へ移ります';
+const ENTER_ORDER = '月 → 日 → 借方科目 → 貸方科目 → 内部取引スイッチ（Shift+Enter でオン／オフ）→（オンのとき：相手区分）→ 摘要 → 取引先 → 金額。金額で Enter を押すと登録の確認が開き、もう一度 Enter を押すと登録して、次の伝票の借方科目へ移ります';
 
 /** 一覧の行に付ける情報（チェック・付箋・内部取引相手区分・共有ストア側の id） */
 interface RowMeta { storeId?: number; check: boolean; fusen: FusenColor; aite: string }
@@ -92,6 +96,9 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
   }, [keepLast]);
   const v = useEntryForm({ initialForm, seed: makeSingleSeed(), afterSubmit, keepAccounts: keepLast, initialMonth: '8' });
   const f = v.form;
+  // 入力区分：入力区分で起動中は固定。親区分で起動中は、配下の入力区分から選んで登録できる（確認メモ #157／#182）
+  const ed = useEntryDivision();
+  const division = ed.division;
 
   // 登録した行の id が決まったら、行の情報（チェック・付箋・相手区分）をひも付ける
   useEffect(() => {
@@ -103,7 +110,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
   }, [v.lastAdded]);
 
   const partner = needsPartner({ kari: f.kariKamoku, kashi: f.kashiKamoku, internal });
-  const issues = judgeEntry({ kari: f.kariKamoku, kashi: f.kashiKamoku, amount: toNum(f.amount), fundMode, internal, aite, division: f.service }, sess.env);
+  const issues = judgeEntry({ kari: f.kariKamoku, kashi: f.kashiKamoku, amount: toNum(f.amount), fundMode, internal, aite, division }, sess.env);
   const blocked = hasError(issues);
   const dirty = !!(f.kariKamoku || f.kashiKamoku || f.tekiyo || f.gyosha || f.amount);
 
@@ -120,9 +127,12 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
   // 画面を開いたら「月」にカーソルを置く
   useEffect(() => { const t = window.setTimeout(() => document.getElementById('se-month')?.focus(), 80); return () => window.clearTimeout(t); }, []);
 
-  const doSubmit = (confirmed = false) => {
+  const doSubmit = (confirmed = false): void => {
     if (!tools.editable) { toast.show(tools.reason); return; }
-    if (!f.month || !f.day) { toast.show('日付（月・日）を入力してください'); focusId(!f.month ? 'se-month' : 'se-day'); return; }
+    // 月は 1〜12、決算月は 99、翌年4〜6月（予備月）は 13〜15（確認メモ #184）
+    const em = parseEntryMonth(f.month);
+    const dn = parseInt(f.day, 10);
+    if (!em.ok || !(dn >= 1 && dn <= 31)) { toast.show('日付（月・日）を正しく入力してください。月は 1〜12、決算月は 99、翌年4〜6月（予備月）は 13〜15 です'); focusId(!em.ok ? 'se-month' : 'se-day'); return; }
     if (!f.kariKamoku || !f.kashiKamoku || !toNum(f.amount)) {
       v.submit(); // 未入力のメッセージを表示
       focusId(!f.kariKamoku ? 'se-kari' : !f.kashiKamoku ? 'se-kashi' : 'se-amount');
@@ -135,12 +145,15 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
       return;
     }
     if (hasWarn(issues) && !confirmed) { setConfirmOpen(true); return; }
-    const stored = addVoucher({ kind: '単一', date: `${f.month}/${f.day}`, kari: f.kariKamoku, kashi: f.kashiKamoku, tekiyo: f.tekiyo, amount: toNum(f.amount), service: f.service, gyosha: f.gyosha || undefined, shohyo: flags.shohyo, cheque: cheque.trim() || undefined, internal: partner || undefined });
+    // 登録の前に「登録しますか？」と確認する（確認メモ #153）。警告の確認を経たときは重ねて聞かない
+    if (!confirmed) { tools.askRegister(() => doSubmit(true)); return; }
+    const date = `${em.month}/${dn}`;
+    const stored = addVoucher({ kind: '単一', date, kari: f.kariKamoku, kashi: f.kashiKamoku, tekiyo: f.tekiyo, amount: toNum(f.amount), service: division, gyosha: f.gyosha || undefined, shohyo: flags.shohyo, cheque: cheque.trim() || undefined, internal: partner || undefined, term: em.term });
     if (flags.check || flags.fusen) updateVoucher(stored.id, { check: flags.check, fusen: flags.fusen });
     if (partner) setPartner(stored.id, aite);
     pending.current = { storeId: stored.id, check: flags.check, fusen: flags.fusen, aite: partner ? aite : '' };
     setHi([stored.id]);
-    v.submit({ shohyo: flags.shohyo, cheque: cheque.trim() || undefined });
+    v.submit({ date, service: division, term: em.term, shohyo: flags.shohyo, cheque: cheque.trim() || undefined });
     setFlags((s) => ({ ...s, check: false, fusen: '' }));
     setInternal(false);
     setAite('');
@@ -167,7 +180,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
     onNavigate,
     toast: toast.show,
     dirty,
-    service: f.service,
+    service: division,
     month: f.month,
     day: f.day,
     kari: f.kariKamoku,
@@ -202,9 +215,11 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
     onRegistered: (ids) => {
       // 自動按分で登録した伝票を一覧にも追加
       const added = getVouchers().filter((r) => ids.includes(r.id));
-      v.addEntries(added.map((r) => ({ date: r.date, kari: r.kari, kashi: r.kashi, tekiyo: r.tekiyo, amount: r.amount, gyosha: r.gyosha, shohyo: r.shohyo })));
+      v.addEntries(added.map((r) => ({ date: r.date, kari: r.kari, kashi: r.kashi, tekiyo: r.tekiyo, amount: r.amount, gyosha: r.gyosha, shohyo: r.shohyo, service: r.service, term: r.term })));
       setHi(ids);
     },
+    // 訂正・削除やインポート伝票の一括削除で消した伝票は、この画面の一覧からも消す
+    onDeleted: (ids) => { Object.entries(meta).forEach(([id, m]) => { if (m.storeId != null && ids.includes(m.storeId)) v.removeEntry(Number(id)); }); },
     onPickDate: (m, d) => { v.setFields({ month: m, day: d }); v.setMonth(m); focusId('se-kari'); },
     onOpenPanel: () => { wide.setCollapsed(false); toast.show('画面の下に参照パネルを開きました'); },
     submitId: 'se-submit',
@@ -217,7 +232,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
     if (ro) return;
     const [m, d] = e.date.split('/');
     const mt = meta[e.id];
-    v.setFields({ month: m ?? '', day: d ?? '', kariKamoku: e.kari, kashiKamoku: e.kashi, tekiyo: e.tekiyo, gyosha: e.gyosha ?? '', amount: String(e.amount) });
+    v.setFields({ month: monthFieldOf(m ?? '', e.term), day: d ?? '', kariKamoku: e.kari, kashiKamoku: e.kashi, tekiyo: e.tekiyo, gyosha: e.gyosha ?? '', amount: String(e.amount) });
     setFlags({ shohyo: !!e.shohyo, check: !!mt?.check, fusen: mt?.fusen ?? '' });
     setCheque(e.cheque ?? '');
     setAite(mt?.aite ?? '');
@@ -240,7 +255,8 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
   };
 
   const wd = weekdayOf(f.month, f.day);
-  const rows = applyMonth(v.journal, v.monthFilter);
+  // 一覧は、現在の入力区分の伝票だけを表示する（確認メモ #158）。予備月（翌年4〜6月）の伝票は「全月」のときだけ表示する
+  const rows = applyMonth(v.journal, v.monthFilter).filter((e) => (e.service ?? SEED_DIVISION) === division && (v.monthFilter == null || e.term !== '予備'));
   const isSheet = variant === 'sheet';
   const showCheque = sess.input.cheque;
 
@@ -271,7 +287,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
   });
   const afterKashi = () => focusId('se-internal');
   const budgetTh = sess.env.budgetCheck ? sess.env.budgetThreshold : 101;
-  const divisionName = f.service.replace(/^\d+\s*/, '');
+  const divisionName = division.replace(/^\d+\s*/, '');
   /** 入力欄の列：伝票No ｜ 日 ｜ （空き） ｜ 借方 ｜ 貸方 ｜ 右端（取引区分・小切手No・金額）。Seq No・チェック・証憑・付箋は上の「伝票の印」の枠 */
   const PCOLS = '72px 124px 104px minmax(0,1fr) minmax(0,1fr) 176px';
   const lab = (text: ReactNode, extra?: CSSProperties, sub?: ReactNode) => <div className="pp-lab" style={extra}><span>{text}{sub && <span className="pp-sub">{sub}</span>}</span></div>;
@@ -341,8 +357,8 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '4px 0 10px' }}>
             <span style={{ fontSize: 12, color: PAPER.ink, fontWeight: 700, flex: 'none' }}>表示月</span>
             <FiscalMonthTabs current={v.monthFilter} accent={accent} onSelect={v.setMonth} withAll />
-            <span style={{ marginLeft: 'auto', fontSize: 14, color: '#8895a3', flex: 'none' }}>
-              <b style={{ color: '#22303c', fontWeight: 700 }}>{rows.length}</b> 件
+            <span data-list-division title="一覧には、現在の入力区分の伝票だけを表示しています" style={{ marginLeft: 'auto', fontSize: 14, color: '#8895a3', flex: 'none', whiteSpace: 'nowrap' }}>
+              <b style={{ color: '#22303c', fontWeight: 700 }}>{division}</b> の伝票のみ表示　<b style={{ color: '#22303c', fontWeight: 700 }}>{rows.length}</b> 件
             </span>
           </div>
 
@@ -361,7 +377,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
           </div>
           <div id="journal-scroll" className="pp-table" style={{ gridTemplateColumns: '1fr', overflowY: 'auto', minHeight: 150, maxHeight: 'calc(100vh - 720px)', alignContent: 'start' }}>
             {rows.length === 0 && (
-              <div className="pp-cell pp-center" style={{ padding: '40px 22px', color: '#9aa5b1', fontSize: 14 }}>この月の伝票はありません。下の入力行から登録してください。</div>
+              <div className="pp-cell pp-center" style={{ padding: '40px 22px', color: '#9aa5b1', fontSize: 14 }}>{division} の{v.monthFilter == null ? '' : 'この月の'}伝票はありません。下の入力行から登録してください。</div>
             )}
             {rows.map((e, i) => {
               const isNew = e.id === v.lastAdded;
@@ -372,8 +388,9 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
                 <div key={e.id} className="pp-row" style={{ gridTemplateColumns: COLS }}>
                   <div className="pp-cell pp-num" style={{ ...c, color: '#8895a3' }}>{String(i + 1).padStart(3, '0')}</div>
                   <div className="pp-cell pp-num" style={{ ...c, color: '#48565f' }}>
+                    {e.term && <span title={e.term === '決算' ? '決算月の伝票' : '翌年度の予備月の伝票'} style={{ marginRight: 4, padding: '0 4px', borderRadius: 4, fontSize: 12, fontWeight: 800, background: e.term === '決算' ? '#efe7fa' : '#e6f0fb', color: e.term === '決算' ? '#6b3fb5' : '#2c5f9e' }}>{termMark(e.term)}</span>}
                     {e.date}
-                    <span style={{ color: '#9aa5b1', fontSize: 12 }}>（{weekdayOfDate(e.date) || '－'}）</span>
+                    <span style={{ color: '#9aa5b1', fontSize: 12 }}>（{weekdayOfDate(e.date, e.term) || '－'}）</span>
                   </div>
                   <div className="pp-cell" style={{ ...c, gap: 5 }}>
                     <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: e.shohyo ? '#eaf5ef' : '#f1f4f6', color: e.shohyo ? '#1f7a52' : '#9aa5b1' }}>
@@ -407,13 +424,13 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
             })}
           </div>
 
-          {/* 入力行（紙の単一式入力の配置：上に サービス区分、下に 4段の項目） */}
-          <div style={{ margin: '14px 0 6px', fontSize: 14, color: PAPER.ink, fontWeight: 700 }}>令和 <b className="pp-num" style={{ padding: '0 3px' }}>8</b> 年　入力中の伝票</div>
+          {/* 入力行（紙の単一式入力の配置：上に 入力区分、下に 4段の項目） */}
+          <div style={{ margin: '14px 0 6px', fontSize: 14, color: PAPER.ink, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}><span>令和 <b className="pp-num" style={{ padding: '0 3px' }}>{entryYearOf(f.month)}</b> 年　入力中の伝票</span><EntryMonthNote month={f.month} /></div>
           <div style={{ display: 'flex', alignItems: 'stretch', gap: 12, margin: '0 0 8px', width: '100%' }}>
-            {/* サービス区分：残りの幅いっぱいに広げる（下の入力枠と同じ幅に揃える） */}
+            {/* 入力区分：入力区分で起動中は固定表示、親区分で起動中は配下の入力区分から選ぶ（確認メモ #157／#181／#182）。残りの幅いっぱいに広げる */}
             <div className="ef-field" style={{ display: 'flex', flex: '1 1 240px', minWidth: 240 }}>
-              <PaperBox label="サービス区分" grow>
-                <ComboField id="se-service" kind="service" value={f.service} onChange={(x) => v.setField('service', x)} onCommit={() => focusId('se-month')} placeholder="コード・名称で指定" dropUp disabled={ro} padY={6} />
+              <PaperBox label="入力区分" grow>
+                <EntryDivisionField ctl={ed} id="se-service" disabled={ro} onCommit={() => focusId('se-month')} />
               </PaperBox>
             </div>
             {/* 内部取引相手区分（最初から表示。スイッチがオンのときだけ入力できる） */}
@@ -454,7 +471,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
               <div className="pp-row" style={{ gridTemplateColumns: PCOLS }}>
                 <div className="pp-cell" style={valCell}><span className="pp-ro" style={{ fontSize: 14 }}>自動採番<small>自動</small></span></div>
                 <div className="pp-cell ef-field" style={{ ...valCell, gridColumn: 'span 2', gap: 3 }}>
-                  <input id="se-month" className="ef-input pp-input" aria-label="月" disabled={ro} value={f.month} onChange={(e) => v.setField('month', e.target.value)} onKeyDown={onEnter(() => focusId('se-day'))} inputMode="numeric" style={dateInput} />
+                  <input id="se-month" className="ef-input pp-input" aria-label="月" title={ENTRY_MONTH_HELP} disabled={ro} value={f.month} onChange={(e) => v.setField('month', e.target.value)} onKeyDown={onEnter(() => { if (parseEntryMonth(f.month).term === '決算' && !f.day) v.setField('day', '31'); focusId('se-day'); })} inputMode="numeric" style={dateInput} />
                   <span style={{ color: '#9aa5b1' }}>/</span>
                   <input id="se-day" className="ef-input pp-input" aria-label="日" disabled={ro} value={f.day} onChange={(e) => v.setField('day', e.target.value)} onKeyDown={onEnter(() => focusId('se-kari'))} inputMode="numeric" style={dateInput} />
                   <span title="曜日は日付から自動で表示します" style={{ fontSize: 14, color: wd ? '#48565f' : '#a3adb8', minWidth: 30, textAlign: 'center' }}>（{wd || '－'}）</span>
@@ -531,7 +548,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10 }}>
-            <span style={{ fontSize: 12, color: '#7a8794', minWidth: 0 }}>Enter：{ENTER_ORDER.split('。')[0]}。金額で Enter → 登録</span>
+            <span style={{ fontSize: 12, color: '#7a8794', minWidth: 0 }}>Enter：{ENTER_ORDER.split('。')[0]}。金額で Enter → 登録の確認</span>
             <span style={{ marginLeft: 'auto', flex: 'none' }}>{tools.submitButton}</span>
           </div>
           {/* 未入力などのメッセージ（科目の組み合わせのエラーは各入力欄の直下、確認はモーダルで表示） */}

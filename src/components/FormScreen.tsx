@@ -10,8 +10,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { DivisionPicker } from './DivisionPicker';
 import { FiscalYearBanner } from './FiscalYearPage';
-import { AttachedStatementModal, BudgetGraphModal, BudgetHintLive, EntryConfirmModal, SpecialAmountModal, TorihikiBadge, useEntryTools } from './EntryExtras';
-import { ComboField, EntryStyles, isIme, FieldLabel, FundAccountLine, PAPER, PaperBox, PaperDate, PaperStyles, PaperTitle, fieldMessage, fieldState, fmtNum, focusId, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, watchedStatement, type FundMode, type FusenColor, FusenTab, VoucherMarks } from './EntryCommon';
+import { AttachedStatementModal, BudgetGraphModal, BudgetHintLive, EntryConfirmModal, EntryDivisionField, SpecialAmountModal, TorihikiBadge, useEntryTools } from './EntryExtras';
+import { ComboField, ENTRY_MONTH_HELP, EntryMonthNote, EntryStyles, isIme, FieldLabel, FundAccountLine, PAPER, PaperBox, PaperDate, PaperStyles, PaperTitle, entryYearOf, parseEntryMonth, fieldMessage, fieldState, fmtNum, focusId, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, watchedStatement, type FundMode, type FusenColor, FusenTab, VoucherMarks } from './EntryCommon';
 import { WIDE_TAB_SPACE, WIDE_WIDTH, WidePanel, useWidePanel } from './WidePanel';
 import { Menu as ClassicMenu } from './classic/ClassicMenu';
 import { VersionBadge } from './VersionBadge';
@@ -19,9 +19,11 @@ import { useLayoutMode } from '../store/layout';
 import { ToastView, useToast } from './Toast';
 import { judgeTorihiki } from '../lib/accounts';
 import { addVoucher, getVouchers, updateVoucher, useVouchers } from '../store/journalStore';
-import { canEdit, setSession, useSession, type JournalTemplate, type TemplateLine } from '../store/session';
+import { setSession, specialRatesOf, useSession, type JournalTemplate, type TemplateLine } from '../store/session';
+import { canEnterVoucher, useEntryDivision } from '../lib/entryDivision';
 import { HeaderTools } from './HeaderTools';
 import { UserMenu } from './UserMenu';
+import { NoticeBell } from './NoticeBell';
 import { SettingsMenu } from './SettingsMenu';
 import { SideNav, useSideNav } from './SideNav';
 import { renderPage } from './pages';
@@ -101,6 +103,7 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: '#68757f', flex: 'none', marginLeft: 'auto' }}>
               <HeaderTools accent={GREEN} page={page} onNavigate={onNavigate} />
               <SettingsMenu accent={GREEN} active={page} onNavigate={onNavigate} />
+              <NoticeBell accent={GREEN} />
               <UserMenu accent={GREEN} soft="#eef4f0" onNavigate={onNavigate} />
             </div>
           </header>
@@ -145,6 +148,7 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: '#68757f', flex: 'none', marginLeft: 'auto' }}>
               <HeaderTools accent={GREEN} page={page} onNavigate={onNavigate} />
               <SettingsMenu accent={GREEN} active={page} onNavigate={onNavigate} />
+              <NoticeBell accent={GREEN} />
               <UserMenu accent={GREEN} soft="#eef4f0" onNavigate={onNavigate} />
             </div>
           </header>
@@ -169,6 +173,9 @@ const DEFAULT_FLAGS: VoucherFlags = { check: false, fusen: '', shohyo: true };
 let rowSeq = 1;
 const blankRow = (p?: Partial<Row>): Row => ({ id: rowSeq++, tekiyo: '', gyosha: '', amount: '', ...p });
 const rowBlank = (r: Row) => !r.tekiyo.trim() && !r.gyosha && !r.amount;
+/** 明細は、はじめから 6 行目まで入力できるようにしておく（確認メモ #155）。足りない分は空の行で補う */
+const MIN_ROWS = 6;
+const padRows = (list: Row[]): Row[] => (list.length >= MIN_ROWS ? list : [...list, ...Array.from({ length: MIN_ROWS - list.length }, () => blankRow())]);
 type LineGroup = { kari: string; kashi: string; lines: TemplateLine[] };
 /** 定型仕訳の行を、借方・貸方の科目が同じもの（＝伝票1枚分）ごとにまとめる */
 function groupLines(lines: TemplateLine[]): LineGroup[] {
@@ -182,7 +189,7 @@ function groupLines(lines: TemplateLine[]): LineGroup[] {
 }
 
 const SUBMIT_ID = 'fe-submit';
-const ENTER_ORDER = '月 → 日 →（伝票No）→ 借方科目 → 貸方科目 → 内部取引スイッチ（Shift+Enter でオン／オフ）→（オンのとき：相手区分）→ 1行目の摘要 → 取引先 → 金額 → 次の行の摘要 …　何も入力していない最後の行の摘要で Enter を押すと「伝票登録」へ移ります';
+const ENTER_ORDER = '月 → 日 →（伝票No）→ 借方科目 → 貸方科目 → 内部取引スイッチ（Shift+Enter でオン／オフ）→（オンのとき：相手区分）→ 1行目の摘要 → 取引先 → 金額 → 次の行の摘要 …（最後の行の金額で Enter を押すと、新しい行を追加します）　入力が終わったら、何も入力していない行の摘要で Enter を押すと「登録する」へ移ります';
 const FE_CSS = `
 .fe-actions { background: #fff; }
 /* 機能ボタンの下部固定は縦に十分な余裕がある画面だけ（低い画面では入力欄が隠れるため通常配置）。下端はプロトタイプの切替バー／メモボタンと重ならないよう余白を取る */
@@ -193,9 +200,13 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
   const sess = useSession();
   const inp = sess.input;
   const toast = useToast();
-  const vouchers = useVouchers();
+  // 伝票No の採番は、予備月（翌年4〜6月）の伝票も含めて数える（確認メモ #184）
+  const vouchers = useVouchers(true);
   const wide = useWidePanel('form-entry');
-  const editable = canEdit(sess);
+  // 入力区分：入力区分で起動中は固定。親区分で起動中は、配下の入力区分から選んで登録できる（確認メモ #182）
+  const ed = useEntryDivision();
+  const division = ed.division;
+  const editable = canEnterVoucher(sess);
 
   // 日付：年は会計年度から自動、月・日は未入力で始める（入力は月から）
   const [month, setMonthV] = useState('');
@@ -208,7 +219,9 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
   const [aite, setAite] = useState('');
   const [internal, setInternal] = useState(false);
   const [fundMode, setFundMode] = useState<FundMode>('自動資金');
-  const [rows, setRows] = useState<Row[]>(() => [blankRow()]);
+  const [rows, setRowsRaw] = useState<Row[]>(() => padRows([]));
+  /** 行を更新する。6 行に満たないときは空の行を補う（確認メモ #155） */
+  const setRows = (u: Row[] | ((l: Row[]) => Row[])) => setRowsRaw((l) => padRows(typeof u === 'function' ? u(l) : u));
   const [flags, setFlagsState] = useState<VoucherFlags>(DEFAULT_FLAGS);
   const setFlags = (p: Partial<VoucherFlags>) => setFlagsState((f) => ({ ...f, ...p }));
   const [cur, setCur] = useState(0);
@@ -228,7 +241,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
   const curIdx = Math.min(cur, rows.length - 1);
   const total = rows.reduce((s, r) => s + toNum(r.amount), 0);
   const partner = needsPartner({ kari, kashi, internal });
-  const issues = judgeEntry({ kari, kashi, amount: total, fundMode, internal, aite, division: sess.division }, sess.env);
+  const issues = judgeEntry({ kari, kashi, amount: total, fundMode, internal, aite, division }, sess.env);
   const warns = issues.filter((i) => i.level === 'warn');
   const blocked = hasError(issues);
   const dirty = !!(kari || kashi || rows.some((r) => !rowBlank(r)));
@@ -244,42 +257,39 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
   const rowInsert = () => { if (!editable) return; setRows((list) => [...list.slice(0, curIdx), blankRow(), ...list.slice(curIdx)]); setCur(curIdx); focusId(`fe-tek-${curIdx}`); };
   /** 行ごとのボタン用：i 行目の上に挿入／i 行目を削除 */
   const insertAt = (i: number) => { if (!editable) return; setRows((list) => [...list.slice(0, i), blankRow(), ...list.slice(i)]); setCur(i); focusId(`fe-tek-${i}`); };
+  /** 行を削除する。6 行に満たなくなる分は、下に空の行を補う */
   const deleteAt = (i: number) => {
     if (!editable) return;
-    if (rows.length === 1) { setRows([blankRow()]); setCur(0); focusId('fe-tek-0'); toast.show('1行目の入力内容を消しました'); return; }
-    const next = Math.min(i, rows.length - 2);
+    const next = Math.min(i, Math.max(MIN_ROWS, rows.length - 1) - 1);
     setRows((list) => list.filter((_, j) => j !== i));
     setCur(next);
     focusId(`fe-tek-${next}`);
   };
-  const rowDelete = () => {
-    if (!editable) return;
-    if (rows.length === 1) { setRows([blankRow()]); setCur(0); focusId('fe-tek-0'); toast.show('1行目の入力内容を消しました'); return; }
-    const next = Math.min(curIdx, rows.length - 2);
-    setRows((list) => list.filter((_, j) => j !== curIdx));
-    setCur(next);
-    focusId(`fe-tek-${next}`);
-  };
+  const rowDelete = () => deleteAt(curIdx);
 
   /* ---- Enter 送り ---- */
   const afterTekiyo = (i: number, v: string) => {
     const r = rows[i];
-    // 何も入力していない最後の行の摘要で Enter → 伝票登録へ
-    if (i > 0 && i === rows.length - 1 && !v.trim() && !r.gyosha && !r.amount) { focusId(SUBMIT_ID); return; }
+    // 何も入力していない行（その下の行もすべて空）の摘要で Enter → 入力が終わったとみなして「登録する」へ
+    if (i > 0 && !v.trim() && !r.gyosha && !r.amount && rows.slice(i + 1).every(rowBlank)) { focusId(SUBMIT_ID); return; }
     focusId(`fe-gyo-${i}`);
   };
-  /** 金額欄で Enter：特殊金額入力（＋金額）なら按分、それ以外は登録。Shift+Enter：この行の下に1行追加 */
+  /** 金額欄で Enter：特殊金額入力（＋金額）なら按分。それ以外は次の行へ進み、最後の行なら新しい行を追加する（確認メモ #154）。Shift+Enter：この行の下に1行挿入 */
   const afterAmount = (i: number) => {
     const r = rows[i];
     if (r.amount.startsWith('+')) { const n = toNum(r.amount); if (n > 0) setSpecial({ row: i, total: n }); return; }
-    submit();
+    if (rowBlank(r)) { focusId(SUBMIT_ID); return; }
+    if (toNum(r.amount) <= 0) { setErr(`${i + 1}行目の金額を入力してください。`); return; }
+    if (i === rows.length - 1) { rowAddAfter(i); return; }
+    setCur(i + 1);
+    focusId(`fe-tek-${i + 1}`);
   };
   const rowAddAfter = (i: number) => { if (!editable) return; setRows((list) => [...list.slice(0, i + 1), blankRow(), ...list.slice(i + 1)]); setCur(i + 1); focusId(`fe-tek-${i + 1}`); };
 
   /* ---- 登録 ---- */
   const basicError = (): string => {
-    const m = parseInt(month, 10), d = parseInt(day, 10);
-    if (!(m >= 1 && m <= 12) || !(d >= 1 && d <= 31)) return '伝票日付（月・日）を正しく入力してください。';
+    const d = parseInt(day, 10);
+    if (!parseEntryMonth(month).ok || !(d >= 1 && d <= 31)) return '伝票日付（月・日）を正しく入力してください。月は 1〜12、決算月は 99、翌年4〜6月（予備月）は 13〜15 です。';
     if (manual && !manualNo.trim()) return '伝票Noを入力してください（入力の変更で自動採番に切り替えられます）。';
     if (!kari || !kashi) return '借方科目・貸方科目を入力してください。';
     const plus = rows.findIndex((r) => r.amount.startsWith('+'));
@@ -303,11 +313,13 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
   const finalize = () => {
     const list = rows.filter((r) => toNum(r.amount) > 0);
     if (!list.length) return;
-    const date = `${parseInt(month, 10)}/${parseInt(day, 10)}`;
+    // 決算月（99）は 3月、予備月（13〜15）は翌年4〜6月の日付として持ち、term で区別する（確認メモ #184）
+    const em = parseEntryMonth(month);
+    const date = `${em.month}/${parseInt(day, 10)}`;
     const seq = getVouchers().reduce((m, r) => Math.max(m, r.seq), 0) + 1;
-    const no = manual && manualNo.trim() ? manualNo.trim() : `${parseInt(month, 10)}-${seq}`;
+    const no = manual && manualNo.trim() ? manualNo.trim() : `${em.month}-${seq}`;
     const ids = list.map((r) => {
-      const vch = addVoucher({ kind: '伝票', seq, no, date, kari, kashi, tekiyo: r.tekiyo.trim(), amount: toNum(r.amount), service: sess.division, gyosha: r.gyosha || undefined, shohyo: inp.shohyo ? flags.shohyo : true, cheque: cheque.trim() || undefined, spare1: spare[0].trim() || undefined, spare2: spare[1].trim() || undefined, internal: partner || undefined });
+      const vch = addVoucher({ kind: '伝票', seq, no, date, kari, kashi, tekiyo: r.tekiyo.trim(), amount: toNum(r.amount), service: division, gyosha: r.gyosha || undefined, shohyo: inp.shohyo ? flags.shohyo : true, cheque: cheque.trim() || undefined, spare1: spare[0].trim() || undefined, spare2: spare[1].trim() || undefined, internal: partner || undefined, term: em.term });
       if (flags.check || flags.fusen) updateVoucher(vch.id, { check: flags.check, fusen: flags.fusen });
       if (partner) setPartner(vch.id, aite);
       return vch.id;
@@ -329,13 +341,14 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
       focusId(sess.input.keepLast ? 'fe-tek-0' : 'fe-month');
     }
   };
-  const submit = () => {
+  const submit = (): void => {
     if (!editable) return;
     const be = basicError();
     if (be) { setErr(be); return; }
     if (blocked) { setErr('登録できない仕訳です。入力欄の下に表示しているエラーの内容を確認してください。'); focusId(issues.find((i) => i.level === 'error')?.field === 'aite' ? 'fe-aite' : issues.find((i) => i.level === 'error')?.field === 'kari' ? 'fe-kari' : 'fe-kashi'); return; }
     if (warns.length) { setConfirmOpen(true); return; }
-    finalize();
+    // 登録の前に「登録しますか？」と確認する（確認メモ #153）。警告の確認を経たときは、そちらで続行を選んでいるので重ねて聞かない
+    tools.askRegister(finalize);
   };
 
   const tools = useEntryTools({
@@ -344,7 +357,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
     onNavigate,
     toast: toast.show,
     dirty,
-    service: sess.division,
+    service: division,
     month,
     day,
     kari,
@@ -388,8 +401,8 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
   const GRID = '52px minmax(0,1fr) 170px 158px';
   const rowBtn: CSSProperties = { padding: '3px 7px', borderRadius: 6, border: '1px solid #cfd8e0', background: '#fff', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', color: '#5b6773' };
   const paperDate: CSSProperties = { ...dateInput, border: '1px solid transparent', borderRadius: 4, background: 'transparent' };
-  const divisionName = sess.division.replace(/^\d+\s*/, '');
-  const fillerRows = Math.max(0, 6 - rows.length);
+  const divisionName = division.replace(/^\d+\s*/, '');
+  const filled = rows.filter((r) => !rowBlank(r)).length;
 
   return (
     <>
@@ -424,7 +437,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
           <EntryStyles />
           <PaperStyles />
           <style>{FE_CSS}</style>
-          {/* 形式の切替（現在の形式を明示）＋ 入力の変更・キーボード操作一覧 */}
+          {/* 形式の切替（現在の形式を明示）。入力の変更・キーボード操作一覧は、下の入力補助に置く（確認メモ #156） */}
           <div style={{ borderRadius: '15px 15px 0 0', overflow: 'hidden' }}>{tools.topBar}</div>
           {tools.banner}
 
@@ -446,18 +459,17 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                 </div>
               </PaperTitle>
 
-              {/* 1段目：拠点区分（入力区分）／年月日／伝票No */}
+              {/* 1段目：入力区分／年月日／伝票No */}
               <div style={{ display: 'flex', alignItems: 'stretch', gap: 14, flexWrap: 'wrap', marginBottom: 14 }}>
-                <PaperBox label={<span>入力区分<span className="pp-sub">サービス区分</span></span>} grow>
-                  <span className="pp-ro pp-ro-fill" title="入力区分は、画面上部の区分の選択で切り替えます" style={{ gap: 8, fontSize: 14, color: '#22303c', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    <span className="pp-num" style={{ fontSize: 14, color: '#7a8794' }}>{sess.division.split(' ')[0]}</span>
-                    <span>{divisionName}</span>
-                  </span>
+                <PaperBox label="入力区分" grow>
+                  <EntryDivisionField ctl={ed} id="fe-division" disabled={!editable} onCommit={() => focusId('fe-month')} />
                 </PaperBox>
                 <div className="ef-field" style={{ display: 'flex', alignItems: 'center' }}>
                   <PaperDate
                     label="伝票日付"
-                    month={<input id="fe-month" className="ef-input pp-input" aria-label="月" disabled={!editable} value={month} onChange={(e) => setNum2(setMonthV)(e.target.value)} onFocus={(e) => e.currentTarget.select()} onKeyDown={onEnter(() => focusId('fe-day'))} inputMode="numeric" autoComplete="off" style={paperDate} />}
+                    year={entryYearOf(month)}
+                    note={<EntryMonthNote month={month} />}
+                    month={<input id="fe-month" className="ef-input pp-input" aria-label="月" title={ENTRY_MONTH_HELP} disabled={!editable} value={month} onChange={(e) => setNum2(setMonthV)(e.target.value)} onFocus={(e) => e.currentTarget.select()} onKeyDown={onEnter(() => { if (parseEntryMonth(month).term === '決算' && !day) setDayV('31'); focusId('fe-day'); })} inputMode="numeric" autoComplete="off" style={paperDate} />}
                     day={<input id="fe-day" className="ef-input pp-input" aria-label="日" disabled={!editable} value={day} onChange={(e) => setNum2(setDayV)(e.target.value)} onFocus={(e) => e.currentTarget.select()} onKeyDown={onEnter(() => focusId(manual ? 'fe-no' : 'fe-kari'))} inputMode="numeric" autoComplete="off" style={paperDate} />}
                   />
                 </div>
@@ -466,7 +478,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                     {manual ? (
                       <input id="fe-no" className="ef-input pp-input" disabled={!editable} value={manualNo} onChange={(e) => setManualNo(e.target.value)} onKeyDown={onEnter(() => focusId('fe-kari'))} placeholder="例 8-101" autoComplete="off" style={{ height: 34, width: '100%', padding: '0 8px', fontSize: 14 }} />
                     ) : (
-                      <span className="pp-ro" style={{ whiteSpace: 'nowrap' }}>自動採番（<span className="pp-num" style={{ color: '#22303c', fontWeight: 700 }}>{parseInt(month, 10) || 8}-{nextSeq}</span>）</span>
+                      <span className="pp-ro" style={{ whiteSpace: 'nowrap' }}>自動採番（<span className="pp-num" style={{ color: '#22303c', fontWeight: 700 }}>{parseEntryMonth(month).month || 8}-{nextSeq}</span>）</span>
                     )}
                   </PaperBox>
                 </div>
@@ -510,7 +522,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
               <VoucherMarks variant="panel" seq={nextSeq} flags={flags} onChange={setFlags} disabled={!editable} viewOnly={tools.viewOnly} showShohyo={inp.shohyo} />
               </div>
 
-              {/* 3段目：明細（コード｜摘要／取引先｜金額｜行の操作）。空の罫線行を足して用紙らしく見せる */}
+              {/* 3段目：明細（コード｜摘要／取引先｜金額｜行の操作）。はじめから 6 行目まで入力できる（確認メモ #155） */}
               <div className="pp-table" style={{ gridTemplateColumns: '1fr' }}>
                 <div className="pp-row" style={{ gridTemplateColumns: GRID }}>
                   <div className="pp-lab">コード<span className="pp-sub">行</span></div>
@@ -548,7 +560,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                           onChange={(e) => { const raw = e.target.value.normalize('NFKC'); const digits = raw.replace(/[^0-9]/g, '').slice(0, 12); patchRow(i, { amount: (/^\s*\+/.test(raw) ? '+' : '') + digits }); }}
                           onFocus={(e) => { setCur(i); e.currentTarget.select(); }}
                           onKeyDown={(e) => { if (e.key !== 'Enter' || isIme(e)) return; e.preventDefault(); if (e.shiftKey) rowAddAfter(i); else afterAmount(i); }}
-                          title="Enter で登録、Shift+Enter でこの行の下に1行追加。先頭に「＋」を付けて金額を入力し Enter を押すと、特殊金額入力（区分別の按分）が開きます"
+                          title="Enter で次の行へ（最後の行では新しい行を追加）、Shift+Enter でこの行の下に1行挿入。先頭に「＋」を付けて金額を入力し Enter を押すと、特殊金額入力（区分別の按分）が開きます"
                           inputMode="numeric"
                           autoComplete="off"
                           placeholder="0"
@@ -564,20 +576,12 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                     </div>
                   );
                 })}
-                {Array.from({ length: fillerRows }, (_, k) => (
-                  <div key={'blank-' + k} className="pp-row" aria-hidden style={{ gridTemplateColumns: GRID }}>
-                    <div className="pp-cell pp-empty pp-center pp-num" style={{ color: '#c9d4ce', fontSize: 14 }}>{String(rows.length + k + 1).padStart(2, '0')}</div>
-                    <div className="pp-cell pp-empty" />
-                    <div className="pp-cell pp-empty" />
-                    <div className="pp-cell pp-empty" />
-                  </div>
-                ))}
                 {/* 行追加・行数 */}
                 <div className="pp-row" style={{ gridTemplateColumns: '1fr' }}>
                   <div className="pp-cell" style={{ padding: '6px 10px', fontSize: 12, color: '#8290a0' }}>
-                    {!tools.viewOnly && <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={rowAdd} title={editable ? '最後に1行追加します（金額欄で Shift+Enter でも行を追加できます）' : tools.reason} style={{ padding: '4px 11px', borderRadius: 7, border: '1px dashed #b9c4cf', background: '#fff', color: '#48565f', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', marginRight: 10 }}>＋ 行追加</button>}
-                    {rows.length} 行
-                    <span style={{ marginLeft: 12, color: '#9aa5b1' }}>Enter で登録／Shift+Enter で行追加</span>
+                    {!tools.viewOnly && <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={rowAdd} title={editable ? '最後に1行追加します（最後の行の金額欄で Enter を押しても追加できます）' : tools.reason} style={{ padding: '4px 11px', borderRadius: 7, border: '1px dashed #b9c4cf', background: '#fff', color: '#48565f', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', marginRight: 10 }}>＋ 行追加</button>}
+                    <span data-row-count>入力済み {filled} 行（全 {rows.length} 行）</span>
+                    <span style={{ marginLeft: 12, color: '#9aa5b1' }}>金額欄で Enter：次の行へ（最後の行では行を追加）／入力が終わったら、空の行の摘要で Enter を押すと「登録する」へ移ります</span>
                   </div>
                 </div>
                 {/* 下段：小切手No（表示項目で有効なとき）｜合計。Seq No・チェック・証憑・付箋は上の内部取引の行に横並び */}
@@ -636,9 +640,10 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
       />
       <BudgetGraphModal open={!!graphAcct} onClose={() => setGraphAcct(null)} account={graphAcct ?? ''} />
       <SpecialAmountModal
-        key={special ? `${special.row}-${special.total}` : 'none'}
+        key={special ? `${special.row}-${special.total}-${kari}-${kashi}` : 'none'}
         open={special != null}
         total={special?.total ?? 0}
+        account={specialRatesOf(sess, kari).byAccount ? kari : kashi}
         onClose={() => { setSpecial(null); if (special) focusId(`fe-amt-${special.row}`); }}
         accent={GREEN}
         onOk={(parts) => {
@@ -648,12 +653,13 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
           if (!editable || !r) return;
           if (!kari || !kashi) { toast.show('先に借方・貸方の科目を選んでください'); focusId(kari ? 'fe-kashi' : 'fe-kari'); return; }
           const list = parts.filter((p) => p.amount > 0);
-          const date = `${parseInt(month, 10) || 8}/${parseInt(day, 10) || 1}`;
-          const ids = list.map((p) => addVoucher({ kind: '伝票', date, kari, kashi, tekiyo: `${r.tekiyo.trim() || '特殊金額入力'}（${p.division.split(' ')[1] ?? p.division}）`, amount: p.amount, service: p.division, gyosha: r.gyosha || undefined, shohyo: inp.shohyo ? flags.shohyo : true }).id);
+          const em = parseEntryMonth(month);
+          const date = `${em.ok ? em.month : 8}/${parseInt(day, 10) || 1}`;
+          const ids = list.map((p) => addVoucher({ kind: '伝票', date, kari, kashi, tekiyo: `${r.tekiyo.trim() || '特殊金額入力'}（${p.division.split(' ')[1] ?? p.division}）`, amount: p.amount, service: p.division, gyosha: r.gyosha || undefined, shohyo: inp.shohyo ? flags.shohyo : true, term: em.term }).id);
           setHi(ids);
           // 按分した行は登録済みになるので、入力中の伝票からは外す
-          if (rows.length === 1) setRows([blankRow()]); else setRows((l) => l.filter((_, j) => j !== at));
-          const next = Math.min(at, Math.max(0, rows.length - 2));
+          setRows((l) => l.filter((_, j) => j !== at));
+          const next = Math.min(at, Math.max(MIN_ROWS, rows.length - 1) - 1);
           setCur(next);
           focusId(`fe-tek-${next}`);
           toast.show(`特殊金額入力：区分別に ${list.length} 枚の伝票を登録しました`);

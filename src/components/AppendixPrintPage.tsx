@@ -3,6 +3,7 @@
 //   保守メニューにあった「財産目録設定」「計算書類に対する注記（法人全体用／拠点区分用）」は重複のため、この画面に一本化した。
 //   附属明細書の明細入力・内訳表の合算テーブルも、印刷の準備としてここに置く（科目設定・監視は「決算附属明細書設定」）。
 //   印刷は画面内で完結：基本条件 → 詳細設定 → 出力先 → 印刷／プレビュー（PrintCenter の PrintFlow を利用）。
+//   確認メモ #163：画面上部に「キャンセル」を置く。保存していない変更（注記・明細・財産目録の行設定・合算テーブル）を破棄し、最後に保存した内容へ戻す。
 
 import { useRef, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -108,6 +109,9 @@ const downloadJson = (name: string, obj: unknown) => {
   const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
 };
+/** 「保存」で確定する編集内容（キャンセルで戻す対象）。印刷書式はダイアログの OK で確定するので含めない */
+interface Draft { rows: Record<string, string[][]>; notes: Record<string, string>; inv: Record<string, string[][]>; merge: { code: string; name: string; formula: string }[]; perPage: number }
+const cloneDraft = (d: Draft): Draft => JSON.parse(JSON.stringify(d));
 const stamp = () => { const d = new Date(); return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`; };
 
 export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'form' | 'sheet'; accent: string; /** メニュー項目名で別画面へ移動（決算附属明細書設定へのリンクに使用） */ onNavigate?: (label: string) => void }) {
@@ -131,6 +135,13 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
   const [preview, setPreview] = useState<{ title: string; opts: { from: string; to: string; output: string; hideZero?: boolean } } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const tableRef = useRef<HTMLInputElement>(null);
+  /** 最後に保存した内容。「保存」で更新し、「キャンセル」でここへ戻す */
+  const draft: Draft = { rows, notes, inv, merge, perPage };
+  const [saved, setSaved] = useState<Draft>(() => cloneDraft(draft));
+  const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
+  const saveAll = () => { setSaved(cloneDraft(draft)); toast.show('別紙の内容を保存しました（プロトタイプ）'); };
+  const restoreSaved = () => { const d = cloneDraft(saved); setRows(d.rows); setNotes(d.notes); setInv(d.inv); setMerge(d.merge); setPerPage(d.perPage); setInvSel(null); toast.show('変更を破棄し、最後に保存した内容に戻しました'); };
+  const cancelAll = () => { if (!dirty) { toast.show('保存していない変更はありません'); return; } setAsk({ msg: '保存していない変更（注記・明細・財産目録の行設定・合算テーブル）を破棄して、最後に保存した内容に戻しますか？', ok: '変更を破棄', run: restoreSaved }); };
 
   const sheet = SHEETS.find((x) => x.id === cur) ?? SHEETS[0];
   const def = DETAILS[sheet.id];
@@ -212,7 +223,10 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
   const tag = (label: string, bg: string, fg: string): ReactNode => <span style={{ fontSize: 12, fontWeight: 800, padding: '2px 8px', borderRadius: 8, background: bg, color: fg, whiteSpace: 'nowrap' }}>{label}</span>;
 
   return (
-    <SettingsShell variant={variant} title="別紙（注記・附属明細書・財産目録）" badge="印刷" desc="決算書に添付する別紙の編集と印刷を行います。左の一覧から別紙を選び、右側で内容の編集と印刷をします。" actions={<button type="button" className="submit-btn" onClick={() => toast.show('別紙の内容を保存しました（プロトタイプ）')} style={btn(accent, true)}>保存</button>}>
+    <SettingsShell variant={variant} title="別紙（注記・附属明細書・財産目録）" badge="印刷" desc="決算書に添付する別紙の編集と印刷を行います。左の一覧から別紙を選び、右側で内容の編集と印刷をします。" actions={<>
+      <button type="button" className="btn-outline" onClick={cancelAll} title="保存していない変更を破棄して、最後に保存した内容に戻します" style={btn()} data-appendix-cancel>キャンセル</button>
+      <button type="button" className="submit-btn" onClick={saveAll} style={btn(accent, true)}>保存</button>
+    </>}>
       <ToastView msg={toast.msg} />
       <div style={{ display: 'grid', gridTemplateColumns: '300px minmax(0,1fr)', minHeight: 520, alignItems: 'start' }}>
         {/* 左：別紙の一覧 */}
@@ -362,7 +376,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
         これまで「保守」メニューにあった「財産目録設定」「計算書類に対する注記（法人全体用／拠点区分用）」は、同じ機能が重複していたため、この画面にまとめました。
       </div>
 
-      {/* 確認（既定に戻す・全行削除） */}
+      {/* 確認（既定に戻す・全行削除・変更の破棄） */}
       <Modal open={!!ask} onClose={() => setAsk(null)} width={440} title="確認" strict>
         {ask && <div style={{ padding: '16px 22px 18px', display: 'grid', gap: 14 }}><div style={{ fontSize: 14, lineHeight: 1.8 }}>{ask.msg}</div><div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setAsk(null)} style={btn()}>キャンセル</button><button type="button" onClick={() => { ask.run(); setAsk(null); }} style={btn('#c0392b', true)}>{ask.ok}</button></div></div>}
       </Modal>
@@ -376,11 +390,12 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
       {/* 設定ファイル読込（財産目録の行設定／注記） */}
       <Modal open={!!load} onClose={() => setLoad(null)} width={480} title={load === 'inv' ? '設定ファイル読込 ― 財産目録の行設定' : `設定ファイル読込 ― ${sheet.name}`}>
         <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
-          <Notice>「設定ファイル保存」で書き出した設定ファイル（JSON）を読み込み、現在の内容を置き換えます。読み込んだ内容は画面上部の「保存」で確定します。</Notice>
+          <Notice>「設定ファイル保存」で書き出した設定ファイル（JSON）を読み込み、現在の内容を置き換えます。読み込んだ内容は画面上部の「保存」で確定します（保存する前なら、画面上部の「キャンセル」で最後に保存した内容に戻せます）。</Notice>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14 }}><span style={{ flex: 1, color: '#5b6773' }}>保存した設定ファイルを選択します。</span><button type="button" onClick={() => fileRef.current?.click()} style={btn(accent)}>ファイルを選択…</button></div>
           <input ref={fileRef} type="file" accept=".json,application/json" onChange={(e) => onFile(e.target.files?.[0])} style={{ display: 'none' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14 }}><span style={{ flex: 1, color: '#9aa5b1' }}>手元にファイルがない場合は、サンプルを読み込んで動作を確認できます。</span><button type="button" onClick={loadSample} style={btn()}>サンプルを読み込む</button></div>
-          <Notice tone="warn">一度読み込んだ内容は元に戻せません（「既定に戻す」で初期状態には戻せます）。</Notice>
+          <Notice tone="warn">「保存」で確定したあとは、読み込む前の内容に戻せません（「既定に戻す」で初期状態には戻せます）。</Notice>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" onClick={() => setLoad(null)} style={btn()}>キャンセル</button></div>
         </div>
       </Modal>
       {/* 合算テーブルの印刷書式 */}

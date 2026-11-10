@@ -378,8 +378,8 @@ export function judgeEntry(x: JudgeInput, env: EnvSettings): Issue[] {
   // 内部取引
   const ik = isInternalAccount(kari), is = isInternalAccount(kashi);
   if (needsPartner(x)) {
-    if (ik !== is && (ik || is) && !env.oneSideInternal) {
-      out.push({ level: 'error', code: 'oneside', title: `${ik ? '借方' : '貸方'}だけが内部取引科目です`, detail: `${ik ? '貸方' : '借方'}にも内部取引科目を指定してください（片側のみの内部取引は、動作環境で許可した場合だけ登録できます）。`, field: ik ? 'kashi' : 'kari' });
+    if (ik !== is && (ik || is)) {
+      out.push({ level: 'error', code: 'oneside', title: `${ik ? '借方' : '貸方'}だけが内部取引科目です`, detail: `${ik ? '貸方' : '借方'}にも内部取引科目を指定してください。`, field: ik ? 'kashi' : 'kari' });
     }
     if (!x.aite) out.push({ level: 'error', code: 'aite', title: '内部取引相手区分が未入力です', detail: '内部取引科目を使う仕訳は、相手先の区分を指定してください。', field: 'aite' });
     else if (x.division && x.aite === x.division) out.push({ level: 'error', code: 'aite-same', title: '内部取引相手区分が入力中の区分と同じです', detail: '相手区分には、取引の相手先となる別の区分を指定してください。', field: 'aite' });
@@ -487,7 +487,7 @@ interface ActProps {
 export function ActButton({ label, k, onClick, tone = 'normal', accent = '#1f7a52', disabled, title, active, id, menu, wide }: ActProps) {
   const c = tone === 'danger' ? '#c0392b' : tone === 'primary' ? accent : '#48565f';
   const solid = tone === 'primary';
-  const tip = [title, k ? `ショートカット：Alt+${k}` : ''].filter(Boolean).join('　');
+  const tip = [title, k ? `ショートカット：Alt+${k}（Mac は option+${k}）` : ''].filter(Boolean).join('　');
   return (
     <span data-tip={disabled && title ? title : undefined} style={{ display: 'inline-flex' }}>
     <button id={id} type="button" className="ef-act" data-menu={menu ?? (typeof label === 'string' ? label : undefined)} disabled={disabled} aria-pressed={active} title={disabled ? undefined : tip} onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: wide ? 240 : undefined, padding: wide ? '12px 32px' : solid ? '10px 18px' : '8px 12px', borderRadius: 8, border: '1px solid ' + (solid ? c : tone === 'danger' ? '#e6b3ab' : active ? accent : '#cfd8e0'), background: solid ? c : active ? accent + '18' : '#fff', color: solid ? '#fff' : active ? accent : c, fontSize: wide ? 16 : solid ? 14 : 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: solid ? '0 3px 10px rgba(30,50,70,.18)' : 'none' }}>
@@ -554,31 +554,41 @@ export function openCandidatesOfFocused(): boolean {
 /** キーボード操作一覧（ヘルプ） */
 export function ShortcutHelpModal({ open, onClose, shortcuts, formatName, enterOrder }: { open: boolean; onClose: () => void; shortcuts: Shortcut[]; formatName: string; enterOrder: string }) {
   const groups = Array.from(new Set(shortcuts.map((s) => s.group)));
-  const row: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '4px 0', borderBottom: '1px dashed #eef2f5', fontSize: 14 };
-  const key: CSSProperties = { flex: 'none', padding: '1px 7px', border: '1px solid #b9c4cf', borderBottomWidth: 2, borderRadius: 5, background: '#f6f8fa', fontSize: 12, fontWeight: 700, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', color: '#3d4a56', whiteSpace: 'nowrap' };
+  // Windows と Mac（MacBook）のキーを並べて示す（確認メモ #146）
+  const row: CSSProperties = { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 92px 104px', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px dashed #eef2f5', fontSize: 14 };
+  const key: CSSProperties = { justifySelf: 'start', padding: '1px 7px', border: '1px solid #b9c4cf', borderBottomWidth: 2, borderRadius: 5, background: '#f6f8fa', fontSize: 12, fontWeight: 700, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', color: '#3d4a56', whiteSpace: 'nowrap' };
+  const head = (caption: string) => (
+    <div style={{ ...row, borderBottom: '1px solid #dde4ea', padding: '0 0 4px', marginBottom: 2 }}>
+      <span style={{ fontSize: 12, fontWeight: 800, color: '#8290a0' }}>{caption}</span>
+      <span style={{ fontSize: 12, fontWeight: 700, color: '#5b6773' }}>Windows</span>
+      <span style={{ fontSize: 12, fontWeight: 700, color: '#5b6773' }}>Mac</span>
+    </div>
+  );
+  const pair = (label: string, win: string, mac: string) => <div style={row}><span>{label}</span><span style={key}>{win}</span><span style={key}>{mac}</span></div>;
   return (
-    <Modal open={open} onClose={onClose} width={780} title={<>キーボード操作一覧 <span style={{ fontSize: 14, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>{formatName}</span></>}>
+    <Modal open={open} onClose={onClose} width={1040} title={<>キーボード操作一覧 <span style={{ fontSize: 14, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>{formatName}</span></>}>
       <div style={{ padding: '12px 22px 18px', display: 'grid', gap: 14 }}>
         <div style={{ padding: '10px 12px', background: '#f3f6f9', border: '1px solid #dde4ea', borderRadius: 10, fontSize: 14, lineHeight: 1.8, color: '#48565f' }}>
-          マウスを使わずに伝票登録まで操作できます。ショートカットは<b>どの入力欄にいても同じキーで同じ機能</b>が動きます（カーソル位置で機能は変わりません）。
+          マウスを使わずに伝票登録まで操作できます。ショートカットは<b>どの入力欄にいても同じキーで同じ機能</b>が動きます（カーソル位置で機能は変わりません）。<br />
+          <b>Windows</b> は <span style={key}>Alt</span> キー、<b>Mac（MacBook）</b> は <span style={key}>option（⌥）</span> キーを押しながら英数字キーを押します。Mac の <span style={key}>return</span> は Windows の <span style={key}>Enter</span> と同じです。
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '12px 22px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '14px 26px' }}>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 800, color: '#8290a0', marginBottom: 4 }}>入力欄の移動・候補の選択</div>
-            <div style={row}><span>次の項目へ</span><span style={key}>Enter</span></div>
-            <div style={row}><span>前の項目へ</span><span style={key}>Shift+Tab</span></div>
-            <div style={row}><span>候補を絞り込む</span><span style={{ fontSize: 12, color: '#7a8794' }}>コード・名称・フリガナを入力</span></div>
-            <div style={row}><span>候補を選ぶ</span><span style={key}>↑ ↓</span></div>
-            <div style={row}><span>候補を決定して次へ</span><span style={key}>Enter</span></div>
-            <div style={row}><span>候補を閉じる</span><span style={key}>Esc</span></div>
-            <div style={{ fontSize: 12, color: '#7a8794', marginTop: 6, lineHeight: 1.7 }}>Enter の順序：{enterOrder}</div>
+            {head('入力欄の移動・候補の選択')}
+            {pair('次の項目へ', 'Enter', 'return')}
+            {pair('前の項目へ', 'Shift+Tab', 'shift+tab')}
+            {pair('候補を選ぶ', '↑ ↓', '↑ ↓')}
+            {pair('候補を決定して次へ', 'Enter', 'return')}
+            {pair('候補を閉じる', 'Esc', 'esc')}
+            <div style={{ fontSize: 12, color: '#7a8794', marginTop: 6, lineHeight: 1.7 }}>候補の絞り込み：コード・名称・フリガナを入力します。</div>
+            <div style={{ fontSize: 12, color: '#7a8794', marginTop: 4, lineHeight: 1.7 }}>Enter の順序：{enterOrder}</div>
             <div style={{ fontSize: 12, color: '#7a8794', marginTop: 4, lineHeight: 1.7 }}>戻る：<b style={{ color: '#22303c' }}>Shift+Tab</b> で1つ前の入力欄へ戻ります。内部取引スイッチの上では Shift+Enter でオン／オフ。</div>
           </div>
           {groups.map((g) => (
             <div key={g}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: '#8290a0', marginBottom: 4 }}>{g}</div>
+              {head(g)}
               {shortcuts.filter((s) => s.group === g).map((s) => (
-                <div key={s.key + s.label} style={{ ...row, opacity: s.disabled ? 0.45 : 1 }}><span>{s.label}</span><span style={key}>Alt+{s.key}</span></div>
+                <div key={s.key + s.label} style={{ ...row, opacity: s.disabled ? 0.45 : 1 }}><span>{s.label}</span><span style={key}>Alt+{s.key}</span><span style={key}>option+{s.key}</span></div>
               ))}
             </div>
           ))}
@@ -633,14 +643,14 @@ export function ReadOnlyBanner({ reason }: { reason: string }) {
 /* ------------------------------------------------------------------ */
 /* 小さな確認ダイアログ（伝票中止・形式切替）                            */
 /* ------------------------------------------------------------------ */
-export function ConfirmModal({ open, title, children, okLabel, cancelLabel = '入力に戻る', danger, onOk, onClose, accent }: { open: boolean; title: string; children: ReactNode; okLabel: string; cancelLabel?: string; danger?: boolean; onOk: () => void; onClose: () => void; accent: string }) {
+export function ConfirmModal({ open, title, children, okLabel, cancelLabel = '入力に戻る', danger, onOk, onClose, accent, focusOk }: { open: boolean; title: string; children: ReactNode; okLabel: string; cancelLabel?: string; danger?: boolean; onOk: () => void; onClose: () => void; accent: string; /** 初期フォーカスを実行側のボタンに置く（Enter でそのまま進める。登録の確認など） */ focusOk?: boolean }) {
   return (
     <Modal open={open} onClose={onClose} width={480} title={title} strict>
       <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 14 }}>
         <div style={{ fontSize: 14, lineHeight: 1.8 }}>{children}</div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <button type="button" className="ef-act" autoFocus onClick={onClose} style={btn()}>{cancelLabel}</button>
-          <button type="button" className="ef-act" onClick={onOk} style={btn(danger ? '#c0392b' : accent, true)}>{okLabel}</button>
+          <button type="button" className="ef-act" autoFocus={!focusOk} onClick={onClose} style={btn()}>{cancelLabel}</button>
+          <button type="button" className="ef-act" data-confirm-ok autoFocus={focusOk} onClick={onOk} style={btn(danger ? '#c0392b' : accent, true)}>{okLabel}</button>
         </div>
       </div>
     </Modal>
@@ -821,8 +831,36 @@ export function PaperTitle({ title, division, badge, right, children }: { title:
   );
 }
 
+/* ---------------- 伝票日付の月（確認メモ #184） ---------------- */
+/** 決算＝決算月、予備＝翌年4〜6月の予備月（年度更新時に翌年度のデータとして引き継ぐ） */
+export type EntryTerm = '決算' | '予備';
+export interface EntryMonth { ok: boolean; /** 暦の月（決算月は 3、予備月は 4〜6） */ month: number; term?: EntryTerm; /** 月欄の横に出す注記（通常の月は空） */ note: string; /** 翌暦年（令和9年）の月 */ nextYear: boolean }
+/** 月欄の入力を解釈する。1〜12＝当年度の月／99＝決算月／13〜15＝翌年4〜6月（予備月） */
+export function parseEntryMonth(raw: string): EntryMonth {
+  const n = parseInt(String(raw).normalize('NFKC'), 10);
+  if (n === 99) return { ok: true, month: 3, term: '決算', note: '決算月', nextYear: true };
+  if (n >= 13 && n <= 15) return { ok: true, month: n - 9, term: '予備', note: `翌年${n - 9}月（予備月）`, nextYear: true };
+  if (n >= 1 && n <= 12) return { ok: true, month: n, note: '', nextYear: n <= 3 };
+  return { ok: false, month: 0, note: '', nextYear: false };
+}
+/** 月欄の入力から、年の表示（令和の年）を返す */
+export const entryYearOf = (raw: string) => (parseEntryMonth(raw).nextYear ? '9' : '8');
+/** 月欄の入力方法（title 用） */
+export const ENTRY_MONTH_HELP = '1〜12：当年度の月　99：決算月　13〜15：翌年4〜6月（予備月。年度更新時に翌年度のデータとして引き継ぎます）';
+/** 伝票の日付の表示。決算月は「決」、予備月は「翌」を頭に付ける */
+export const termMark = (term?: EntryTerm) => (term === '決算' ? '決' : term === '予備' ? '翌' : '');
+/** 月欄の横に出す注記のバッジ（決算月／翌年の予備月のときだけ表示） */
+export function EntryMonthNote({ month, style }: { month: string; style?: CSSProperties }) {
+  const m = parseEntryMonth(month);
+  if (!m.note) return null;
+  const closing = m.term === '決算';
+  return (
+    <span data-month-note title={closing ? '決算月の伝票として登録します（月欄に 99 と入力）' : '翌年度の予備月の伝票として登録します。年度更新時に翌年度のデータとして引き継ぎます（月欄に 13〜15 と入力）'} style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 10, fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap', background: closing ? '#efe7fa' : '#e6f0fb', color: closing ? '#6b3fb5' : '#2c5f9e', border: '1px solid ' + (closing ? '#d6c4f0' : '#c9dbf0'), ...style }}>{m.note}</span>
+  );
+}
+
 /** 「令和 ［8］年 ［月］月 ［日］日」の枠付きセル。month／day には既存の入力欄をそのまま渡す */
-export function PaperDate({ month, day, year = '8', label = '年月日' }: { month: ReactNode; day: ReactNode; year?: string; label?: string }) {
+export function PaperDate({ month, day, year = '8', label = '年月日', note }: { month: ReactNode; day: ReactNode; year?: string; label?: string; /** 月の注記（決算月・予備月のバッジ） */ note?: ReactNode }) {
   const cell: CSSProperties = { padding: '2px 4px', justifyContent: 'center' };
   return (
     <div className="pp-row" style={{ gridTemplateColumns: 'auto auto auto auto auto auto auto auto', border: `1px solid ${PAPER.line}`, display: 'inline-grid', verticalAlign: 'middle' }}>
@@ -833,7 +871,7 @@ export function PaperDate({ month, day, year = '8', label = '年月日' }: { mon
       <div className="pp-cell" style={cell}>{month}</div>
       <div className="pp-lab">月</div>
       <div className="pp-cell" style={cell}>{day}</div>
-      <div className="pp-lab">日</div>
+      <div className="pp-lab" style={{ gap: 6 }}>日{note}</div>
     </div>
   );
 }

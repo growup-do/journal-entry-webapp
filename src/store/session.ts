@@ -47,7 +47,8 @@ export interface EnvSettings {
   /** 帳票・繰入金・注意書き（動作環境 4.2.2） */
   budgetInternalOffset: boolean; onePageRow: boolean; termFromStart: boolean; hideCorpName: boolean;
   transferWatch: '収入で監視' | '支払いで監視';
-  /** 依頼書 2.6／5.5.1：動作環境の残り項目（全区分共通：フリガナ検索の無効化・帳票印刷の速度重視／区分ごと：負数の表記位置・バックアップ先・画面背景・金額フォントの自動調整） */
+  /** 依頼書 2.6／5.5.1：動作環境の残り項目（全区分共通：フリガナ検索の無効化・帳票印刷の速度重視／区分ごと：負数の表記位置・バックアップ先・画面背景・金額フォントの自動調整）。
+   *  確認メモ #170・#172・#173・#174：noFurigana／oneSideInternal／specialPopup／backupDest／backupFolder の設定欄は環境設定の画面から削除した（保存済みデータとの互換のためフィールドは残す） */
   noFurigana: boolean; printSpeed: boolean;
   negativePos: '前' | '後'; backupDest: 'クラウド（標準）' | 'フォルダ指定' | 'Dropbox'; backupFolder: string;
   bgMode: '色' | '画像'; bgColor: string; bgColorRight: string; autoAmountFont: boolean;
@@ -119,6 +120,19 @@ export const DEFAULT_ALLOCATIONS: AllocationTemplate[] = [
 ];
 /** 特殊金額入力の按分率（集合区分で起動したときの区分別配分） */
 export const DEFAULT_SPECIAL_RATES: { division: string; rate: number }[] = [{ division: '001 本部', rate: 20 }, { division: '002 保育事業', rate: 60 }, { division: '003 子育て支援', rate: 10 }, { division: '004 一時預かり', rate: 10 }];
+/** 特殊金額入力の按分率（科目ごと。確認メモ #179）：科目ごとに各区分の按分率と、端数の加算先区分を持つ。設定のない科目は共通の按分率（specialRates）を使う */
+export interface SpecialRateSetting { account: string; rates: { division: string; rate: number }[]; /** 端数の加算先区分 */ roundTo: string }
+export const DEFAULT_SPECIAL_RATES_BY_ACCOUNT: SpecialRateSetting[] = [
+  { account: '水道光熱費（事業）', rates: [{ division: '001 本部', rate: 10 }, { division: '002 保育事業', rate: 70 }, { division: '003 子育て支援', rate: 10 }, { division: '004 一時預かり', rate: 10 }], roundTo: '002 保育事業' },
+  { account: '通信運搬費', rates: [{ division: '001 本部', rate: 30 }, { division: '002 保育事業', rate: 50 }, { division: '003 子育て支援', rate: 10 }, { division: '004 一時預かり', rate: 10 }], roundTo: '001 本部' },
+  { account: '賃借料（事業）', rates: [{ division: '001 本部', rate: 0 }, { division: '002 保育事業', rate: 80 }, { division: '003 子育て支援', rate: 10 }, { division: '004 一時預かり', rate: 10 }], roundTo: '002 保育事業' },
+];
+
+/* ---------- 消費税の処理方式（確認メモ #175。旧 消費税動作環境） ---------- */
+export const TAX_MODES = ['通常モード', '簡易課税方式', '本則課税の一括比例配分方式', '本則課税の個別対応方式'] as const;
+export type TaxMode = (typeof TAX_MODES)[number];
+/** 伝票入力に税区分・税額の欄を出す方式か（通常モード＝消費税の処理をしないので出さない） */
+export const taxModeUsesTax = (m: TaxMode) => m !== '通常モード';
 
 /* ---------- セッション本体 ---------- */
 export interface Session {
@@ -137,8 +151,8 @@ export interface Session {
   specialRates: { division: string; rate: number }[];
   /** 推移・試算表からの元帳ドリルダウン */
   ledgerTarget: { account: string; month: string; /** 呼び出し元の画面（戻り導線に使う。例 '月次試算'） */ from?: string } | null;
-  /** 同額・不一致検索の「伝票表示」から日記帳へ（不一致が見つかった日・呼び出し元を引き継ぐ） */
-  journalTarget: { month: string; day: number; from: string } | null;
+  /** 日次調査の「伝票表示」から日記帳へ（不一致が見つかった日・呼び出し元を引き継ぐ） */
+  journalTarget: { month: string; day: number; from: string; /** 日記帳で印を付ける伝票の id（日次調査：不一致の原因になっている伝票。確認メモ #127） */ markIds?: number[]; /** 印の補足（例：'差額 18,000'） */ markNote?: string } | null;
   /** 決算チェック設定（項目番号→有効） */
   auditEnabled: Record<number, boolean>;
   /** 法人決算チェック設定（法人全体。項目番号→有効）。区分ごとの設定とは別に保持する（確認メモ #124） */
@@ -154,20 +168,27 @@ export interface Session {
   homeSections: Record<HomeSectionKey, boolean>;
   /** 消費税対応（法人単位。依頼書 2.4：振替伝票形式・振替単一形式に税区分・税額の欄を出す）。事業者 › 会計方針で切替 */
   taxEntry: boolean;
+  /** 消費税の処理方式（法人単位。確認メモ #175）。変更は setTaxMode() で行い、taxEntry（税区分・税額の欄を出すか）も同時に更新する */
+  taxMode: TaxMode;
+  /** 特殊金額入力の按分率（科目ごと。確認メモ #179）。引くときは specialRatesOf() を使う */
+  specialRatesByAccount: SpecialRateSetting[];
+  /** 共通の按分率（specialRates。科目ごとの設定がない科目に使う）の端数の加算先区分 */
+  specialRoundTo: string;
+  /** 開始残高の「期中入力」を行うか（期の途中から導入する場合。確認メモ #167）。true のときだけ期中入力の3つのタブを出す */
+  openingMidTerm: boolean;
 }
 
 const KEY = 'proto-session-v2'; // v2：区分ツリーの見直し（入力区分／親区分）に伴い保存形式を更新
 /** ホーム（ダッシュボード）の表示メニュー */
 export const HOME_SECTIONS = [
-  { key: 'bank', label: '銀行の預金残高', note: '口座ごとの残高と前日比' },
-  { key: 'checks', label: '調査・チェック', note: '仕訳数の問合せ／同額・不一致検索／決算チェック' },
+  // 預金残高は「推移・分析」へ（確認メモ #149）、お知らせはヘッダーのベルへ（#151）移したので、ここでは選ばない
+  { key: 'checks', label: '調査・チェック', note: '仕訳数の問合せ／日次調査／決算チェック' },
   { key: 'favorites', label: 'お気に入りメニュー', note: '登録した画面をすぐに開くボタン（メニューバーの「お気に入りメニュー」と共通）' },
   { key: 'faq', label: 'よくある質問（FAQ）', note: '操作で迷ったときの質問と回答' },
-  { key: 'notices', label: 'お知らせ', note: 'システム・法改正・保守の案内' },
   { key: 'banners', label: 'バナー', note: 'ご案内の画像' },
 ] as const;
 export type HomeSectionKey = (typeof HOME_SECTIONS)[number]['key'];
-const DEFAULT_HOME_SECTIONS: Record<HomeSectionKey, boolean> = { bank: true, checks: true, favorites: true, faq: true, notices: true, banners: true };
+const DEFAULT_HOME_SECTIONS: Record<HomeSectionKey, boolean> = { checks: true, favorites: true, faq: true, banners: true };
 
 const DEFAULT: Session = {
   division: '002 保育事業', divisionPath: ['社会福祉法人 チャイルド保育園', '社会福祉事業', 'チャイルド保育園', '保育事業'],
@@ -176,6 +197,7 @@ const DEFAULT: Session = {
   env: DEFAULT_ENV, input: DEFAULT_INPUT, print: DEFAULT_PRINT, templates: DEFAULT_TEMPLATES, allocations: DEFAULT_ALLOCATIONS, specialRates: DEFAULT_SPECIAL_RATES,
   ledgerTarget: null, journalTarget: null, auditEnabled: {}, auditCorpEnabled: { 21: false, 22: false }, corpStartDate: '20240401', corpTax: '非課税',
   role: '入力可', startScreen: '伝票入力', homeSections: DEFAULT_HOME_SECTIONS, taxEntry: false,
+  taxMode: '通常モード', specialRatesByAccount: DEFAULT_SPECIAL_RATES_BY_ACCOUNT, specialRoundTo: DEFAULT_SPECIAL_RATES[DEFAULT_SPECIAL_RATES.length - 1].division, openingMidTerm: false,
 };
 
 let state: Session = (() => {
@@ -183,7 +205,9 @@ let state: Session = (() => {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULT;
     const saved = JSON.parse(raw) as Partial<Session>;
-    return { ...DEFAULT, ...saved, tree: normalizeTree(saved.tree ?? DEFAULT.tree), env: { ...DEFAULT_ENV, ...(saved.env ?? {}) }, input: { ...DEFAULT_INPUT, ...(saved.input ?? {}) }, print: { ...DEFAULT_PRINT, ...(saved.print ?? {}) }, homeSections: { ...DEFAULT_HOME_SECTIONS, ...(saved.homeSections ?? {}) }, ledgerTarget: null, journalTarget: null };
+    return { ...DEFAULT, ...saved, tree: normalizeTree(saved.tree ?? DEFAULT.tree), env: { ...DEFAULT_ENV, ...(saved.env ?? {}) }, input: { ...DEFAULT_INPUT, ...(saved.input ?? {}) }, print: { ...DEFAULT_PRINT, ...(saved.print ?? {}) }, homeSections: { ...DEFAULT_HOME_SECTIONS, ...(saved.homeSections ?? {}) }, ledgerTarget: null, journalTarget: null,
+      // 以前の保存データ（消費税対応の On／Off だけ）には方式がないので、On は「簡易課税方式」として引き継ぐ（確認メモ #175）
+      taxMode: saved.taxMode ?? (saved.taxEntry ? '簡易課税方式' : DEFAULT.taxMode) };
   } catch {
     return DEFAULT;
   }
@@ -238,3 +262,26 @@ export const editBlockReason = (s: Session) => (s.role !== '入力可' ? '参照
 /** 付箋の表示名：「赤（要確認）」のように色と意味を並べる。意味は環境設定の「付箋の色の意味」で変更できる */
 /** 付箋の表示名：色＋（意味）。意味は環境設定で任意に付ける（既定は空。確認メモ #49：利用者が自由に使い分けているため） */
 export const fusenLabel = (f: string): string => { if (!f) return 'なし'; const n = getSession().env.fusenNames[f as '赤' | '青' | '黄' | '緑'] ?? ''; return n ? `${f}（${n}）` : f; };
+
+/* ---------- 消費税の処理方式の変更（確認メモ #175） ---------- */
+/** 消費税の処理方式を変える。税区分・税額の欄を出すか（taxEntry）も方式に合わせて同時に更新する */
+export function setTaxMode(m: TaxMode) { setSession({ taxMode: m, taxEntry: taxModeUsesTax(m) }); }
+
+/* ---------- 特殊金額入力の按分率（科目ごと。確認メモ #179） ---------- */
+/** 科目名から、特殊金額入力の按分率と端数の加算先区分を引く。
+ *  科目ごとの設定があればそれを、なければ共通の按分率（specialRates）と共通の端数の加算先を返す。
+ *  区分の並びは共通の按分率に合わせる（科目ごとの設定に無い区分は 0%）。byAccount＝科目ごとの設定が見つかったか */
+export function specialRatesOf(s: Pick<Session, 'specialRates' | 'specialRatesByAccount' | 'specialRoundTo'>, account: string): { rates: { division: string; rate: number }[]; roundTo: string; byAccount: boolean } {
+  const hit = account ? (s.specialRatesByAccount ?? []).find((x) => x.account === account) : undefined;
+  const rates = hit ? s.specialRates.map((r) => ({ division: r.division, rate: hit.rates.find((x) => x.division === r.division)?.rate ?? 0 })) : s.specialRates;
+  const want = hit ? hit.roundTo : s.specialRoundTo;
+  const roundTo = rates.some((r) => r.division === want) ? want : rates[rates.length - 1]?.division ?? '';
+  return { rates, roundTo, byAccount: !!hit };
+}
+/** 金額を科目の按分率で区分に配分する（区分ごとに円未満を切り捨て、端数は加算先の区分に足す。合計は必ず total に一致する） */
+export function splitSpecialAmount(s: Pick<Session, 'specialRates' | 'specialRatesByAccount' | 'specialRoundTo'>, account: string, total: number): { division: string; rate: number; amount: number }[] {
+  const { rates, roundTo } = specialRatesOf(s, account);
+  const parts = rates.map((r) => ({ ...r, amount: Math.trunc((total * r.rate) / 100) }));
+  const rest = total - parts.reduce((a, p) => a + p.amount, 0);
+  return parts.map((p) => (p.division === roundTo ? { ...p, amount: p.amount + rest } : p));
+}

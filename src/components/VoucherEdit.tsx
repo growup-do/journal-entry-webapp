@@ -14,6 +14,7 @@ import { SERVICES } from '../data';
 import { FUSEN_COLORS, FUSEN_CYCLE, addVoucher, cycleFusen, deleteVoucher, getVouchers, moveVoucher, setVoucherFlags, updateVoucher, useVouchers, type Fusen, type Voucher } from '../store/journalStore';
 import { judgeTorihiki, TORIHIKI_COLOR } from '../lib/accounts';
 import { canEdit, canReorder, editBlockReason, fusenLabel, useSession, isViewOnly } from '../store/session';
+import { canEnterVoucher, entryBlockReason } from '../lib/entryDivision';
 import type { MonthFilter } from '../types';
 
 const BLUE = '#2c5f9e';
@@ -51,9 +52,10 @@ export function FlagCell({ v, compact }: { v: Voucher; compact?: boolean }) {
 }
 
 /* ---------------- 伝票削除の確認（依頼書 6.4） ---------------- */
-export function DeleteVoucherModal({ rows, onClose, onDeleted, multi }: { rows: Voucher[] | null; onClose: () => void; onDeleted?: () => void; /** 一覧で複数行を選んで削除するとき（伝票単位ではなく行単位の案内にする） */ multi?: boolean }) {
+export function DeleteVoucherModal({ rows, onClose, onDeleted, multi, entry }: { rows: Voucher[] | null; onClose: () => void; onDeleted?: () => void; /** 一覧で複数行を選んで削除するとき（伝票単位ではなく行単位の案内にする） */ multi?: boolean; /** 伝票入力の画面から開いたとき（親区分で起動中でも、配下の入力区分の伝票を削除できる。確認メモ #182） */ entry?: boolean }) {
   const s = useSession();
-  const ok = canEdit(s);
+  const ok = entry ? canEnterVoucher(s) : canEdit(s);
+  const blockReason = entry ? entryBlockReason(s) : editBlockReason(s);
   if (!rows || rows.length === 0) return null;
   const h = rows[0];
   const total = rows.reduce((a, r) => a + r.amount, 0);
@@ -83,10 +85,10 @@ export function DeleteVoucherModal({ rows, onClose, onDeleted, multi }: { rows: 
             ))}
           </div>
         </div>
-        {!ok && <Notice tone="warn">{editBlockReason(s)}</Notice>}
+        {!ok && <Notice tone="warn">{blockReason}</Notice>}
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
           <button type="button" className="ef-act" autoFocus onClick={onClose} style={btn()}>削除しないで戻る</button>
-          <button type="button" className="ef-act" disabled={!ok} title={ok ? undefined : editBlockReason(s)} onClick={() => { rows.forEach((r) => { deleteVoucher(r.id); setPartner(r.id, ''); }); onDeleted?.(); onClose(); }} style={btn('#c0392b', true)}>{multi ? `選択した ${rows.length} 行を削除する` : `この伝票を削除する（${rows.length} 行）`}</button>
+          <button type="button" className="ef-act" disabled={!ok} title={ok ? undefined : blockReason} onClick={() => { rows.forEach((r) => { deleteVoucher(r.id); setPartner(r.id, ''); }); onDeleted?.(); onClose(); }} style={btn('#c0392b', true)}>{multi ? `選択した ${rows.length} 行を削除する` : `この伝票を削除する（${rows.length} 行）`}</button>
         </div>
       </div>
     </Modal>
@@ -95,7 +97,7 @@ export function DeleteVoucherModal({ rows, onClose, onDeleted, multi }: { rows: 
 
 /* ---------------- 伝票訂正・伝票削除の対象を選ぶ ---------------- */
 export function VoucherPickerModal({ open, mode, onClose, onPick, accent }: { open: boolean; mode: '訂正' | '削除'; onClose: () => void; onPick: (group: VoucherGroup) => void; accent: string }) {
-  const all = useVouchers();
+  const all = useVouchers(true);
   const [month, setMonth] = useState<MonthFilter>(null);
   const [q, setQ] = useState('');
   const [hi, setHi] = useState(0);
@@ -194,11 +196,11 @@ function applyOrder(ids: number[]) {
   }
 }
 
-export function EditVoucherModal({ voucher, onClose, accent, returnTo }: { voucher: Voucher | null; onClose: () => void; accent: string; returnTo: string }) {
-  const all = useVouchers();
+export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: { voucher: Voucher | null; onClose: () => void; accent: string; returnTo: string; /** 伝票入力の画面から開いたとき（親区分で起動中でも、配下の入力区分の伝票を訂正できる。確認メモ #182） */ entry?: boolean }) {
+  const all = useVouchers(true);
   const sess = useSession();
-  const editable = canEdit(sess);
-  const reason = editBlockReason(sess);
+  const editable = entry ? canEnterVoucher(sess) : canEdit(sess);
+  const reason = entry ? entryBlockReason(sess) : editBlockReason(sess);
   const [st, setSt] = useState<EditState | null>(null);
   const [loadedId, setLoadedId] = useState<number | null>(null);
   const [active, setActive] = useState(0);

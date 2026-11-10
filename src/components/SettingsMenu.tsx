@@ -7,9 +7,10 @@
 export const SUPPORT_URL = 'https://www.child.co.jp/';
 
 import { useEffect, useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { SETTINGS_GROUPS, SETTINGS_MENU, settingsMenuName, type SettingsGroup } from '../data';
 import { startKindOf, useSession } from '../store/session';
+import { HomeOptionsModal } from './HomeOptionsModal';
 
 interface Props {
   accent: string;
@@ -23,6 +24,8 @@ const ENTRY_ONLY = ['仕訳辞書', '摘要辞書', '取引先'];
 
 export function SettingsMenu({ accent, active, onNavigate }: Props) {
   const [open, setOpen] = useState(false);
+  // ダッシュボード表示オプション（確認メモ #152）：ホームの右上から、各種設定へ移した。画面ではなくモーダルで開く
+  const [homeOpt, setHomeOpt] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const session = useSession();
   const kind = startKindOf(session);
@@ -55,7 +58,12 @@ export function SettingsMenu({ accent, active, onNavigate }: Props) {
       </button>
     );
   };
-  const group = (g: SettingsGroup) => (
+  const homeOptItem = (
+    <button key="ダッシュボード表示オプション" type="button" className="menu-sub" data-menu="ダッシュボード表示オプション" onClick={() => { setOpen(false); setHomeOpt(true); }} style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', textAlign: 'left', padding: '7px 10px', border: 'none', background: 'transparent', borderRadius: 7, fontSize: 14, fontFamily: 'inherit', color: '#22303c', fontWeight: 500, cursor: 'pointer' }}>
+      <span style={{ flex: 1 }}>ダッシュボード表示オプション</span>
+    </button>
+  );
+  const group = (g: SettingsGroup, extra?: ReactNode) => (
     <section key={g.key} style={{ breakInside: 'avoid', border: '1px solid ' + (g.danger ? '#f2c9c2' : '#dde4ea'), borderRadius: 10, overflow: 'hidden', background: g.danger ? '#fdf5f3' : '#fff' }}>
       <div style={{ padding: '7px 12px', background: g.danger ? '#f9e4df' : '#eef2f6', borderBottom: '1px solid ' + (g.danger ? '#f2c9c2' : '#dde4ea') }}>
         <div style={{ fontSize: 12, fontWeight: 800, color: g.danger ? DANGER : '#22303c', letterSpacing: '.04em', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -64,7 +72,7 @@ export function SettingsMenu({ accent, active, onNavigate }: Props) {
         </div>
         {g.note && <div style={{ fontSize: 12, color: g.danger ? '#b5564a' : '#7a8794', marginTop: 1 }}>{g.note}</div>}
       </div>
-      <div style={{ padding: 6 }}>{g.items.map((l) => item(l, g))}</div>
+      <div style={{ padding: 6 }}>{g.items.map((l) => item(l, g))}{extra}</div>
     </section>
   );
   const by = (k: string) => SETTINGS_GROUPS.find((g) => g.key === k)!;
@@ -97,7 +105,7 @@ export function SettingsMenu({ accent, active, onNavigate }: Props) {
               {group(by('master'))}
               {group(by('register'))}
             </div>
-            {group(by('config'))}
+            {group(by('config'), homeOptItem)}
             <div style={{ display: 'grid', gap: 12 }}>
               {group(by('maint'))}
               {group(by('update'))}
@@ -105,6 +113,7 @@ export function SettingsMenu({ accent, active, onNavigate }: Props) {
           </div>
         </div>
       )}
+      <HomeOptionsModal open={homeOpt} onClose={() => setHomeOpt(false)} accent={accent} />
     </div>
   );
 }

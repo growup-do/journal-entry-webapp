@@ -513,14 +513,14 @@ export function ReportStyleSettings({ accent, compact }: { accent: string; compa
 export function EnvPrintSummary({ env, division }: { env: EnvSettings; division: string }) {
   const rows: [string, ReactNode, ScopeKind][] = [
     ['金額の書式', <>桁区切り：{env.thousandsSep}／負数：<span style={{ color: amountColor(-1, env), fontVariantNumeric: 'tabular-nums' }}>{formatAmount(-89012, env)}</span>（{env.negativeColor}）</>, '区分ごと'],
-    ['0項目カット', env.zeroCut ? '相殺結果が 0 円の項目を印刷しない' : '相殺結果が 0 円の項目も印刷する', '区分ごと'],
+    ['0データ判定方法の変更', env.zeroCut ? '相殺結果が 0 円の項目を 0 データとみなす' : '相殺結果が 0 円の項目を 0 データとみなさない', '区分ごと'],
     ['和暦の 1 年の表記', env.eraGannen ? '「元年」と表記' : '「1年」と表記', '全区分共通'],
     ['試算表の費目行の計算方式', env.trialCalc, '全区分共通'],
   ];
   return (
     <div style={{ display: 'grid', gap: 8 }}>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <tbody>{rows.map(([k, v, scope]) => <tr key={k}><td style={{ ...TD, width: 150, fontSize: 14, fontWeight: 700, color: '#5b6773', padding: '6px 8px' }}>{k}</td><td style={{ ...TD, fontSize: 14, padding: '6px 8px' }}>{v}</td><td style={{ ...TD, width: 190, padding: '6px 8px', textAlign: 'right' }}><ScopeBadge kind={scope} label={scope === '区分ごと' ? `区分ごと（${division}）` : undefined} /></td></tr>)}</tbody>
+        <tbody>{rows.map(([k, v, scope]) => <tr key={k}><td style={{ ...TD, width: 176, fontSize: 14, fontWeight: 700, color: '#5b6773', padding: '6px 8px' }}>{k}</td><td style={{ ...TD, fontSize: 14, padding: '6px 8px' }}>{v}</td><td style={{ ...TD, width: 190, padding: '6px 8px', textAlign: 'right' }}><ScopeBadge kind={scope} label={scope === '区分ごと' ? `区分ごと（${division}）` : undefined} /></td></tr>)}</tbody>
       </table>
       <div style={{ fontSize: 12, color: '#8290a0', lineHeight: 1.7 }}>変更は「各種設定 ＞ {displayName('環境設定')}」で行います。「全区分共通」はすべての区分の印刷に、「区分ごと」は起動中の区分の印刷だけに反映されます。</div>
     </div>

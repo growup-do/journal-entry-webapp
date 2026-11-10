@@ -3,17 +3,20 @@
 //   縦（スプレッドシート型サイドバー）… 大メニューをアコーディオンで開閉。開いている階層の項目を表示
 // 出納・資産・決裁（旧オプション）階層は他の階層と同じ見た目（最後尾に配置するのみ）。
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { MENU_GROUPS, displayName, groupOf, isOptionMenu, type MenuGroup } from '../../data';
 import { startKindOf, useSession, type Session } from '../../store/session';
 import { FavoritesMenu } from './FavoritesMenu';
 import { Chevron } from '../ui';
+import { useMenuOpen } from '../Menu';
+import { canEnterVoucher } from '../../lib/entryDivision';
 
 /** メニュー項目の状態（依頼書 5.1.1／5.1.4）：起動区分の種類で変わる。使えない項目は隠さず、グレーアウトの無効表示にする（理由はツールチップのみ。確認事項 10/9 回答） */
 function itemState(label: string, s: Session): { disabled?: string; tag?: string } {
   const kind = startKindOf(s);
-  if (['単一入力', '伝票入力', '振替入力', '振替単一'].includes(label) && kind !== '入力区分') return { disabled: `${kind}で起動中は伝票を入力できません（入力区分に切り替えてください）` };
+  // 伝票入力：入力区分で起動中のほか、親区分で起動中でも、入力権限があり配下に入力区分があれば開ける（確認メモ #182）
+  if (['単一入力', '伝票入力', '振替入力', '振替単一'].includes(label) && kind !== '入力区分' && !canEnterVoucher(s)) return { disabled: `${kind}で起動中は伝票を入力できません（入力区分に切り替えてください）` };
   if (['業者元帳', '業者推移'].includes(label) && kind === '合算区分') return { disabled: '合算区分で起動中は利用できません' };
   if (isOptionMenu(label) && kind === '合算区分') return { disabled: '合算区分で起動中は利用できません（入力区分・拠点区分などで起動してください）' };
   return {};
@@ -34,24 +37,14 @@ export function Menu({ orientation, accent, active, onSelect }: Props) {
 /* ---------------- 横：大メニュー＋ドロップダウン ---------------- */
 function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
   const session = useSession();
-  const [open, setOpen] = useState<string | null>(null);
-  const timer = useRef<number | undefined>(undefined);
+  // マウスを載せると開く。分類を押すと開いたまま固定する（もう一度押す・外側を押す・Esc・項目を選ぶと閉じる。確認メモ #144）
+  const { open, pinned, enter, leave, click, close, root } = useMenuOpen();
   const activeGroup = groupOf(active)?.key;
-
-  const enter = (k: string) => {
-    window.clearTimeout(timer.current);
-    setOpen(k);
-  };
-  const leave = () => {
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setOpen(null), 160);
-  };
-  useEffect(() => () => window.clearTimeout(timer.current), []);
 
   return (
     <div style={{ display: 'flex', alignItems: 'stretch', flexWrap: 'wrap', gap: 2, flex: 1, minWidth: 0 }}>
       {/* 左：メニュー。幅が足りないときは項目が折り返す。右側（お気に入りメニュー・機能から探す）は、最後の行に入れば同じ行の右端、入らなければ次の行の右端に置く（重ならない。確認メモ #66） */}
-      <div style={{ display: 'contents' }}>
+      <div ref={root} style={{ display: 'contents' }}>
       <HomeButton active={active === 'ホーム'} accent={accent} onClick={() => onSelect('ホーム')} />
       {MENU_GROUPS.map((g) => {
         const on = activeGroup === g.key;
@@ -63,8 +56,9 @@ function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
               type="button"
               className="menu-item-h"
               data-group={g.key}
-              onClick={() => setOpen(isOpen ? null : g.key)}
+              onClick={() => click(g.key)}
               aria-expanded={isOpen}
+              title={isOpen && pinned ? 'もう一度押すと閉じます' : '押すと開いたままにします'}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -74,7 +68,7 @@ function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
                 fontWeight: on ? 700 : 500,
                 fontFamily: 'inherit',
                 cursor: 'pointer',
-                background: isOpen ? '#f4f6f8' : 'transparent',
+                background: isOpen ? (pinned ? '#e3eaf1' : '#f4f6f8') : 'transparent',
                 border: 'none',
                 borderRadius: 8,
                 borderBottom: '2px solid ' + (on ? accent : 'transparent'),
@@ -103,7 +97,7 @@ function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
                 }}
               >
                 {g.items.map((label) => (
-                  <SubItem key={label} label={label} state={itemState(label, session)} active={label === active} accent={accent} onClick={() => { onSelect(label); setOpen(null); }} />
+                  <SubItem key={label} label={label} state={itemState(label, session)} active={label === active} accent={accent} onClick={() => { onSelect(label); close(); }} />
                 ))}
               </div>
             )}

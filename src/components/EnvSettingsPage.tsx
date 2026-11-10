@@ -1,6 +1,8 @@
 // 環境設定（提案I）：既存【動作環境】（マニュアル 4.2）と【ワイド画面 設定】（5.5.1）をWeb向けに整理。
 //   依頼書 5.5.1／6.3：全項目を「全区分共通（システム全体）」と「区分ごと（起動中の区分）」の2区画に分けて表示する。
 //   他画面へ移した項目の対応表は「確認事項・やりとり」のスレッドに記録（画面には出さない）。金額書式はプレビューつき。
+//   確認メモ #170・#172・#173・#174・#180：Web 化などで不要になった設定欄（フリガナ検索の無効化／片側だけの内部取引仕訳の許可／特殊摘要のポップアップ／
+//   バックアップ先／繰入金明細の集計方法）はこの画面から削除した。繰入金明細の集計方法は「決算付属明細書設定」の「科目の合わせ方」で切り替える。
 
 import { useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
@@ -14,7 +16,7 @@ import { ScopeBlock } from './PrintCenter';
 import { LoadDivisionSettings } from './DivisionSettingsLoad';
 import { FUSEN_COLORS } from '../store/journalStore';
 
-const DIV_TABS = ['金額書式', '伝票入力', '画面・バックアップ'];
+const DIV_TABS = ['金額書式', '伝票入力', '画面'];
 const grid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 14, alignItems: 'start' };
 const colorLbl: CSSProperties = { fontSize: 14, display: 'flex', gap: 6, alignItems: 'center' };
 
@@ -39,8 +41,9 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
   function radios<O extends string>(opts: readonly O[], cur: O, on: (o: O) => void, text?: (o: O) => string) {
     return <div style={{ display: 'flex', gap: 14, fontSize: 14, flexWrap: 'wrap', paddingTop: 2 }}>{opts.map((o) => <label key={o} style={{ display: 'flex', gap: 4, alignItems: 'center' }}><input type="radio" checked={cur === o} onChange={() => on(o)} />{text ? text(o) : o}</label>)}</div>;
   }
-  /** この画面から移した項目（補正予算の入力方式・参照パネルの初期表示）は、移動先の画面で保存した値を維持する */
-  const save = () => { setSession((x) => ({ env: { ...v, supplementMode: x.env.supplementMode, wideInitial: x.env.wideInitial, wideMonth: x.env.wideMonth, ledger1Init: x.env.ledger1Init, ledger2Init: x.env.ledger2Init, order: x.env.order } })); toast.show(`${displayName('環境設定')}を保存しました（全区分共通の設定はすべての区分に反映されます）`); };
+  /** この画面から移した項目（補正予算の入力方式・参照パネルの初期表示・繰入金明細の集計方法）は、移動先の画面で保存した値を維持する。
+   *  片側だけの内部取引仕訳の許可は設定を廃止した（確認メモ #172）ので、常に「許可しない」で保存する */
+  const save = () => { setSession((x) => ({ env: { ...v, supplementMode: x.env.supplementMode, wideInitial: x.env.wideInitial, wideMonth: x.env.wideMonth, ledger1Init: x.env.ledger1Init, ledger2Init: x.env.ledger2Init, order: x.env.order, transferWatch: x.env.transferWatch, oneSideInternal: false } })); toast.show(`${displayName('環境設定')}を保存しました（全区分共通の設定はすべての区分に反映されます）`); };
   /** 設定の保存：現在の環境条件を JSON でダウンロード（既存の .ini に相当） */
   const saveFile = () => {
     const d = new Date();
@@ -96,9 +99,8 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
 
         <ScopeBlock kind="全区分共通" title="システム全体の設定" desc="すべての区分に同じ内容が適用されます。変更すると他の区分の画面・帳票にも反映されます。">
           <div style={grid}>
-            <div style={card}><div style={cardHead}>試算表・繰入金明細の集計方法</div><div style={{ padding: 14, display: 'grid', gap: 12 }}>
+            <div style={card}><div style={cardHead}>試算表・予算の集計方法</div><div style={{ padding: 14, display: 'grid', gap: 12 }}>
               <Field label="試算表：費目行の計算方式"><select value={v.trialCalc} onChange={(e) => set({ trialCalc: e.target.value })} style={input}>{['費目行に表記されている計算方式で計算する', '収入の借方と支出の借方を加算する（貸方も同様）'].map((o) => <option key={o}>{o}</option>)}</select></Field>
-              <Field label="繰入金明細の集計方法">{radios(['収入で監視', '支払いで監視'] as const, v.transferWatch, (o) => set({ transferWatch: o }))}</Field>
               {T('budgetInternalOffset', '予算の内部取引消去（内部取引を相殺する）')}
               {T('termFromStart', '月範囲の選択で、期首から月を選択する')}
             </div></div>
@@ -111,8 +113,7 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
               ))}
               <div style={{ fontSize: 14, color: '#7a8794' }}>意味を入れると、伝票入力・日記帳・元帳の付箋ボタンのツールチップと、検索条件・印刷の絞り込みに「赤（{v.fusenNames.赤 || '…'}）」のように表示します。空欄のときは色だけを表示します（既存では利用者が自由に使い分けているため、初期値は空です）。付箋の色は4色固定です。</div>
             </div></div>
-            <div style={card}><div style={cardHead}>検索・日付の表記</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
-              {T('noFurigana', 'フリガナ検索を無効にする（科目・取引先・摘要の検索でフリガナを使わない）')}
+            <div style={card}><div style={cardHead}>日付の表記</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
               {T('eraGannen', '和暦の1年を「元年」と表記する')}
             </div></div>
           </div>
@@ -127,7 +128,7 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
                 <Field label="負の記号"><select value={v.negativeSign} onChange={(e) => set({ negativeSign: e.target.value as EnvSettings['negativeSign'] })} style={input}><option value="-">ー（半角）</option><option value="△">△（全角）</option><option value="▲">▲（全角）</option></select></Field>
                 <Field label="負の記号の位置">{radios(['前', '後'] as const, v.negativePos, (o) => set({ negativePos: o }), (o) => `数字の${o}`)}</Field>
                 <Field label="負の表示色"><select value={v.negativeColor} onChange={(e) => set({ negativeColor: e.target.value as EnvSettings['negativeColor'] })} style={input}><option>黒</option><option>赤</option></select></Field>
-                <div style={{ gridColumn: 'span 2' }}>{T('zeroCut', '0項目カット（相殺結果が0円の項目を表示・印刷しない）')}</div>
+                <div style={{ gridColumn: 'span 2' }}>{T('zeroCut', '0データ判定方法の変更（相殺結果が0円の項目を0データとみなす）')}</div>
                 <div style={{ gridColumn: 'span 2' }}>{T('autoAmountFont', '金額フォントサイズを自動調整する（桁数が多い金額を欄内に収める）')}</div>
                 <div style={{ gridColumn: 'span 2', padding: '10px 12px', background: '#f8fafc', borderRadius: 10, fontSize: 14, display: 'flex', gap: 24, alignItems: 'center' }}><span style={{ fontSize: 14, color: '#5b6773' }}>表示例：</span>{sample(1234567)}{sample(-89012)}</div>
                 {v.thousandsSep === '点線' && <div style={{ gridColumn: 'span 2', fontSize: 14, color: '#7a8794' }}>点線：3桁ごとに点線の区切り線を引きます（金額欄の位取り線。文字としての記号は入りません）。</div>}
@@ -144,8 +145,6 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
                 <div style={card}><div style={cardHead}>摘要・仕訳の入力補助</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
                   {T('autoComplete', '摘要自動補完入力機能を有効にする')}
                   <div style={{ paddingLeft: 46, display: 'flex', gap: 14, fontSize: 14, flexWrap: 'wrap' }}>{[true, false].map((b) => <label key={String(b)} style={{ display: 'flex', gap: 4 }}><input type="radio" checked={v.autoCompleteAdd === b} disabled={!v.autoComplete} onChange={() => set({ autoCompleteAdd: b })} />入力された摘要を候補に{b ? '追加する' : '追加しない'}</label>)}</div>
-                  {T('specialPopup', '特殊摘要入力時のポップアップを有効にする（入力可能な科目候補を表示）')}
-                  {T('oneSideInternal', '借方側（貸方側）のみの内部取引仕訳を許可する')}
                   {T('searchTotal', '仕訳一覧の検索合計を有効にする（検索時に金額合計を右上に表示）')}
                 </div></div>
                 <div style={card}><div style={cardHead}>予算チェック</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
@@ -155,27 +154,20 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
                 </div></div>
               </>
             )}
-            {tab === '画面・バックアップ' && (
-              <>
-                <div style={card}><div style={cardHead}>バックアップ先</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
-                  <Field label="保存先">{radios(['クラウド（標準）', 'フォルダ指定', 'Dropbox'] as const, v.backupDest, (o) => set({ backupDest: o }))}</Field>
-                  {v.backupDest === 'フォルダ指定' && <Field label="保存フォルダ"><input className="field-input" value={v.backupFolder} onChange={(e) => set({ backupFolder: e.target.value })} placeholder="例：ダウンロード／会計バックアップ" style={input} /></Field>}
-                  <div style={{ fontSize: 14, color: '#7a8794' }}>「データのバックアップ」を実行したときの保存先です。区分ごとに指定できます。</div>
-                </div></div>
-                <div style={card}><div style={cardHead}>画面背景</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
-                  <Field label="背景の種類">{radios(['色', '画像'] as const, v.bgMode, (o) => set({ bgMode: o }))}</Field>
-                  {v.bgMode === '色' ? (
-                    <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-                      <label style={colorLbl}>背景色<input type="color" value={v.bgColor} onChange={(e) => set({ bgColor: e.target.value })} /></label>
-                      <label style={colorLbl}>右側（参照パネル）<input type="color" value={v.bgColorRight} onChange={(e) => set({ bgColorRight: e.target.value })} /></label>
-                      <span style={{ display: 'inline-flex', width: 120, height: 34, borderRadius: 8, overflow: 'hidden', border: '1px solid #cfd8e0' }}><span style={{ flex: 2, background: v.bgColor }} /><span style={{ flex: 1, background: v.bgColorRight }} /></span>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}><button type="button" className="btn-outline" onClick={() => toast.show('背景画像の選択（プロトタイプでは未対応）')} style={btn()}>画像を選択…</button><span style={{ fontSize: 14, color: '#7a8794' }}>未選択</span></div>
-                  )}
-                  <div style={{ fontSize: 14, color: '#7a8794' }}>区分ごとに背景を変えると、起動中の区分を取り違えにくくなります。</div>
-                </div></div>
-              </>
+            {tab === '画面' && (
+              <div style={card}><div style={cardHead}>画面背景</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
+                <Field label="背景の種類">{radios(['色', '画像'] as const, v.bgMode, (o) => set({ bgMode: o }))}</Field>
+                {v.bgMode === '色' ? (
+                  <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <label style={colorLbl}>背景色<input type="color" value={v.bgColor} onChange={(e) => set({ bgColor: e.target.value })} /></label>
+                    <label style={colorLbl}>右側（参照パネル）<input type="color" value={v.bgColorRight} onChange={(e) => set({ bgColorRight: e.target.value })} /></label>
+                    <span style={{ display: 'inline-flex', width: 120, height: 34, borderRadius: 8, overflow: 'hidden', border: '1px solid #cfd8e0' }}><span style={{ flex: 2, background: v.bgColor }} /><span style={{ flex: 1, background: v.bgColorRight }} /></span>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}><button type="button" className="btn-outline" onClick={() => toast.show('背景画像の選択（プロトタイプでは未対応）')} style={btn()}>画像を選択…</button><span style={{ fontSize: 14, color: '#7a8794' }}>未選択</span></div>
+                )}
+                <div style={{ fontSize: 14, color: '#7a8794' }}>区分ごとに背景を変えると、起動中の区分を取り違えにくくなります。</div>
+              </div></div>
             )}
           </div>
         </ScopeBlock>

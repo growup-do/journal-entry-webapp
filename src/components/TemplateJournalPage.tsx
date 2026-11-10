@@ -7,8 +7,8 @@ import { NUM, TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
 import { Field, Notice, SettingsShell, Tabs, btn, input, numInput, toInt, yen } from './ui';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
-import { SERVICES } from '../data';
-import { setSession, useSession, type AllocationTemplate, type JournalTemplate } from '../store/session';
+import { ACCOUNTS, SERVICES } from '../data';
+import { setSession, specialRatesOf, splitSpecialAmount, useSession, type AllocationTemplate, type JournalTemplate } from '../store/session';
 import { allocate } from './EntryExtras';
 import { AllocationWizardModal, TemplateWizardModal, blankAllocation, blankTemplate } from './TemplateWizards';
 
@@ -41,6 +41,37 @@ export function TemplateJournalPage({ variant, accent }: { variant: 'form' | 'sh
   const [aoRows, setAoRows] = useState<AllocOutRow[]>(ALLOC_OUT_ROWS);
   const [aoTotal, setAoTotal] = useState(true);
   const [exp, setExp] = useState<ExportSpec | null>(null);
+  // 特殊金額の按分率：科目ごとに各区分の按分率と端数の加算先区分を持つ（確認メモ #179）。1 行目の「共通」は、科目ごとの設定がない科目に使う
+  const spDivs = s.specialRates.map((r) => r.division);
+  const spByAccount = s.specialRatesByAccount ?? [];
+  /** まだ按分率を設定していない科目（追加の候補） */
+  const spFree = ACCOUNTS.flatMap((g) => g.items).filter((a) => !spByAccount.some((x) => x.account === a));
+  const [spAdd, setSpAdd] = useState('');
+  const [spCalcAccount, setSpCalcAccount] = useState('');
+  const [spCalcAmount, setSpCalcAmount] = useState('10001');
+  /** 表の行（account が空＝共通）。区分の並びは共通の按分率に合わせる */
+  const spRows = [{ account: '', ...specialRatesOf(s, '') }, ...spByAccount.map((x) => ({ account: x.account, ...specialRatesOf(s, x.account) }))];
+  const setSpRate = (account: string, division: string, rate: number) => {
+    if (!account) { setSession({ specialRates: s.specialRates.map((x) => (x.division === division ? { ...x, rate } : x)) }); return; }
+    setSession({ specialRatesByAccount: spByAccount.map((x) => (x.account === account ? { ...x, rates: spDivs.map((d) => ({ division: d, rate: d === division ? rate : x.rates.find((r) => r.division === d)?.rate ?? 0 })) } : x)) });
+  };
+  const setSpRoundTo = (account: string, roundTo: string) => {
+    if (!account) { setSession({ specialRoundTo: roundTo }); return; }
+    setSession({ specialRatesByAccount: spByAccount.map((x) => (x.account === account ? { ...x, roundTo } : x)) });
+  };
+  /** 科目を追加する（共通の按分率と端数の加算先を初期値にする） */
+  const addSpAccount = () => {
+    if (!spAdd) { toast.show('追加する科目を選んでください'); return; }
+    setSession({ specialRatesByAccount: [...spByAccount, { account: spAdd, rates: s.specialRates.map((r) => ({ ...r })), roundTo: specialRatesOf(s, '').roundTo }] });
+    toast.show(`「${spAdd}」の按分率を追加しました（共通の按分率を初期値にしています）`);
+    setSpAdd('');
+  };
+  const removeSpAccount = (account: string) => {
+    if (!confirm(`「${account}」の按分率を削除しますか？（削除後は共通の按分率を使います）`)) return;
+    setSession({ specialRatesByAccount: spByAccount.filter((x) => x.account !== account) });
+    if (spCalcAccount === account) setSpCalcAccount('');
+  };
+  const spCalc = specialRatesOf(s, spCalcAccount);
   const aoServices = SERVICES.slice(0, 3);
   // 出力（CSV）：科目 × 区分 × 列（当年度末／前年度末／増減）を按分率で配分した金額。端数は「端数の加算区分」に寄せる
   const exportAlloc = () => {
@@ -116,15 +147,39 @@ export function TemplateJournalPage({ variant, accent }: { variant: 'form' | 'sh
       )}
 
       {tab === '特殊金額の按分率' && (
-        <div style={{ padding: 22, maxWidth: 640 }}>
-          <Notice>配下に伝票入力区分を含む集合区分で起動したとき、金額の先頭に「＋」を付けて入力すると【特殊金額入力】が開き、ここで設定した按分率を初期値として区分別の金額を入力できます（合計100%）。</Notice>
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
-            <thead><tr><th style={TH}>伝票入力区分</th><th style={{ ...TH, width: 140, textAlign: 'right' }}>按分率（%）</th></tr></thead>
+        <div style={{ padding: 22, maxWidth: 1100, display: 'grid', gap: 12 }}>
+          <Notice>配下に伝票入力区分を含む集合区分で起動したとき、金額の先頭に「＋」を付けて入力すると【特殊金額入力】が開き、ここで設定した按分率を初期値として区分別の金額を入力できます（合計100%）。按分率は<b>科目ごと</b>に設定でき、設定のない科目には「共通」の按分率を使います。按分で出た端数（区分ごとに円未満を切り捨てた残り）は「端数の加算先区分」に加算します。</Notice>
+          <table data-special-rates style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead><tr><th style={TH}>科目</th>{spDivs.map((d) => <th key={d} style={{ ...TH, width: 130, textAlign: 'right' }}>{d}（%）</th>)}<th style={{ ...TH, width: 80, textAlign: 'right' }}>合計</th><th style={{ ...TH, width: 190 }}>端数の加算先区分</th><th style={{ ...TH, width: 80, textAlign: 'right' }}>操作</th></tr></thead>
             <tbody>
-              {s.specialRates.map((r, i) => <tr key={r.division}><td style={TD}>{r.division}</td><td style={NUM}><input className="field-input ring" value={String(r.rate)} onChange={(e) => setSession({ specialRates: s.specialRates.map((x, k) => (k === i ? { ...x, rate: toInt(e.target.value) } : x)) })} inputMode="numeric" style={{ ...numInput, width: 90, padding: '4px 8px' }} /></td></tr>)}
-              <tr style={{ background: '#f3f6f9' }}><td style={{ ...TD, fontWeight: 700 }}>合計</td><td style={{ ...NUM, fontWeight: 700, color: s.specialRates.reduce((a, r) => a + r.rate, 0) === 100 ? '#1f7a52' : '#c0392b' }}>{s.specialRates.reduce((a, r) => a + r.rate, 0)}%</td></tr>
+              {spRows.map((row) => {
+                const sum = row.rates.reduce((a, r) => a + r.rate, 0);
+                const name = row.account || '共通';
+                return (
+                  <tr key={name} data-special-rate-row={name} style={{ background: row.account ? undefined : '#f8fafc' }}>
+                    <td style={{ ...TD, fontWeight: 700 }}>{row.account || <>共通<span style={{ fontWeight: 400, color: '#8290a0', fontSize: 12, marginLeft: 8 }}>科目ごとの設定がない科目に使います</span></>}</td>
+                    {row.rates.map((r) => <td key={r.division} style={NUM}><input className="field-input ring" value={String(r.rate)} onChange={(e) => setSpRate(row.account, r.division, Math.max(0, Math.min(100, toInt(e.target.value))))} inputMode="numeric" aria-label={`${name}の${r.division}の按分率`} style={{ ...numInput, width: 80, padding: '4px 8px' }} /></td>)}
+                    <td style={{ ...NUM, fontWeight: 700, color: sum === 100 ? '#1f7a52' : '#c0392b' }}>{sum}%</td>
+                    <td style={TD}><select value={row.roundTo} onChange={(e) => setSpRoundTo(row.account, e.target.value)} aria-label={`${name}の端数の加算先区分`} style={{ ...input, padding: '4px 8px' }}>{spDivs.map((d) => <option key={d}>{d}</option>)}</select></td>
+                    <td style={{ ...TD, textAlign: 'right' }}>{row.account && <button type="button" onClick={() => removeSpAccount(row.account)} style={btn('#c0392b', false, true)}>削除</button>}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <select value={spAdd} onChange={(e) => setSpAdd(e.target.value)} aria-label="按分率を設定する科目" style={{ ...input, width: 260, padding: '6px 8px' }}><option value="">科目を選択</option>{spFree.map((a) => <option key={a}>{a}</option>)}</select>
+            <button type="button" className="btn-outline" data-special-rate-add onClick={addSpAccount} style={btn(accent, false, true)}>＋ 科目を追加</button>
+            <span style={{ fontSize: 12, color: '#8290a0' }}>追加した科目は、共通の按分率を初期値にして設定できます。</span>
+          </div>
+          {spRows.some((row) => row.rates.reduce((a, r) => a + r.rate, 0) !== 100) && <Notice tone="warn">按分率の合計が100%になっていない行があります（赤字）。合計が100%になるよう設定してください。</Notice>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: '#5b6773', flexWrap: 'wrap' }}>
+            <span>計算例：</span><input className="field-input" value={yen(toInt(spCalcAmount))} onChange={(e) => setSpCalcAmount(e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" aria-label="計算例の金額" style={{ ...numInput, width: 120, padding: '5px 8px' }} /><span>円を</span>
+            <select value={spCalcAccount} onChange={(e) => setSpCalcAccount(e.target.value)} aria-label="計算例の科目" style={{ ...input, width: 220, padding: '5px 8px' }}><option value="">共通</option>{spByAccount.map((x) => <option key={x.account}>{x.account}</option>)}</select>
+            <span>の按分率で按分 →</span>
+            {splitSpecialAmount(s, spCalcAccount, toInt(spCalcAmount)).map((r) => <span key={r.division} style={{ padding: '3px 8px', background: r.division === spCalc.roundTo ? '#fff7e6' : '#eef2f6', borderRadius: 6 }}>{r.division.split(' ')[1]} {yen(r.amount)}</span>)}
+            <span style={{ fontSize: 12, color: '#8290a0' }}>端数は「{spCalc.roundTo}」に加算</span>
+          </div>
         </div>
       )}
 

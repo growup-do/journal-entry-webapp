@@ -3,13 +3,14 @@
 //   小口現金：特殊行の挿入・集計（確認→集計済みロック）・AI自動仕訳インポート
 //   預金出納：新規出納帳（預金科目の選択）・銀行CSVインポート・インポート一括削除・預金残高（通帳残高との差額）
 //   共通：会計連動・印刷（集計内訳表／仕訳伝票／出納帳）・区分の切替
+//   集計 ― 確認：会計連動へ送るときの伝票日付を指定できる（明細の日付を伝票日付とする／伝票年月日／月末日。確認メモ #164）
 
 import { useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent } from 'react';
 import { AssistField } from './AssistField';
 import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
-import { inPeriod, periodLabel as periodText, type Period } from '../lib/period';
+import { FISCAL_MONTHS, inPeriod, lastDayOf, parseMD, periodLabel as periodText, type Period } from '../lib/period';
 import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
 import { LABEL, NUM, ReportShell, TD, TH } from './ReportShell';
@@ -36,6 +37,8 @@ interface Row {
   imported?: boolean;
   /** 会計連動で仕訳伝票を作成済み */
   linked?: boolean;
+  /** 集計時に指定した伝票日付（'M/D'）。未指定のときは明細の日付で仕訳伝票を作る */
+  slipDate?: string;
   /** AI自動仕訳からの取込：会計確認（承認）待ち／承認済み */
   ai?: 'pending' | 'approved';
   /** AI推定の信頼度（%） */
@@ -157,6 +160,10 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
   const [aggSel, setAggSel] = useState<Set<number>>(new Set());
   const [aggConfirm, setAggConfirm] = useState(false);
   const [aggLink, setAggLink] = useState(false);
+  /** 集計 ― 確認：会計連動へ送る伝票の日付（確認メモ #164）。明細の日付を使うか、伝票年月日を指定する（「月末日」で日を月の末日にする） */
+  const [aggUseRowDate, setAggUseRowDate] = useState(false);
+  const [aggDate, setAggDate] = useState({ month: '8', day: '' });
+  const [aggMonthEnd, setAggMonthEnd] = useState(false);
   const [bankBalanceOpen, setBankBalanceOpen] = useState(false);
   const [bankBalance, setBankBalance] = useState<number | null>(null);
   const [bankInput, setBankInput] = useState('');
@@ -196,11 +203,25 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
   const aggregable = withBal.filter((r) => !r.special && !r.aggregated);
   const aggRange = aggregable.filter((r) => aggSel.has(r.id));
   const aggBal = aggRange.length ? withBal.find((r) => r.id === aggRange[aggRange.length - 1].id)!.bal : lastBal;
+  /** 集計 ― 確認を開く。伝票年月日の初期値は、選択した範囲の最後の明細の日付 */
+  const openAggConfirm = () => {
+    const last = aggRange[aggRange.length - 1];
+    if (last) setAggDate({ month: last.month, day: last.day });
+    setAggMonthEnd(false);
+    setAggUseRowDate(false);
+    setAggConfirm(true);
+  };
+  /** 伝票年月日を使うのは、会計連動フォルダへ送る場合で「明細の日付を伝票日付とする」を外しているとき */
+  const slipActive = aggLink && !aggUseRowDate;
+  const slipDay = aggMonthEnd ? String(lastDayOf(aggDate.month)) : aggDate.day;
+  const slipDate = parseMD(`${aggDate.month}/${slipDay}`);
   const runAggregate = () => {
-    setRows((rs) => rs.map((r) => (aggSel.has(r.id) ? { ...r, aggregated: true } : r)));
+    if (slipActive && !slipDate) return toast.show('伝票年月日の日を正しく入力してください');
+    const sd = slipActive && slipDate ? slipDate : undefined;
+    setRows((rs) => rs.map((r) => (aggSel.has(r.id) ? { ...r, aggregated: true, slipDate: sd } : r)));
     setAggConfirm(false);
     setAggOpen(false);
-    toast.show(`${aggSel.size} 件を集計しました${aggLink ? '（会計連動フォルダへ送信）' : ''}`);
+    toast.show(`${aggSel.size} 件を集計しました${aggLink ? `（会計連動フォルダへ送信。伝票日付：${sd ? `${sd.replace('/', '月')}日` : '明細の日付'}）` : ''}`);
     setAggSel(new Set());
   };
   const importCsv = () => {
@@ -224,7 +245,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
   // ---- 会計連動：集計済み（未連動）の明細を仕訳伝票にする ----
   const cashAccount = isPetty ? '小口現金' : book; // 出納帳の相手科目
   const journalOf = (r: Row) => ({
-    date: `${r.month}/${r.day}`,
+    date: r.slipDate ?? `${r.month}/${r.day}`,
     kari: r.inAmt ? cashAccount : r.account,
     kashi: r.inAmt ? r.account : cashAccount,
     tekiyo: r.tekiyo,
@@ -464,7 +485,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
           </div>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 14 }}>
             <button type="button" className="btn-outline" onClick={() => setAggSel(new Set(aggregable.map((r) => r.id)))} style={btn()}>すべて選択</button>
-            <span data-tip={aggSel.size === 0 ? '集計する明細にチェックを入れると押せます' : undefined} style={{ display: 'inline-flex' }}><button type="button" className="submit-btn" disabled={aggSel.size === 0} onClick={() => setAggConfirm(true)} style={{ ...btn(true), opacity: aggSel.size ? 1 : 0.5 }}>OK</button></span>
+            <span data-tip={aggSel.size === 0 ? '集計する明細にチェックを入れると押せます' : undefined} style={{ display: 'inline-flex' }}><button type="button" className="submit-btn" disabled={aggSel.size === 0} onClick={openAggConfirm} style={{ ...btn(true), opacity: aggSel.size ? 1 : 0.5 }}>OK</button></span>
             <button type="button" onClick={() => setAggOpen(false)} style={btn()}>キャンセル</button>
           </div>
         </div>
@@ -485,6 +506,18 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
           <div style={{ fontWeight: 700 }}>この時点での残高は　<span style={{ fontSize: 16 }}>{yen(aggBal)}円</span>になります。</div>
           <div style={{ marginTop: 8 }}>集計を開始してもよろしいですか？</div>
           <label style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 8, fontSize: 14 }}><input type="checkbox" checked={aggLink} onChange={() => setAggLink(!aggLink)} />集計したら会計連動フォルダへこの伝票情報を送る</label>
+          {/* 伝票日付の指定（確認メモ #164）：会計連動フォルダへ送るときだけ指定できる */}
+          <div style={{ display: 'grid', gap: 6, margin: '6px 0 0 22px', fontSize: 14 }} data-agg-slip-date>
+            <label style={{ display: 'flex', gap: 6, alignItems: 'center', opacity: aggLink ? 1 : 0.5 }}><input type="checkbox" checked={aggUseRowDate} disabled={!aggLink} onChange={() => setAggUseRowDate(!aggUseRowDate)} />明細の日付を伝票日付とする</label>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', opacity: slipActive ? 1 : 0.5 }}>
+              <span>伝票年月日：</span>
+              <span>令和{['1', '2', '3'].includes(aggDate.month) ? 9 : 8}年</span>
+              <select aria-label="伝票年月日の月" value={aggDate.month} disabled={!slipActive} onChange={(e) => setAggDate({ ...aggDate, month: e.target.value })} style={{ ...inp, width: 64, padding: '4px 6px' }}>{FISCAL_MONTHS.filter((m) => m !== '決').map((m) => <option key={m}>{m}</option>)}</select><span>月</span>
+              <input aria-label="伝票年月日の日" inputMode="numeric" value={slipDay} disabled={!slipActive || aggMonthEnd} maxLength={2} onChange={(e) => setAggDate({ ...aggDate, day: e.target.value })} style={{ ...inp, width: 52, padding: '4px 6px', textAlign: 'right', background: !slipActive || aggMonthEnd ? '#f3f6f9' : '#fff' }} /><span>日</span>
+              <label style={{ display: 'flex', gap: 4, alignItems: 'center', marginLeft: 10 }}><input type="checkbox" checked={aggMonthEnd} disabled={!slipActive} onChange={() => setAggMonthEnd(!aggMonthEnd)} />月末日</label>
+            </div>
+            <div style={{ fontSize: 12, color: '#7a8794' }}>「月末日」にチェックすると、伝票の日付をその月の末日にします。「明細の日付を伝票日付とする」にチェックすると、明細ごとの日付で伝票を作ります。</div>
+          </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
             <button type="button" className="submit-btn" onClick={runAggregate} style={btn(true)}>OK</button>
             <button type="button" onClick={() => setAggConfirm(false)} style={btn()}>キャンセル</button>
@@ -588,7 +621,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
               <thead><tr><th style={TH}>日付</th><th style={TH}>借方科目</th><th style={TH}>貸方科目</th><th style={TH}>摘要</th><th style={{ ...TH, textAlign: 'right' }}>金額</th></tr></thead>
               <tbody>
                 {linkTargets.map((r) => { const j = journalOf(r); return (
-                  <tr key={r.id}><td style={{ ...TD, whiteSpace: 'nowrap' }}>令和8年 {r.month}月{r.day}日</td><td style={TD}>{j.kari}</td><td style={TD}>{j.kashi}</td><td style={TD}>{j.tekiyo}</td><td style={{ ...NUM, fontWeight: 700 }}>{yen(j.amount)}</td></tr>
+                  <tr key={r.id}><td style={{ ...TD, whiteSpace: 'nowrap' }}>令和8年 {j.date.replace('/', '月')}日</td><td style={TD}>{j.kari}</td><td style={TD}>{j.kashi}</td><td style={TD}>{j.tekiyo}</td><td style={{ ...NUM, fontWeight: 700 }}>{yen(j.amount)}</td></tr>
                 ); })}
                 <tr style={{ background: '#f6f8fa' }}><td colSpan={4} style={{ ...TD, fontWeight: 700, textAlign: 'right' }}>合計</td><td style={{ ...NUM, fontWeight: 700 }}>{yen(linkTargets.reduce((a, r) => a + (r.inAmt || r.outAmt), 0))}</td></tr>
               </tbody>

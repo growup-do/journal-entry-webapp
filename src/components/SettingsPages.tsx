@@ -10,8 +10,8 @@ import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
 import { ACCOUNTS, SUMMARIES, VENDORS, displayName } from '../data';
-import { Tabs, Toggle } from './ui';
-import { setSession, useSession } from '../store/session';
+import { Tabs } from './ui';
+import { TAX_MODES, setSession, setTaxMode, taxModeUsesTax, useSession, type TaxMode } from '../store/session';
 import { DivisionTreeEditor } from './DivisionTreeEditor';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { BudgetPage } from './BudgetPage';
@@ -102,13 +102,22 @@ const VENDOR_KANA: Record<string, string> = { 東京電力: 'トウキョウデ�
 const SUMMARY_KANA = ['シャカイホケンリョウ', 'コウセイネンキン', 'ケンコウホケン', 'ショクインホウキュウ', 'イタクヒ', 'デンワリョウキン', 'デンキダイ', 'フクショクヒ', 'インサツダイ', 'ホイクザイリョウ', 'フリコミテスウリョウ'];
 const MASTERS: Record<string, MasterConfig> = {
   勘定科目: { title: '勘定科目', desc: '仕訳で使う勘定科目の一覧。分類・区分・資金科目の対応を管理します。', addLabel: '科目を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '科目名' }, { key: 'group', label: '分類', type: 'select', options: ACCOUNTS.map((g) => g.group) }, { key: 'kind', label: '区分', type: 'select', options: ['BS 資産', 'BS 負債', 'BS 純資産', 'PL 収益', 'PL 費用'], width: 110 }, { key: 'fund', label: '資金科目', width: 120 }], rows: acctRows() },
-  税区分: { title: '税区分', desc: '消費税の区分と税率。仕訳入力時の既定値として使われます。', addLabel: '税区分を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '名称' }, { key: 'rate', label: '税率', type: 'number', width: 90, align: 'right' }, { key: 'kind', label: '課税区分', type: 'select', options: ['課税', '非課税', '不課税', '免税'], width: 120 }], rows: [{ code: '10', name: '課税売上 10%', rate: '10', kind: '課税' }, { code: '11', name: '課税仕入 10%', rate: '10', kind: '課税' }, { code: '08', name: '軽減税率 8%', rate: '8', kind: '課税' }, { code: '20', name: '非課税', rate: '0', kind: '非課税' }, { code: '30', name: '不課税', rate: '0', kind: '不課税' }, { code: '40', name: '免税', rate: '0', kind: '免税' }] },
+  // 名称は「印刷名称」（帳票に印字）と「入力名称」（伝票入力の候補に表示）の2種類。「表示順」は候補・一覧の並び順（確認メモ #177）。課税区分に「不明」を追加（現行の消費税コード「課税区分不明」用。確認メモ #178）
+  税区分: { title: '税区分', desc: '消費税の区分と税率。仕訳入力時の既定値として使われます。名称は、帳票に印字する「印刷名称」と、伝票入力の候補に出す「入力名称」の2種類を持ちます。一覧と入力時の候補は「表示順」の小さい順に並びます。', addLabel: '税区分を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '印刷名称' }, { key: 'iname', label: '入力名称' }, { key: 'rate', label: '税率', type: 'number', width: 90, align: 'right' }, { key: 'kind', label: '課税区分', type: 'select', options: ['課税', '非課税', '不課税', '免税', '不明'], width: 120 }, { key: 'order', label: '表示順', type: 'number', width: 90, align: 'right' }], rows: [{ code: '10', name: '課税売上 10%', iname: '課売10%', rate: '10', kind: '課税', order: '1' }, { code: '11', name: '課税仕入 10%', iname: '課仕10%', rate: '10', kind: '課税', order: '2' }, { code: '08', name: '軽減税率 8%', iname: '軽減8%', rate: '8', kind: '課税', order: '3' }, { code: '20', name: '非課税', iname: '非課税', rate: '0', kind: '非課税', order: '4' }, { code: '30', name: '不課税', iname: '不課税', rate: '0', kind: '不課税', order: '5' }, { code: '40', name: '免税', iname: '免税', rate: '0', kind: '免税', order: '6' }, { code: '99', name: '課税区分不明', iname: '不明', rate: '0', kind: '不明', order: '99' }] },
   // 摘要はショートカットではなくコードを持つ（現行の摘要コードと同じ。確認メモ #92）
   摘要辞書: { title: '摘要辞書', desc: 'よく使う摘要の候補。コードを入力するか、入力時のドロップダウンから選べます。', addLabel: '摘要を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '摘要' }, { key: 'kana', label: 'フリガナ' }, { key: 'acct', label: 'よく使う科目', type: 'select', options: ACCOUNTS.flatMap((g) => g.items) }], rows: SUMMARIES.map((s, i) => ({ code: String(i + 1).padStart(3, '0'), name: s, kana: SUMMARY_KANA[i] ?? '', acct: ['法定福利費', '法定福利費', '法定福利費', '職員俸給', '委託費収益', '通信運搬費', '水道光熱費（事業）', 'その他の利用料収益', '印刷製本費', '保育材料費', '手数料'][i] ?? '' })) },
   仕訳辞書: { title: '仕訳辞書', desc: '定型仕訳のひな形。単一入力・伝票入力で呼び出して金額だけ入力できます（既存の「連続定型」に相当）。', addLabel: '定型仕訳を追加', fields: [{ key: 'name', label: '名称' }, { key: 'kari', label: '借方科目', type: 'select', options: ACCOUNTS.flatMap((g) => g.items) }, { key: 'kashi', label: '貸方科目', type: 'select', options: ACCOUNTS.flatMap((g) => g.items) }, { key: 'tekiyo', label: '摘要' }, { key: 'amount', label: '金額（任意）', type: 'number', width: 110, align: 'right' }], rows: [{ name: '電話料金', kari: '通信運搬費', kashi: '普通預金（保育園）', tekiyo: '電話料金', amount: '' }, { name: '給与支給（本俸）', kari: '職員俸給', kashi: '普通預金（保育園）', tekiyo: '職員俸給', amount: '' }, { name: '副食費 保護者より', kari: '現金（収入）', kashi: 'その他の利用料収益', tekiyo: '副食費ー保護者より', amount: '4500' }, { name: 'コピー機リース', kari: '賃借料（事業）', kashi: '普通預金（保育園）', tekiyo: 'コピー機リース代', amount: '10995' }] },
   '取引先（合算集計用）': { title: '取引先（合算集計用）', desc: '合算区分（法人全体・事業区分）で取引先元帳・取引先推移表を集計するときに、各区分の取引先をまとめて扱うための名簿です。区分ごとの取引先コードが違っていても、ここで同じ取引先として対応づけます。', addLabel: '合算用の取引先を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '取引先名' }, { key: 'kana', label: 'フリガナ' }, { key: 'map', label: '対応する区分の取引先（区分：コード）' }], rows: [{ code: '901', name: 'みどり電力', kana: 'ミドリデンリョク', map: '001：101 ／ 002：103 ／ 004：101' }, { code: '902', name: '山田文具', kana: 'ヤマダブング', map: '001：102 ／ 002：105' }, { code: '903', name: 'さくら給食サービス', kana: 'サクラキュウショクサービス', map: '002：104 ／ 003：104 ／ 004：102' }] },
   // 取引先は現行の業者登録と同じ コード・名称・フリガナ（種別・連絡先・備考は持たない。確認メモ #91）
   取引先: { title: '取引先', desc: '仕入先・保護者・行政などの取引先。仕訳の「取引先」欄と取引先元帳に使われます。フリガナは入力時のカナ検索に使います。', addLabel: '取引先を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '取引先名' }, { key: 'kana', label: 'フリガナ' }], rows: VENDORS.filter((v) => v !== '（なし）').map((v, i) => ({ code: String(101 + i), name: v, kana: VENDOR_KANA[v] ?? '' })) },
+};
+
+/** 消費税の方式ごとの説明（確認メモ #175） */
+const TAX_MODE_NOTE: Record<TaxMode, string> = {
+  通常モード: '消費税の処理を行いません。伝票入力に税区分・税額の欄は表示しません（消費税の申告が不要な法人）。',
+  簡易課税方式: '課税売上にかかる税額に、みなし仕入率を掛けて納付税額を計算する方式です。伝票入力に税区分・税額の欄を表示します。',
+  本則課税の一括比例配分方式: '課税仕入にかかる税額の全体に、課税売上割合を掛けて控除額を計算する方式です。伝票入力に税区分・税額の欄を表示します。',
+  本則課税の個別対応方式: '課税仕入を用途（課税売上対応・非課税売上対応・共通対応）ごとに分けて控除額を計算する方式です。伝票入力に税区分・税額の欄を表示します。',
 };
 
 function MasterPage({ variant, accent, label, tabs, title }: { variant: 'form' | 'sheet'; accent: string; label: string; tabs?: ReactNode; /** 画面タイトル（省略時は表示名） */ title?: string }) {
@@ -120,7 +129,11 @@ function MasterPage({ variant, accent, label, tabs, title }: { variant: 'form' |
   const [exp, setExp] = useState<ExportSpec | null>(null);
   const [imp, setImp] = useState<{ open: boolean; name: string; rows: Row[]; byHeader: boolean; error: string }>({ open: false, name: '', rows: [], byHeader: false, error: '' });
   const toast = useToast();
-  const list = rows.filter((r) => !q || cfg.fields.some((f) => String(r[f.key] ?? '').includes(q)));
+  // 「表示順」を持つマスター（税区分）は、表示順の小さい順に並べる（未入力は末尾。確認メモ #177）
+  const hasOrder = cfg.fields.some((f) => f.key === 'order');
+  const orderOf = (r: Row) => (r.order ? Number(r.order) : Number.MAX_SAFE_INTEGER);
+  const filtered = rows.filter((r) => !q || cfg.fields.some((f) => String(r[f.key] ?? '').includes(q)));
+  const list = hasOrder ? [...filtered].sort((a, b) => orderOf(a) - orderOf(b)) : filtered;
   const cell = (r: Row, f: Field) => (f.type === 'number' && f.key !== 'rate' && r[f.key] ? Number(r[f.key]) : r[f.key] ?? '');
   // CSV出力：表示中（検索後）の一覧。見出しは画面の項目名＋「有効」
   const exportCsv = () => setExp({ kind: 'csv', title: cfg.title, fileName: `${cfg.title}一覧`, meta: `${list.length} 件${q ? `　検索：${q}` : ''}`, header: [...cfg.fields.map((f) => f.label), '有効'], rows: list.map((r) => [...cfg.fields.map((f) => cell(r, f)), r._on === '1' ? 1 : 0]) });
@@ -167,10 +180,24 @@ function MasterPage({ variant, accent, label, tabs, title }: { variant: 'form' |
       <ToastView msg={toast.msg} />
       {tabs}
       {label === '税区分' && (
-        /* 旧 保守メニュー＞動作環境＞消費税動作環境（確認メモ #55）：消費税対応の切替。振替伝票形式・振替単一形式に税区分・税額の欄を出す。法人単位の設定 */
-        <div data-tax-entry style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 22px', background: '#f8fafc', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
-          <Toggle on={sess.taxEntry} onChange={(x) => { setSession({ taxEntry: x }); toast.show(x ? '振替伝票形式・振替単一形式に税区分・税額の欄を表示します' : '税区分・税額の欄を非表示にしました'); }} accent={accent} label="消費税対応（振替伝票形式・振替単一形式に税区分・税額の欄を表示する）" />
-          <span style={{ fontSize: 12, color: '#7a8794' }}>旧「消費税動作環境」。消費税の申告が必要な法人で有効にします。税率は下の税区分ごとに持ち、税額は 金額 × 税率 ÷（100 ＋ 税率）の切り捨てで計算します（手入力で変更可）。</span>
+        /* 旧 保守メニュー＞動作環境＞消費税動作環境（確認メモ #55）：消費税対応の設定。法人単位。
+           On／Off ではなく 4 つの方式から選ぶ（確認メモ #175）。「通常モード」以外では、すべての伝票形式に税区分・税額の欄を出す（確認メモ #176。今回はラベルの変更まで） */
+        <div data-tax-entry style={{ display: 'grid', gap: 8, padding: '12px 22px', background: '#f8fafc', borderBottom: '1px solid #eef2f5' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#3d4a56' }}>消費税対応（すべての伝票形式に税区分・税額の欄を表示する）</span>
+            <div role="radiogroup" aria-label="消費税の方式" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {TAX_MODES.map((m) => {
+                const on = sess.taxMode === m;
+                return (
+                  <button key={m} type="button" role="radio" aria-checked={on} className="chip" data-tax-mode={m} title={TAX_MODE_NOTE[m]} onClick={() => { if (on) return; setTaxMode(m); toast.show(taxModeUsesTax(m) ? `消費税の方式を「${m}」にしました。伝票入力に税区分・税額の欄を表示します` : '消費税の方式を「通常モード」にしました。税区分・税額の欄は表示しません'); }} style={{ padding: '5px 14px', borderRadius: 14, border: '1px solid ' + (on ? accent : '#d3dbe3'), background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>{m}</button>
+                );
+              })}
+            </div>
+          </div>
+          <div data-tax-mode-note style={{ fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>
+            <b style={{ color: '#3d4a56' }}>{sess.taxMode}</b>：{TAX_MODE_NOTE[sess.taxMode]}
+            　旧「消費税動作環境」。税率は下の税区分ごとに持ち、税額は 金額 × 税率 ÷（100 ＋ 税率）の切り捨てで計算します（手入力で変更可）。
+          </div>
         </div>
       )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 22px', borderBottom: '1px solid #eef2f5' }}>
@@ -251,37 +278,125 @@ function OrgPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: strin
 }
 
 /* ---------------- 開始残高 ---------------- */
+/** 内部取引の内訳（現行「貸借対照表 繰越 内部取引残高」と同じ 4 階層。確認メモ #168） */
+const INNER_LEVELS = ['事業区分間', '拠点区分間', 'サービス区分間', '小サービス区分間'] as const;
+/** 既定のタブ（確認メモ #167） */
+const OPENING_BASE_TABS = ['貸借科目繰越残高', '事業科目前年実績'];
+/** 「期中入力を行う」のときだけ追加されるタブ（期の途中から導入する場合。確認メモ #167）。旧「資金科目当期実績」は「資金科目期中入力」 */
+const OPENING_MID_TABS = ['貸借科目期中入力', '事業科目期中入力', '資金科目期中入力'];
+const OPENING_SITES = ['本部', 'チャイルド保育園'];
+/** 1 科目ぶんの入力値。l＝借方（資金科目は収入）、r＝貸方（資金科目は支出）、inner＝内部取引の額（INNER_LEVELS の順） */
+interface OpenCell { l: number; r: number; inner: number[] }
+/** 貸借科目（主要なもの）。v＝繰越残高、prior＝前年度（令和7年度）決算の期末残高。いずれも拠点ごと（サンプル）。本番では前年度データの貸借対照表から取得 */
+const OPEN_BS: { code: string; name: string; side: 'l' | 'r'; v: number[]; prior: number[] }[] = [
+  { code: '111', name: '小口現金', side: 'l', v: [0, 26500], prior: [0, 31200] },
+  { code: '112', name: '普通預金（本部）', side: 'l', v: [14800, 0], prior: [21500, 0] },
+  { code: '113', name: '普通預金（保育園）', side: 'l', v: [0, 9630000], prior: [0, 9870500] },
+  { code: '114', name: '当座預金（保育園）', side: 'l', v: [0, 155800], prior: [0, 142300] },
+  { code: '121', name: '事業未収金', side: 'l', v: [0, 1200000], prior: [0, 1350000] },
+  { code: '151', name: '土地', side: 'l', v: [0, 22000000], prior: [0, 22000000] },
+  { code: '152', name: '建物', side: 'l', v: [0, 15400000], prior: [0, 15100000] },
+  { code: '153', name: '器具及び備品', side: 'l', v: [0, 1800000], prior: [0, 1620000] },
+  { code: '211', name: '事業未払金', side: 'r', v: [0, 400000], prior: [0, 385000] },
+  { code: '212', name: '職員預り金', side: 'r', v: [0, 250000], prior: [0, 262000] },
+  { code: '221', name: '賞与引当金', side: 'r', v: [0, 1500000], prior: [0, 1550000] },
+  { code: '311', name: '基本金', side: 'r', v: [0, 25800000], prior: [0, 25800000] },
+  { code: '321', name: '国庫補助金等特別積立金', side: 'r', v: [0, 9600000], prior: [0, 9300000] },
+  { code: '331', name: '次期繰越活動増減差額', side: 'r', v: [14800, 12662300], prior: [21500, 12817000] },
+];
+/** 事業活動科目。v＝前年実績、mid＝期中（導入月の前月まで）の実績。拠点ごと（サンプル） */
+const OPEN_PL: { code: string; name: string; side: 'l' | 'r'; v: number[]; mid: number[] }[] = [
+  { code: '400', name: '保育事業収益', side: 'r', v: [0, 40200000], mid: [0, 13746150] },
+  { code: '410', name: '補助金事業収益', side: 'r', v: [0, 700000], mid: [0, 660000] },
+  { code: '420', name: '人件費', side: 'l', v: [0, 28100000], mid: [0, 9600000] },
+  { code: '430', name: '事業費', side: 'l', v: [0, 5050000], mid: [0, 1720000] },
+  { code: '440', name: '事務費', side: 'l', v: [0, 3480000], mid: [0, 1150000] },
+  { code: '450', name: '減価償却費', side: 'l', v: [0, 3034380], mid: [0, 0] },
+];
+/** 資金科目。mid＝期中（導入月の前月まで）の実績。l＝収入、r＝支出。拠点ごと（サンプル） */
+const OPEN_FUND: { code: string; name: string; side: 'l' | 'r'; mid: number[] }[] = [
+  { code: '100', name: '委託費収入', side: 'l', mid: [0, 13662150] },
+  { code: '110', name: '利用者等利用料収入', side: 'l', mid: [0, 84000] },
+  { code: '120', name: '補助金事業収入', side: 'l', mid: [0, 660000] },
+  { code: '130', name: '人件費支出', side: 'r', mid: [0, 9600000] },
+  { code: '140', name: '事業費支出', side: 'r', mid: [0, 1720000] },
+  { code: '150', name: '事務費支出', side: 'r', mid: [0, 1150000] },
+];
+/** 内部取引の額のサンプル（チャイルド保育園。INNER_LEVELS の順） */
+const OPEN_BS_INNER: Record<string, number[] | undefined> = { 事業未収金: [0, 0, 50000, 0], 事業未払金: [0, 0, 50000, 0] };
+const OPEN_BS_PRIOR_INNER: Record<string, number[] | undefined> = { 事業未収金: [0, 0, 60000, 0], 事業未払金: [0, 0, 60000, 0] };
+const OPEN_PL_INNER: Record<string, number[] | undefined> = { 保育事業収益: [0, 0, 180000, 0], 事業費: [0, 0, 180000, 0] };
+/** 貸借科目の期中の発生額［借方, 貸方］のサンプル（チャイルド保育園） */
+const OPEN_BS_MID: Record<string, [number, number] | undefined> = { 小口現金: [120000, 98400], '普通預金（保育園）': [14406150, 12470000], 職員預り金: [610000, 655000] };
+const openCell = (l = 0, r = 0, inner?: number[]): OpenCell => ({ l, r, inner: inner ? [...inner] : INNER_LEVELS.map(() => 0) });
+const openSided = (side: 'l' | 'r', v: number, inner?: number[]): OpenCell => (side === 'l' ? openCell(v, 0, inner) : openCell(0, v, inner));
+/** タブ → 拠点 → 科目 の入力値（初期値） */
+const initOpening = (): Record<string, OpenCell[][]> => ({
+  貸借科目繰越残高: OPENING_SITES.map((_, s) => OPEN_BS.map((it) => openSided(it.side, it.v[s], s === 1 ? OPEN_BS_INNER[it.name] : undefined))),
+  事業科目前年実績: OPENING_SITES.map((_, s) => OPEN_PL.map((it) => openSided(it.side, it.v[s], s === 1 ? OPEN_PL_INNER[it.name] : undefined))),
+  貸借科目期中入力: OPENING_SITES.map((_, s) => OPEN_BS.map((it) => { const m = s === 1 ? OPEN_BS_MID[it.name] : undefined; return openCell(m?.[0] ?? 0, m?.[1] ?? 0); })),
+  事業科目期中入力: OPENING_SITES.map((_, s) => OPEN_PL.map((it) => openSided(it.side, it.mid[s]))),
+  資金科目期中入力: OPENING_SITES.map((_, s) => OPEN_FUND.map((it) => openSided(it.side, it.mid[s]))),
+});
+/** タブごとの表の定義。inner＝内部取引の列を出す（繰越残高・前年実績だけ。期中入力は内部取引の入力に対応しない＝現行と同じ） */
+const OPENING_DEFS: Record<string, { items: { code: string; name: string }[]; cols: [string, string]; inner: boolean; note: string }> = {
+  貸借科目繰越残高: { items: OPEN_BS, cols: ['借方', '貸方'], inner: true, note: '期首（前年度末）の貸借対照表科目の残高を登録します。年度更新をすると自動で設定されるため、通常は初年度のみ入力します。' },
+  事業科目前年実績: { items: OPEN_PL, cols: ['借方', '貸方'], inner: true, note: '事業活動計算書の前年度実績（前年度決算額）を登録します。年度更新をすると自動で設定されるため、通常は初年度のみ入力します。' },
+  貸借科目期中入力: { items: OPEN_BS, cols: ['借方', '貸方'], inner: false, note: '期の途中から導入する場合に、期首から導入月の前月までの貸借科目の発生額（借方・貸方）を登録します。' },
+  事業科目期中入力: { items: OPEN_PL, cols: ['借方', '貸方'], inner: false, note: '期の途中から導入する場合に、期首から導入月の前月までの事業活動科目の実績（借方・貸方）を登録します。' },
+  資金科目期中入力: { items: OPEN_FUND, cols: ['収入', '支出'], inner: false, note: '期の途中から導入する場合に、期首から導入月の前月までの資金収支科目の実績（収入・支出）を登録します（旧「資金科目当期実績」）。' },
+};
+
 function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; accent: string }) {
   const toast = useToast();
-  const SITES = ['本部', 'チャイルド保育園'];
-  const ITEMS: { name: string; side: '借方' | '貸方'; v: number[] }[] = [
-    { name: '小口現金', side: '借方', v: [0, 26500] }, { name: '普通預金（本部）', side: '借方', v: [14800, 0] }, { name: '普通預金（保育園）', side: '借方', v: [0, 9630000] }, { name: '当座預金（保育園）', side: '借方', v: [0, 155800] }, { name: '事業未収金', side: '借方', v: [0, 1200000] }, { name: '土地', side: '借方', v: [0, 22000000] }, { name: '建物', side: '借方', v: [0, 15400000] }, { name: '器具及び備品', side: '借方', v: [0, 1800000] },
-    { name: '事業未払金', side: '貸方', v: [0, 400000] }, { name: '職員預り金', side: '貸方', v: [0, 250000] }, { name: '賞与引当金', side: '貸方', v: [0, 1500000] }, { name: '基本金', side: '貸方', v: [0, 25800000] }, { name: '国庫補助金等特別積立金', side: '貸方', v: [0, 9600000] }, { name: '次期繰越活動増減差額', side: '貸方', v: [14800, 12662300] },
-  ];
-  const [vals, setVals] = useState(ITEMS.map((i) => [...i.v]));
+  /** 期中入力を行うか（期の途中から導入する場合だけ On。確認メモ #167） */
+  const mid = useSession().openingMidTerm;
+  const [data, setData] = useState(initOpening);
   const [site, setSite] = useState(0);
-  const [tab, setTab] = useState('貸借科目繰越残高');
+  const [tabRaw, setTab] = useState(OPENING_BASE_TABS[0]);
   const [importOpen, setImportOpen] = useState(false);
-  /** 前年度（令和7年度）決算の期末残高（サンプル）。本番では前年度データの貸借対照表から取得 */
-  const PRIOR: number[][] = [[0, 31200], [21500, 0], [0, 9870500], [0, 142300], [0, 1350000], [0, 22000000], [0, 15100000], [0, 1620000], [0, 385000], [0, 262000], [0, 1550000], [0, 25800000], [0, 9300000], [21500, 12817000]];
-  const importPrior = () => { setVals(PRIOR.map((r) => [...r])); setImportOpen(false); toast.show('前年度（令和7年度）の決算残高を貸借科目繰越残高に取り込みました（「OK」で確定）'); };
-  const PL_ITEMS: { name: string; side: '借方' | '貸方'; v: number }[] = [{ name: '保育事業収益', side: '貸方', v: 40_200_000 }, { name: '補助金事業収益', side: '貸方', v: 700_000 }, { name: '人件費', side: '借方', v: 28_100_000 }, { name: '事業費', side: '借方', v: 5_050_000 }, { name: '事務費', side: '借方', v: 3_480_000 }, { name: '減価償却費', side: '借方', v: 3_034_380 }];
-  const FUND_ITEMS: { name: string; side: '収入' | '支出'; v: number }[] = [{ name: '委託費収入', side: '収入', v: 13_662_150 }, { name: '利用者等利用料収入', side: '収入', v: 84_000 }, { name: '補助金事業収入', side: '収入', v: 660_000 }, { name: '人件費支出', side: '支出', v: 9_600_000 }, { name: '事業費支出', side: '支出', v: 1_720_000 }, { name: '事務費支出', side: '支出', v: 1_150_000 }];
-  const sum = (side: '借方' | '貸方') => ITEMS.reduce((s, it, i) => s + (it.side === side ? vals[i][site] : 0), 0);
-  const d = sum('借方'), c = sum('貸方');
+  /** 期中入力の切替の確認（'on'＝始める／'off'＝やめる） */
+  const [midConfirm, setMidConfirm] = useState<'on' | 'off' | null>(null);
+  const tabs = mid ? [...OPENING_BASE_TABS, ...OPENING_MID_TABS] : OPENING_BASE_TABS;
+  const tab = tabs.includes(tabRaw) ? tabRaw : OPENING_BASE_TABS[0];
+  const def = OPENING_DEFS[tab];
+  const rows = data[tab][site];
+  const num = (v: string) => parseInt(v.replace(/[^0-9]/g, ''), 10) || 0;
+  const patch = (i: number, f: (c: OpenCell) => OpenCell) => setData((x) => ({ ...x, [tab]: x[tab].map((rs, s) => (s === site ? rs.map((c, k) => (k === i ? f(c) : c)) : rs)) }));
+  // 貸借一致は、貸借科目繰越残高（表示中の拠点）で判定する
+  const bs = data['貸借科目繰越残高'][site];
+  const d = bs.reduce((a, x) => a + x.l, 0), c = bs.reduce((a, x) => a + x.r, 0);
   const ok = d === c;
-  const set = (i: number, v: string) => setVals((vs) => vs.map((row, k) => (k === i ? row.map((x, s) => (s === site ? parseInt(v.replace(/[^0-9]/g, ''), 10) || 0 : x)) : row)));
+  const sumL = rows.reduce((a, x) => a + x.l, 0), sumR = rows.reduce((a, x) => a + x.r, 0);
+  const importPrior = () => {
+    setData((x) => ({ ...x, 貸借科目繰越残高: OPENING_SITES.map((_, s) => OPEN_BS.map((it) => openSided(it.side, it.prior[s], s === 1 ? OPEN_BS_PRIOR_INNER[it.name] : undefined))) }));
+    setImportOpen(false); setTab('貸借科目繰越残高');
+    toast.show('前年度（令和7年度）の決算残高を貸借科目繰越残高に取り込みました（「OK」で確定）');
+  };
+  const applyMid = () => {
+    const on = midConfirm === 'on';
+    setSession({ openingMidTerm: on });
+    setMidConfirm(null);
+    setTab(on ? OPENING_MID_TABS[0] : OPENING_BASE_TABS[0]);
+    toast.show(on ? '期中入力のタブ（貸借科目・事業科目・資金科目）を追加しました' : '期中入力のタブを閉じました');
+  };
+  const ctd: CSSProperties = { ...TD, padding: '4px 10px' };
+  const cnum: CSSProperties = { ...NUM, padding: '4px 10px' };
+  const cellIn: CSSProperties = { ...input, textAlign: 'right', padding: '5px 8px', fontVariantNumeric: 'tabular-nums', background: '#fffbe6' };
+  const total: CSSProperties = { ...cnum, fontWeight: 700, paddingRight: 19 };
   return (
-    <Shell variant={variant} title="開始残高" desc="運用開始時点（期首）の貸借残高、事業活動科目の前年実績、資金科目の当期実績（期中開始時）を拠点ごとに登録します。" actions={<>
+    <Shell variant={variant} title="開始残高" desc="運用開始時点（期首）の貸借科目の繰越残高と、事業科目の前年実績を拠点ごとに登録します。各科目には内部取引の金額も入力します。期の途中から導入する場合は「期中入力を行う」をチェックすると、期中入力のタブが追加されます。" actions={<>
       <button type="button" className="btn-outline" onClick={() => setImportOpen(true)} style={btn()}>前年度決算から取込</button>
-      <button type="button" className="btn-outline" onClick={() => toast.show('繰越残高の設定 - 貸借科目期中：期中から使い始めた場合に使用（カスタマーセンターへご相談ください）')} style={btn()}>借貸残高（期中）</button>
-      <button type="button" className="btn-outline" onClick={() => toast.show('貸借対照表 繰越 内部取引残高：年度更新時に自動設定されます。通常は変更不要')} style={btn()}>内部取引</button>
+      {/* 期中入力の切替（確認を挟む。確認メモ #167）。旧「借貸残高（期中）」ボタンの置き換え */}
+      <label data-opening-midterm title="期の途中から導入する場合だけチェックします。通常は使用しません" style={{ ...btn(mid ? accent : undefined), display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <input type="checkbox" checked={mid} onChange={() => setMidConfirm(mid ? 'off' : 'on')} style={{ margin: 0 }} />期中入力を行う（期の途中から導入する場合）
+      </label>
       <button type="button" className="submit-btn" disabled={!ok} onClick={() => toast.show('開始残高を確定しました（プロトタイプ）')} style={{ ...btn(accent, true), opacity: ok ? 1 : 0.5 }}>OK</button>
     </>}>
       <ToastView msg={toast.msg} />
       <Modal open={importOpen} onClose={() => setImportOpen(false)} width={480} title="前年度決算から取込" strict>
         <div style={{ padding: '16px 22px 18px', fontSize: 14, lineHeight: 1.8 }}>
-          <div>前年度（令和7年度）の決算残高を貸借科目繰越残高に取り込みます。</div>
+          <div>前年度（令和7年度）の決算残高を貸借科目繰越残高に取り込みます（内部取引の金額を含みます）。</div>
           <div style={{ color: '#c0392b', fontWeight: 700 }}>現在の入力値は上書きされます。</div>
           <div style={{ fontSize: 14, color: '#7a8794', marginTop: 6 }}>対象：本部／チャイルド保育園の全拠点。取り込み後は貸借一致を確認し「OK」で確定してください。</div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
@@ -290,44 +405,73 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
           </div>
         </div>
       </Modal>
-      <Tabs items={['貸借科目繰越残高', '事業活動科目前年実績', '資金科目当期実績']} current={tab} onChange={setTab} accent={accent} />
-      {tab !== '貸借科目繰越残高' && (
-        <div style={{ padding: 22 }}>
-          <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 10 }}>{tab === '事業活動科目前年実績' ? '事業活動計算書の前年度実績（前年度決算額）を登録します。年度更新をすると自動で設定されるため、通常は初年度のみ入力します。' : '期中から運用を開始した場合に、開始月までの資金収支計算書の実績（収入・支出）を登録します。'}</div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', maxWidth: 720 }}>
-            <thead><tr><th style={{ ...TH, width: 90 }}>コード</th><th style={TH}>科目名</th><th style={{ ...TH, width: 200, textAlign: 'right' }}>{tab === '事業活動科目前年実績' ? '借方' : '収入'}</th><th style={{ ...TH, width: 200, textAlign: 'right' }}>{tab === '事業活動科目前年実績' ? '貸方' : '支出'}</th></tr></thead>
-            <tbody>
-              {(tab === '事業活動科目前年実績' ? PL_ITEMS.map((it, i) => ({ code: `${400 + i * 10}`, name: it.name, l: it.side === '借方' ? it.v : 0, r: it.side === '貸方' ? it.v : 0 })) : FUND_ITEMS.map((it, i) => ({ code: `${100 + i * 10}`, name: it.name, l: it.side === '収入' ? it.v : 0, r: it.side === '支出' ? it.v : 0 }))).map((row) => (
-                <tr key={row.name}><td style={{ ...TD, color: '#8290a0' }}>{row.code}</td><td style={TD}>{row.name}</td><td style={NUM}><input className="field-input ring" defaultValue={row.l ? yen(row.l) : ''} inputMode="numeric" style={{ ...input, textAlign: 'right', padding: '5px 8px', fontVariantNumeric: 'tabular-nums', background: '#fffbe6' }} /></td><td style={NUM}><input className="field-input ring" defaultValue={row.r ? yen(row.r) : ''} inputMode="numeric" style={{ ...input, textAlign: 'right', padding: '5px 8px', fontVariantNumeric: 'tabular-nums', background: '#fffbe6' }} /></td></tr>
-              ))}
-              <tr style={{ background: '#f3f6f9' }}><td style={{ ...TD, fontWeight: 700 }} colSpan={2}>合計</td><td style={{ ...NUM, fontWeight: 700 }}>{yen((tab === '事業活動科目前年実績' ? PL_ITEMS.filter((x) => x.side === '借方') : FUND_ITEMS.filter((x) => x.side === '収入')).reduce((a, x) => a + x.v, 0))}</td><td style={{ ...NUM, fontWeight: 700 }}>{yen((tab === '事業活動科目前年実績' ? PL_ITEMS.filter((x) => x.side === '貸方') : FUND_ITEMS.filter((x) => x.side === '支出')).reduce((a, x) => a + x.v, 0))}</td></tr>
-            </tbody>
-          </table>
-        </div>
-      )}
-      {tab === '貸借科目繰越残高' && <>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 22px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>拠点</span>
-        {SITES.map((s, i) => <button key={s} type="button" className="chip" onClick={() => setSite(i)} style={{ padding: '5px 14px', borderRadius: 14, border: '1px solid ' + (site === i ? accent : '#d3dbe3'), background: site === i ? accent : '#fff', color: site === i ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{s}</button>)}
-        <span style={{ marginLeft: 'auto', fontSize: 14, padding: '4px 12px', borderRadius: 10, background: ok ? '#eaf5ef' : '#fdeee9', color: ok ? '#1f7a52' : '#c0392b', fontWeight: 700 }}>{ok ? '貸借一致' : `差額 ${yen(Math.abs(d - c))}（${d > c ? '借方' : '貸方'}が多い）`}</span>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
-        {(['借方', '貸方'] as const).map((side) => (
-          <div key={side} style={{ borderRight: side === '借方' ? '1px solid #eef2f5' : 'none' }}>
-            <div style={{ padding: '9px 18px', background: side === '借方' ? '#eaf2fb' : '#fdeef3', color: side === '借方' ? '#2c5f9e' : '#b0426a', fontSize: 14, fontWeight: 700 }}>{side}（{side === '借方' ? '資産' : '負債・純資産'}）</div>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <tbody>
-                {ITEMS.map((it, i) => it.side === side && (
-                  <tr key={it.name}><td style={TD}>{it.name}</td><td style={{ ...NUM, width: 180 }}><input className="field-input ring" value={yen(vals[i][site])} onChange={(e) => set(i, e.target.value)} inputMode="numeric" style={{ ...input, textAlign: 'right', padding: '5px 8px', fontVariantNumeric: 'tabular-nums' }} /></td></tr>
-                ))}
-                <tr style={{ background: '#f3f6f9' }}><td style={{ ...TD, fontWeight: 700 }}>合計</td><td style={{ ...NUM, fontWeight: 700, fontSize: 14 }}>{yen(sum(side))}</td></tr>
-              </tbody>
-            </table>
+      <Modal open={midConfirm !== null} onClose={() => setMidConfirm(null)} width={520} title={midConfirm === 'off' ? '期中入力をやめる' : '期中入力を行う'}>
+        <div data-opening-midterm-confirm style={{ padding: '16px 22px 18px', fontSize: 14, lineHeight: 1.8 }}>
+          {midConfirm === 'off' ? <>
+            <div>期中入力をやめて、期中入力のタブ（貸借科目期中入力・事業科目期中入力・資金科目期中入力）を閉じます。</div>
+            <div style={{ fontSize: 14, color: '#7a8794', marginTop: 6 }}>入力済みの期中の金額は残ります。もう一度チェックすると、同じ内容で表示されます。</div>
+          </> : <>
+            <div>期中入力は、<b>期の途中から導入する場合</b>に使う画面です。通常は使用しません。</div>
+            <div>期中入力のタブ（貸借科目期中入力・事業科目期中入力・資金科目期中入力）を追加しますか？</div>
+            <div style={{ fontSize: 14, color: '#7a8794', marginTop: 6 }}>期首から導入月の前月までの実績を、科目ごとの合計額で登録します。</div>
+          </>}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+            <button type="button" onClick={() => setMidConfirm(null)} style={btn()}>キャンセル</button>
+            <button type="button" className="submit-btn" data-opening-midterm-ok onClick={applyMid} style={btn(accent, true)}>{midConfirm === 'off' ? '期中入力をやめる' : '期中入力を行う'}</button>
           </div>
-        ))}
+        </div>
+      </Modal>
+      <Tabs items={tabs} current={tab} onChange={setTab} accent={accent} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 22px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>拠点</span>
+        {OPENING_SITES.map((s, i) => <button key={s} type="button" className="chip" onClick={() => setSite(i)} style={{ padding: '5px 14px', borderRadius: 14, border: '1px solid ' + (site === i ? accent : '#d3dbe3'), background: site === i ? accent : '#fff', color: site === i ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{s}</button>)}
+        <span style={{ fontSize: 12, color: '#7a8794', flex: 1, minWidth: 240 }}>{def.note}</span>
+        {tab === '貸借科目繰越残高' && <span style={{ fontSize: 14, padding: '4px 12px', borderRadius: 10, background: ok ? '#eaf5ef' : '#fdeee9', color: ok ? '#1f7a52' : '#c0392b', fontWeight: 700, whiteSpace: 'nowrap' }}>{ok ? '貸借一致' : `差額 ${yen(Math.abs(d - c))}（${d > c ? '借方' : '貸方'}が多い）`}</span>}
       </div>
-      <div style={{ padding: '10px 22px 16px', fontSize: 12, color: '#9aa5b1' }}>※ 科目は主要なもののみ表示しています。確定後は前年仕訳の「繰越」として各元帳に反映されます。</div>
-      </>}
+      <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 330px)' }}>
+        <table data-opening-table={tab} style={{ width: '100%', borderCollapse: 'collapse', maxWidth: def.inner ? undefined : 760 }}>
+          <thead>
+            <tr>
+              <th rowSpan={def.inner ? 2 : 1} style={{ ...TH, width: 70 }}>コード</th>
+              <th rowSpan={def.inner ? 2 : 1} style={TH}>科目名</th>
+              <th rowSpan={def.inner ? 2 : 1} style={{ ...TH, width: 150, textAlign: 'right' }}>{def.cols[0]}</th>
+              <th rowSpan={def.inner ? 2 : 1} style={{ ...TH, width: 150, textAlign: 'right' }}>{def.cols[1]}</th>
+              {def.inner && <th colSpan={INNER_LEVELS.length} style={{ ...TH, textAlign: 'center', padding: '6px 10px', borderLeft: '1px solid #e2e8ee' }}>内部取引（左の金額のうち、内部取引にあたる額）</th>}
+            </tr>
+            {def.inner && <tr>{INNER_LEVELS.map((l, k) => <th key={l} style={{ ...TH, width: 128, textAlign: 'right', fontSize: 12, padding: '6px 10px', borderLeft: k === 0 ? '1px solid #e2e8ee' : undefined }}>{l}</th>)}</tr>}
+          </thead>
+          <tbody>
+            {def.items.map((it, i) => {
+              const cl = rows[i];
+              // 内部取引の合計が金額（借方＋貸方）を超えていたら赤字で知らせる
+              const over = def.inner && cl.inner.reduce((a, x) => a + x, 0) > cl.l + cl.r;
+              return (
+                <tr key={it.code}>
+                  <td style={{ ...ctd, color: '#8290a0' }}>{it.code}</td>
+                  <td style={ctd}>{it.name}</td>
+                  <td style={cnum}><input className="field-input ring" value={cl.l ? yen(cl.l) : ''} onChange={(e) => patch(i, (x) => ({ ...x, l: num(e.target.value) }))} inputMode="numeric" aria-label={`${it.name}の${def.cols[0]}`} style={cellIn} /></td>
+                  <td style={cnum}><input className="field-input ring" value={cl.r ? yen(cl.r) : ''} onChange={(e) => patch(i, (x) => ({ ...x, r: num(e.target.value) }))} inputMode="numeric" aria-label={`${it.name}の${def.cols[1]}`} style={cellIn} /></td>
+                  {def.inner && INNER_LEVELS.map((l, k) => (
+                    <td key={l} style={{ ...cnum, borderLeft: k === 0 ? '1px solid #e2e8ee' : undefined }}><input className="field-input ring" data-opening-inner value={cl.inner[k] ? yen(cl.inner[k]) : ''} onChange={(e) => patch(i, (x) => ({ ...x, inner: x.inner.map((v, n) => (n === k ? num(e.target.value) : v)) }))} inputMode="numeric" aria-label={`${it.name}の内部取引（${l}）`} title={over ? '内部取引の合計が、この科目の金額を超えています' : undefined} style={{ ...cellIn, color: over ? '#c0392b' : undefined }} /></td>
+                  ))}
+                </tr>
+              );
+            })}
+            <tr style={{ background: '#f3f6f9' }}>
+              <td style={{ ...ctd, fontWeight: 700, padding: '9px 10px' }} colSpan={2}>合計</td>
+              <td style={total}>{yen(sumL)}</td>
+              <td style={total}>{yen(sumR)}</td>
+              {def.inner && INNER_LEVELS.map((l, k) => <td key={l} style={{ ...total, borderLeft: k === 0 ? '1px solid #e2e8ee' : undefined }}>{yen(rows.reduce((a, x) => a + x.inner[k], 0))}</td>)}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div style={{ padding: '10px 22px 16px', fontSize: 12, color: '#9aa5b1', lineHeight: 1.7 }}>
+        {def.inner
+          ? <>※ 内部取引：その科目の金額のうち、区分間の内部取引にあたる額を階層（{INNER_LEVELS.join('／')}）ごとに入力します。合算区分で集計するときの内部取引消去に使います。勘定科目そのものが内部取引の科目として設定されている場合は、入力不要です。<br /></>
+          : <>※ 期中入力は、内部取引の金額の入力には対応していません。<br /></>}
+        ※ 科目は主要なもののみ表示しています。{tab === '貸借科目繰越残高' && '確定後は前年仕訳の「繰越」として各元帳に反映されます。'}
+      </div>
     </Shell>
   );
 }

@@ -8,7 +8,7 @@ import { PreviewModal, PrintDialog, REPORTS, sampleReportData, type ReportDef, t
 import { Chevron, btn } from './ui';
 
 export interface PrintItem { name: string; /** 詳細設定の元にする帳票（REPORTS の名前） */ base: string; note?: string; /** 画面に表示中の表を印刷データに使う */ screenData?: boolean }
-export interface PrintGroup { label?: string; items: PrintItem[] }
+export interface PrintGroup { label?: string; items: PrintItem[]; /** 次のグループとの区切りを点線にする（同じ種類の帳票の中の区切り） */ dashedBelow?: boolean }
 /** 画面独自の印刷処理を呼ぶ項目（出納帳の集計内訳表など）。共通の印刷ダイアログは使わない */
 export interface PrintAction { name: string; onClick: () => void; note?: string }
 export interface PrintActionGroup { label?: string; items: PrintAction[] }
@@ -52,7 +52,7 @@ function reportOf(item: PrintItem): ReportDef {
 
 /** 画面の「印刷」ボタン。帳票が1つならそのまま印刷ダイアログ、複数なら一覧から選ぶ */
 export function ScreenPrintMenu({ page, groups, actions, accent, data, label = '印刷', small, tone, style }: { page?: string; groups?: PrintGroup[]; /** 画面独自の印刷処理（指定時は groups／page より優先） */ actions?: PrintActionGroup[]; accent: string; /** 画面に表示中の表（screenData の帳票に使う） */ data?: TableData; label?: string; small?: boolean; /** 'act'＝伝票入力の操作ボタン（定型仕訳など）と同じ大きさ・色 */ tone?: 'act'; style?: CSSProperties }) {
-  const gs: { label?: string; items: (PrintItem | PrintAction)[] }[] = actions ?? groups ?? (page ? SCREEN_PRINTS[page] : undefined) ?? [];
+  const gs: { label?: string; items: (PrintItem | PrintAction)[]; dashedBelow?: boolean }[] = actions ?? groups ?? (page ? SCREEN_PRINTS[page] : undefined) ?? [];
   const items = gs.flatMap((g) => g.items);
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<PrintItem | null>(null);
@@ -79,7 +79,7 @@ export function ScreenPrintMenu({ page, groups, actions, accent, data, label = '
       {open && !single && (
         <div role="menu" style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, minWidth: 280, maxWidth: 420, maxHeight: '60vh', overflowY: 'auto', background: '#fff', border: '1px solid #dde4ea', borderRadius: 10, boxShadow: '0 12px 32px rgba(24,42,62,.16)', padding: 6, zIndex: 120, textAlign: 'left' }}>
           {gs.map((g, gi) => (
-            <div key={gi} style={{ paddingBottom: gi < gs.length - 1 ? 4 : 0, marginBottom: gi < gs.length - 1 ? 4 : 0, borderBottom: gi < gs.length - 1 ? '1px solid #eef2f5' : 'none' }}>
+            <div key={gi} style={{ paddingBottom: gi < gs.length - 1 ? 4 : 0, marginBottom: gi < gs.length - 1 ? 4 : 0, borderBottom: gi < gs.length - 1 ? (g.dashedBelow ? '1px dashed #b4bfca' : '1px solid #eef2f5') : 'none' }}>
               {g.label && <div style={{ padding: '6px 10px 3px', fontSize: 12, fontWeight: 800, color: '#8290a0', letterSpacing: '.04em' }}>{g.label}</div>}
               {g.items.map((it) => (
                 <button key={it.name} type="button" role="menuitem" className="menu-sub" data-print-item={it.name} onClick={() => choose(it)} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '7px 10px', border: 'none', borderRadius: 7, background: 'transparent', fontFamily: 'inherit', fontSize: 14, color: '#22303c', cursor: 'pointer', whiteSpace: 'nowrap' }}>

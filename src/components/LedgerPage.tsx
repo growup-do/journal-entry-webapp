@@ -5,8 +5,8 @@
 //   表示切替＝摘要／取引先・区分色・区分名・貸借の色付け・消費税表示（資金元帳のみ：税区分／税額の列を追加）。
 
 import { useEffect, useState } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
-import { AssistField } from './AssistField';
+import type { ReactNode } from 'react';
+import { TargetCombo, openTargetCombo } from './TargetCombo';
 import { BizSwitch, useDivisionTools } from './DivisionTools';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { ExportDialog, type ExportSpec } from './ExportDialog';
@@ -18,7 +18,6 @@ import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { displayName } from '../data';
 import { useVouchers } from '../store/journalStore';
 import { fusenLabel, getSession, setSession, useSession } from '../store/session';
-import { useAssist } from '../hooks/useAssist';
 import type { MonthFilter } from '../types';
 import { inPeriod, periodLabel as periodText, periodShort, type Period } from '../lib/period';
 
@@ -26,6 +25,8 @@ export type LedgerKind = 'account' | 'fund' | 'vendor';
 /** 画面キー（ルーティング・確認メモで使用。表示名は displayName で現行の用語に合わせる） */
 const KEY: Record<LedgerKind, string> = { account: '勘定元帳', fund: '資金元帳', vendor: '業者元帳' };
 const CARRY = 1_000_000;
+/** 指定科目（指定取引先）の入力欄の id（「科目検索」ボタンからフォーカスを移す） */
+const TARGET_ID = 'ledger-target';
 
 /** 税額（内税）。課税仕入のみ計算し、それ以外は 0 */
 const taxAmount = (tax: string, amount: number) => (tax.includes('10%') ? Math.floor((amount * 10) / 110) : tax.includes('8%') ? Math.floor((amount * 8) / 108) : 0);
@@ -38,7 +39,7 @@ interface Props {
   onNavigate: (label: string) => void;
 }
 
-export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Props) {
+export function LedgerPage({ kind, variant, accent, onNavigate }: Props) {
   // 推移表・試算表・決算書からのドリルダウン（科目・月・呼び出し元を引き継ぐ）
   const [boot] = useState(() => getSession().ledgerTarget);
   useEffect(() => { if (boot) setSession({ ledgerTarget: null }); }, [boot]);
@@ -50,7 +51,6 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
   const [target, setTarget] = useState(boot?.account ?? (kind === 'vendor' ? '中央リース' : '普通預金（保育園）'));
   const all = useVouchers();
   const [opts, setOpts] = useState({ check: false, red: false, blue: false, yellow: false, green: false, daily: true, spare: true, internal: false });
-  const assist = useAssist();
   const isVendor = kind === 'vendor';
   const isFund = kind === 'fund';
   const dt = useDivisionTools(all, accent);
@@ -96,7 +96,6 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
     setExp({ kind: out, title: `${title}　${target}`, fileName: range ? `${title}_${target}_令和8年${periodShort(range)}` : `${title}_${target}_令和8年${m}月`, meta: `${s.fiscalYear}　${s.division}　${periodStr}`, header, rows: body });
   };
 
-  const fieldBtn: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, width: 260, boxSizing: 'border-box', padding: '7px 10px', background: '#fff', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left', color: 'inherit' };
   const stats: { label: string; value: ReactNode; hi?: boolean }[] = kind === 'account'
     ? [{ label: '実績', value: money(sumD - sumC) }]
     : [{ label: '予算', value: money(3_000_000) }, { label: '実績', value: money(sumD - sumC) }, { label: '残高', value: money(3_000_000 - (sumD - sumC)) }, { label: '達成率', value: ((sumD - sumC) / 3_000_000 * 100).toFixed(1) + '%', hi: true }];
@@ -112,7 +111,7 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
       subtitle={isVendor ? '指定した取引先の取引を日付順に表示します。行の右端の「訂正」「削除」、または行のダブルクリックで伝票を訂正できます。' : '指定した科目の仕訳を日付順に表示し、残高を計算します。行の右端の「訂正」「削除」、または行のダブルクリックで伝票を訂正できます。'}
       returnTo={from ? { from, onBack: () => onNavigate(from), here: `${target}　${m}月` } : null}
       extraTools={<ScreenPrintMenu page={kind === 'vendor' ? '業者元帳' : kind === 'fund' ? '資金元帳' : '勘定元帳'} accent={accent} data={exportTable()} />}
-      tools={[{ label: isVendor ? '取引先検索' : '科目検索', onClick: () => assist.open('target', isVendor ? 'vendor' : 'account'), primary: true }, { label: 'Excel', onClick: () => openExport('excel') }, { label: '再計算', onClick: () => toast.show(`再計算しました（${lines.length} 件　残高 ${moneyText(bal, s.env)}）`) }]}
+      tools={[{ label: isVendor ? '取引先検索' : '科目検索', onClick: () => openTargetCombo(TARGET_ID), primary: true }, { label: 'Excel', onClick: () => openExport('excel') }, { label: '再計算', onClick: () => toast.show(`再計算しました（${lines.length} 件　残高 ${moneyText(bal, s.env)}）`) }]}
       period={
         <>
           <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} range={range} onRange={setRange} />
@@ -128,24 +127,8 @@ export function LedgerPage({ kind, variant, accent, accentRgb, onNavigate }: Pro
       targetLabel={isVendor ? '指定取引先' : '指定科目'}
       target={
         <>
-          <AssistField
-            value={target}
-            placeholder={isVendor ? '取引先を選択' : '科目を選択'}
-            open={assist.isOpen('target')}
-            onOpen={() => assist.open('target', isVendor ? 'vendor' : 'account')}
-            accent={accent}
-            accentRgb={accentRgb}
-            buttonStyle={fieldBtn}
-            panelStyle={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, width: 260, zIndex: 60 }}
-            groups={assist.groups}
-            query={assist.query}
-            empty={assist.empty}
-            onInput={assist.setQuery}
-            onPick={(v) => {
-              setTarget(v === '（なし）' ? '' : v);
-              assist.close();
-            }}
-          />
+          {/* 伝票入力と同じコンボ：科目コードを入力して選べ、候補の各行にコードを表示する（確認メモ #160。日記帳・推移表と同じ共通部品） */}
+          <TargetCombo id={TARGET_ID} kind={isVendor ? 'vendor' : 'account'} value={target} onChange={setTarget} accent={accent} />
         </>
       }
       switches={

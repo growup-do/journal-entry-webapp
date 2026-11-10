@@ -143,11 +143,10 @@ export function useEntryForm({ initialForm, seed, afterSubmit, keepAccounts = fa
       setErr('借方科目・貸方科目・金額を入力してください。');
       return;
     }
-    const month = form.month || '';
     const id = nextId.current++;
     const entry: JournalEntry = {
       id,
-      date: month + '/' + (form.day || ''),
+      date: (form.month || '') + '/' + (form.day || ''),
       kari: form.kariKamoku,
       kashi: form.kashiKamoku,
       tekiyo: form.tekiyo || '',
@@ -161,7 +160,9 @@ export function useEntryForm({ initialForm, seed, afterSubmit, keepAccounts = fa
     // 借方・貸方・摘要・取引先・金額をクリア（日付・取引区分・サービス区分は保持）
     setForm((s) => ({ ...s, ...(keepAccountsRef.current ? {} : { kariKamoku: '', kashiKamoku: '' }), tekiyo: '', gyosha: '', amount: '' }));
     // フィルターが特定月に絞られていて新規行の月と異なる場合は新規行の月へ自動切替
-    setMonthFilter((mf) => (mf != null && mf !== month ? month : mf));
+    // 月は、登録した伝票の日付（暦の月）で判定する。予備月（翌年4〜6月）の伝票は月別の一覧に出さないので「全月」に切り替える
+    const month = entry.date.split('/')[0];
+    setMonthFilter((mf) => (mf == null ? mf : entry.term === '予備' ? null : mf !== month ? month : mf));
     afterSubmitRef.current?.();
   }, [form]);
 

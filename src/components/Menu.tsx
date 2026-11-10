@@ -1,6 +1,7 @@
 // 左メニュー（大メニュー6分類＋ホーム）
 //   展開（full）… 大メニューをアコーディオンで開閉し、開いている分類の項目を縦に並べる（当初のスプレッドシート型サイドバーと同じ）
-//   折りたたみ（compact）… アイコンだけの細い列。マウスオーバー（またはクリック）で、その分類の項目を右側にフライアウト表示
+//   折りたたみ（compact）… アイコンだけの細い列。マウスオーバーで、その分類の項目を右側にフライアウト表示。
+//                           分類を押すと開いたまま固定する（確認メモ #144）
 // 出納・資産・決裁（旧オプション）階層は他の階層と同じ見た目（最後尾に配置するのみ）。
 // 1600×768 の画面で使う人が多いため、上部のメニューバーをやめて左側に置き、縦のスペースを本文に使う（11/10）。
 
@@ -9,11 +10,39 @@ import type { CSSProperties, ReactNode } from 'react';
 import { MENU_GROUPS, displayName, groupOf, isOptionMenu, type MenuGroup } from '../data';
 import { startKindOf, useSession, type Session } from '../store/session';
 import { Chevron } from './ui';
+import { canEnterVoucher } from '../lib/entryDivision';
+
+/**
+ * 分類メニューの開閉（確認メモ #144）。
+ * マウスを載せると開く。分類を押すと開いたまま固定し、マウスを外しても閉じない。
+ * 固定中は、もう一度同じ分類を押す・メニューの外側を押す・Esc・項目を選ぶ、のいずれかで閉じる。
+ */
+export function useMenuOpen() {
+  const [open, setOpen] = useState<string | null>(null);
+  const [pinned, setPinned] = useState(false);
+  const timer = useRef<number | undefined>(undefined);
+  const root = useRef<HTMLDivElement>(null);
+  const close = () => { window.clearTimeout(timer.current); setOpen(null); setPinned(false); };
+  const enter = (k: string) => { window.clearTimeout(timer.current); setOpen(k); };
+  const leave = () => { window.clearTimeout(timer.current); if (!pinned) timer.current = window.setTimeout(() => setOpen(null), 160); };
+  const click = (k: string) => { window.clearTimeout(timer.current); if (pinned && open === k) { close(); return; } setOpen(k); setPinned(true); };
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+  useEffect(() => {
+    if (!pinned) return;
+    const down = (e: MouseEvent) => { if (!root.current?.contains(e.target as Node)) { setOpen(null); setPinned(false); } };
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') { setOpen(null); setPinned(false); } };
+    document.addEventListener('mousedown', down);
+    document.addEventListener('keydown', key);
+    return () => { document.removeEventListener('mousedown', down); document.removeEventListener('keydown', key); };
+  }, [pinned]);
+  return { open, pinned, enter, leave, click, close, root };
+}
 
 /** メニュー項目の状態（依頼書 5.1.1／5.1.4）：起動区分の種類で変わる。使えない項目は隠さず、グレーアウトの無効表示にする（理由はツールチップのみ。確認事項 10/9 回答） */
 function itemState(label: string, s: Session): { disabled?: string; tag?: string } {
   const kind = startKindOf(s);
-  if (['単一入力', '伝票入力', '振替入力', '振替単一'].includes(label) && kind !== '入力区分') return { disabled: `${kind}で起動中は伝票を入力できません（入力区分に切り替えてください）` };
+  // 伝票入力：入力区分で起動中のほか、親区分で起動中でも、入力権限があり配下に入力区分があれば開ける（確認メモ #182）
+  if (['単一入力', '伝票入力', '振替入力', '振替単一'].includes(label) && kind !== '入力区分' && !canEnterVoucher(s)) return { disabled: `${kind}で起動中は伝票を入力できません（入力区分に切り替えてください）` };
   if (['業者元帳', '業者推移'].includes(label) && kind === '合算区分') return { disabled: '合算区分で起動中は利用できません' };
   if (isOptionMenu(label) && kind === '合算区分') return { disabled: '合算区分で起動中は利用できません（入力区分・拠点区分などで起動してください）' };
   return {};
@@ -80,15 +109,11 @@ function FullMenu({ accent, active, onSelect }: Omit<Props, 'compact'>) {
 /* ---------------- 折りたたみ：アイコン＋フライアウト ---------------- */
 function CompactMenu({ accent, active, onSelect }: Omit<Props, 'compact'>) {
   const session = useSession();
-  const [open, setOpen] = useState<string | null>(null);
-  const timer = useRef<number | undefined>(undefined);
+  const { open, pinned, enter, leave, click, close, root } = useMenuOpen();
   const activeGroup = groupOf(active)?.key;
-  const enter = (k: string) => { window.clearTimeout(timer.current); setOpen(k); };
-  const leave = () => { window.clearTimeout(timer.current); timer.current = window.setTimeout(() => setOpen(null), 160); };
-  useEffect(() => () => window.clearTimeout(timer.current), []);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'stretch' }}>
+    <div ref={root} style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'stretch' }}>
       <HomeButton active={active === 'ホーム'} accent={accent} onClick={() => onSelect('ホーム')} compact />
       {MENU_GROUPS.map((g) => {
         const on = activeGroup === g.key;
@@ -100,18 +125,18 @@ function CompactMenu({ accent, active, onSelect }: Omit<Props, 'compact'>) {
               type="button"
               className="menu-item-v"
               data-group={g.key}
-              onClick={() => setOpen(isOpen ? null : g.key)}
+              onClick={() => click(g.key)}
               aria-expanded={isOpen}
               aria-label={g.label}
-              title={g.label}
-              style={{ ...iconBtn, background: isOpen ? '#f4f6f8' : on ? '#eef2f6' : 'transparent', color }}
+              title={isOpen && pinned ? `${g.label}（もう一度押すと閉じます）` : `${g.label}（押すと開いたままにします）`}
+              style={{ ...iconBtn, background: isOpen ? (pinned ? '#e3eaf1' : '#f4f6f8') : on ? '#eef2f6' : 'transparent', color }}
             >
               <Icon kind={g.icon} color={color} size={20} />
             </button>
             {isOpen && (
               <Flyout title={g.label}>
                 {g.items.map((label) => (
-                  <SubItem key={label} label={label} state={itemState(label, session)} active={label === active} accent={accent} onClick={() => { onSelect(label); setOpen(null); }} />
+                  <SubItem key={label} label={label} state={itemState(label, session)} active={label === active} accent={accent} onClick={() => { onSelect(label); close(); }} />
                 ))}
               </Flyout>
             )}

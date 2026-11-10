@@ -7,6 +7,7 @@ import { DepreciationPage } from './DepreciationPage';
 import { ReceiptsPaymentsPage } from './ReceiptsPaymentsPage';
 import { GraphPage } from './GraphPage';
 import { HomePage } from './HomePage';
+import { BankBalancePage } from './BankBalancePage';
 import { UserSettingsPage } from './UserSettingsPage';
 import { SufficiencyPage } from './SufficiencyPage';
 import { JournalListPage } from './JournalListPage';
@@ -94,6 +95,8 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
       return <GraphPage key="yearly" mode="yearly" variant={variant} accent={accent} onNavigate={onNavigate} />;
     case '分析グラフ':
       return <GraphPage key="analysis" mode="analysis" variant={variant} accent={accent} onNavigate={onNavigate} />;
+    case '預金残高':
+      return <BankBalancePage variant={variant} accent={accent} onNavigate={onNavigate} />;
     case '充実残額':
       return <SufficiencyPage variant={variant} accent={accent} onNavigate={onNavigate} />;
     case '小口現金':

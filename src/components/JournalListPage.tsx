@@ -11,7 +11,8 @@ import type { CSSProperties } from 'react';
 import { BizSwitch, useDivisionTools } from './DivisionTools';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { ExportDialog, type ExportSpec } from './ExportDialog';
-import { NUM, ReportShell, SwitchPill, TD, TH, useMoney } from './ReportShell';
+import { LABEL, NUM, ReportShell, SwitchPill, TD, TH, useMoney } from './ReportShell';
+import { TargetCombo } from './TargetCombo';
 import { ACTION_HEAD, ACTION_TH, useRowActions } from './RowActions';
 import { ToastView, useToast } from './Toast';
 import { AdvancedSearchModal, DeleteVoucherModal, EMPTY_COND, applyCond, condActive, type SearchCond } from './VoucherEdit';
@@ -31,11 +32,17 @@ interface Props {
 }
 
 const KEY = '仕訳一覧';
+/** 日次調査で不一致になった伝票の印の色（日次調査の「不一致」と同じ赤） */
+const MARK = '#c0392b';
 
 export function JournalListPage({ variant, accent, onNavigate }: Props) {
-  // 同額・不一致検索の「伝票表示」から開いたとき：不一致が見つかった日の伝票だけを表示し、戻り導線を出す
+  // 日次調査の「伝票表示」から開いたとき：不一致が見つかった日の伝票だけを表示し、戻り導線を出す
+  //   不一致の原因になっている伝票（boot.markIds）には「不一致」の印を付けて、ほかの伝票と判別できるようにする（確認メモ #127）
   const [boot] = useState(() => getSession().journalTarget);
   useEffect(() => { if (boot) setSession({ journalTarget: null }); }, [boot]);
+  const markIds = boot?.markIds ?? [];
+  // 印を付けた伝票が見える位置まで一覧を送る（開いた直後の1回だけ）
+  useEffect(() => { if (boot?.markIds?.length) document.querySelector('[data-mismatch]')?.scrollIntoView({ block: 'nearest' }); }, [boot]);
   const all = useVouchers();
   const s = useSession();
   const money = useMoney();
@@ -45,6 +52,8 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
   /** 集計期間の範囲（月の範囲・日付の範囲。確認メモ #57／#58）。null＝月タブの単月 */
   const [range, setRange] = useState<Period | null>(null);
   const [kw, setKw] = useState('');
+  /** 指定科目（確認メモ #160）：借方または貸方がこの科目の仕訳だけを表示する。空＝指定なし。科目コードの入力でも選べる */
+  const [acct, setAcct] = useState('');
   const [cond, setCond] = useState<SearchCond>(EMPTY_COND);
   const [searchOpen, setSearchOpen] = useState(false);
   const [showBiz, setShowBiz] = useState(false);
@@ -57,13 +66,17 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
   const title = displayName(KEY);
 
   const rows = applyCond(
-    all.filter((r) => (range ? inPeriod(r.date, range) : (month == null || r.date.split('/')[0] === month) && (day == null || Number(r.date.split('/')[1]) === day)) && (!kw || [r.kari, r.kashi, r.tekiyo, r.gyosha ?? ''].some((x) => x.includes(kw)))),
+    all.filter((r) => (range ? inPeriod(r.date, range) : (month == null || r.date.split('/')[0] === month) && (day == null || Number(r.date.split('/')[1]) === day)) && (!acct || r.kari === acct || r.kashi === acct) && (!kw || [r.kari, r.kashi, r.tekiyo, r.gyosha ?? ''].some((x) => x.includes(kw)))),
     cond,
   );
   const ra = useRowActions({ rows, accent, returnTo: title });
   const total = rows.reduce((a, r) => a + r.amount, 0);
   const m = month ?? '8';
-  const filtered = condActive(cond) || !!kw;
+  const filtered = condActive(cond) || !!kw || !!acct;
+  /** 表示中の伝票に「不一致」の印を付けたものがあるとき、一覧の上に説明を出す */
+  const markNotice = boot && rows.some((r) => markIds.includes(r.id)) ? (
+    <span data-mismatch-note><b style={{ color: MARK }}>「不一致」</b>の印が付いた伝票が、{boot.month}月{boot.day}日の不一致{boot.markNote ? `（${boot.markNote}）` : ''}に該当する伝票です。</span>
+  ) : null;
   // 複合仕訳（1伝票に複数行）が検索結果に含まれるときは、検索合計を出さず注意を表示する
   const compound = filtered && rows.some((r) => all.some((x) => x.id !== r.id && x.seq === r.seq && x.no === r.no));
   // 表示中（絞り込み後）の仕訳をそのまま出力用の表にする（CSV出力・印刷・プレビューで共用）
@@ -76,7 +89,7 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
   const [sel, setSel] = useState<number[]>([]);
   const [lastIdx, setLastIdx] = useState<number | null>(null);
   const [delOpen, setDelOpen] = useState(false);
-  useEffect(() => { setSel([]); setLastIdx(null); }, [month, day, range, kw, cond]);
+  useEffect(() => { setSel([]); setLastIdx(null); }, [month, day, range, kw, acct, cond]);
   const toggleSel = (id: number, idx: number, shift: boolean) => {
     if (shift && lastIdx != null) {
       const [a, b] = [Math.min(lastIdx, idx), Math.max(lastIdx, idx)];
@@ -125,6 +138,8 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
       listNote={<span>行の右端の「訂正」「削除」、または行のダブルクリックで伝票を訂正できます{selectable && '。行頭のチェックで複数行を選び、まとめて削除できます'}</span>}
       target={
         <>
+          <span style={LABEL}>指定科目</span>
+          <TargetCombo id="journal-account" value={acct} onChange={setAcct} accent={accent} width={300} hint={false} clearable />
           <input className="search-input" value={kw} onChange={(e) => setKw(e.target.value)} placeholder="科目・摘要・取引先で絞り込み" autoComplete="off" style={{ width: 240, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
           {condActive(cond) && <button type="button" onClick={() => setCond(EMPTY_COND)} style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid ' + accent, background: '#fff', color: accent, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>検索条件で絞り込み中 ×解除</button>}
           <span style={{ fontSize: 12, color: '#9aa5b1' }}>金額・伝票No・付箋・区分などは右上の「検索条件」で指定します</span>
@@ -138,7 +153,7 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
         </>
       }
       controls={dt.legend}
-      notice={ra.notice}
+      notice={markNotice || ra.notice ? <>{markNotice}{ra.notice}</> : undefined}
     >
       <ToastView msg={toast.msg} />
       <SelectionBar count={sel.length} unit="行" hint="Shift＋クリックで範囲、Ctrl／⌘＋クリックで追加・解除" onClear={() => setSel([])} actions={<button type="button" data-action="選択した行を削除" onClick={() => setDelOpen(true)} style={btn('#c0392b', true, true)}>選択した行を削除</button>} />
@@ -160,10 +175,14 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
             {rows.length === 0 && (
               <tr><td colSpan={colCount} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>該当する仕訳がありません。</td></tr>
             )}
-            {rows.map((r, idx) => (
-              <tr key={r.id} data-voucher={r.id} data-selected={sel.includes(r.id) || undefined} onDoubleClick={() => ra.openEdit(r)} onClick={(e) => { if (selectable && (e.shiftKey || e.metaKey || e.ctrlKey)) { e.preventDefault(); toggleSel(r.id, idx, e.shiftKey); } }} title={ra.editable ? 'ダブルクリックで伝票を訂正' : undefined} style={{ cursor: ra.editable ? 'pointer' : 'default', background: sel.includes(r.id) ? '#fff7cc' : dt.rowBg(r) }}>
-                {selectable && <td style={{ ...TD, textAlign: 'center' }} onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}><input type="checkbox" checked={sel.includes(r.id)} onChange={() => undefined} onClick={(e) => toggleSel(r.id, idx, e.shiftKey)} aria-label={`Seq ${r.seq} を選択`} /></td>}
-                <td style={TD}><div style={{ fontWeight: 700 }}>{dt.chip(r)}{r.seq}</div></td>
+            {rows.map((r, idx) => {
+              // 日次調査で不一致の原因になっている伝票（確認メモ #127）：行の色・左端の赤い帯・「不一致」ラベルで示す
+              const marked = markIds.includes(r.id);
+              const bar = marked ? { boxShadow: `inset 4px 0 0 ${MARK}` } : null;
+              return (
+              <tr key={r.id} data-voucher={r.id} data-mismatch={marked || undefined} data-selected={sel.includes(r.id) || undefined} onDoubleClick={() => ra.openEdit(r)} onClick={(e) => { if (selectable && (e.shiftKey || e.metaKey || e.ctrlKey)) { e.preventDefault(); toggleSel(r.id, idx, e.shiftKey); } }} title={ra.editable ? 'ダブルクリックで伝票を訂正' : undefined} style={{ cursor: ra.editable ? 'pointer' : 'default', background: sel.includes(r.id) ? '#fff7cc' : marked ? '#fdecea' : dt.rowBg(r) }}>
+                {selectable && <td style={{ ...TD, textAlign: 'center', ...bar }} onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}><input type="checkbox" checked={sel.includes(r.id)} onChange={() => undefined} onClick={(e) => toggleSel(r.id, idx, e.shiftKey)} aria-label={`Seq ${r.seq} を選択`} /></td>}
+                <td style={selectable ? TD : { ...TD, ...bar }}><div style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{dt.chip(r)}{r.seq}{marked && <span data-mismatch-tag title={`日次調査で不一致になった伝票${boot?.markNote ? `（${boot.markNote}）` : ''}`} style={{ marginLeft: 6, padding: '0 6px', borderRadius: 6, background: MARK, color: '#fff', fontSize: 12 }}>不一致</span>}</div></td>
                 <td style={TD}><div style={{ fontSize: 12, color: '#9aa5b1' }}>{r.kind}{r.source && <span data-source={r.source} title={r.source === '自動按分' ? `自動按分で登録した伝票（${r.from ?? ''}）` : `別システムから取り込んだ伝票（${r.from ?? ''}）`} style={{ marginLeft: 3, padding: '0 4px', borderRadius: 4, background: '#eef2f5', color: '#5b6773', fontWeight: 700 }}>{r.source === '自動按分' ? '按分' : r.source}</span>}</div><div>{r.date}</div></td>
                 <td style={TD}>{r.no}</td>
                 {dt.nameOn && <td style={TD}>{dt.nameTag(r)}</td>}
@@ -178,7 +197,8 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
                 <td style={{ ...NUM, fontWeight: 700 }}>{money(r.amount)}</td>
                 <td style={{ ...TD, paddingTop: 5, paddingBottom: 5 }}>{ra.cell(r)}</td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -220,7 +240,7 @@ function BulkDeleteMenu({ open, onToggle, onPick }: { open: boolean; onToggle: (
 }
 
 /** 一括削除の対象を選ぶ：年度内のインポート伝票／自動按分伝票を、取込・按分の実行単位（既存の GUID）ごとに一覧し、選んだ単位の全件を削除確認へ渡す（確認メモ #56） */
-function BulkDeleteModal({ src, all, onClose, onConfirm }: { src: NonNullable<Voucher['source']>; all: Voucher[]; onClose: () => void; onConfirm: (ids: number[]) => void }) {
+export function BulkDeleteModal({ src, all, onClose, onConfirm }: { src: NonNullable<Voucher['source']>; all: Voucher[]; onClose: () => void; onConfirm: (ids: number[]) => void }) {
   const money = useMoney();
   const groups = useMemo(() => {
     const map = new Map<string, Voucher[]>();

@@ -15,7 +15,8 @@ import { BALANCE_ACCOUNTS } from '../data';
 import { metaOf } from '../lib/accounts';
 import { inPeriod, type Period } from '../lib/period';
 import { FUSEN_COLORS, useVouchers, type Voucher } from '../store/journalStore';
-import { canEdit, useSession } from '../store/session';
+import { useSession } from '../store/session';
+import { canEnterVoucher } from '../lib/entryDivision';
 import { getLayoutMode } from '../store/layout';
 import type { MonthFilter } from '../types';
 
@@ -97,7 +98,8 @@ const clip: CSSProperties = { overflow: 'hidden', textOverflow: 'ellipsis', whit
 export function WidePanel({ accent, layout, state, top = 0, highlightIds, returnTo, onNavigate }: Props) {
   const all = useVouchers();
   const sess = useSession();
-  const editable = canEdit(sess);
+  // 伝票入力の画面の中のパネルなので、親区分で起動中でも配下の入力区分の伝票を訂正できる（確認メモ #182）
+  const editable = canEnterVoucher(sess);
   const [month, setMonth] = useState<MonthFilter>('8');
   const [acc1, setAcc1] = useState(() => read(state.storageKey + ':ledger1') ?? sess.env.ledger1Init);
   const [acc2, setAcc2] = useState(() => read(state.storageKey + ':ledger2') ?? sess.env.ledger2Init);
@@ -241,7 +243,7 @@ export function WidePanel({ accent, layout, state, top = 0, highlightIds, return
     </>
   );
 
-  const modal = <EditVoucherModal voucher={edit} onClose={() => setEdit(null)} accent={accent} returnTo={returnTo} />;
+  const modal = <EditVoucherModal entry voucher={edit} onClose={() => setEdit(null)} accent={accent} returnTo={returnTo} />;
 
   if (layout === 'inline') {
     return (

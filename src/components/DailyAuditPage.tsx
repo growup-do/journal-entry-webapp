@@ -1,10 +1,12 @@
-// 同額・不一致検索（ツールバー名：日次調査）
+// 日次調査（同額・不一致の検索。表示名は「日次調査」。確認メモ #126）
 //   仕訳数の問合せ・決算チェックと同じく、モーダルで開く（ホームの「調査・チェック」などから）。
 //   見出し・年度／区分の表示・機能ボタンは ReportShell 共通。
 //   開くと「一致・不一致検索を開始しますか？」の確認 → はい で調査が走り、
 //   月ごとの調査結果（未調査 → OK同額）、当月カレンダー、資金収支／貸借／事業活動の照合結果を表示する。
+//   カレンダーは日ごとの検索結果も表示する（確認メモ #128）：一致した日＝「OK 同額」、不一致で止まった日＝「× 不一致」、それより後＝「未調査」。最後まで終わると全日 OK。
 //   不一致が見つかると、その「日」で検査を止める（チャイルド社回答 2026/10）：
 //     伝票表示＝不一致が見つかった日の伝票すべてを日記帳で開く（そこから伝票の訂正へ進める）。
+//       不一致の原因になっている伝票には、日記帳で「不一致」の印を付ける（確認メモ #127）。
 //     検査継続＝日記帳で訂正して戻ったあと、不一致が見つかった日から再検査する。
 //   数値はサンプル（構造確認用）。プロトタイプでは最初の検査で 8月5日 に不一致が出て、検査継続で同額になる。
 
@@ -19,6 +21,15 @@ import { setSession } from '../store/session';
 
 const SLOTS = ['繰越残高', '期中残高', '4月仕訳', '5月仕訳', '6月仕訳', '7月仕訳', '8月仕訳', '9月仕訳', '10月仕訳', '11月仕訳', '12月仕訳', '1月仕訳', '2月仕訳', '3月仕訳', '決算月仕訳'];
 type Phase = 'confirm' | 'idle' | 'running' | 'stopped' | 'done';
+/** 月（区分）・日ごとの検索結果：同額／不一致／調査中／未調査 */
+type Result = 'ok' | 'ng' | 'busy' | 'wait';
+/** カレンダーの日ごとの検索結果の表示（確認メモ #128。月別の結果と同じ言葉・色） */
+const DAY_TAG: Record<Result, { text: string; bg: string; color: string }> = {
+  ok: { text: 'OK 同額', bg: '#f5a623', color: '#fff' },
+  ng: { text: '× 不一致', bg: '#c0392b', color: '#fff' },
+  busy: { text: '調査中', bg: '#22303c', color: '#fff' },
+  wait: { text: '未調査', bg: '#eef2f5', color: '#8290a0' },
+};
 /** サンプルの不一致：8月仕訳の 5日で、資金収支と貸借の支払資金に差額が出る */
 const STOP = { slot: SLOTS.indexOf('8月仕訳'), month: 8, day: 5, diff: 18_000 };
 const RED = '#c0392b';
@@ -34,7 +45,7 @@ interface Props {
   onClose?: () => void;
 }
 
-/** 同額・不一致検索をモーダルで開く。開くたびに開始確認から始める（不一致で止まっている間は、その状態を復元） */
+/** 日次調査をモーダルで開く。開くたびに開始確認から始める（不一致で止まっている間は、その状態を復元） */
 export function DailyAuditModal({ open, onClose, onNavigate, accent }: { open: boolean; onClose: () => void; onNavigate: (label: string) => void; accent: string }) {
   return (
     <Modal open={open} onClose={onClose} width={1180} strict>
@@ -50,6 +61,8 @@ export function DailyAuditPage({ variant, accent, onNavigate, onClose }: Props) 
   // カレンダーに表示する会計月（不一致が見つかった月）
   const month = STOP.month;
   const [continueOpen, setContinueOpen] = useState(false);
+  /** 検査継続で再検査している間（不一致の日より前は「同額」のまま表示する） */
+  const [resuming, setResuming] = useState(false);
   const timer = useRef<number | undefined>(undefined);
   const toast = useToast();
   const vouchers = useVouchers();
@@ -59,6 +72,7 @@ export function DailyAuditPage({ variant, accent, onNavigate, onClose }: Props) 
   /** from 番目の区分から検査する。未訂正のうちは不一致の日で止まる */
   const run = (from = 0) => {
     setPhase('running');
+    setResuming(from === STOP.slot);
     setDoneCount(from);
     window.clearInterval(timer.current);
     const start = Date.now();
@@ -81,8 +95,10 @@ export function DailyAuditPage({ variant, accent, onNavigate, onClose }: Props) 
   useEffect(() => () => window.clearInterval(timer.current), []);
 
   // 伝票表示：不一致が見つかった日の伝票すべてを日記帳で開く（日記帳から訂正へ進み、戻って検査継続）
+  //   不一致の原因になっている伝票（サンプルでは差額と同じ金額の伝票）は、日記帳で印を付けて判別できるようにする（確認メモ #127）
   const showVouchers = () => {
-    setSession({ journalTarget: { month: String(STOP.month), day: STOP.day, from: '日次調査' } });
+    const markIds = monthVouchers.filter((x) => Number(x.date.split('/')[1]) === STOP.day && x.amount === STOP.diff).map((x) => x.id);
+    setSession({ journalTarget: { month: String(STOP.month), day: STOP.day, from: '日次調査', markIds, markNote: `差額 ${yen(STOP.diff)}` } });
     onNavigate('仕訳一覧');
   };
   // 検査継続：不一致が見つかった日から再検査する
@@ -97,6 +113,15 @@ export function DailyAuditPage({ variant, accent, onNavigate, onClose }: Props) 
   const stopped = phase === 'stopped';
   const shown = done || stopped;
   const stopDay = `${STOP.month}月${STOP.day}日`;
+  /** 月（区分）ごとの検索結果 */
+  const slotResult = (i: number): Result => (phase === 'running' ? (i < doneCount ? 'ok' : i === doneCount ? 'busy' : 'wait') : stopped ? (i < STOP.slot ? 'ok' : i === STOP.slot ? 'ng' : 'wait') : done ? 'ok' : 'wait');
+  /** カレンダーの日ごとの検索結果（確認メモ #128）：不一致で止まった日より前＝同額、止まった日＝不一致、それより後＝未調査。最後まで終わると全日が同額 */
+  const dayResult = (d: number): Result => {
+    const st = slotResult(SLOTS.indexOf(`${month}月仕訳`));
+    if (st === 'ng') return d < STOP.day ? 'ok' : d === STOP.day ? 'ng' : 'wait';
+    if (st === 'busy') return resuming && d < STOP.day ? 'ok' : 'busy';
+    return st;
+  };
   // 当月の仕訳件数を日ごとに集計（カレンダー用。仕訳ストアと共有）
   const counts = new Map<number, number>();
   monthVouchers.forEach((v) => { const d = Number(v.date.split('/')[1]); counts.set(d, (counts.get(d) ?? 0) + 1); });
@@ -145,7 +170,7 @@ export function DailyAuditPage({ variant, accent, onNavigate, onClose }: Props) 
       notice={stopped ? (
         <>
           <b style={{ color: RED }}>{stopDay}の仕訳で不一致が見つかり、検査を止めています。</b>
-          <span>「伝票表示」でこの日の伝票を日記帳で開いて訂正し、戻ってから「検査継続」で{stopDay}以降を再検査します。</span>
+          <span>「伝票表示」でこの日の伝票を日記帳で開いて訂正し、戻ってから「検査継続」で{stopDay}以降を再検査します。日記帳では、該当する伝票に「不一致」の印が付きます。</span>
           <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
             <button type="button" onClick={showVouchers} style={{ ...miniBtn, background: RED, color: '#fff' }}>伝票表示（{stopDay}の伝票）</button>
             <button type="button" onClick={() => setContinueOpen(true)} style={miniBtn}>検査継続</button>
@@ -182,7 +207,7 @@ export function DailyAuditPage({ variant, accent, onNavigate, onClose }: Props) 
               <div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 8 }}>調査結果（月別）</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, minmax(0,1fr))', gap: 6 }}>
                 {SLOTS.map((s, i) => {
-                  const st = phase === 'running' ? (i < doneCount ? 'ok' : i === doneCount ? 'busy' : 'wait') : stopped ? (i < STOP.slot ? 'ok' : i === STOP.slot ? 'ng' : 'wait') : done ? 'ok' : 'wait';
+                  const st = slotResult(i);
                   const isCur = s === `${month}月仕訳`;
                   return (
                     <div key={s} style={{ border: '1px solid ' + (isCur ? accent : '#dde4ea'), borderRadius: 8, overflow: 'hidden', background: isCur ? '#fff' : '#f6f8fa', boxShadow: isCur ? `0 0 0 2px ${accent}33` : 'none' }}>
@@ -197,23 +222,27 @@ export function DailyAuditPage({ variant, accent, onNavigate, onClose }: Props) 
             </div>
             {/* カレンダー */}
             <div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 8 }}>令和{era}年 {month}月　<span style={{ fontWeight: 500 }}>日付ごとの仕訳件数</span><span style={{ fontWeight: 500, marginLeft: 8 }}>（仕訳 {monthVouchers.length} 件）</span></div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 8 }}>令和{era}年 {month}月　<span style={{ fontWeight: 500 }}>日付ごとの検索結果と仕訳件数</span><span style={{ fontWeight: 500, marginLeft: 8 }}>（仕訳 {monthVouchers.length} 件）</span></div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0,1fr))', gap: 4 }}>
                 {['日', '月', '火', '水', '木', '金', '土'].map((w, i) => (
                   <div key={w} style={{ textAlign: 'center', fontSize: 12, fontWeight: 700, color: i === 0 ? '#c0392b' : i === 6 ? '#2c5f9e' : '#8290a0', padding: '4px 0' }}>{w}</div>
                 ))}
                 {cells.map((d, i) => {
                   const n = d ? counts.get(d) ?? 0 : 0;
-                  const ng = stopped && d === STOP.day;
-                  if (ng) return (
-                    <button key={i} type="button" onClick={showVouchers} title={`${stopDay}の伝票を日記帳で開く`} style={{ height: 52, border: '2px solid ' + RED, borderRadius: 6, background: '#fdecea', padding: '3px 5px', fontSize: 12, color: RED, fontWeight: 700, position: 'relative', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', display: 'block', width: '100%' }}>
-                      {d}<span style={{ marginLeft: 6, padding: '0 6px', borderRadius: 6, background: RED, color: '#fff', fontSize: 12 }}>不一致</span>
+                  // 日ごとの検索結果（確認メモ #128）：一致した日は「OK 同額」。件数は右下にそのまま表示
+                  const res = d ? dayResult(d) : null;
+                  const tag = res && (
+                    <span data-day-result={res} style={{ marginLeft: 5, padding: '0 5px', borderRadius: 6, background: DAY_TAG[res].bg, color: DAY_TAG[res].color, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>{DAY_TAG[res].text}</span>
+                  );
+                  if (res === 'ng') return (
+                    <button key={i} type="button" data-day={d} onClick={showVouchers} title={`${stopDay}の伝票を日記帳で開く`} style={{ height: 52, border: '2px solid ' + RED, borderRadius: 6, background: '#fdecea', padding: '3px 5px', fontSize: 12, color: RED, fontWeight: 700, position: 'relative', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', display: 'block', width: '100%', whiteSpace: 'nowrap' }}>
+                      {d}{tag}
                       <span style={{ position: 'absolute', right: 5, bottom: 3, fontSize: 12 }}>{n}件</span>
                     </button>
                   );
                   return (
-                    <div key={i} style={{ height: 52, border: '1px solid #e6ecf1', borderRadius: 6, background: d ? (n ? '#eaf5ef' : '#fff') : '#f6f8fa', padding: '4px 6px', fontSize: 12, color: '#5b6773', position: 'relative' }}>
-                      {d}
+                    <div key={i} data-day={d ?? undefined} style={{ height: 52, border: '1px solid #e6ecf1', borderRadius: 6, background: d ? (n ? '#eaf5ef' : '#fff') : '#f6f8fa', padding: '4px 6px', fontSize: 12, color: '#5b6773', position: 'relative', whiteSpace: 'nowrap' }}>
+                      {d}{tag}
                       {n > 0 && <span style={{ position: 'absolute', right: 5, bottom: 4, fontSize: 12, fontWeight: 700, color: '#1f7a52' }}>{n}件</span>}
                     </div>
                   );

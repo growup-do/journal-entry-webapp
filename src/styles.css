@@ -166,12 +166,16 @@ a:hover {
   border-color: #1f7a52;
 }
 
-/* 大メニュー配下の項目 */
+/* 大メニュー配下の項目：マウスを載せた項目がはっきり分かるようにする（確認メモ #145）。
+   項目の背景はインラインで指定しているので、!important で上書きする。使えない項目は変えない */
 .menu-sub {
-  transition: background 0.1s;
+  transition: background 0.1s, box-shadow 0.1s;
 }
-.menu-sub:hover {
-  background: #f4f6f8;
+.menu-sub:not([aria-disabled="true"]):hover,
+.menu-sub:not([aria-disabled="true"]):focus-visible {
+  background: #dce8f2 !important;
+  color: #16212b !important;
+  box-shadow: inset 3px 0 0 #64788c;
 }
 
 /* 無効（グレーアウト）な操作の理由：data-tip にマウスを載せると小さな説明を出す */

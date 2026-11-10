@@ -8,7 +8,7 @@
 
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
-import { ComboField, EntryStyles, scopeStyle } from './EntryCommon';
+import { TargetCombo } from './TargetCombo';
 import { Modal } from './Modal';
 import { btn } from './ui';
 import { FISCAL_MONTHS } from './FiscalMonthTabs';
@@ -137,14 +137,8 @@ export function TrendPage({ kind, variant, accent, onNavigate }: Props) {
       targetLabel={isVendor ? '指定取引先' : '指定科目'}
       target={
         <>
-          {/* 伝票入力と同じコンボ：コード・名称・フリガナで絞り込み、候補にコードを表示（確認メモ #94） */}
-          <div className="ef-scope" style={{ ...scopeStyle(accent), flex: '0 1 380px', minWidth: 240 }}>
-            <EntryStyles />
-            <div className="ef-field">
-              <ComboField id="trend-target" kind={isVendor ? 'vendor' : 'account'} value={target} onChange={setTarget} placeholder={isVendor ? 'コード・取引先名で指定' : 'コード・科目名・フリガナで指定'} listWidth={400} fontSize={14} padY={7} />
-            </div>
-          </div>
-          <span style={{ fontSize: 12, color: '#8290a0' }}>コードを入力するか、候補から選びます</span>
+          {/* 伝票入力と同じコンボ：コード・名称・フリガナで絞り込み、候補にコードを表示（確認メモ #94）。日記帳・元帳と同じ共通部品（確認メモ #160） */}
+          <TargetCombo id="trend-target" kind={isVendor ? 'vendor' : 'account'} value={target} onChange={setTarget} accent={accent} />
           <span style={{ marginLeft: 'auto', fontSize: 14, color: '#7a8794' }}>単位：{view.unit}</span>
         </>
       }

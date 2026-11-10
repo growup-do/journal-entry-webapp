@@ -9,15 +9,17 @@ import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
 import { Field, Notice, Toggle, btn, input, lbl, numInput, toInt, yen } from './ui';
-import { ActButton, ActionGroup, ConfirmModal, ENTRY_FORMATS, FORMAT_KIND, FUND_MODES, FUND_MODE_NOTE, FormatSwitcher, ReadOnlyBanner, ShortcutHelpModal, nextFusen, openCandidatesOfFocused, useShortcuts, type EntryFormat, type FundMode, type FusenColor, type Shortcut } from './EntryCommon';
+import { ActButton, ActionGroup, ConfirmModal, ENTRY_FORMATS, FORMAT_KIND, FUND_MODES, FUND_MODE_NOTE, FormatSwitcher, ReadOnlyBanner, ShortcutHelpModal, nextFusen, openCandidatesOfFocused, parseEntryMonth, useShortcuts, type EntryFormat, type FundMode, type FusenColor, type Shortcut } from './EntryCommon';
 import { AccountBalanceModal, CalendarModal, CashBalanceModal } from './SingleEntryTools';
 import { AllocationWizardModal, TemplateWizardModal, blankAllocation, blankTemplate, type AllocationWiz, type TemplateWiz } from './TemplateWizards';
 import { DeleteVoucherModal, EditVoucherModal, VoucherPickerModal } from './VoucherEdit';
+import { BulkDeleteModal } from './JournalListPage';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { displayName } from '../data';
 import { TORIHIKI_COLOR, budgetSample, judgeTorihiki, type Torihiki7 } from '../lib/accounts';
 import { addVoucher, useVouchers, type Voucher } from '../store/journalStore';
-import { canEdit, editBlockReason, isViewOnly, setSession, useSession, type AllocationTemplate, type InputSettings, type JournalTemplate, type TemplateLine } from '../store/session';
+import { canEnterVoucher, entryBlockReason, entryDivisionsOf, type EntryDivisionCtl } from '../lib/entryDivision';
+import { isViewOnly, setSession, specialRatesOf, splitSpecialAmount, useSession, type AllocationTemplate, type InputSettings, type JournalTemplate, type TemplateLine } from '../store/session';
 
 export { WATCHED, watchedStatement } from './EntryCommon';
 
@@ -292,21 +294,22 @@ export function AllocationRunModal({ open, onClose, accent, onRegister, onNew }:
 }
 
 /* ---------------- 特殊金額入力（金額の先頭に「＋」） ---------------- */
-export function SpecialAmountModal({ open, total, onClose, accent, onOk }: { open: boolean; total: number; onClose: () => void; accent: string; onOk: (parts: { division: string; amount: number }[]) => void }) {
+export function SpecialAmountModal({ open, total, account, onClose, accent, onOk }: { open: boolean; total: number; /** 按分率を引く科目。科目ごとの設定がなければ共通の按分率を使う（確認メモ #179） */ account?: string; onClose: () => void; accent: string; onOk: (parts: { division: string; amount: number }[]) => void }) {
   const s = useSession();
-  const [parts, setParts] = useState<number[]>(() => s.specialRates.map((r, i) => (i === s.specialRates.length - 1 ? 0 : Math.floor((total * r.rate) / 100))));
-  const sum = parts.reduce((a, b) => a + b, 0);
-  const last = s.specialRates.length - 1;
-  const fixed = parts.map((p, i) => (i === last ? total - parts.slice(0, last).reduce((a, b) => a + b, 0) : p));
+  const sp = specialRatesOf(s, account ?? '');
+  const [parts, setParts] = useState<number[]>(() => splitSpecialAmount(s, account ?? '', total).map((p) => p.amount));
+  /** 自動で調整する行＝端数の加算先区分 */
+  const last = Math.max(0, sp.rates.findIndex((r) => r.division === sp.roundTo));
+  const fixed = parts.map((p, i) => (i === last ? total - parts.reduce((a, b, k) => (k === last ? a : a + b), 0) : p));
   const ok = fixed.every((v) => v >= 0);
   return (
     <Modal open={open} onClose={onClose} width={520} title="特殊金額入力（区分別の金額）" strict>
       <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
-        <Notice>金額 <b>{yen(total)}</b> 円を、配下の伝票入力区分に按分します。按分率（設定「仕訳辞書」→「特殊金額の按分率」）を初期値として表示しています。合計が一致するよう最後の区分で調整します。</Notice>
+        <Notice>金額 <b>{yen(total)}</b> 円を、配下の伝票入力区分に按分します。{sp.byAccount ? <>科目「<b>{account}</b>」の按分率</> : '共通の按分率'}（設定「仕訳辞書」→「特殊金額の按分率」）を初期値として表示しています。端数は<b>端数の加算先区分（{sp.roundTo}）</b>に加算し、合計が一致するよう調整します。</Notice>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}><thead><tr><th style={TH}>伝票入力区分</th><th style={{ ...TH, textAlign: 'right', width: 80 }}>按分率</th><th style={{ ...TH, textAlign: 'right', width: 170 }}>金額</th></tr></thead>
-          <tbody>{s.specialRates.map((r, i) => <tr key={r.division}><td style={TD}>{r.division}</td><td style={NUM}>{r.rate}%</td><td style={NUM}>{i === last ? <b style={{ color: fixed[i] < 0 ? '#c0392b' : '#22303c' }}>{yen(fixed[i])}</b> : <input className="field-input ring" value={yen(parts[i])} onChange={(e) => setParts((p) => p.map((v, k) => (k === i ? toInt(e.target.value) : v)))} inputMode="numeric" style={{ ...numInput, padding: '4px 8px' }} />}</td></tr>)}
-            <tr style={{ background: '#f3f6f9' }}><td style={{ ...TD, fontWeight: 700 }} colSpan={2}>合計</td><td style={{ ...NUM, fontWeight: 700 }}>{yen(sum - parts[last] + fixed[last])}</td></tr></tbody></table>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={onClose} style={btn()}>中止</button><button type="button" className="submit-btn" disabled={!ok} onClick={() => onOk(s.specialRates.map((r, i) => ({ division: r.division, amount: fixed[i] })))} style={{ ...btn(accent, true), opacity: ok ? 1 : 0.5 }}>OK（{s.specialRates.length}枚の伝票を作成）</button></div>
+          <tbody>{sp.rates.map((r, i) => <tr key={r.division} data-special-part={i === last ? 'round' : 'part'}><td style={TD}>{r.division}{i === last && <span style={{ marginLeft: 8, padding: '1px 7px', borderRadius: 8, background: '#eef2f5', color: '#5b6773', fontSize: 12, fontWeight: 700 }}>端数の加算先</span>}</td><td style={NUM}>{r.rate}%</td><td style={NUM}>{i === last ? <b style={{ color: fixed[i] < 0 ? '#c0392b' : '#22303c' }}>{yen(fixed[i])}</b> : <input className="field-input ring" value={yen(parts[i])} onChange={(e) => setParts((p) => p.map((v, k) => (k === i ? toInt(e.target.value) : v)))} inputMode="numeric" style={{ ...numInput, padding: '4px 8px' }} />}</td></tr>)}
+            <tr style={{ background: '#f3f6f9' }}><td style={{ ...TD, fontWeight: 700 }} colSpan={2}>合計</td><td style={{ ...NUM, fontWeight: 700 }}>{yen(fixed.reduce((a, b) => a + b, 0))}</td></tr></tbody></table>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={onClose} style={btn()}>中止</button><button type="button" className="submit-btn" disabled={!ok} onClick={() => onOk(sp.rates.map((r, i) => ({ division: r.division, amount: fixed[i] })))} style={{ ...btn(accent, true), opacity: ok ? 1 : 0.5 }}>OK（{sp.rates.length}枚の伝票を作成）</button></div>
       </div>
     </Modal>
   );
@@ -382,6 +385,8 @@ export interface EntryToolsOptions {
   internalLocked?: boolean;
   onLoadTemplate: (t: JournalTemplate, mode: '定型' | '連続') => void;
   /** 自動按分などで登録した仕訳の id（一覧の強調表示用） */
+  /** 伝票を削除したあと（削除した伝票の id。画面内の一覧から消すのに使う） */
+  onDeleted?: (ids: number[]) => void;
   onRegistered?: (ids: number[]) => void;
   onPickDate: (month: string, day: string) => void;
   /** 参照パネルを開く（画面問合の先頭に出す） */
@@ -392,22 +397,58 @@ export interface EntryToolsOptions {
   enterOrder: string;
 }
 
+/* ---------------- 入力区分の欄（確認メモ #157／#181／#182） ---------------- */
+/** 入力区分で起動中は固定表示。親区分で起動中（入力権限あり）は、その親区分に属する入力区分から選ぶ */
+export function EntryDivisionField({ ctl, id, disabled, onCommit }: { ctl: EntryDivisionCtl; id?: string; disabled?: boolean; onCommit?: () => void }) {
+  const sp = ctl.division.indexOf(' ');
+  const code = sp > 0 ? ctl.division.slice(0, sp) : '';
+  const name = sp > 0 ? ctl.division.slice(sp + 1) : ctl.division;
+  if (ctl.fixed || disabled) {
+    return (
+      <span className="pp-ro pp-ro-fill" data-entry-division="fixed" title={ctl.fixed && ctl.options.length ? '入力区分で起動中のため固定です。入力区分は、画面上部の区分の選択で切り替えます' : undefined} style={{ gap: 8, fontSize: 14, color: '#22303c', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {code && <span className="pp-num" style={{ fontSize: 14, color: '#7a8794' }}>{code}</span>}
+        <span>{name}</span>
+      </span>
+    );
+  }
+  return (
+    <select id={id} className="ef-input pp-input" data-entry-division="select" aria-label="入力区分" value={ctl.division} onChange={(e) => ctl.setDivision(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onCommit?.(); } }} title="起動中の親区分に属する入力区分から選びます" style={{ width: '100%', height: 34, padding: '0 8px', fontSize: 14, fontFamily: 'inherit', color: '#22303c' }}>
+      {ctl.options.map((d) => <option key={d} value={d}>{d}</option>)}
+    </select>
+  );
+}
+/** 伝票日付の表示（決算月・翌年の予備月は注記つき。確認メモ #184） */
+export function entryDateText(month: string, day: string): string {
+  const em = parseEntryMonth(month);
+  const d = parseInt(day, 10) || day;
+  if (!em.ok) return `${month}月${d}日`;
+  return `${em.term === '決算' ? '決算月（3月）' : em.term === '予備' ? `翌年${em.month}月（予備月）` : `${em.month}月`}${d}日`;
+}
+
 const TEMPLATE_FORM: Record<EntryFormat, JournalTemplate['form']> = { 伝票入力: '伝票式', 単一入力: '単一式', 振替入力: '振替伝票式', 振替単一: '振替単一式' };
 
 export function useEntryTools(o: EntryToolsOptions) {
   const sess = useSession();
-  const vouchers = useVouchers();
-  const editable = canEdit(sess);
-  const reason = editBlockReason(sess);
+  // 予備月（翌年4〜6月）の伝票も含めて扱う（確認メモ #184）。残高には当年度の伝票だけを渡す
+  const vouchers = useVouchers(true);
+  const current = useMemo(() => vouchers.filter((v) => v.term !== '予備'), [vouchers]);
+  // 親区分で起動中でも、配下の入力区分を選んで登録できる（確認メモ #182／#183）
+  const editable = canEnterVoucher(sess);
+  const reason = entryBlockReason(sess);
   const ro = !editable;
   /** 参照のみ権限：登録・訂正系のボタンは表示しない（参照の操作だけ残す） */
   const viewOnly = isViewOnly(sess);
-  const [dlg, setDlg] = useState<null | '定型' | '連続' | '按分' | '科目別残' | '現預金残' | 'カレンダー' | '入力の変更' | '訂正' | '削除' | 'ヘルプ' | '中止'>(null);
+  const [dlg, setDlg] = useState<null | '定型' | '連続' | '按分' | '科目別残' | '現預金残' | 'カレンダー' | '入力の変更' | '訂正' | '削除' | '一括削除' | 'ヘルプ' | '中止'>(null);
   const [wiz, setWiz] = useState<TemplateWiz>(null);
   const [awiz, setAwiz] = useState<AllocationWiz>(null);
   const [edit, setEdit] = useState<Voucher | null>(null);
   const [del, setDel] = useState<Voucher[] | null>(null);
+  /** 一括削除から開いた削除確認か（行単位の案内にする） */
+  const [bulk, setBulk] = useState(false);
   const [leave, setLeave] = useState<string | null>(null);
+  /** 登録の確認（確認メモ #153）。run＝確認後に実行する登録処理、back＝「入力に戻る」で戻すフォーカス */
+  const [ask, setAsk] = useState<null | { run: () => void; back: HTMLElement | null }>(null);
+  const askRegister = (run: () => void) => setAsk({ run, back: document.activeElement as HTMLElement | null });
   const name = displayName(o.format);
 
   const go = (label: string) => {
@@ -455,13 +496,14 @@ export function useEntryTools(o: EntryToolsOptions) {
       current={o.format}
       accent={o.accent}
       onSwitch={o.onNavigate ? (k) => go(k) : undefined}
-      right={
-        <>
-          <ActButton label="入力の変更" k="O" accent={o.accent} onClick={() => setDlg('入力の変更')} title="伝票No・証憑・小切手No・予備入力などの表示項目を変更します" />
-          <ActButton label="キーボード操作一覧" k="H" accent={o.accent} onClick={() => setDlg('ヘルプ')} title="マウスを使わない操作方法の一覧" />
-        </>
-      }
     />
+  );
+  /** 「入力の変更」「キーボード操作一覧」は、左下の入力補助に置く（確認メモ #156）。参照のみ権限では入力補助が出ないので、参照の並びに置く */
+  const settingButtons: ReactNode = (
+    <>
+      <ActButton label="入力の変更" k="O" accent={o.accent} onClick={() => setDlg('入力の変更')} title="伝票No・証憑・小切手No・予備入力などの表示項目を変更します" />
+      <ActButton label="キーボード操作一覧" k="H" accent={o.accent} onClick={() => setDlg('ヘルプ')} title="マウスを使わない操作方法の一覧" />
+    </>
   );
   const banner: ReactNode = <ReadOnlyBanner reason={reason} />;
 
@@ -482,21 +524,30 @@ export function useEntryTools(o: EntryToolsOptions) {
   /** 内部取引スイッチ（相手区分の入力欄の中に置く） */
   const internalSwitch: ReactNode = viewOnly ? null : <InternalSwitch on={o.internal} onToggle={o.onInternal} disabled={ro} locked={o.internalLocked} title={ro ? reason : undefined} id={o.internalId} onNext={o.onInternalNext} />;
   const actionBar: ReactNode = (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 8 }}>
+    <div data-entry-actions style={{ display: 'grid', gridTemplateColumns: viewOnly ? '1fr' : 'minmax(0, 3fr) minmax(0, 1.25fr) minmax(0, 1.15fr)', gap: 8 }}>
       {!viewOnly && <ActionGroup caption="入力補助">
         <ActButton label="連続定型" k="R" accent={o.accent} disabled={ro} title={why('テンプレートから複数の伝票を続けて登録します')} onClick={() => setDlg('連続')} />
         <ActButton label="自動按分" k="A" accent={o.accent} disabled={ro} title={why('按分テンプレートで、複数の区分・科目に金額を配分します')} onClick={() => setDlg('按分')} />
         <ActButton label="仕訳登録" k="G" accent={o.accent} disabled={ro} title={why('入力中の伝票を、定型仕訳として登録します')} onClick={saveAsTemplate} />
         <ActButton label="カレンダー" k="K" accent={o.accent} disabled={ro} title={why('カレンダーから日付を選びます')} onClick={() => setDlg('カレンダー')} />
+        {settingButtons}
       </ActionGroup>}
       <ActionGroup caption="参照">
         <ActButton label="科目別残高" k="B" accent={o.accent} onClick={() => setDlg('科目別残')} />
         <ActButton label="現預金残高" k="Z" accent={o.accent} onClick={() => setDlg('現預金残')} />
+        {viewOnly && settingButtons}
       </ActionGroup>
+      {!viewOnly && <ActionGroup caption="伝票の整理">
+        <ActButton label="インポート伝票一括削除" tone="danger" accent={o.accent} disabled={ro} title={why('インポートで取り込んだ伝票を、取込の単位ごとにまとめて削除します')} onClick={() => setDlg('一括削除')} />
+      </ActionGroup>}
     </div>
   );
 
-  const month = o.month || '8';
+  // 月欄の値（1〜12／99＝決算月／13〜15＝翌年の予備月）を、残高（暦の月）とカレンダー（月欄の値）に分けて渡す
+  const em = parseEntryMonth(o.month || '8');
+  const month = !em.ok ? '8' : em.term ? '3' : String(em.month);
+  const calMonth = em.ok ? String(parseInt(o.month.normalize('NFKC'), 10)) : '8';
+  const mine = entryDivisionsOf(sess);
   const dialogs: ReactNode = (
     <>
       <InputSettingsModal open={dlg === '入力の変更'} onClose={() => setDlg(null)} accent={o.accent} />
@@ -525,12 +576,19 @@ export function useEntryTools(o: EntryToolsOptions) {
         }}
         onNew={() => { setDlg(null); setAwiz({ step: 0, t: blankAllocation({ kari: o.kari, kashi: o.kashi, tekiyo: o.lines[0]?.tekiyo ?? '' }) }); }}
       />
-      {dlg === '科目別残' && <AccountBalanceModal open onClose={() => setDlg(null)} accent={o.accent} entries={vouchers} month={month} focus={[o.kari, o.kashi]} />}
-      {dlg === '現預金残' && <CashBalanceModal open onClose={() => setDlg(null)} accent={o.accent} entries={vouchers} month={month} focus={[o.kari, o.kashi]} />}
-      {dlg === 'カレンダー' && <CalendarModal open onClose={() => setDlg(null)} accent={o.accent} entries={vouchers} month={month} day={o.day} onPick={(m, d) => { o.onPickDate(m, d); o.toast(`日付を ${m}月${d}日 にしました`); }} />}
-      <VoucherPickerModal key={dlg === '削除' ? 'd' : 'e'} open={dlg === '訂正' || dlg === '削除'} mode={dlg === '削除' ? '削除' : '訂正'} onClose={() => setDlg(null)} accent={o.accent} onPick={(g) => { if (dlg === '削除') setDel(g.rows); else setEdit(g.head); setDlg(null); }} />
-      <EditVoucherModal voucher={edit} onClose={() => setEdit(null)} accent={o.accent} returnTo={name} />
-      <DeleteVoucherModal rows={del} onClose={() => setDel(null)} onDeleted={() => o.toast('伝票を削除しました')} />
+      {dlg === '科目別残' && <AccountBalanceModal open onClose={() => setDlg(null)} accent={o.accent} entries={current} month={month} focus={[o.kari, o.kashi]} />}
+      {dlg === '現預金残' && <CashBalanceModal open onClose={() => setDlg(null)} accent={o.accent} entries={current} month={month} focus={[o.kari, o.kashi]} />}
+      {dlg === 'カレンダー' && <CalendarModal open extended onClose={() => setDlg(null)} accent={o.accent} entries={vouchers} month={calMonth} day={o.day} onPick={(m, d) => { o.onPickDate(m, d); o.toast(`日付を ${entryDateText(m, d)} にしました`); }} />}
+      <VoucherPickerModal key={dlg === '削除' ? 'd' : 'e'} open={dlg === '訂正' || dlg === '削除'} mode={dlg === '削除' ? '削除' : '訂正'} onClose={() => setDlg(null)} accent={o.accent} onPick={(g) => { if (dlg === '削除') { setBulk(false); setDel(g.rows); } else setEdit(g.head); setDlg(null); }} />
+      <EditVoucherModal entry voucher={edit} onClose={() => setEdit(null)} accent={o.accent} returnTo={name} />
+      <DeleteVoucherModal entry multi={bulk} rows={del} onClose={() => setDel(null)} onDeleted={() => { o.onDeleted?.((del ?? []).map((r) => r.id)); o.toast(bulk ? `インポート伝票 ${(del ?? []).length} 行を削除しました` : '伝票を削除しました'); }} />
+      {/* インポート伝票の一括削除（確認メモ #159）。対象は、いま登録できる入力区分の伝票 */}
+      {dlg === '一括削除' && <BulkDeleteModal src="インポート" all={vouchers.filter((v) => mine.includes(v.service))} onClose={() => setDlg(null)} onConfirm={(ids) => { setDlg(null); setBulk(true); setDel(vouchers.filter((v) => ids.includes(v.id))); }} />}
+      {/* 登録の確認（確認メモ #153）。Enter でそのまま登録できるよう、初期フォーカスは「登録する」 */}
+      <ConfirmModal open={!!ask} title="伝票登録の確認" okLabel="登録する" focusOk accent={o.accent} onClose={() => { const b = ask?.back; setAsk(null); window.setTimeout(() => b?.focus(), 0); }} onOk={() => { const r = ask?.run; setAsk(null); r?.(); }}>
+        この内容で伝票を登録しますか？
+        <div data-register-confirm style={{ marginTop: 8, padding: '8px 12px', borderRadius: 8, background: '#f3f6f9', fontSize: 14, lineHeight: 1.8 }}>入力区分：<b>{o.service || '（未指定）'}</b><br />伝票日付：<b>{entryDateText(o.month, o.day)}</b></div>
+      </ConfirmModal>
       <ConfirmModal open={dlg === '中止'} title="伝票中止の確認" okLabel="入力中の伝票を破棄する" danger accent={o.accent} onClose={() => setDlg(null)} onOk={() => { setDlg(null); o.onCancel(); o.toast('入力中の伝票を破棄しました'); }}>
         入力中の伝票を破棄します。<b>登録済みの伝票には影響しません。</b>
       </ConfirmModal>
@@ -540,5 +598,5 @@ export function useEntryTools(o: EntryToolsOptions) {
     </>
   );
 
-  return { topBar, banner, actionBar, submitButton, templateButton, fundSwitch, internalSwitch, dialogs, editable, reason, viewOnly, openEdit: (v: Voucher) => setEdit(v), openDelete: (rows: Voucher[]) => setDel(rows) };
+  return { topBar, banner, actionBar, submitButton, templateButton, fundSwitch, internalSwitch, dialogs, editable, reason, viewOnly, askRegister, openEdit: (v: Voucher) => setEdit(v), openDelete: (rows: Voucher[]) => { setBulk(false); setDel(rows); } };
 }

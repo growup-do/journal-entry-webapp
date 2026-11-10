@@ -24,6 +24,8 @@ export interface Voucher extends JournalRow {
   from?: string;
   /** 取込・按分の実行単位（既存の GUID に相当）。一括削除はこの単位で年度内の全件を消す（確認メモ #56） */
   batch?: string;
+  /** 伝票日付の月の扱い（確認メモ #184）。決算＝決算月（月欄に 99 と入力。日付は 3月として持つ）／予備＝翌年4〜6月の予備月（月欄に 13〜15。年度更新時に翌年度のデータとして引き継ぐ） */
+  term?: '決算' | '予備';
 }
 
 /** サンプル：別システムから取り込んだ体の伝票（預金出納＝水道料金・電話料金、減価償却＝リース代。月ごとに1回の取込）と、自動按分で登録した体の伝票（ガス代。月ごとに1回の実行） */
@@ -37,11 +39,19 @@ const sourceOf = (r: JournalRow): Pick<Voucher, 'source' | 'from' | 'batch'> => 
 let rows: Voucher[] = JOURNAL_ROWS.map((r, i) => ({ ...r, id: i + 1, check: false, fusen: '', ...sourceOf(r) }));
 let nextId = rows.length + 1;
 const listeners = new Set<() => void>();
-const emit = () => listeners.forEach((l) => l());
+/** 予備月（翌年4〜6月）の伝票を除いた一覧。当年度の帳票（日記帳・元帳など）はこちらを使う */
+let current: Voucher[] = rows;
+const emit = () => {
+  current = rows.some((r) => r.term === '予備') ? rows.filter((r) => r.term !== '予備') : rows;
+  listeners.forEach((l) => l());
+};
 
+/** 予備月の伝票も含めた全件 */
 export function getVouchers() { return rows; }
-export function useVouchers(): Voucher[] {
-  return useSyncExternalStore((l) => { listeners.add(l); return () => listeners.delete(l); }, () => rows, () => rows);
+/** withSpare＝予備月（翌年4〜6月）の伝票も含める。伝票入力の画面だけ true にする（当年度の帳票に翌年度の伝票を混ぜない） */
+export function useVouchers(withSpare = false): Voucher[] {
+  const snap = () => (withSpare ? rows : current);
+  return useSyncExternalStore((l) => { listeners.add(l); return () => listeners.delete(l); }, snap, snap);
 }
 export function updateVoucher(id: number, patch: Partial<Voucher>) {
   rows = rows.map((r) => (r.id === id ? { ...r, ...patch } : r));
@@ -49,6 +59,12 @@ export function updateVoucher(id: number, patch: Partial<Voucher>) {
 }
 export function deleteVoucher(id: number) {
   rows = rows.filter((r) => r.id !== id);
+  emit();
+}
+/** まとめて削除（インポート伝票の一括削除など） */
+export function deleteVouchers(ids: number[]) {
+  const set = new Set(ids);
+  rows = rows.filter((r) => !set.has(r.id));
   emit();
 }
 export function addVoucher(v: Omit<Voucher, 'id' | 'check' | 'fusen' | 'seq' | 'no'> & Partial<Pick<Voucher, 'seq' | 'no'>>) {

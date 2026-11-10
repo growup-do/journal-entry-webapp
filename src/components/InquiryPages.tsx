@@ -5,13 +5,12 @@
 
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
-import { AssistField } from './AssistField';
+import { TargetCombo, openTargetCombo } from './TargetCombo';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { LABEL, NUM, ReportShell, TD, TH, yen, SwitchPill } from './ReportShell';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { BALANCE_ACCOUNTS, JOURNAL_ROWS, displayName, type JournalRow } from '../data';
-import { useAssist } from '../hooks/useAssist';
 import type { MonthFilter } from '../types';
 
 const CARRY = 5_000_000;
@@ -55,12 +54,11 @@ interface Cond {
 }
 const EMPTY: Cond = { other: '', sub: '', tax: '', tekiyo: '' };
 
-export function LedgerInquiryPage({ slot, variant, accent, accentRgb, onNavigate }: LedgerProps) {
+export function LedgerInquiryPage({ slot, variant, accent, onNavigate }: LedgerProps) {
   const [account, setAccount] = useState(slot === 'ledger1' ? '普通預金（保育園）' : '');
   const [month, setMonth] = useState<MonthFilter>('8');
   const [cond, setCond] = useState<Cond>(EMPTY);
   const [applied, setApplied] = useState<Cond>(EMPTY);
-  const assist = useAssist();
   const title = displayName(slot === 'ledger1' ? '元帳１' : '元帳２');
 
   const subOptions = Array.from(new Set(JOURNAL_ROWS.map(subOf).filter(Boolean)));
@@ -87,7 +85,6 @@ export function LedgerInquiryPage({ slot, variant, accent, accentRgb, onNavigate
   const sumC = lines.reduce((a, l) => a + l.c, 0);
   const isFiltered = applied.other || applied.sub || applied.tax || applied.tekiyo;
   const dirty = JSON.stringify(cond) !== JSON.stringify(applied);
-  const fieldBtn: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, width: 240, boxSizing: 'border-box', padding: '7px 10px', background: '#fff', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left', color: 'inherit' };
   const input: CSSProperties = { padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none', background: '#fff', color: '#22303c', boxSizing: 'border-box' };
   const btn = (primary?: boolean): CSSProperties => ({ padding: '7px 14px', border: '1px solid ' + (primary ? accent : '#cfd8e0'), borderRadius: 8, background: primary ? accent : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
   const field = (label: string, node: React.ReactNode) => (
@@ -96,25 +93,10 @@ export function LedgerInquiryPage({ slot, variant, accent, accentRgb, onNavigate
       {node}
     </div>
   );
-  const assistField = (id: string, value: string, placeholder: string, onPick: (v: string) => void) => (
-    <AssistField
-      value={value}
-      placeholder={placeholder}
-      open={assist.isOpen(id)}
-      onOpen={() => assist.open(id, 'account')}
-      accent={accent}
-      accentRgb={accentRgb}
-      buttonStyle={fieldBtn}
-      panelStyle={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, width: 260, zIndex: 60 }}
-      groups={assist.groups}
-      query={assist.query}
-      empty={assist.empty}
-      onInput={assist.setQuery}
-      onPick={(v) => {
-        onPick(v === '（なし）' ? '' : v);
-        assist.close();
-      }}
-    />
+  // 指定科目・相手勘定科目：科目コードでも入力できるコンボ（確認メモ #160）。相手勘定科目は指定を外せる
+  const comboId = (id: string) => `inq-${slot}-${id}`;
+  const assistField = (id: string, value: string, placeholder: string, onPick: (v: string) => void, clearable?: boolean) => (
+    <TargetCombo id={comboId(id)} value={value} onChange={onPick} accent={accent} placeholder={placeholder} width={260} listWidth={360} hint={false} clearable={clearable} />
   );
 
   return (
@@ -123,7 +105,7 @@ export function LedgerInquiryPage({ slot, variant, accent, accentRgb, onNavigate
       accent={accent}
       title={title}
       subtitle="総勘定元帳の参照用の画面です。科目を指定して仕訳と残高を照会します。相手勘定科目・補助科目・税区分・摘要でさらに絞り込めます。元帳１と元帳２は別々の条件を保持します。"
-      tools={[{ label: '科目検索', onClick: () => assist.open('acc', 'account'), primary: true }]}
+      tools={[{ label: '科目検索', onClick: () => openTargetCombo(comboId('acc')), primary: true }]}
       period={
         <>
           <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} withAll />
@@ -137,7 +119,7 @@ export function LedgerInquiryPage({ slot, variant, accent, accentRgb, onNavigate
       ))}
       target={
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
-          {field('科目', assistField('acc', account, '<<科目未選択>>', setAccount))}
+          {field('科目', assistField('acc', account, 'コード・科目名で指定（未選択）', setAccount, true))}
           <span style={{ fontSize: 14, color: '#7a8794', paddingBottom: 9 }}>未選択の場合は全科目の仕訳を一覧します（残高は計算しません）。</span>
         </div>
       }
@@ -152,7 +134,7 @@ export function LedgerInquiryPage({ slot, variant, accent, accentRgb, onNavigate
         <>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e8edf2', borderRadius: 10 }}>
             <span style={{ ...LABEL, alignSelf: 'center', marginRight: 2 }}>絞り込み</span>
-            {field('相手勘定科目', assistField('other', cond.other, '指定なし', (v) => setCond((c) => ({ ...c, other: v }))))}
+            {field('相手勘定科目', assistField('other', cond.other, '指定なし', (v) => setCond((c) => ({ ...c, other: v })), true))}
             {field('補助科目', (
               <select value={cond.sub} onChange={(e) => setCond((c) => ({ ...c, sub: e.target.value }))} style={{ ...input, width: 160, cursor: 'pointer' }}>
                 <option value="">指定なし</option>

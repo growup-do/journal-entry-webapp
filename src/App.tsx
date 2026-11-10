@@ -18,6 +18,7 @@ import { isReviewMode, setReviewMode } from './store/review';
 import { FeatureListPage } from './components/FeatureListPage';
 import { LegalPage } from './components/LegalPage';
 import { FlowMapPage } from './components/FlowMapPage';
+import { RangeProposalPage } from './components/RangeProposalPage';
 import { IssueBoardPage } from './components/IssueBoardPage';
 import { setLayoutMode, useLayoutMode } from './store/layout';
 
@@ -164,6 +165,8 @@ export default function App() {
   }
   if (staticPage === 'terms') return <LegalPage />;
   if (staticPage === 'flow') return <FlowMapPage />;
+  // 範囲指定のご提案（確認メモ #143）：数パターンを見比べるための提案用ページ
+  if (staticPage === 'range') return <RangeProposalPage />;
   if (staticPage === 'issues' && !review) return <IssueBoardPage />;
 
   return (
@@ -217,7 +220,7 @@ function RoleSwitchBar({ review }: { /** 確認用アカウント：確認事項
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '2px 6px 2px 4px' }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', letterSpacing: '.03em', padding: '0 6px' }}>プロトタイプ確認用</span>
         <div style={{ display: 'flex', gap: 2 }}>
-          {([['features', '機能一覧'], ['flow', '画面遷移図'], ['issues', '確認事項・やりとり']] as const).filter(([key]) => !review || key !== 'issues').map(([key, label]) => (
+          {([['features', '機能一覧'], ['flow', '画面遷移図'], ['range', '範囲指定のご提案'], ['issues', '確認事項・やりとり']] as const).filter(([key]) => !review || key !== 'issues').map(([key, label]) => (
             <button key={key} type="button" className="btn-outline" data-proto-link={key} onClick={() => { window.location.href = '?page=' + key; }} title="プロトタイプ確認用のページ（製品の機能ではありません）" style={{ padding: '4px 8px', border: 'none', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', background: 'transparent', color: '#3d4a56', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>{label}</button>
           ))}
         </div>
