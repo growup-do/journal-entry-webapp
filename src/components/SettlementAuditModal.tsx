@@ -197,7 +197,6 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
               {running ? '調査中…' : done ? (counts.要調査 > 0 ? <>要調査が <b style={{ color: '#c0392b' }}>{counts.要調査} 件</b> あります。行の「結果詳細」「説明」で内容を確認してください。</> : 'すべての項目が OK です。') : '「調査開始」で全項目を調査します（決算チェック設定で無効にした項目はスキップ）'}
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              <button type="button" className="btn-outline" onClick={() => window.open('https://www.child.co.jp/', '_blank', 'noopener')} style={btn()}>サポートサイト</button>
               <span title={done ? '' : '調査が終わると使えます'}><button type="button" className="btn-outline" disabled={!done} onClick={() => setPrint(true)} style={{ ...btn(), opacity: done ? 1 : 0.5 }}>結果印刷</button></span>
               <span title={done ? '' : '調査が終わると使えます'}><button type="button" className="btn-outline" disabled={!done} onClick={() => setTrace('all')} style={{ ...btn(), opacity: done ? 1 : 0.5 }}>結果詳細表示（全項目）</button></span>
               {done && <button type="button" className="btn-outline" onClick={start} style={btn()}>再調査</button>}

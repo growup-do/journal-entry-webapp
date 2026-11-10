@@ -136,11 +136,13 @@ export default function App() {
     if (key === FEATURES_KEY) { window.location.href = '?page=features'; return; }
     const p = key.split(':')[1];
     if (!p) return;
-    if (p === '決算調査') setAuditOpen(true);
-    else if (p === '仕訳数') setCountOpen(true);
-    else if (p === '日次調査') setDailyOpen(true);
-    else if (p === '法人印刷') setCorpPrintOpen(true);
-    else setPage(p);
+    // 確認メモから移るときは、開いているモーダルを閉じてから目的の画面を開く
+    // （決算調査を開いたまま日次調査のメモを選ぶと、画面キーが決算調査のままでメモが開けなかった。確認メモ #126）
+    setAuditOpen(p === '決算調査' || p === '法人調査');
+    setCountOpen(p === '仕訳数');
+    setDailyOpen(p === '日次調査');
+    setCorpPrintOpen(p === '法人印刷');
+    if (!MODAL_MENU.includes(p)) setPage(p);
   };
 
   if (!loggedIn) {
