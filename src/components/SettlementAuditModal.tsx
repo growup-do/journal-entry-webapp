@@ -12,7 +12,7 @@ import { PreviewModal } from './PrintCenter';
 import { Notice, btn as uiBtn } from './ui';
 import { AUDIT_EXPLANATIONS, AUDIT_ITEMS, displayName } from '../data';
 import { isViewOnly, setSession, useSession } from '../store/session';
-import { AuditItemDialog } from './AuditItemDialog';
+import { AuditChecklist, AuditItemDialog } from './AuditItemDialog';
 
 type Status = '未調査' | '調査中' | 'OK' | '要調査' | 'スキップ';
 const STATES: Status[] = ['未調査', '調査中', 'OK', '要調査', 'スキップ'];
@@ -244,25 +244,13 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
     </Modal>
 
     {/* 決算チェック設定：表示中の区分／法人全体で、それぞれの設定を表示・変更する（確認メモ #124）。参照のみ権限は表示だけ（#118） */}
-    <Modal open={settings} onClose={() => setSettings(false)} width={760} title="決算チェック設定">
+    <Modal open={settings} onClose={() => setSettings(false)} width={1080} title={corpTab === '区分' ? '決算チェック設定' : '法人決算チェック設定'}>
       <div style={{ padding: '12px 22px 18px' }} data-audit-settings={corpTab}>
-        <div role="tablist" style={{ display: 'flex', gap: 4, marginBottom: 10 }}>{(['区分', '法人'] as const).map((t) => <button key={t} type="button" role="tab" aria-selected={corpTab === t} onClick={() => setCorpTab(t)} style={uiBtn(corpTab === t ? '#1f7a52' : '#5b6773', corpTab === t, true)}>{t === '区分' ? '決算チェック設定（表示中の区分）' : '法人決算チェック設定（法人全体）'}</button>)}</div>
-        <div style={{ fontSize: 14, color: '#7a8794', marginBottom: 8 }}>
-          <b style={{ color: '#3d4a56', marginRight: 6 }}>{corpTab === '区分' ? `この区分のみ：${s.division}` : '法人全体'}</b>
+        <div style={{ fontSize: 14, color: '#7a8794', marginBottom: 10 }}>
           {viewOnly ? '参照のみの権限のため、設定の変更はできません。項目名をクリックすると設定内容を表示します。' : 'チェックする項目を有効／無効に切り替え、項目名をクリックすると診断用条件式を構成する勘定科目を選択できます。'}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px', maxHeight: 400, overflow: 'auto' }}>
-          {AUDIT_ITEMS.map((it) => {
-            const on = cfgOn(it.no);
-            return (
-              <div key={it.no} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid #f1f4f6' }}>
-                <span style={{ width: 24, fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{String(it.no).padStart(2, '0')}</span>
-                <input type="checkbox" checked={on} disabled={viewOnly} aria-label={`${String(it.no).padStart(2, '0')} ${it.name} を有効にする`} onChange={(e) => setCfgOn(it.no, e.target.checked)} />
-                <button type="button" onClick={() => setItemCfg(it.no)} style={{ flex: 1, textAlign: 'left', border: '1px solid #e2e8ee', background: '#fff', borderRadius: 7, padding: '5px 10px', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', color: on ? '#22303c' : '#9aa5b1' }}>{it.name}</button>
-              </div>
-            );
-          })}
-        </div>
+        {/* 一覧の構成は現行【決算チェックシステム ― 設定】と同じ 3 列（確認メモ #117）。各種設定の「決算チェック設定」と共通 */}
+        <AuditChecklist scope={corpTab} isOn={cfgOn} setOn={setCfgOn} onOpen={setItemCfg} onSwitch={() => setCorpTab(corpTab === '区分' ? '法人' : '区分')} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
           {onNavigate && <button type="button" data-action="設定画面で開く" onClick={() => { setSettings(false); onClose(); onNavigate('決算チェック設定'); }} title="決算調査を閉じて、各種設定の「決算チェック設定」画面へ移動します" style={uiBtn('#1f7a52')}>各種設定の「決算チェック設定」画面で開く ›</button>}
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>{viewOnly ? <button type="button" onClick={() => setSettings(false)} style={uiBtn('#1f7a52', true)}>閉じる</button> : <><button type="button" onClick={() => setSettings(false)} style={uiBtn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { setSettings(false); toast.show('決算チェック設定を保存しました'); }} style={uiBtn('#1f7a52', true)}>OK</button></>}</div>

@@ -24,7 +24,7 @@ const stamp = () => { const d = new Date(); return `${d.getFullYear()}/${pad2(d.
 const waToday = () => { const d = new Date(); return `令和${d.getFullYear() - 2018}年 ${d.getMonth() + 1}月${String(d.getDate()).padStart(2, ' ')}日`; };
 const numOf = (s: string) => parseInt(String(s || '').replace(/[^0-9]/g, ''), 10) || 0;
 
-interface Asset { code: string; name: string; account: string; acquired: string; life: number; cost: number; status: '償却中' | '償却終了' | '対象外'; opening: number; subsidy: number; method: string; qty: number; place?: string; purpose?: string; transferIn?: boolean }
+interface Asset { code: string; name: string; account: string; acquired: string; life: number; cost: number; status: '償却中' | '償却終了' | '対象外'; opening: number; subsidy: number; method: string; qty: number; place?: string; purpose?: string; transferIn?: boolean; depStart?: string; manualRows?: Record<YrTab, MRow[]> }
 const ASSETS: Asset[] = [
   { code: '00001', name: '園舎', account: '建物　－基本財産－', acquired: '昭和54年 4月 1日', life: 47, cost: 27580000, status: '償却中', opening: 4349772, subsidy: 2934626, method: '定額法', qty: 1 },
   { code: '00002', name: '哺乳びん殺菌乾燥保管庫', account: '器具及び備品', acquired: '平成30年 2月 5日', life: 5, cost: 203040, status: '償却終了', opening: 33840, subsidy: 0, method: '定額法', qty: 1 },
@@ -116,6 +116,19 @@ const TABS: { key: Tab; label: string; hint: string }[] = [
 const statusStyle = (st: Asset['status']): CSSProperties => ({ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: st === '償却中' ? '#eaf5ef' : st === '対象外' ? '#f1f4f6' : '#fff1b8', color: st === '償却中' ? '#1f7a52' : st === '対象外' ? '#7a8794' : '#8a6d00', whiteSpace: 'nowrap' });
 /** 経年表示の切替。減価償却・国庫補助金は帳簿価額の推移、償還補助金は未入金額の推移（確認メモ #65） */
 const YR_TABS = ['数量／減価償却', '国庫補助金', '償還補助金'] as const;
+type YrTab = (typeof YR_TABS)[number];
+/** 全項目手入力の 1 年度ぶん。a〜d は 期首帳簿価額・当期増加額・当期減価償却額・当期減少額（償還補助金は a＝期首未入金額、b＝当期入金額）（確認メモ #62） */
+interface MRow { a: number; b: number; c: number; d: number }
+const MAX_YEARS = 80;
+/** 当期の年度（令和8年度） */
+const THIS_FY = 2026;
+const ERA_BASE: Record<string, number> = { 昭和: 1925, 平成: 1988, 令和: 2018 };
+/** 和暦の年月日 → 年度（4月始まり）。読み取れなければ null */
+const fiscalYearOf = (s: string) => { const m = s.match(/(昭和|平成|令和)\s*(元|\d+)\s*年\s*(\d+)\s*月/); if (!m) return null; const y = ERA_BASE[m[1]] + (m[2] === '元' ? 1 : Number(m[2])); return Number(m[3]) <= 3 ? y - 1 : y; };
+const fyLabel = (y: number) => { const [era, base] = y >= 2019 ? ['令和', 2018] as const : y >= 1989 ? ['平成', 1988] as const : ['昭和', 1925] as const; return `${era}${y - base === 1 ? '元' : y - base}年度`; };
+const blankRows = (): MRow[] => Array.from({ length: MAX_YEARS }, () => ({ a: 0, b: 0, c: 0, d: 0 }));
+/** 期末帳簿価額（償還補助金は期末未入金額） */
+const endOf = (r: MRow, redeemTab: boolean) => (redeemTab ? r.a - r.b : r.a + r.b - r.c - r.d);
 // 見出しは2行に分けて表示する（列の幅を金額に合わせるため）
 const YR_HEAD_BOOK = ['年度', '期首\n帳簿価額', '当期\n増加額', '当期\n減価償却額', '当期\n減少額', '期末\n帳簿価額', '減価償却\n累計額', '期末\n取得原価'];
 const YR_HEAD_REDEEM = ['年度', '期首\n未入金額', '当期\n入金額', '期末\n未入金額'];
@@ -766,6 +779,7 @@ function AssetDetail({ accent, asset, imageSrc, onClose, onEdit, onManual, onPri
       </div>
       <div>
         {row('取得年月日', asset.acquired)}
+        {asset.depStart && row('償却開始年月日', asset.depStart)}
         {row('耐用年数 ／ 償却方法', `${asset.life || '—'}年 ／ ${asset.method}`)}
         {row('取得価額', yen(asset.cost))}
         {row('うち国庫補助金等', yen(asset.subsidy))}
@@ -808,7 +822,8 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
     place: asset?.place ?? '',
     purpose: asset?.purpose ?? '',
     afterLife: true,
-    useStart: false,
+    useStart: !!asset?.depStart,
+    startDate: asset?.depStart ?? '',
     transferNew: false,
   });
   const set = (k: keyof typeof f, v: string | boolean) => setF((s) => ({ ...s, [k]: v }));
@@ -831,44 +846,98 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
   const annual = life && f.method !== '非償却' ? roundBy((cost + capexSum - num(f.residual) - num(f.memo)) / life, rounding.dep) : 0;
   const opening = asset ? asset.opening : 0;
   const c = Math.min(annual, Math.max(0, opening + capexSum - num(f.memo)));
-  const [manualVals, setManualVals] = useState({ A: opening, B: 0, C: c, D: 0 });
-  const A = manual ? manualVals.A : opening;
-  const B = manual ? manualVals.B : (asset ? 0 : cost) + capexSum;
-  const C = manual ? manualVals.C : asset ? c : 0;
-  const dispQty = partial ? partial.qty : f.disposal !== '設定なし' ? qty : 0;
-  const D = manual ? manualVals.D : dispQty && qty ? Math.floor(((A + B - C) * dispQty) / qty) : 0;
-  const E = A + B - C - D;
-  const F = cost + capexSum - E;
-  const G = E + F;
   const sub = num(f.subsidy);
   const redeem = subsidies.reduce((s, r) => s + r.redeem, 0);
   const totalCost = cost + capexSum;
   const subOf = (v: number) => (totalCost ? roundBy((v * sub) / totalCost, rounding.sub) : 0);
   const redeemOf = (v: number) => (totalCost ? roundBy((v * redeem) / totalCost, rounding.sub) : 0);
+  /* 全項目手入力：取得した年度から、すべての年度（最大 80 年）を手入力する（確認メモ #62） */
+  const fy0 = fiscalYearOf(f.acquired) ?? THIS_FY;
+  /** 当期にあたる行（取得した年度を 1 年目として数える） */
+  const curIdx = Math.min(MAX_YEARS - 1, Math.max(0, THIS_FY - fy0));
+  const [mRows, setMRows] = useState<Record<YrTab, MRow[]>>(() => {
+    if (asset?.manualRows) return asset.manualRows;
+    const r: Record<YrTab, MRow[]> = { '数量／減価償却': blankRows(), '国庫補助金': blankRows(), '償還補助金': blankRows() };
+    if (asset) { r['数量／減価償却'][curIdx] = { a: opening, b: 0, c, d: 0 }; r['国庫補助金'][curIdx] = { a: subOf(opening), b: 0, c: subOf(c), d: 0 }; }
+    return r;
+  });
+  /** 「＋ 1年追加」で足した年数 */
+  const [extraYears, setExtraYears] = useState(0);
+  const mCount = Math.min(MAX_YEARS, Math.max(life, curIdx + 1, 1) + extraYears);
+  const setCell = (tab: YrTab, y: number, k: keyof MRow, v: number) => setMRows((s) => ({ ...s, [tab]: s[tab].map((r, i) => (i === y ? { ...r, [k]: v } : r)) }));
+  const accTo = (tab: YrTab, y: number) => mRows[tab].slice(0, y + 1).reduce((s, r) => s + r.c, 0);
+  const cur = mRows['数量／減価償却'][curIdx];
+  const A = manual ? cur.a : opening;
+  const B = manual ? cur.b : (asset ? 0 : cost) + capexSum;
+  const C = manual ? cur.c : asset ? c : 0;
+  const dispQty = partial ? partial.qty : f.disposal !== '設定なし' ? qty : 0;
+  const D = manual ? cur.d : dispQty && qty ? Math.floor(((A + B - C) * dispQty) / qty) : 0;
+  const E = A + B - C - D;
+  const F = manual ? accTo('数量／減価償却', curIdx) : cost + capexSum - E;
+  const G = E + F;
   /** 経年表示の行（取得した年度から、耐用年数の年度まで） */
   const yrHead = yrTab === '償還補助金' ? YR_HEAD_REDEEM : YR_HEAD_BOOK;
-  const yrRows = () => {
-    const empty = (msg: string) => <tr><td colSpan={yrHead.length} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 24 }}>{msg}</td></tr>;
-    if (!cost || !life || f.method === '非償却') return empty('取得価額と耐用年数を入力すると年度ごとの推移を表示します。');
-    const years = Math.min(life, 80);
-    const cell = (v: number, bold = false) => <td style={{ ...NUM, padding: '8px 8px', fontWeight: bold ? 700 : 400, whiteSpace: 'nowrap' }}>{yen(v)}</td>;
-    if (yrTab === '償還補助金') {
-      if (!redeem) return empty('償還補助金は設定されていません（「補助金設定」で、うち償還補助金額を入力します）。');
-      const per = Math.floor(redeem / years); let rest = redeem;
-      return Array.from({ length: years }, (_, y) => { const pay = y === years - 1 ? rest : per; const open = rest; rest -= pay; return <tr key={y}><td style={{ ...TD, padding: '8px 8px', whiteSpace: 'nowrap' }}>{y + 1}年目</td>{cell(open)}{cell(pay)}{cell(rest, true)}</tr>; });
-    }
-    const isSub = yrTab === '国庫補助金';
-    if (isSub && !sub) return empty('国庫補助金等は設定されていません（「補助金設定」で入力します）。');
-    let book = 0; let bal = 0; let acc = 0;
-    return Array.from({ length: years }, (_, y) => {
+  /** 自動計算の年度ごとの値（取得した年度から、耐用年数の年度まで） */
+  const autoYears = Math.min(life, MAX_YEARS);
+  const autoBook = (isSub: boolean): MRow[] => {
+    let book = 0; let bal = 0;
+    return Array.from({ length: autoYears }, (_, y) => {
       // 固定資産そのものの当期減価償却額（国庫補助金は、これに比例して取り崩す）
       const assetOpen = book + (y === 0 ? totalCost : 0);
       const assetDep = Math.max(0, Math.min(annual, assetOpen - num(f.memo)));
       book = assetOpen - assetDep;
-      const inc = y === 0 ? (isSub ? sub : totalCost) : 0;
-      const dep = isSub ? subOf(assetDep) : assetDep;
-      const open = bal; bal = open + inc - dep; acc += dep;
-      return <tr key={y}><td style={{ ...TD, padding: '8px 8px', whiteSpace: 'nowrap' }}>{y + 1}年目</td>{cell(open)}{cell(inc)}{cell(dep)}{cell(0)}{cell(bal, true)}{cell(acc)}{cell(isSub ? sub : totalCost)}</tr>;
+      const row: MRow = { a: bal, b: y === 0 ? (isSub ? sub : totalCost) : 0, c: isSub ? subOf(assetDep) : assetDep, d: 0 };
+      bal = row.a + row.b - row.c;
+      return row;
+    });
+  };
+  const autoRedeem = (): MRow[] => { const per = Math.floor(redeem / autoYears); let rest = redeem; return Array.from({ length: autoYears }, (_, y) => { const b = y === autoYears - 1 ? rest : per; const a = rest; rest -= b; return { a, b, c: 0, d: 0 }; }); };
+  const yrCell = (v: number, bold = false, bg?: string) => <td style={{ ...NUM, padding: '8px 8px', fontWeight: bold ? 700 : 400, whiteSpace: 'nowrap', color: v < 0 ? '#c0392b' : undefined, background: bg }}>{yen(v)}</td>;
+  const yrRows = () => {
+    const empty = (msg: string) => <tr><td colSpan={yrHead.length} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 24 }}>{msg}</td></tr>;
+    if (!cost || !life || f.method === '非償却') return empty('取得価額と耐用年数を入力すると年度ごとの推移を表示します。');
+    const yearTd = (y: number) => <td style={{ ...TD, padding: '8px 8px', whiteSpace: 'nowrap' }}>{y + 1}年目</td>;
+    if (yrTab === '償還補助金') {
+      if (!redeem) return empty('償還補助金は設定されていません（「補助金設定」で、うち償還補助金額を入力します）。');
+      return autoRedeem().map((r, y) => <tr key={y}>{yearTd(y)}{yrCell(r.a)}{yrCell(r.b)}{yrCell(r.a - r.b, true)}</tr>);
+    }
+    const isSub = yrTab === '国庫補助金';
+    if (isSub && !sub) return empty('国庫補助金等は設定されていません（「補助金設定」で入力します）。');
+    let acc = 0;
+    return autoBook(isSub).map((r, y) => { acc += r.c; return <tr key={y}>{yearTd(y)}{yrCell(r.a)}{yrCell(r.b)}{yrCell(r.c)}{yrCell(0)}{yrCell(r.a + r.b - r.c, true)}{yrCell(acc)}{yrCell(isSub ? sub : totalCost)}</tr>; });
+  };
+  /* ---- 全項目手入力の表（確認メモ #62） ---- */
+  /** 選択中の表に、自動計算の値を入れる（耐用年数ぶん。それより後の年度は入力したまま残す） */
+  const fillAuto = () => {
+    if (!cost || !life || f.method === '非償却') return toast('取得価額と耐用年数を入力すると、自動計算の値を入れられます');
+    if (yrTab === '償還補助金' && !redeem) return toast('償還補助金が設定されていません（「補助金設定」で入力します）');
+    if (yrTab === '国庫補助金' && !sub) return toast('国庫補助金等が設定されていません（「補助金設定」で入力します）');
+    const src = yrTab === '償還補助金' ? autoRedeem() : autoBook(yrTab === '国庫補助金');
+    setMRows((s) => ({ ...s, [yrTab]: s[yrTab].map((r, i) => src[i] ?? r) }));
+    toast(`「${yrTab}」の表に、自動計算の値を ${src.length} 年ぶん入れました`);
+  };
+  /** Enter で次の欄へ（行の最後なら次の年度の先頭へ）。変換確定の Enter は無視する */
+  const mEnter = (e: KeyboardEvent<HTMLInputElement>, y: number, ki: number, n: number) => {
+    if (e.key !== 'Enter' || noIme(e)) return;
+    e.preventDefault();
+    const [ny, nk] = ki + 1 < n ? [y, ki + 1] : [y + 1, 0];
+    document.querySelector<HTMLInputElement>(`[data-m="${ny}-${nk}"]`)?.focus();
+  };
+  const manualRowsView = () => {
+    const redeemTab = yrTab === '償還補助金';
+    const keys: (keyof MRow)[] = redeemTab ? ['a', 'b'] : ['a', 'b', 'c', 'd'];
+    let acc = 0;
+    return mRows[yrTab].slice(0, mCount).map((r, y) => {
+      const end = endOf(r, redeemTab); acc += r.c;
+      const isCur = y === curIdx;
+      const bg = isCur ? '#fff7dc' : '#fff';
+      return (
+        <tr key={y} data-m-row={y} data-m-cur={isCur ? '1' : undefined}>
+          <td style={{ ...TD, padding: '4px 8px', whiteSpace: 'nowrap', position: 'sticky', left: 0, zIndex: 1, background: bg, lineHeight: 1.3 }}>{y + 1}年目<div style={{ fontSize: 12, color: isCur ? '#8a6d00' : '#8290a0', fontWeight: isCur ? 700 : 400 }}>{fyLabel(fy0 + y)}{isCur && '（当期）'}</div></td>
+          {keys.map((k, ki) => <td key={k} style={{ ...NUM, padding: '3px 4px', background: bg }}><input className="field-input" data-m={`${y}-${ki}`} value={r[k] ? yen(r[k]) : ''} placeholder="0" onChange={(e) => setCell(yrTab, y, k, num(e.target.value))} onFocus={(e) => e.target.select()} onKeyDown={(e) => mEnter(e, y, ki, keys.length)} inputMode="numeric" style={{ ...numIn, padding: '5px 6px', width: 100 }} /></td>)}
+          {yrCell(end, true, bg)}{!redeemTab && yrCell(acc, false, bg)}{!redeemTab && yrCell(end + acc, false, bg)}
+        </tr>
+      );
     });
   };
 
@@ -879,21 +948,29 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
   const box: CSSProperties = { border: '1px solid #f0c8cc', background: '#fff5f6', borderRadius: 10, padding: 12 };
   const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '7px 12px', borderRadius: 7, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
   const tag = (t: string) => <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 6, background: '#e8f0fb', color: '#2c5f9e', whiteSpace: 'nowrap' }}>{t}</span>;
-  const current = (): Asset => ({ code: f.code, name: f.name.trim() || '（未入力）', account: f.account, acquired: f.acquired, life, cost: totalCost, status: f.method === '非償却' || !life ? '対象外' : E <= num(f.memo) ? '償却終了' : '償却中', opening: E, subsidy: sub, method: f.method, qty, place: f.place, purpose: f.purpose, transferIn: asset?.transferIn || f.transferNew });
+  const current = (): Asset => ({ code: f.code, name: f.name.trim() || '（未入力）', account: f.account, acquired: f.acquired, life, cost: totalCost, status: f.method === '非償却' || !life ? '対象外' : E <= num(f.memo) ? '償却終了' : '償却中', opening: E, subsidy: sub, method: f.method, qty, place: f.place, purpose: f.purpose, transferIn: asset?.transferIn || f.transferNew, depStart: f.useStart && f.startDate.trim() ? f.startDate.trim() : undefined, manualRows: manual ? mRows : asset?.manualRows });
   const save = () => {
     if (!f.name.trim()) return toast('資産名称を入力してください');
     if (!cost) return toast('取得価額（数量×単価）を入力してください');
     if (f.method !== '非償却' && !life) return toast('耐用年数を入力してください');
     if (f.disposal !== '設定なし' && !f.disposalDate) return toast('処分年月日を入力してください');
+    if (f.useStart && !f.startDate.trim()) return toast('償却開始年月日を入力してください');
     const notes = [calcChange && `計算変更：${calcChange.reason}`, capex.length && `資本的支出 ${yen(capexSum)}`, partial && `一部${partial.proc} ${partial.qty}/${qty}`, f.disposal !== '設定なし' && `${f.disposal} ${f.disposalDate}`].filter(Boolean).join('、');
     onSave(current(), notes || undefined);
   };
   const disabledBg = (on: boolean): CSSProperties => ({ background: on ? '#fff' : '#f5f7f9' });
+  // 償却計算表の 国庫補助金等／うち償還補助金。全項目手入力では、国庫補助金の表の当期の行を出す
+  const sc = mRows['国庫補助金'][curIdx];
+  const scE = endOf(sc, false);
+  const scF = accTo('国庫補助金', curIdx);
+  const redeemPart = (v: number) => (sub ? roundBy((v * redeem) / sub, rounding.sub) : 0);
+  const subRow = manual ? [sc.a, sc.b, sc.c, sc.d, scE, scF, scE + scF] : [subOf(A), subOf(B), subOf(C), subOf(D), subOf(E), subOf(F), sub];
+  const redeemRow = manual ? [sc.a, sc.b, sc.c, sc.d, scE].map(redeemPart) : [A, B, C, D, E].map(redeemOf);
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(300px,1fr)', gap: 0 }}>
       <div style={{ padding: 18, borderRight: '1px solid #eef2f5', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {manual && <div style={{ padding: '8px 12px', background: '#fff1b8', borderRadius: 8, fontSize: 14, color: '#8a6d00', fontWeight: 700 }}>全項目手入力：自動計算を行わず、期首帳簿価額・当期増加額・当期減価償却額・当期減少額を直接入力します。</div>}
+        {manual && <div style={{ padding: '8px 12px', background: '#fff1b8', borderRadius: 8, fontSize: 14, color: '#8a6d00', fontWeight: 700, lineHeight: 1.6 }}>全項目手入力：自動計算を行わず、取得した年度からすべての年度（最大 {MAX_YEARS} 年）の金額を、右の表に直接入力します。下の償却計算表は、当期（{fyLabel(THIS_FY)}）の行と同じ値です。</div>}
         <div style={box}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
             <div><span style={lbl}>資産コード</span><input className="field-input" value={f.code} onChange={(e) => set('code', e.target.value)} style={{ ...input, background: '#fff9c4', fontWeight: 700 }} /></div>
@@ -901,9 +978,12 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
             <div><span style={lbl}>科目</span><select value={f.account} onChange={(e) => set('account', e.target.value)} style={input}>{FA_ACCOUNTS.map((o) => <option key={o}>{o}</option>)}</select></div>
             <div style={{ gridColumn: 'span 2' }}><span style={lbl}>資産名称</span><input className="field-input ring" value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="例：調理室エアコン" style={input} /></div>
             <div><span style={lbl}>取得年月日</span><input className="field-input" value={f.acquired} onChange={(e) => set('acquired', e.target.value)} style={input} /></div>
-            <div style={{ gridColumn: 'span 3', display: 'flex', alignItems: 'center', gap: 14, fontSize: 14 }}>
-              <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={f.useStart} onChange={() => set('useStart', !f.useStart)} />償却開始年月日を使用する</label>
-              <span style={{ color: '#9aa5b1' }}>（償却開始年月日：{f.useStart ? '入力可' : '取得年月日と同じ'}）</span>
+            {/* 「償却開始年月日を使用する」を入れると、年月日の入力欄を別枠で出す（確認メモ #64） */}
+            <div style={{ gridColumn: 'span 3', display: 'flex', alignItems: 'center', gap: 14, fontSize: 14, flexWrap: 'wrap', minHeight: 44 }}>
+              <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={f.useStart} onChange={() => setF((s) => ({ ...s, useStart: !s.useStart, startDate: s.startDate || s.acquired }))} data-use-start />償却開始年月日を使用する</label>
+              {f.useStart
+                ? <div data-dep-start style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px', border: '1px solid #e6c36a', background: '#fffbea', borderRadius: 8 }}><span style={{ fontSize: 12, fontWeight: 700, color: '#8a6d00', whiteSpace: 'nowrap' }}>償却開始年月日</span><input className="field-input ring" value={f.startDate} onChange={(e) => set('startDate', e.target.value)} placeholder="令和　年　月　日" style={{ ...input, width: 170 }} /></div>
+                : <span style={{ color: '#9aa5b1' }}>（償却開始年月日：取得年月日と同じ）</span>}
             </div>
             <div><span style={lbl}>耐用年数</span><div style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input className="field-input" value={f.life} onChange={(e) => set('life', e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" style={{ ...numIn, width: 70 }} /><span style={{ fontSize: 14 }}>年</span><button type="button" className="btn-outline" onClick={() => setDlg('life')} style={btn()}>辞書</button></div></div>
             <div><span style={lbl}>償却方法</span><select value={f.method} onChange={(e) => set('method', e.target.value)} style={input}>{['定額法', '旧定額法', 'リース定額法', '非償却'].map((o) => <option key={o}>{o}</option>)}</select></div>
@@ -968,11 +1048,11 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
             <tbody>
               <tr>
                 <td style={{ ...TD, fontWeight: 700 }}>取得価額</td>
-                {(['A', 'B', 'C', 'D'] as const).map((k) => <td key={k} style={NUM}>{manual ? <input className="field-input" value={yen(manualVals[k])} onChange={(e) => setManualVals({ ...manualVals, [k]: num(e.target.value) })} inputMode="numeric" style={{ ...numIn, width: 110 }} /> : yen({ A, B, C, D }[k])}</td>)}
+                {(['A', 'B', 'C', 'D'] as const).map((k) => <td key={k} style={NUM}>{manual ? <input className="field-input" data-cur={k} value={yen({ A, B, C, D }[k])} onChange={(e) => setCell('数量／減価償却', curIdx, ({ A: 'a', B: 'b', C: 'c', D: 'd' } as const)[k], num(e.target.value))} inputMode="numeric" style={{ ...numIn, width: 110 }} /> : yen({ A, B, C, D }[k])}</td>)}
                 <td style={{ ...NUM, fontWeight: 700 }}>{yen(E)}</td><td style={NUM}>{yen(F)}</td><td style={NUM}>{yen(G)}</td>
               </tr>
-              <tr><td style={TD}>国庫補助金等の額</td><td style={NUM}>{yen(subOf(A))}</td><td style={NUM}>{yen(subOf(B))}</td><td style={NUM}>{yen(subOf(C))}</td><td style={NUM}>{yen(subOf(D))}</td><td style={NUM}>{yen(subOf(E))}</td><td style={NUM}>{yen(subOf(F))}</td><td style={NUM}>{yen(sub)}</td></tr>
-              <tr><td style={{ ...TD, color: '#7a8794' }}>（うち償還補助金の額）</td><td style={NUM}>{yen(redeemOf(A))}</td><td style={NUM}>{yen(redeemOf(B))}</td><td style={NUM}>{yen(redeemOf(C))}</td><td style={NUM}>{yen(redeemOf(D))}</td><td style={NUM}>{yen(redeemOf(E))}</td><td style={NUM} /><td style={NUM} /></tr>
+              <tr><td style={TD}>国庫補助金等の額</td>{subRow.map((v, k) => <td key={k} style={NUM}>{yen(v)}</td>)}</tr>
+              <tr><td style={{ ...TD, color: '#7a8794' }}>（うち償還補助金の額）</td>{redeemRow.map((v, k) => <td key={k} style={NUM}>{yen(v)}</td>)}<td style={NUM} /><td style={NUM} /></tr>
             </tbody>
           </table>
         </div>
@@ -986,18 +1066,30 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
         </div>
       </div>
 
-      {/* 右：経年表示。減価償却・国庫補助金は 期首帳簿価額〜期末取得原価、償還補助金は 未入金額の推移（確認メモ #65） */}
+      {/* 右：経年表示。減価償却・国庫補助金は 期首帳簿価額〜期末取得原価、償還補助金は 未入金額の推移（確認メモ #65）。全項目手入力では、年度ごとの入力表になる（確認メモ #62） */}
       <div style={{ padding: 16, minWidth: 0 }} data-yr-view>
-        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>選択中の固定資産　経年表示</div>
-        <div style={{ display: 'flex', gap: 10, fontSize: 14, marginBottom: 8, flexWrap: 'wrap' }}>{YR_TABS.map((t) => <label key={t} style={{ display: 'flex', gap: 4, alignItems: 'center' }}><input type="radio" name="yr" checked={yrTab === t} onChange={() => setYrTab(t)} data-yr-tab={t} />{t}</label>)}</div>
-        <div style={{ overflow: 'auto', maxHeight: 560, border: '1px solid #e2e8ee', borderRadius: 8 }}>
-          <table style={{ width: '100%', minWidth: yrTab === '償還補助金' ? 380 : 640, borderCollapse: 'collapse' }}>
-            <thead><tr>{yrHead.map((h, k) => <th key={h} style={{ ...TH, padding: '8px 8px', textAlign: k ? 'right' : 'left', whiteSpace: 'pre', lineHeight: 1.35, verticalAlign: 'bottom', position: 'sticky', top: 0, zIndex: 1 }}>{h}</th>)}</tr></thead>
-            <tbody>{yrRows()}</tbody>
+        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>{manual ? `全項目手入力　年度ごとの入力（${mCount} 年ぶんを表示。最大 ${MAX_YEARS} 年）` : '選択中の固定資産　経年表示'}</div>
+        <div style={{ display: 'flex', gap: 10, fontSize: 14, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          {YR_TABS.map((t) => <label key={t} style={{ display: 'flex', gap: 4, alignItems: 'center' }}><input type="radio" name="yr" checked={yrTab === t} onChange={() => setYrTab(t)} data-yr-tab={t} />{t}</label>)}
+          {manual && <button type="button" className="btn-outline" onClick={fillAuto} style={{ ...btn(), marginLeft: 'auto', padding: '5px 10px' }}>自動計算の値を入れる</button>}
+        </div>
+        <div style={{ overflow: 'auto', maxHeight: manual ? 520 : 560, border: '1px solid #e2e8ee', borderRadius: 8 }}>
+          <table style={{ width: '100%', minWidth: manual ? (yrTab === '償還補助金' ? 440 : 800) : yrTab === '償還補助金' ? 380 : 640, borderCollapse: 'collapse' }}>
+            <thead><tr>{yrHead.map((h, k) => <th key={h} style={{ ...TH, padding: '8px 8px', textAlign: k ? 'right' : 'left', whiteSpace: 'pre', lineHeight: 1.35, verticalAlign: 'bottom', position: 'sticky', top: 0, zIndex: k ? 1 : 3, ...(k ? {} : { left: 0 }) }}>{h}</th>)}</tr></thead>
+            <tbody>{manual ? manualRowsView() : yrRows()}</tbody>
           </table>
         </div>
+        {manual && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
+            <button type="button" className="btn-outline" disabled={mCount >= MAX_YEARS} onClick={() => setExtraYears((n) => n + 1)} style={{ ...btn(), padding: '5px 10px', opacity: mCount >= MAX_YEARS ? 0.5 : 1 }}>＋ 1年追加</button>
+            <button type="button" className="btn-outline" disabled={mCount >= MAX_YEARS} onClick={() => setExtraYears(MAX_YEARS)} style={{ ...btn(), padding: '5px 10px', opacity: mCount >= MAX_YEARS ? 0.5 : 1 }}>{MAX_YEARS}年まで表示</button>
+            <span style={{ fontSize: 12, color: '#7a8794' }}>Enter で次の欄へ進みます。</span>
+          </div>
+        )}
         <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 6, lineHeight: 1.7 }}>
-          {yrTab === '償還補助金' ? '償還補助金の入金額は、耐用年数で均等に入金する見込みとして表示しています（プロトタイプのサンプル）。' : yrTab === '国庫補助金' ? '国庫補助金等の取崩額は、固定資産の当期減価償却額に比例して計算しています。' : '取得した年度から耐用年数の年度までを表示します。'}
+          {manual
+            ? `取得した年度から、年度ごとに金額を入力します。${yrTab === '償還補助金' ? '期末未入金額' : '期末帳簿価額・減価償却累計額・期末取得原価'}は、入力した金額から表示します。色のついた行が当期（${fyLabel(THIS_FY)}）で、左の償却計算表と同じ値です。「自動計算の値を入れる」は、選択中の表の耐用年数ぶんを上書きします。`
+            : yrTab === '償還補助金' ? '償還補助金の入金額は、耐用年数で均等に入金する見込みとして表示しています（プロトタイプのサンプル）。' : yrTab === '国庫補助金' ? '国庫補助金等の取崩額は、固定資産の当期減価償却額に比例して計算しています。' : '取得した年度から耐用年数の年度までを表示します。'}
         </div>
       </div>
 

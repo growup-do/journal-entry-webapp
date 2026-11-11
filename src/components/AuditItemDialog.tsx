@@ -10,7 +10,7 @@ import { Modal } from './Modal';
 import { btn } from './ui';
 import { AUDIT_ITEMS } from '../data';
 import { ACCOUNT_META } from '../lib/accounts';
-import { divisionLabel, isViewOnly, useSession, type DivisionNode } from '../store/session';
+import { divisionLabel, flattenDivisions, isViewOnly, useSession, type DivisionNode } from '../store/session';
 
 export type AuditScope = '区分' | '法人';
 interface Acct { code: string; name: string }
@@ -85,6 +85,65 @@ export function useAuditSummary(scope: AuditScope) {
     const v = paramOf(s, scope, no);
     return `対象科目 ${n} 件${pr ? `　／　${pr.unit === '円' ? v.toLocaleString('ja-JP') + ' 円以上' : v + ' ％'}${pr.fixed ? '（固定）' : ''}` : ''}`;
   };
+}
+
+/* ---------- 項目の一覧（現行【決算チェックシステム ― 設定】と同じ 3 列の並び。確認メモ #117） ----------
+ * 左＝01〜14、中＝15〜19 と説明、右＝20〜28。各項目は「番号・チェック・項目名ボタン」。
+ * 下に、この設定がどの区分に対するものかを示し、法人決算チェック設定との切り替えを置く。
+ * 各種設定の「決算チェック設定」と、決算調査から開く設定画面の両方で使う。 */
+const CHECK_COLS: number[][] = [
+  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+  [15, 16, 17, 18, 19],
+  [20, 21, 22, 23, 24, 25, 26, 27, 28],
+];
+export function AuditChecklist({ scope, isOn, setOn, onOpen, onSwitch, accent = '#1f7a52' }: { scope: AuditScope; isOn: (no: number) => boolean; setOn: (no: number, v: boolean) => void; onOpen: (no: number) => void; onSwitch: () => void; accent?: string }) {
+  const s = useSession();
+  const viewOnly = isViewOnly(s);
+  const summary = useAuditSummary(scope);
+  const node = flattenDivisions(s.tree).find((x) => divisionLabel(x.node) === s.division)?.node;
+  const target = scope === '法人' ? `［法人］ ${s.tree.name}` : `［${node?.kind ?? '合算区分'}］ ${s.division}`;
+  const col = (nos: number[]) => (
+    <div style={{ display: 'grid', gap: 5, alignContent: 'start' }}>
+      {nos.map((no) => {
+        const it = AUDIT_ITEMS.find((a) => a.no === no);
+        if (!it) return null;
+        const on = isOn(no);
+        const nn = String(no).padStart(2, '0');
+        return (
+          <div key={no} data-audit-item={nn} style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+            <span style={{ width: 28, flex: 'none', textAlign: 'right', fontSize: 14, fontVariantNumeric: 'tabular-nums', color: on ? '#3d4a56' : '#9aa5b1' }}>{nn}.</span>
+            <input type="checkbox" checked={on} disabled={viewOnly} onChange={(e) => setOn(no, e.target.checked)} aria-label={`${nn} ${it.name} を有効にする`} style={{ width: 17, height: 17, flex: 'none', accentColor: accent }} />
+            <button type="button" onClick={() => onOpen(no)} title={`${it.name}（${summary(no)}）。クリックで設定内容を${viewOnly ? '表示' : '開く'}`} style={{ flex: 1, minWidth: 0, height: 30, padding: '0 10px', textAlign: 'left', border: '1px solid #d5dde5', background: '#fff', borderRadius: 6, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', color: on ? '#22303c' : '#9aa5b1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.name}</button>
+          </div>
+        );
+      })}
+    </div>
+  );
+  const p: CSSProperties = { margin: 0, fontSize: 14, lineHeight: 1.6, color: '#5b6773' };
+  return (
+    <div data-audit-checklist={scope} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '14px 28px' }}>
+      <div style={{ gridColumn: 1, gridRow: '1 / span 2' }}>{col(CHECK_COLS[0])}</div>
+      <div style={{ gridColumn: 2, gridRow: 1, display: 'grid', gap: 12, alignContent: 'start' }}>
+        {col(CHECK_COLS[1])}
+        <div style={{ display: 'grid', gap: 6 }}>
+          <p style={p}>01〜14、18〜19 は会計システムのデータ同士を比較してチェックするものです。15〜17 は減価償却システムのデータと会計システムのデータを比較してチェックするものです。</p>
+          <p style={p}>減価償却データの指定は「法人・区分」の設定で行います。各項目の具体的な内容は、項目名のボタンをクリックしてください。</p>
+          <p style={p}>各項目で使っている科目の区分コードを変更した場合は、再設定を行ってください。</p>
+        </div>
+      </div>
+      <div style={{ gridColumn: 3, gridRow: 1 }}>{col(CHECK_COLS[2])}</div>
+      <div data-audit-target style={{ gridColumn: '2 / span 2', gridRow: 2, alignSelf: 'end', display: 'grid', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#3d4a56' }}>
+          <span aria-hidden style={{ width: 22, height: 22, flex: 'none', borderRadius: 999, background: '#2c6fbd', color: '#fff', fontSize: 14, fontWeight: 800, fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>i</span>
+          この画面のチェックボックスの設定は、以下の{scope === '区分' ? '区分のみ' : '法人全体'}に対する設定となります。
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ flex: 1, minWidth: 0, padding: '6px 12px', background: '#f1f4f6', border: '1px solid #e2e8ee', borderRadius: 6, fontSize: 14, fontWeight: 700, color: '#22303c' }}>{target}</div>
+          <button type="button" data-action="対象切替" onClick={onSwitch} style={btn(accent)}>{scope === '区分' ? '法人決算チェック設定' : '区分の決算チェック設定に戻る'}</button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /* ---------- データ範囲確認の図 ---------- */

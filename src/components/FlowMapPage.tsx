@@ -90,7 +90,7 @@ const NODES: Node[] = [
   N('daily', '日次調査', 'modal', 'audit', { open: '日次調査', note: '日ごとに OK 同額／不一致を表示。不一致日で停止 → 伝票表示（原因の伝票に印）／検査継続' }),
   N('auditm', '決算チェック（決算調査）', 'modal', 'audit', { open: '決算調査', note: '28項目・5状態' }),
   N('auditexp', '説明／結果詳細／トレース', 'dialog', 'audit', { open: '決算調査' }),
-  N('auditset', '決算チェック設定', 'page', 'audit', { open: '決算チェック設定' }),
+  N('auditset', '決算チェック設定', 'page', 'audit', { open: '決算チェック設定', note: '現行と同じ 3 列の一覧。項目名ボタンで項目ごとの設定、「法人決算チェック設定」ボタンで法人全体の設定に切替' }),
   N('auditrange', 'データ範囲確認 → 項目ごとの設定', 'dialog', 'audit', { open: '決算チェック設定', note: '設定先の区分を確認 → 条件式と要素ごとの科目' }),
   // グラフ
   N('ygraph', '経年グラフ', 'page', 'trend', { open: '経年グラフ' }),
@@ -111,7 +111,7 @@ const NODES: Node[] = [
   N('pettyrow', '明細の挿入・編集', 'modal', 'option', { open: '小口現金', note: '行の右の「挿入」「編集」。集計済みの行は不可' }),
   N('pettyset', '小口の設定', 'modal', 'option', { open: '小口現金', note: '項目は仮の案' }),
   N('pettydenom', '金銭残高金種別表', 'modal', 'option', { open: '小口現金', note: '日付ごとの紙幣・硬貨の枚数。帳簿残高との差額' }),
-  N('dep', '減価償却', 'page', 'option', { open: '減価償却' }),
+  N('dep', '減価償却', 'page', 'option', { open: '減価償却', note: '固定資産台帳の詳細から 変更／全項目手入力（年度ごとに最大 80 年を手入力）を開く' }),
   N('bank', '預金出納帳', 'page', 'option', { open: '預金出納' }),
   N('bankswitch', '区分の切替（出納帳の追加）', 'modal', 'option', { open: '預金出納', note: '「＋出納帳追加」で出納帳を追加' }),
   N('receipt', '伺い書（収入・支出調書）', 'page', 'option', { open: '収入支出', note: '「印刷」で出力先（プリンター／Excel／PDF）を選ぶ' }),

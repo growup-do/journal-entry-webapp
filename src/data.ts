@@ -427,7 +427,7 @@ export const BS_ASSET_ROWS: HierRow[] = [
   { name: 'ソフトウェア', level: 2, v: [0, 0, 350000, 340000] },
 ];
 
-/** 予算対比（資金の部・収入）サンプル。v = [現額予算, 実績額] */
+/** 予算対比（資金の部）サンプル。v = [現額予算, 実績額]。事業活動の収入 */
 export const BUDGET_ROWS: HierRow[] = [
   { name: '保育事業収入', level: 0 },
   { name: '委託費収入', level: 1 },
@@ -451,6 +451,56 @@ export const BUDGET_ROWS: HierRow[] = [
   { name: '障害児保育事業補助金', level: 4, v: [0, 0] },
   { name: 'その他の補助金収入', level: 3, v: [280000, 0] },
 ];
+
+/** 予算対比：事業活動の支出（サンプル） */
+const BUDGET_EXPENSE_ROWS: HierRow[] = [
+  { name: '人件費支出', level: 0 },
+  { name: '職員給料支出', level: 1, v: [19200000, 7900000] },
+  { name: '職員賞与支出', level: 1, v: [4800000, 1600000] },
+  { name: '非常勤職員給与支出', level: 1, v: [3600000, 1450000] },
+  { name: '法定福利費支出', level: 1, v: [4100000, 1560000] },
+  { name: '事業費支出', level: 0 },
+  { name: '給食費支出', level: 1, v: [2400000, 1150000] },
+  { name: '保育材料費支出', level: 1, v: [900000, 380000] },
+  { name: '水道光熱費支出', level: 1, v: [1200000, 520000] },
+  { name: '消耗器具備品費支出', level: 1, v: [600000, 210000] },
+  { name: '事務費支出', level: 0 },
+  { name: '福利厚生費支出', level: 1, v: [300000, 96000] },
+  { name: '通信運搬費支出', level: 1, v: [240000, 118000] },
+  { name: '業務委託費支出', level: 1, v: [960000, 480000] },
+  { name: '手数料支出', level: 1, v: [120000, 52000] },
+];
+
+/** 予算対比：資金収支の 3 つの区分（確認メモ #137）。区分ごとに 収入計・支出計・資金収支差額 の集計行が付く。金額はサンプル */
+export const BUDGET_SECTIONS: { name: string; income: HierRow[]; expense: HierRow[] }[] = [
+  { name: '事業活動', income: BUDGET_ROWS, expense: BUDGET_EXPENSE_ROWS },
+  {
+    name: '施設整備等',
+    income: [
+      { name: '施設整備等補助金収入', level: 0 },
+      { name: '設備資金借入金元金償還補助金収入', level: 1, v: [500000, 0] },
+    ],
+    expense: [
+      { name: '固定資産取得支出', level: 0 },
+      { name: '器具及び備品取得支出', level: 1, v: [1200000, 640000] },
+    ],
+  },
+  {
+    name: 'その他の活動',
+    income: [
+      { name: '積立資産取崩収入', level: 0 },
+      { name: '備品等購入積立資産取崩収入', level: 1, v: [700000, 0] },
+    ],
+    expense: [
+      { name: '積立資産支出', level: 0 },
+      { name: '人件費積立資産支出', level: 1, v: [600000, 0] },
+      { name: '修繕積立資産支出', level: 1, v: [400000, 0] },
+    ],
+  },
+];
+/** 予算対比：予備費支出 と 前期末支払資金残高。[現額予算, 実績額]（サンプル。前期末支払資金は日次調査と同じ額） */
+export const BUDGET_RESERVE: [number, number] = [500000, 0];
+export const BUDGET_PREV_BALANCE: [number, number] = [9800000, 9800000];
 
 /** 仕訳数（月別）。日記帳のサンプル仕訳から集計：[合計, 単一, 伝票, (うち特摘), 振替, 振単] */
 const countOf = (m: string) => {

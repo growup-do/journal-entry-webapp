@@ -12,7 +12,7 @@ import { Field, Notice, SettingsShell, Steps, Tabs, Toggle, btn, card, cardHead,
 import { ACCOUNT_META } from '../lib/accounts';
 import { AUDIT_ITEMS, SERVICES, displayName } from '../data';
 import { isViewOnly, setSession, useSession } from '../store/session';
-import { AuditItemDialog, useAuditSummary } from './AuditItemDialog';
+import { AuditChecklist, AuditItemDialog } from './AuditItemDialog';
 
 export interface MaintenancePageProps { variant: 'form' | 'sheet'; accent: string; /** 関連画面へ移動する（未指定のときは案内のみ表示） */ onNavigate?: (page: string) => void }
 
@@ -289,12 +289,6 @@ export function FinancialAnalysisSettingsPage({ variant, accent, onNavigate }: M
 /* ======================================================================
  * 決算チェック設定（図52）：28 項目の有効／無効と、項目ごとの設定
  * ==================================================================== */
-const AUDIT_GROUPS: { label: string; note: string; nos: number[] }[] = [
-  { label: '会計データ同士の比較', note: '会計システムのデータ同士を比較してチェックします（01〜14、18〜19）', nos: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 18, 19] },
-  { label: '減価償却システムとの比較', note: '減価償却システムのデータと会計システムのデータを比較します（15〜17）', nos: [15, 16, 17] },
-  { label: '★印の項目', note: '期中残高・内部取引・予算などの追加チェック（20〜28）', nos: [20, 21, 22, 23, 24, 25, 26, 27, 28] },
-];
-const no2 = (n: number) => String(n).padStart(2, '0');
 
 export function AuditSettingsPage({ variant, accent, onNavigate }: MaintenancePageProps) {
   const s = useSession();
@@ -303,13 +297,11 @@ export function AuditSettingsPage({ variant, accent, onNavigate }: MaintenancePa
   const [mode, setMode] = useState<'区分' | '法人'>('区分');
   const [dlg, setDlg] = useState<number | null>(null);
   const [help, setHelp] = useState(false);
-  const summary = useAuditSummary(mode);
   // 区分の設定と法人全体の設定は別に保持する（確認メモ #124。決算調査から開く設定画面と共通）
   const isOn = (no: number) => (mode === '区分' ? s.auditEnabled[no] !== false : s.auditCorpEnabled[no] !== false);
   const setOn = (no: number, v: boolean) => (mode === '区分' ? setSession({ auditEnabled: { ...s.auditEnabled, [no]: v } }) : setSession({ auditCorpEnabled: { ...s.auditCorpEnabled, [no]: v } }));
   const setAll = (v: boolean) => { const all = Object.fromEntries(AUDIT_ITEMS.map((a) => [a.no, v])); setSession(mode === '区分' ? { auditEnabled: all } : { auditCorpEnabled: all }); toast.show(`28 項目をすべて${v ? '有効' : '無効'}にしました`); };
   const onCount = AUDIT_ITEMS.filter((a) => isOn(a.no)).length;
-  const seg = (on: boolean): CSSProperties => ({ padding: '8px 16px', border: '1px solid ' + (on ? accent : '#cfd8e0'), background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
 
   return (
     <SettingsShell variant={variant} title="決算チェック設定" badge="保守・運用" draft={false} desc="決算チェック（決算調査）の 28 項目について、チェックする項目の有効／無効と、項目ごとの条件（対象科目など）を設定します。" actions={<>
@@ -317,11 +309,11 @@ export function AuditSettingsPage({ variant, accent, onNavigate }: MaintenancePa
       <button type="button" className="btn-outline" onClick={() => (onNavigate ? onNavigate('決算調査') : toast.show('メニューの「決算チェック（決算調査）」から開きます'))} style={btn()}>決算チェック（決算調査）を開く →</button>
     </>}>
       <ToastView msg={toast.msg} />
+      {/* 一覧の構成は現行【決算チェックシステム ― 設定】に合わせる（確認メモ #117）。
+          3 列（01〜14／15〜19 と説明／20〜28）。項目名のボタンで項目ごとの設定を開く。
+          設定の対象（この区分／法人全体）は、下の「法人決算チェック設定」で切り替える */}
       <div style={{ padding: '14px 22px 0', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <div role="tablist" aria-label="設定の対象" style={{ display: 'inline-flex' }}>
-          <button type="button" role="tab" aria-selected={mode === '区分'} onClick={() => setMode('区分')} style={{ ...seg(mode === '区分'), borderRadius: '8px 0 0 8px' }}>決算チェック設定（この区分）</button>
-          <button type="button" role="tab" aria-selected={mode === '法人'} onClick={() => setMode('法人')} style={{ ...seg(mode === '法人'), borderRadius: '0 8px 8px 0', borderLeft: 'none' }}>法人決算チェック設定（法人全体）</button>
-        </div>
+        <b data-audit-mode={mode} style={{ fontSize: 16, color: '#22303c' }}>{mode === '区分' ? '決算チェック設定（この区分）' : '法人決算チェック設定（法人全体）'}</b>
         <span style={{ fontSize: 14, color: '#5b6773' }}>有効 <b style={{ fontSize: 16, fontVariantNumeric: 'tabular-nums' }}>{onCount}</b> ／ 28 項目</span>
         {viewOnly
           ? <span data-view-only style={{ marginLeft: 'auto', fontSize: 14, color: '#b7791f', fontWeight: 700 }}>参照のみの権限のため、設定の変更はできません</span>
@@ -330,47 +322,19 @@ export function AuditSettingsPage({ variant, accent, onNavigate }: MaintenancePa
               <button type="button" onClick={() => setAll(false)} style={btn('#5b6773', false, true)}>すべて無効</button>
             </span>}
       </div>
-      <div style={{ margin: '12px 22px 0', borderRadius: 10, overflow: 'hidden', border: '1px solid #eef2f5' }}>
-        {mode === '区分'
-          ? <ScopeBar scope="この区分のみ" note={s.division}>この画面の設定は、起動中の区分のみに適用されます。ほかの区分は、その区分で起動して設定してください。</ScopeBar>
-          : <ScopeBar scope="全区分共通" note="法人全体">法人全体の決算チェック（法人で起動したときの決算調査）に使う設定です。区分ごとの設定とは別に保持します。</ScopeBar>}
-      </div>
 
-      <div style={{ padding: '16px 22px 22px', display: 'grid', gap: 16 }}>
-        {AUDIT_GROUPS.map((g) => (
-          <div key={g.label} style={card}>
-            <div style={cardHead}>{g.label}<span style={{ fontSize: 12, fontWeight: 500, color: '#8290a0' }}>{g.note}</span></div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(430px, 1fr))' }}>
-              {g.nos.map((no) => {
-                const it = AUDIT_ITEMS.find((a) => a.no === no);
-                if (!it) return null;
-                const on = isOn(no);
-                return (
-                  <div key={no} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderBottom: '1px solid #f1f4f6', borderRight: '1px solid #f1f4f6', background: on ? '#fff' : '#fafbfc' }}>
-                    <span style={{ width: 26, fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: on ? '#22303c' : '#9aa5b1' }}>{no2(no)}</span>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: on ? accent : '#9aa5b1', fontWeight: 700, cursor: viewOnly ? 'default' : 'pointer', width: 62, flex: 'none' }}>
-                      <input type="checkbox" checked={on} disabled={viewOnly} onChange={(e) => setOn(no, e.target.checked)} aria-label={`${no2(no)} ${it.name} を有効にする`} style={{ width: 17, height: 17 }} />{on ? '有効' : '無効'}
-                    </label>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: on ? '#22303c' : '#9aa5b1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.name}</div>
-                      <div style={sub}>{summary(no)}</div>
-                    </div>
-                    <button type="button" className="btn-outline" onClick={() => setDlg(no)} style={btn('#5b6773', false, true)}>{viewOnly ? '表示' : '設定'}</button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-        <Notice>減価償却システムのデータの指定（15〜17）は「法人・区分」の設定で行います。各項目で使っている科目の区分コードを変更した場合は、その項目の「設定」で対象科目を選び直してください。</Notice>
+      <div style={{ padding: '12px 22px 22px' }}>
+        <div style={{ ...card, padding: '16px 18px' }}>
+          <AuditChecklist scope={mode} isOn={isOn} setOn={setOn} onOpen={setDlg} onSwitch={() => setMode(mode === '区分' ? '法人' : '区分')} accent={accent} />
+        </div>
       </div>
 
       <AuditItemDialog no={dlg} scope={mode} onClose={() => setDlg(null)} onSaved={toast.show} accent={accent} />
       <ExplainModal open={help} onClose={() => setHelp(false)} accent={accent} support={false} title="決算チェック設定の説明" source="現行画面【決算チェックシステム - 設定】" sections={[
         { h: '有効／無効', body: <>チェックを外した項目は、決算チェック（決算調査）の実行時に調査しません。結果一覧では「対象外」として表示します。</> },
-        { h: '項目ごとの設定', body: <>各行の「設定」を押すと、設定先の区分を確認する画面のあとに、その項目の診断用条件式と、条件式の要素ごとの勘定科目の一覧を表示します。科目はチェックで有効／無効に切り替えます。予算や残高率で判定する項目（26・27）は、しきい値もここで設定します。14 の抽出する金額（10 万円以上）は変更できません。</> },
-        { h: '適用範囲', body: <>「決算チェック設定（この区分）」は起動中の区分のみに適用されます。「法人決算チェック設定（法人全体）」は法人全体の決算チェックに使う設定で、区分ごとの設定とは別に保持します。</> },
-        { h: '項目の分類', body: <>01〜14・18〜19 は会計システムのデータ同士を比較します。15〜17 は減価償却システムのデータと会計システムのデータを比較します。★印（20〜28）は期中残高や内部取引などの追加チェックです。</> },
+        { h: '項目ごとの設定', body: <>項目名のボタンを押すと、設定先の区分を確認する画面のあとに、その項目の診断用条件式と、条件式の要素ごとの勘定科目の一覧を表示します。科目はチェックで有効／無効に切り替えます。予算や残高率で判定する項目（26・27）は、しきい値もここで設定します。14 の抽出する金額（10 万円以上）は変更できません。</> },
+        { h: '適用範囲', body: <>一覧の下に、この設定がどの区分に対するものかを表示します。「決算チェック設定（この区分）」は起動中の区分のみに適用されます。「法人決算チェック設定」ボタンで切り替える法人全体の設定は、法人全体の決算チェックに使う設定で、区分ごとの設定とは別に保持します。</> },
+        { h: '項目の並び', body: <>現行と同じ 3 列（左 01〜14／中 15〜19／右 20〜28）で並べています。01〜14・18〜19 は会計システムのデータ同士を比較します。15〜17 は減価償却システムのデータと会計システムのデータを比較します。★印（20〜28）は期中残高や内部取引などの追加チェックです。</> },
       ]} />
     </SettingsShell>
   );

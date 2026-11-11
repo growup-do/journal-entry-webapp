@@ -133,10 +133,12 @@ export function DailyAuditPage({ variant, accent, onNavigate, onClose }: Props) 
   while (cells.length % 7) cells.push(null);
 
   const panelTitle: CSSProperties = { fontSize: 12, fontWeight: 700, color: '#8290a0', padding: '10px 14px 0' };
-  const cell = (label: string, value: number | null, opt?: { hi?: 'green' | 'yellow'; sub?: string }): CSSProperties & { label: string; value: number | null; hi?: 'green' | 'yellow'; sub?: string } => ({ label, value, ...opt });
-  const Box = ({ label, value, hi, sub }: { label: string; value: number | null; hi?: 'green' | 'yellow'; sub?: string }) => (
-    <div style={{ padding: '9px 12px', border: '1px solid #e2e8ee', borderRadius: 8, background: hi === 'green' ? '#e6f6ec' : hi === 'yellow' ? '#fff8d6' : '#fff', minWidth: 0 }}>
+  type BoxOpt = { hi?: 'green' | 'yellow'; sub?: string; note?: string; area?: CSSProperties };
+  const cell = (label: string, value: number | null, opt?: BoxOpt): BoxOpt & { label: string; value: number | null } => ({ label, value, ...opt });
+  const Box = ({ label, value, hi, sub, note, area }: BoxOpt & { label: string; value: number | null }) => (
+    <div data-box={label} style={{ padding: '9px 12px', border: '1px solid #e2e8ee', borderRadius: 8, background: hi === 'green' ? '#e6f6ec' : hi === 'yellow' ? '#fff8d6' : '#fff', minWidth: 0, ...area }}>
       <div style={{ fontSize: 12, color: '#5b6773', fontWeight: 600 }}>{label}</div>
+      {note && <div style={{ fontSize: 12, color: '#7a8794' }}>{note}</div>}
       <div style={{ textAlign: 'right', fontWeight: 700, fontSize: 16, fontVariantNumeric: 'tabular-nums', color: value != null && value < 0 ? '#c0392b' : '#22303c' }}>{value == null ? '—' : yen(value)}</div>
       {sub && <div style={{ textAlign: 'right', fontSize: 12, color: BLUE_TXT, fontVariantNumeric: 'tabular-nums' }}>{sub}</div>}
     </div>
@@ -265,15 +267,16 @@ export function DailyAuditPage({ variant, accent, onNavigate, onClose }: Props) 
             <Same ng={stopped} />
             <div style={{ border: '1px solid #dde4ea', borderRadius: 10, paddingBottom: 10 }}>
               <div style={panelTitle}>貸借　<span style={{ color: BLUE_TXT, fontWeight: 500 }}>青字は流動負債中の引当金の額</span></div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, padding: '8px 12px 0' }}>
-                <Box {...cell('流動資産', v(S.ryudoShisan))} />
-                <Box {...cell('流動負債', v(S.ryudoFusai), { sub: shown ? yen(S.hikiate) : undefined })} />
-                <Box {...cell('固定資産', v(S.koteiShisan))} />
-                <Box {...cell('固定負債', v(S.koteiFusai))} />
-                <Box {...cell('支払資金（流動資産－流動負債＋引当金）', v(S.tokiShiharai), { hi: 'green' })} />
-                <Box {...cell('純資産', v(S.junShisan))} />
-                <div />
-                <Box {...cell('次期繰越収支差額', v(S.jikiKurikoshi), { hi: 'yellow' })} />
+              {/* 並びは現行と同じ（確認メモ #129）。左＝資産、右＝負債・純資産。
+                  緑の支払資金は右の列の流動負債のすぐ下（流動資産と同じ高さの範囲）に置く */}
+              <div data-bs-panel style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, padding: '8px 12px 0' }}>
+                <Box {...cell('流動資産', v(S.ryudoShisan), { area: { gridColumn: 1, gridRow: '1 / span 2' } })} />
+                <Box {...cell('流動負債', v(S.ryudoFusai), { sub: shown ? yen(S.hikiate) : undefined, area: { gridColumn: 2, gridRow: 1 } })} />
+                <Box {...cell('支払資金', v(S.tokiShiharai), { hi: 'green', note: '流動資産－流動負債＋引当金', area: { gridColumn: 2, gridRow: 2 } })} />
+                <Box {...cell('固定資産', v(S.koteiShisan), { area: { gridColumn: 1, gridRow: '3 / span 3' } })} />
+                <Box {...cell('固定負債', v(S.koteiFusai), { area: { gridColumn: 2, gridRow: 3 } })} />
+                <Box {...cell('純資産', v(S.junShisan), { area: { gridColumn: 2, gridRow: 4 } })} />
+                <Box {...cell('次期繰越収支差額', v(S.jikiKurikoshi), { hi: 'yellow', area: { gridColumn: 2, gridRow: 5 } })} />
               </div>
             </div>
             <Same />

@@ -4,7 +4,8 @@
 //   表示切替＝表／実績グラフ／達成率グラフ／構成比グラフ。科目名／現額予算／実績額／予算残高／達成率／構成比の階層表。
 //   科目行から元帳へドリルダウン：月次試算と同じく、画面遷移せず右側の元帳パネルに資金元帳を表示する（確認メモ #138）。
 //   パネルの「元帳の画面で開く」で全画面の資金元帳へ移り、その「← 戻る」でこの画面に戻る。
-//   サンプルは収入の科目のみ。
+//   集計行は現行と同じ名称と並び（確認メモ #137）：区分ごとの 収入計・支出計・資金収支差額、予備費支出、
+//   当期資金収支差額合計、前期末支払資金残高、当期末支払資金残高。集計行は緑、科目の行は白と薄い緑の縞。金額はサンプル。
 
 import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
@@ -12,7 +13,7 @@ import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { NUM, pct, ReportShell, Segmented, TD, TH, useMoney, useViewState } from './ReportShell';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { LedgerDrawer, useLedgerDrawer } from './LedgerDrawer';
-import { BUDGET_ROWS, displayName } from '../data';
+import { BUDGET_PREV_BALANCE, BUDGET_RESERVE, BUDGET_SECTIONS, displayName, type HierRow } from '../data';
 import { codeOf } from './EntryCommon';
 import { grandTotal, rollup } from '../lib/hier';
 
@@ -26,25 +27,73 @@ const KEY = '予算対比';
 const VIEWS = ['表', '実績グラフ', '達成率グラフ', '構成比グラフ'] as const;
 type ViewKind = (typeof VIEWS)[number];
 
+/** kind：row＝科目の行、sum＝集計行。leaf＝金額を持つ科目の行（元帳を開けるのはこの行）。b＝現額予算、a＝実績額 */
+interface Line { kind: 'row' | 'sum'; name: string; level: number; b: number; a: number; leaf: boolean }
+type Pair = [number, number];
+
+/** 集計行の色（現行と同じ緑）と、科目の行の縞（白と薄い緑） */
+const SUM_BG = '#b9e0ad';
+const SUM_LINE = '#9ccb8f';
+const STRIPE_BG = '#f1f8f3';
+
+/** 現行と同じ並びの行を組み立てる（確認メモ #137）。
+ *   区分ごとに：収入の科目 → 収入計(n) → 支出の科目 → 支出計(n+1) → 資金収支差額(n+2)=(n)-(n+1)
+ *   続けて：予備費支出(10) → 当期資金収支差額合計(11) → 前期末支払資金残高(12) → 当期末支払資金残高 */
+function buildLines(): { lines: Line[]; incomeActual: number } {
+  const lines: Line[] = [];
+  let incomeActual = 0;
+  const sum = (name: string, v: Pair): Line => ({ kind: 'sum', name, level: 0, b: v[0], a: v[1], leaf: false });
+  const net: Pair = [0, 0];
+  BUDGET_SECTIONS.forEach((sec, i) => {
+    const n = i * 3 + 1;
+    const part = (src: HierRow[]): Pair => {
+      const rs = rollup(src, 2);
+      rs.forEach((r, k) => lines.push({ kind: 'row', name: r.name, level: r.level, b: r.values[0], a: r.values[1], leaf: !!src[k].v }));
+      const t = grandTotal(rs, 2);
+      return [t[0], t[1]];
+    };
+    const inc = part(sec.income);
+    incomeActual += inc[1];
+    lines.push(sum(`${sec.name}収入計(${n})`, inc));
+    const exp = part(sec.expense);
+    lines.push(sum(`${sec.name}支出計(${n + 1})`, exp));
+    const diff: Pair = [inc[0] - exp[0], inc[1] - exp[1]];
+    net[0] += diff[0];
+    net[1] += diff[1];
+    lines.push(sum(`${sec.name}資金収支差額(${n + 2})=(${n})-(${n + 1})`, diff));
+  });
+  const total: Pair = [net[0] - BUDGET_RESERVE[0], net[1] - BUDGET_RESERVE[1]];
+  lines.push(sum('予備費支出(10)', BUDGET_RESERVE));
+  lines.push(sum('当期資金収支差額合計(11)=(3)+(6)+(9)-(10)', total));
+  lines.push(sum('前期末支払資金残高(12)', BUDGET_PREV_BALANCE));
+  lines.push(sum('当期末支払資金残高(11)+(12)', [total[0] + BUDGET_PREV_BALANCE[0], total[1] + BUDGET_PREV_BALANCE[1]]));
+  return { lines, incomeActual };
+}
+const { lines: LINES, incomeActual: INCOME_ACTUAL } = buildLines();
+/** 構成比の分母（現行と同じ）＝収入の実績額の合計＋前期末支払資金残高。収入・支出・差額・残高のどの行も同じ分母で割る */
+const SHARE_BASE = INCOME_ACTUAL + BUDGET_PREV_BALANCE[1];
+
 export function BudgetComparePage({ variant, accent, onNavigate }: Props) {
   const money = useMoney();
   const [view, setView] = useViewState<{ month: string; kind: ViewKind }>(KEY, { month: '10', kind: '表' });
   const [q, setQ] = useState('');
-  // leaf＝金額を持つ科目の行（集計行ではない）。元帳を開けるのはこの行
-  const rows = rollup(BUDGET_ROWS, 2).map((r, i) => ({ ...r, leaf: !!BUDGET_ROWS[i].v }));
-  const total = grandTotal(rows, 2);
+  // 科目の行（グラフと科目検索の対象）。集計行は表にだけ出す
+  const rows = LINES.filter((r) => r.kind === 'row');
+  // 構成比＝その行の実績額 ÷（収入の実績額の合計＋前期末支払資金残高）。実績額が 0 の行は空欄（現行と同じ）
+  const share = (r: Line) => (r.a && SHARE_BASE ? r.a / SHARE_BASE : null);
   // 科目名の一部、または科目コード（前方一致）で強調する（確認メモ #160）
   const hit = (name: string) => { const k = q.trim(); return !!k && (name.includes(k) || (/^\d+$/.test(k) && codeOf('account', name).startsWith(k))); };
   const hits = rows.filter((r) => hit(r.name)).length;
-  const maxActual = Math.max(1, ...rows.map((r) => r.values[1]));
+  const maxActual = Math.max(1, ...rows.map((r) => r.a));
 
   // グラフ1本分の値（0〜1）と右端の表示
-  const bar = (b: number, a: number): { ratio: number; text: ReactNode } => (
-    view.kind === '実績グラフ' ? { ratio: a / maxActual, text: money(a) }
-      : view.kind === '達成率グラフ' ? { ratio: b ? Math.min(1, a / b) : 0, text: b ? pct(a / b) : '—' }
-        : { ratio: total[1] ? a / total[1] : 0, text: a ? pct(a / total[1]) : '—' }
-  );
-  const graphNote = view.kind === '実績グラフ' ? '棒：実績額（最大の科目を100%として表示）' : view.kind === '達成率グラフ' ? '棒：実績額 ÷ 現額予算（達成率）' : '棒：実績額 ÷ 実績額合計（構成比）';
+  const bar = (r: Line): { ratio: number; text: ReactNode } => {
+    const sh = share(r);
+    return view.kind === '実績グラフ' ? { ratio: r.a / maxActual, text: money(r.a) }
+      : view.kind === '達成率グラフ' ? { ratio: r.b ? Math.min(1, r.a / r.b) : 0, text: r.b ? pct(r.a / r.b) : '—' }
+        : { ratio: sh ?? 0, text: sh != null ? pct(sh) : '—' };
+  };
+  const graphNote = view.kind === '実績グラフ' ? '棒：実績額（最大の科目を100%として表示）' : view.kind === '達成率グラフ' ? '棒：実績額 ÷ 現額予算（達成率）' : '棒：実績額 ÷（収入の実績額合計＋前期末支払資金残高）（構成比）';
 
   // 元帳へのドリルダウン：右側の元帳パネルに資金元帳を出す（月次試算と同じ出し方。確認メモ #138）
   const drawer = useLedgerDrawer(KEY, 'fund');
@@ -85,8 +134,8 @@ export function BudgetComparePage({ variant, accent, onNavigate }: Props) {
             <span>科目名</span><span style={{ textAlign: 'right' }}>実績額</span><span>{view.kind}</span><span style={{ textAlign: 'right' }}>{view.kind === '実績グラフ' ? '実績額' : view.kind === '達成率グラフ' ? '達成率' : '構成比'}</span>
           </div>
           {rows.map((r, i) => {
-            const [b, a] = r.values;
-            const g = bar(b, a);
+            const a = r.a;
+            const g = bar(r);
             return (
               <div key={i} style={{ display: 'grid', gridTemplateColumns: '260px 130px 1fr 90px', alignItems: 'center', gap: 12, padding: '6px 0', borderBottom: '1px solid #f1f4f6', background: hit(r.name) ? '#fff8d6' : 'transparent' }}>
                 <div style={{ fontSize: 14, fontWeight: r.level === 0 ? 700 : r.level === 1 ? 600 : 400, paddingLeft: r.level * 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
@@ -115,34 +164,41 @@ export function BudgetComparePage({ variant, accent, onNavigate }: Props) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r, i) => {
-                const [b, a] = r.values;
-                const bold = r.level === 0;
-                return (
-                  <tr key={i} data-account={r.name} onDoubleClick={() => { if (r.leaf) openLedger(r.name); }} title={r.leaf ? 'ダブルクリックで資金元帳を開く' : undefined} data-picked={picked(r.name) || undefined} style={{ background: picked(r.name) ? '#eaf5ef' : hit(r.name) ? '#fff8d6' : r.level === 0 ? '#f3f6f9' : 'transparent', boxShadow: picked(r.name) ? `inset 3px 0 0 ${accent}` : undefined, cursor: r.leaf ? 'pointer' : 'default' }}>
-                    <td style={{ ...TD, paddingLeft: 12 + r.level * 18, fontWeight: bold || picked(r.name) ? 700 : 400, whiteSpace: 'nowrap' }}>
-                      {r.name}
-                      {r.leaf && <button type="button" className="btn-outline" data-action="元帳" onClick={(e) => { e.stopPropagation(); openLedger(r.name); }} style={linkBtn}>元帳 ›</button>}
-                    </td>
-                    <td style={{ ...NUM, fontWeight: bold ? 700 : 400 }}>{money(b)}</td>
-                    <td style={{ ...NUM, fontWeight: bold ? 700 : 400 }}>{money(a)}</td>
-                    <td style={NUM}>{money(b - a)}</td>
-                    <td style={NUM}>{b ? pct(a / b) : ''}</td>
-                    <td style={NUM}>{a ? pct(a / total[1]) : ''}</td>
-                  </tr>
-                );
-              })}
+              {(() => {
+                let n = 0; // 科目の行の通し番号（縞の色を決める。集計行は数えない）
+                return LINES.map((r, i) => {
+                  const { b, a } = r;
+                  const sh = share(r);
+                  // 集計行（確認メモ #137）：現行と同じ名称で、緑の背景・太字。元帳は開かない
+                  if (r.kind === 'sum') return (
+                    <tr key={i} data-sum-row={r.name} style={{ background: SUM_BG }}>
+                      <td style={{ ...TD, paddingLeft: 12, whiteSpace: 'nowrap', borderBottom: '1px solid ' + SUM_LINE }}>{r.name}</td>
+                      <td style={{ ...NUM, borderBottom: '1px solid ' + SUM_LINE }}>{money(b)}</td>
+                      <td style={{ ...NUM, borderBottom: '1px solid ' + SUM_LINE }}>{money(a)}</td>
+                      <td style={{ ...NUM, borderBottom: '1px solid ' + SUM_LINE }}>{money(b - a)}</td>
+                      <td style={{ ...NUM, borderBottom: '1px solid ' + SUM_LINE }}>{b ? pct(a / b) : ''}</td>
+                      <td style={{ ...NUM, borderBottom: '1px solid ' + SUM_LINE }}>{sh != null ? pct(sh) : ''}</td>
+                    </tr>
+                  );
+                  const stripe = n++ % 2 === 1;
+                  const bold = r.level === 0;
+                  const on = r.leaf && picked(r.name);
+                  return (
+                    <tr key={i} data-account={r.name} onDoubleClick={() => { if (r.leaf) openLedger(r.name); }} title={r.leaf ? 'ダブルクリックで資金元帳を開く' : undefined} data-picked={on || undefined} style={{ background: on ? '#dff0e6' : hit(r.name) ? '#fff8d6' : stripe ? STRIPE_BG : '#fff', boxShadow: on ? `inset 3px 0 0 ${accent}` : undefined, cursor: r.leaf ? 'pointer' : 'default' }}>
+                      <td style={{ ...TD, paddingLeft: 12 + r.level * 18, fontWeight: bold || on ? 700 : 400, whiteSpace: 'nowrap' }}>
+                        {r.name}
+                        {r.leaf && <button type="button" className="btn-outline" data-action="元帳" onClick={(e) => { e.stopPropagation(); openLedger(r.name); }} style={linkBtn}>元帳 ›</button>}
+                      </td>
+                      <td style={{ ...NUM, fontWeight: bold ? 700 : 400 }}>{money(b)}</td>
+                      <td style={{ ...NUM, fontWeight: bold ? 700 : 400 }}>{money(a)}</td>
+                      <td style={NUM}>{money(b - a)}</td>
+                      <td style={NUM}>{b ? pct(a / b) : ''}</td>
+                      <td style={NUM}>{sh != null ? pct(sh) : ''}</td>
+                    </tr>
+                  );
+                });
+              })()}
             </tbody>
-            <tfoot>
-              <tr style={{ background: '#e9eef3' }}>
-                <td style={{ ...TD, fontWeight: 700 }}>合計</td>
-                <td style={{ ...NUM, fontWeight: 700 }}>{money(total[0])}</td>
-                <td style={{ ...NUM, fontWeight: 700 }}>{money(total[1])}</td>
-                <td style={{ ...NUM, fontWeight: 700 }}>{money(total[0] - total[1])}</td>
-                <td style={{ ...NUM, fontWeight: 700 }}>{pct(total[1] / total[0])}</td>
-                <td style={{ ...NUM, fontWeight: 700 }}>100.0%</td>
-              </tr>
-            </tfoot>
           </table>
         </div>
       )}
