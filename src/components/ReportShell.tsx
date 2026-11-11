@@ -83,7 +83,9 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
   const s = useSession();
   const isSheet = variant === 'sheet';
   const kind = startKindOf(s);
-  const pastYear = s.fiscalYear !== s.currentYear;
+  // 過去年度だけを対象にする（翌年度は含めない）。色はヘッダーの帯と同じ（確認メモ #218）
+  const yearNo = (y: string) => parseInt(y.replace(/[^0-9]/g, ''), 10) || 0;
+  const pastYear = yearNo(s.fiscalYear) < yearNo(s.currentYear);
 
   // 部の切替：← → キー（入力欄・ダイアログ操作中は無視）
   const partsRef = useRef(parts);
@@ -133,8 +135,8 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
                 <span style={{ fontSize: 14, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>{org}</span>
               ) : (
                 <span data-org style={{ fontSize: 14, fontWeight: 500, color: '#7a8794', marginLeft: 8, whiteSpace: 'nowrap' }}>
-                  <span style={{ fontWeight: 700, color: pastYear ? '#b7791f' : '#48565f' }}>{s.fiscalYear}</span>
-                  {pastYear && <span style={{ marginLeft: 4, padding: '1px 6px', borderRadius: 6, background: '#fff7e6', border: '1px solid #f3d9b0', color: '#8a5a00', fontSize: 12, fontWeight: 700 }}>過去年度を参照中</span>}
+                  <span style={{ fontWeight: 700, color: pastYear ? '#d7191c' : '#48565f' }}>{s.fiscalYear}</span>
+                  {pastYear && <span style={{ marginLeft: 4, padding: '2px 8px', borderRadius: 6, background: '#d7191c', color: '#fff', fontSize: 12, fontWeight: 800 }}>過去年度を参照中</span>}
                   <span style={{ margin: '0 6px' }}>／</span>
                   <span style={{ fontWeight: 700, color: '#48565f' }}>{s.division}</span>
                   <span style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 6, background: '#eef2f6', color: '#5b6773', fontSize: 12, fontWeight: 700 }}>{kind}</span>

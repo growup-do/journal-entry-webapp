@@ -7,6 +7,7 @@ import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { TargetCombo, openTargetCombo } from './TargetCombo';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
+import { BALANCE_DEFAULT_MONTH, balanceAsOf, balanceMonthLabel, setBookBalance, systemBalances, useBookBalances } from '../lib/balanceCheck';
 import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { LABEL, NUM, ReportShell, TD, TH, yen, SwitchPill } from './ReportShell';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
@@ -222,19 +223,22 @@ export function LedgerInquiryPage({ slot, variant, accent, onNavigate }: LedgerP
 
 /* ---- 残高照合：現預金科目ごとに通帳残高とシステム残高を突合 ---- */
 export function BalanceCheckPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: string; onNavigate: (label: string) => void }) {
-  const [book, setBook] = useState<number[]>(() => BALANCE_ACCOUNTS.map(() => 0));
+  // 月選択ボタン（確認メモ #201）：選んだ月の月末時点で突合する。通帳残高も月ごとに入力する
+  const [month, setMonth] = useState(BALANCE_DEFAULT_MONTH);
+  const book = useBookBalances(month);
+  const system = systemBalances(month);
   const [editing, setEditing] = useState(false);
   const [ngOnly, setNgOnly] = useState(false);
   const [exp, setExp] = useState<ExportSpec | null>(null);
-  const set = (i: number, v: string) => setBook((b) => b.map((x, k) => (k === i ? parseInt(v.replace(/[^0-9]/g, ''), 10) || 0 : x)));
-  const ngCount = BALANCE_ACCOUNTS.filter((a, i) => book[i] !== a.system).length;
+  const set = (i: number, v: string) => setBookBalance(month, i, parseInt(v.replace(/[^0-9]/g, ''), 10) || 0);
+  const ngCount = BALANCE_ACCOUNTS.filter((_, i) => book[i] !== system[i]).length;
   const sumBook = book.reduce((a, b) => a + b, 0);
-  const sumSys = BALANCE_ACCOUNTS.reduce((a, b) => a + b.system, 0);
+  const sumSys = system.reduce((a, b) => a + b, 0);
   // 印刷：既存では【名前を付けて保存】から「現預金残高推移表」を Excel（*.xlsx）で出力する（マニュアル 5.5.4）
   const openExport = () => setExp({
-    kind: 'print', title: '現預金残高推移表', fileName: '現預金残高推移表_令和8年8月', meta: '残高照合　令和8年8月31日時点',
+    kind: 'print', title: '現預金残高推移表', fileName: `現預金残高推移表_${balanceMonthLabel(month)}`, meta: `残高照合　${balanceAsOf(month)}`,
     header: ['現預金科目', '判定', '通帳残高', 'システム残高', '差額'],
-    rows: [...BALANCE_ACCOUNTS.map((a, i) => [a.name, book[i] === a.system ? 'OK' : 'NG', book[i], a.system, book[i] - a.system]), ['合計', sumBook === sumSys ? 'OK' : 'NG', sumBook, sumSys, sumBook - sumSys]],
+    rows: [...BALANCE_ACCOUNTS.map((a, i) => [a.name, book[i] === system[i] ? 'OK' : 'NG', book[i], system[i], book[i] - system[i]]), ['合計', sumBook === sumSys ? 'OK' : 'NG', sumBook, sumSys, sumBook - sumSys]],
   });
   return (
     <ReportShell
@@ -245,9 +249,11 @@ export function BalanceCheckPage({ variant, accent }: { variant: 'form' | 'sheet
       tools={[{ label: editing ? '設定を終了' : '通帳残高の設定', onClick: () => setEditing((e) => !e), primary: true }]}
       extraTools={<ScreenPrintMenu accent={accent} actions={[{ items: [{ name: '現預金残高推移表（残高照合）', onClick: openExport }] }]} />}
       period={
-        <>
-          <span style={{ fontSize: 14 }}>令和8年 8月31日 時点</span>
-        </>
+        <div data-balance-months style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <FiscalMonthTabs current={month} accent={accent} onSelect={(v) => { if (v) setMonth(v); }} />
+          <span style={{ fontSize: 14 }}>{balanceAsOf(month)}</span>
+          {editing && <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 9px', borderRadius: 8, background: accent + '18', color: accent }}>{month === '決' ? '決算月' : `${month}月`}の通帳残高を入力中</span>}
+        </div>
       }
       target={<span>現預金科目 <b style={{ color: '#22303c' }}>{BALANCE_ACCOUNTS.length} 科目</b>（科目設定で現預金に分類した科目をすべて突合します。個別の指定はありません）</span>}
       switches={<SwitchPill label="不一致（NG）のみ表示" on={ngOnly} onChange={setNgOnly} accent={accent} title="通帳残高とシステム残高が合わない科目だけを表示します" />}
@@ -267,8 +273,8 @@ export function BalanceCheckPage({ variant, accent }: { variant: 'form' | 'sheet
         </thead>
         <tbody>
           {BALANCE_ACCOUNTS.map((a, i) => {
-            const ok = book[i] === a.system;
-            const diff = book[i] - a.system;
+            const ok = book[i] === system[i];
+            const diff = book[i] - system[i];
             if (ngOnly && ok) return null;
             return (
               <tr key={a.name} style={{ background: ok ? 'transparent' : '#fff7f5' }}>
@@ -281,7 +287,7 @@ export function BalanceCheckPage({ variant, accent }: { variant: 'form' | 'sheet
                     yen(book[i])
                   )}
                 </td>
-                <td style={NUM}>{yen(a.system)}</td>
+                <td style={NUM}>{yen(system[i])}</td>
                 <td style={{ ...NUM, fontWeight: 700, color: ok ? '#22303c' : '#c0392b' }}>{diff < 0 ? '-' : ''}{yen(Math.abs(diff))}</td>
               </tr>
             );
@@ -296,7 +302,7 @@ export function BalanceCheckPage({ variant, accent }: { variant: 'form' | 'sheet
           </tr>
         </tfoot>
       </table>
-      <div style={{ padding: '12px 22px', fontSize: 12, color: '#9aa5b1', lineHeight: 1.6, borderTop: '1px solid #eef2f5' }}>「通帳残高の設定」で通帳の残高を入力すると、システム残高と突合して OK／NG と差額を表示します。</div>
+      <div style={{ padding: '12px 22px', fontSize: 12, color: '#9aa5b1', lineHeight: 1.6, borderTop: '1px solid #eef2f5' }}>月選択ボタンで月を選ぶと、その月の月末時点で突合します。「通帳残高の設定」で通帳の残高を入力すると（月ごとに入力します）、システム残高と突合して OK／NG と差額を表示します。</div>
     </ReportShell>
   );
 }

@@ -13,6 +13,7 @@ import { ActButton, ActDivider, ComboField, EntryStyles, FieldLabel, FlagButtons
 import { SERVICES } from '../data';
 import { FUSEN_COLORS, FUSEN_CYCLE, addVoucher, cycleFusen, deleteVoucher, getVouchers, moveVoucher, setVoucherFlags, updateVoucher, useVouchers, type Fusen, type Voucher } from '../store/journalStore';
 import { judgeTorihiki, TORIHIKI_COLOR } from '../lib/accounts';
+import { TAX_OPTS, taxAmountOf, taxDefaultOf } from '../lib/transferTax';
 import { canEdit, canReorder, editBlockReason, fusenLabel, useSession, isViewOnly } from '../store/session';
 import { canEnterVoucher, entryBlockReason } from '../lib/entryDivision';
 import type { MonthFilter } from '../types';
@@ -170,12 +171,38 @@ export function VoucherPickerModal({ open, mode, onClose, onPick, accent }: { op
 }
 
 /* ---------------- 伝票の訂正モード（同じ伝票の行を同時に編集） ---------------- */
-interface EditRow { key: string; id: number | null; kari: string; kashi: string; tekiyo: string; gyosha: string; amount: string }
+interface EditRow {
+  key: string; id: number | null; kari: string; kashi: string; tekiyo: string; gyosha: string;
+  /** 金額。振替伝票形式では借方金額 */
+  amount: string;
+  /** 振替伝票形式：貸方金額（借方金額と別に入力する。確認メモ #199） */
+  kashiAmount: string;
+  /** 予備入力1・予備入力2 は行ごとに持つ（確認メモ #198） */
+  spare1: string; spare2: string;
+  /** 振替伝票形式・振替単一形式：貸借それぞれの税区分（空＝科目からの既定）と税額（未指定＝自動計算）。確認メモ #199／#200 */
+  kariTax: string; kashiTax: string; kariTaxAmt?: string; kashiTaxAmt?: string;
+  /** 振替単一形式：行ごとの内部取引と相手区分（確認メモ #195） */
+  internal: boolean; aite: string;
+}
 /** 証憑・チェック・付箋は伝票1枚につき1つ（確認メモ #47） */
 interface EditFlags { shohyo: boolean; check: boolean; fusen: Fusen }
-interface EditState { base: Voucher; ids: number[]; shared: boolean; multi: boolean; service: string; month: string; day: string; no: string; kari: string; kashi: string; aite: string; internal: boolean; cheque: string; spare1: string; spare2: string; flags: EditFlags; rows: EditRow[] }
+interface EditState { base: Voucher; ids: number[]; shared: boolean; multi: boolean; service: string; month: string; day: string; no: string; kari: string; kashi: string; aite: string; internal: boolean; cheque: string; flags: EditFlags; rows: EditRow[] }
 let rowKey = 0;
-const newRow = (p?: Partial<EditRow>): EditRow => ({ key: 'n' + rowKey++, id: null, kari: '', kashi: '', tekiyo: '', gyosha: '', amount: '', ...p });
+const newRow = (p?: Partial<EditRow>): EditRow => ({ key: 'n' + rowKey++, id: null, kari: '', kashi: '', tekiyo: '', gyosha: '', amount: '', kashiAmount: '', spare1: '', spare2: '', kariTax: '', kashiTax: '', internal: false, aite: '', ...p });
+/** 登録済みの行 → 編集用の行 */
+const toEditRow = (r: Voucher): EditRow => {
+  // 振替伝票形式は、行の借方金額と貸方金額を別々に持つ（未指定の伝票は amount を両方に使う）
+  const ka = r.kind === '振替' ? r.kariAmount ?? r.amount : r.amount;
+  const sa = r.kind === '振替' ? r.kashiAmount ?? r.amount : r.amount;
+  // 登録済みの税額が自動計算と同じなら、手入力ではないものとして扱う（金額を直すと税額も計算し直す）
+  const manual = (tax: string | undefined, account: string, base: number, amt?: number) => (amt != null && amt !== taxAmountOf(tax || taxDefaultOf(account), base) ? String(amt) : undefined);
+  return {
+    key: 'v' + r.id, id: r.id, kari: r.kari, kashi: r.kashi, tekiyo: r.tekiyo, gyosha: r.gyosha ?? '', amount: String(ka), kashiAmount: String(sa),
+    spare1: r.spare1 ?? '', spare2: r.spare2 ?? '',
+    kariTax: r.kariTax ?? '', kashiTax: r.kashiTax ?? '', kariTaxAmt: manual(r.kariTax, r.kari, ka, r.kariTaxAmt), kashiTaxAmt: manual(r.kashiTax, r.kashi, sa, r.kashiTaxAmt),
+    internal: !!r.internal, aite: partnerOf(r.id),
+  };
+};
 
 /** 同じ伝票の行を、指定した順に共有ストア上で並べ替える（同一日の中の入換だけを使う） */
 function applyOrder(ids: number[]) {
@@ -216,11 +243,12 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
     const shared = !transfer && rows.every((r) => r.kari === rows[0].kari && r.kashi === rows[0].kashi);
     const [m, d] = voucher.date.split('/');
     setSt({
-      base: rows[0], ids: rows.map((r) => r.id), shared, multi: voucher.kind !== '単一' && voucher.kind !== '振単',
+      // 振替単一形式は、1枚の伝票に複数行を持てる（確認メモ #195）。1伝票1行なのは単一形式だけ
+      base: rows[0], ids: rows.map((r) => r.id), shared, multi: voucher.kind !== '単一',
       service: rows[0].service, month: m ?? '', day: d ?? '', no: rows[0].no, kari: rows[0].kari, kashi: rows[0].kashi,
-      aite: partnerOf(rows[0].id), internal: !!rows[0].internal, cheque: rows[0].cheque ?? '', spare1: rows[0].spare1 ?? '', spare2: rows[0].spare2 ?? '',
+      aite: partnerOf(rows[0].id), internal: !!rows[0].internal, cheque: rows[0].cheque ?? '',
       flags: { shohyo: rows[0].shohyo, check: rows[0].check, fusen: rows[0].fusen },
-      rows: rows.map((r) => ({ key: 'v' + r.id, id: r.id, kari: r.kari, kashi: r.kashi, tekiyo: r.tekiyo, gyosha: r.gyosha ?? '', amount: String(r.amount) })),
+      rows: rows.map(toEditRow),
     });
     setLoadedId(voucher.id);
     setActive(0);
@@ -234,7 +262,13 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
   const setRow = (i: number, p: Partial<EditRow>) => { setSt((s) => (s ? { ...s, rows: s.rows.map((r, k) => (k === i ? { ...r, ...p } : r)) } : s)); setRowErr({}); setMsg(null); };
   const rowsN = st?.rows.length ?? 0;
   const act = Math.min(active, Math.max(0, rowsN - 1));
-  const firstField = (i: number) => (st?.shared ? `ed-r${i}-tekiyo` : `ed-r${i}-kari`);
+  /** 振替伝票形式：行に借方金額と貸方金額を持つ（確認メモ #199） */
+  const isTr = st?.base.kind === '振替';
+  /** 振替単一形式：金額は行に1つ。内部取引と相手区分は行ごと */
+  const isTs = st?.base.kind === '振単';
+  /** 税区分・税額を貸借それぞれに出す（振替伝票形式・振替単一形式。入力画面と同じく消費税対応の法人のみ。確認メモ #199／#200） */
+  const taxOn = (isTr || isTs) && sess.taxEntry;
+  const firstField = (i: number) => (st?.shared ? `ed-r${i}-tekiyo` : isTr ? `ed-r${i}-amount` : `ed-r${i}-kari`);
   const addRow = (at: number) => {
     if (!st || !editable || !st.multi) return;
     const next = [...st.rows];
@@ -272,10 +306,19 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
   };
 
   const pairIssues: Issue[] = st && st.shared ? judgeEntry({ kari: st.kari, kashi: st.kashi, fundMode: '自動資金', internal: st.internal, aite: st.aite, division: st.service, amount: 0 }, sess.env) : [];
-  const issuesOfRow = (r: EditRow): Issue[] => (st && !st.shared ? judgeEntry({ kari: r.kari, kashi: r.kashi, fundMode: '自動資金', internal: st.internal, aite: st.aite, division: st.service, amount: 0 }, sess.env) : []);
+  // 振替単一形式は、内部取引と相手区分を行ごとに判定する
+  const issuesOfRow = (r: EditRow): Issue[] => (st && !st.shared ? judgeEntry({ kari: r.kari, kashi: r.kashi, fundMode: '自動資金', internal: isTs ? r.internal : st.internal, aite: isTs ? r.aite : st.aite, division: st.service, amount: 0 }, sess.env) : []);
   const allIssues = st ? (st.shared ? pairIssues : st.rows.flatMap(issuesOfRow)) : [];
   const total = st ? st.rows.reduce((a, r) => a + toNum(r.amount), 0) : 0;
-  const partner = !!st && (st.shared ? needsPartner({ kari: st.kari, kashi: st.kashi, internal: st.internal }) : st.internal || st.rows.some((r) => needsPartner({ kari: r.kari, kashi: r.kashi })));
+  /** 振替伝票形式の貸方合計（借方合計は total） */
+  const kashiTotal = st ? st.rows.reduce((a, r) => a + toNum(r.kashiAmount), 0) : 0;
+  /** 行ごとの内部取引（振替単一形式）：スイッチがオン、または内部取引科目を使っている行 */
+  const rowPartnerOf = (r: EditRow) => needsPartner({ kari: r.kari, kashi: r.kashi, internal: r.internal });
+  /** 伝票に1つの内部取引相手区分（振替単一形式は行ごとに持つので対象外） */
+  const partner = !!st && !isTs && (st.shared ? needsPartner({ kari: st.kari, kashi: st.kashi, internal: st.internal }) : st.internal || st.rows.some((r) => needsPartner({ kari: r.kari, kashi: r.kashi })));
+  /** 税区分（空＝科目からの既定）と、税額の基礎になる金額（借方は借方金額、貸方は貸方金額。振替単一形式は行の金額） */
+  const taxKindOf = (r: EditRow, side: 'kari' | 'kashi') => (side === 'kari' ? r.kariTax || taxDefaultOf(r.kari) : r.kashiTax || taxDefaultOf(r.kashi));
+  const taxBase = (r: EditRow, side: 'kari' | 'kashi') => toNum(side === 'kashi' && isTr ? r.kashiAmount : r.amount);
 
   const save = (confirmed: boolean) => {
     if (!st || !editable) return;
@@ -285,28 +328,51 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
     const re: Record<string, string> = {};
     st.rows.forEach((r) => {
       if (!st.shared && (!r.kari || !r.kashi)) re[r.key] = '借方科目・貸方科目を入力してください。';
-      else if (!toNum(r.amount)) re[r.key] = '金額を入力してください。';
+      // 振替伝票形式は、借方金額・貸方金額のどちらかが入っていればよい（行単位では貸借の金額が異なることがある）
+      else if (isTr ? !toNum(r.amount) && !toNum(r.kashiAmount) : !toNum(r.amount)) re[r.key] = isTr ? '金額（借方金額または貸方金額）を入力してください。' : '金額を入力してください。';
     });
     if (Object.keys(re).length) {
       setRowErr(re);
       const i = st.rows.findIndex((r) => re[r.key]);
       setMsg({ tone: 'error', text: `${i + 1}行目：${re[st.rows[i].key]}` });
-      focusId(re[st.rows[i].key].startsWith('金額') ? `ed-r${i}-amount` : firstField(i));
+      focusId(re[st.rows[i].key].startsWith('金額') ? `ed-r${i}-amount` : isTr ? `ed-r${i}-kari` : firstField(i));
       return;
     }
+    // 振替伝票形式：伝票全体で借方合計と貸方合計が一致していること
+    if (isTr && total !== kashiTotal) { setMsg({ tone: 'error', text: `借方合計と貸方合計が一致していません（差額 ${Math.abs(total - kashiTotal).toLocaleString('ja-JP')} 円）。` }); return; }
     if (hasError(allIssues)) { setMsg({ tone: 'error', text: '登録できない仕訳があります。赤い表示の内容を確認してください。' }); return; }
     if (hasWarn(allIssues) && !confirmed) { setMsg({ tone: 'info', text: '確認が必要な内容があります。黄色の表示を確認し、「確認して登録」を押してください。' }); focusId('ed-confirm'); return; }
     const date = `${st.month}/${st.day}`;
     const keep = st.rows.filter((r) => r.id != null).map((r) => r.id as number);
     st.ids.filter((id) => !keep.includes(id)).forEach((id) => { deleteVoucher(id); setPartner(id, ''); });
     const ids: number[] = [];
+    const partners: string[] = [];
     st.rows.forEach((r) => {
-      const body = { date, service: st.service, kari: st.shared ? st.kari : r.kari, kashi: st.shared ? st.kashi : r.kashi, tekiyo: r.tekiyo, gyosha: r.gyosha || undefined, amount: toNum(r.amount), shohyo: st.flags.shohyo, cheque: st.cheque.trim() || undefined, spare1: st.spare1 || undefined, spare2: st.spare2 || undefined, internal: partner || undefined };
+      const ka = toNum(r.amount);
+      const sa = isTr ? toNum(r.kashiAmount) : ka;
+      // 内部取引：振替単一形式は行ごと、ほかの形式は伝票に1つ
+      const rp = isTs ? rowPartnerOf(r) : partner;
+      // 税区分・税額は貸借それぞれ（振替伝票形式・振替単一形式。消費税対応の法人のみ）
+      const kt = taxKindOf(r, 'kari');
+      const kst = taxKindOf(r, 'kashi');
+      const tax = taxOn ? { kariTax: kt, kariTaxAmt: r.kariTaxAmt ? toNum(r.kariTaxAmt) : taxAmountOf(kt, ka), kashiTax: kst, kashiTaxAmt: r.kashiTaxAmt ? toNum(r.kashiTaxAmt) : taxAmountOf(kst, sa) } : {};
+      const body = {
+        date, service: st.service, kari: st.shared ? st.kari : r.kari, kashi: st.shared ? st.kashi : r.kashi, tekiyo: r.tekiyo, gyosha: r.gyosha || undefined,
+        amount: ka || sa,
+        // 振替伝票形式：行の借方金額と貸方金額をそれぞれ持つ
+        ...(isTr ? { kariAmount: ka, kashiAmount: sa } : {}),
+        ...tax,
+        shohyo: st.flags.shohyo, cheque: st.cheque.trim() || undefined,
+        // 予備入力1・予備入力2 は行ごと（確認メモ #198）
+        spare1: r.spare1 || undefined, spare2: r.spare2 || undefined,
+        internal: rp || undefined,
+      };
       if (r.id != null) { updateVoucher(r.id, { ...body, no: st.no.trim(), check: st.flags.check, fusen: st.flags.fusen }); ids.push(r.id); }
       else { const nv = addVoucher({ ...body, kind: st.base.kind, seq: st.base.seq, no: st.no.trim() }); updateVoucher(nv.id, { check: st.flags.check, fusen: st.flags.fusen }); ids.push(nv.id); }
+      partners.push(rp ? (isTs ? r.aite : st.aite) : '');
     });
     applyOrder(ids);
-    ids.forEach((id) => setPartner(id, partner ? st.aite : ''));
+    ids.forEach((id, k) => setPartner(id, partners[k]));
     onClose();
   };
 
@@ -332,10 +398,45 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
   const ro = !editable;
   const viewOnly = isViewOnly(sess);
   const cell: CSSProperties = { ...input, padding: '7px 9px', fontSize: 14 };
-  const GRID = st.shared ? '34px minmax(0,1.5fr) minmax(0,1fr) 120px 132px' : '34px minmax(0,1.1fr) minmax(0,1.1fr) minmax(0,1.2fr) minmax(0,.9fr) 112px 132px';
+  // 振替伝票形式は、入力画面と同じ並び（借方金額｜借方科目｜貸方科目｜貸方金額）。摘要と取引先は行の下段に置く
+  const GRID = st.shared ? '34px minmax(0,1.5fr) minmax(0,1fr) 120px 132px' : isTr ? '34px 124px minmax(0,1fr) minmax(0,1fr) 124px 132px' : '34px minmax(0,1.1fr) minmax(0,1.1fr) minmax(0,1.2fr) minmax(0,.9fr) 112px 132px';
+  /** 行の下段：予備入力1・予備入力2 は行ごと（確認メモ #198）。振替伝票形式は摘要・取引先、振替単一形式は行ごとの内部取引と相手区分も置く */
+  const SUB_GRID = isTr ? 'minmax(0,1.3fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,.8fr)' : isTs ? 'minmax(0,1fr) minmax(0,1fr) 112px minmax(0,1fr)' : 'minmax(0,1fr) minmax(0,1fr)';
   const afterHead = () => focusId(st.shared ? 'ed-kari' : firstField(0));
   const rowNext = (i: number) => (i + 1 < st.rows.length ? focusId(firstField(i + 1)) : focusId('ed-save'));
   const smallBtn: CSSProperties = { ...btn('#5b6773', false, true), padding: '3px 7px' };
+  const subLab: CSSProperties = { fontSize: 12, fontWeight: 700, color: '#8290a0', flex: 'none', whiteSpace: 'nowrap' };
+  const subWrap: CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 };
+  const subInput: CSSProperties = { ...input, padding: '5px 8px', fontSize: 14, minWidth: 0, flex: 1 };
+  const amountInput = (err: boolean): CSSProperties => ({ ...numInput, padding: '7px 9px', fontWeight: 700, fontSize: 14, borderColor: err ? '#c0392b' : '#cfd8e0' });
+  /** 予備入力1・予備入力2（行ごと） */
+  const spareCells = (r: EditRow, i: number) => (
+    <>
+      <div style={subWrap}><span style={subLab}>予備入力1</span><input id={`ed-r${i}-spare1`} data-spare="1" aria-label={`${i + 1}行目 予備入力1（摘要予備）`} className="ef-input" disabled={ro} value={r.spare1} onChange={(e) => setRow(i, { spare1: e.target.value })} onKeyDown={onEnter(() => focusId(`ed-r${i}-spare2`))} placeholder="摘要予備" style={subInput} /></div>
+      <div style={subWrap}><span style={subLab}>予備入力2</span><input id={`ed-r${i}-spare2`} data-spare="2" aria-label={`${i + 1}行目 予備入力2（取引先予備）`} className="ef-input" disabled={ro} value={r.spare2} onChange={(e) => setRow(i, { spare2: e.target.value })} onKeyDown={onEnter(() => rowNext(i))} placeholder="取引先予備" style={subInput} /></div>
+    </>
+  );
+  /** 税区分と税額（借方・貸方のそれぞれ。確認メモ #199／#200） */
+  const taxCells = (r: EditRow, i: number, side: 'kari' | 'kashi') => {
+    const name = side === 'kari' ? '借方' : '貸方';
+    const color = side === 'kari' ? BLUE : PINK;
+    const manual = side === 'kari' ? r.kariTaxAmt : r.kashiTaxAmt;
+    const amt = (v: string | undefined): Partial<EditRow> => (side === 'kari' ? { kariTaxAmt: v } : { kashiTaxAmt: v });
+    return (
+      <>
+        <div style={subWrap}>
+          <span style={{ ...subLab, color }}>{name} 税区分</span>
+          <select data-tax-kind={side} aria-label={`${i + 1}行目 ${name}の税区分`} className="ef-input" disabled={ro} value={taxKindOf(r, side)} onChange={(e) => setRow(i, side === 'kari' ? { kariTax: e.target.value } : { kashiTax: e.target.value })} style={{ ...subInput, padding: '5px 4px' }}>
+            {TAX_OPTS.map((o) => <option key={o}>{o}</option>)}
+          </select>
+        </div>
+        <div style={subWrap}>
+          <span style={{ ...subLab, color }}>{name} 税額</span>
+          <input data-tax-amount={side} aria-label={`${i + 1}行目 ${name}の税額`} className="ef-input" disabled={ro} inputMode="numeric" value={fmtNum(manual ?? String(taxAmountOf(taxKindOf(r, side), taxBase(r, side))))} onChange={(e) => setRow(i, amt(e.target.value.replace(/[^0-9]/g, '')))} onBlur={() => { if (manual === '') setRow(i, amt(undefined)); }} title="金額 × 税率 ÷（100 ＋ 税率）の切り捨てで自動計算。端数の調整は手入力で変更できます（空にすると自動計算に戻ります）" style={{ ...subInput, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: manual != null ? '#1f2933' : '#5b6773' }} />
+        </div>
+      </>
+    );
+  };
   return (
     <Modal open onClose={onClose} width={st.shared ? 920 : 1080} title={<>{ro ? '伝票の参照' : '伝票の訂正'} <span style={{ fontSize: 14, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>Seq {st.base.seq}　伝票No {st.base.no}</span><span style={{ marginLeft: 10, padding: '2px 9px', borderRadius: 8, background: accent, color: '#fff', fontSize: 12, fontWeight: 800 }}>{KIND_FORMAT[st.base.kind]}</span></>} strict>
       <div className="ef-scope" style={scopeStyle(accent)}>
@@ -405,27 +506,54 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 8, padding: '7px 10px', background: '#f6f8fa', fontSize: 12, fontWeight: 700, color: '#8290a0' }}>
               <div>行</div>
+              {isTr && <div style={{ color: BLUE, textAlign: 'right' }}>借方金額</div>}
               {!st.shared && <div style={{ color: BLUE }}>借方科目</div>}
               {!st.shared && <div style={{ color: PINK }}>貸方科目</div>}
-              <div>摘要</div><div>取引先</div><div style={{ textAlign: 'right' }}>金額</div><div>並べ替え／削除</div>
+              {isTr ? <div style={{ color: PINK, textAlign: 'right' }}>貸方金額</div> : <><div>摘要</div><div>取引先</div><div style={{ textAlign: 'right' }}>金額</div></>}
+              <div>並べ替え／削除</div>
             </div>
             {st.rows.map((r, i) => {
               const ri = issuesOfRow(r);
+              /** 振替単一形式：この行が内部取引か（スイッチ、または内部取引科目）。内部取引科目を使う行は外せない */
+              const rowLocked = needsPartner({ kari: r.kari, kashi: r.kashi });
+              const rowIn = rowPartnerOf(r);
               return (
                 <div key={r.key} className="ef-row" onFocus={() => setActive(i)} style={{ borderTop: '1px solid #f1f4f6', padding: '7px 10px', background: i === act ? '#fbfdff' : 'transparent' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 8, alignItems: 'center' }}>
                     <div style={{ fontSize: 14, color: '#9aa5b1' }}><span className="ef-rowno">{i + 1}{r.id == null && <span style={{ color: accent, fontWeight: 700 }}> 新</span>}</span><span className="ef-rownow" style={{ fontSize: 12, fontWeight: 800, color: '#fff', background: accent, borderRadius: 6, padding: '1px 4px' }}>入力中</span></div>
+                    {/* 振替伝票形式：借方金額と貸方金額をそれぞれ入力する（確認メモ #199） */}
+                    {isTr && <input id={`ed-r${i}-amount`} data-amount="kari" aria-label={`${i + 1}行目 借方金額`} className="ef-input" disabled={ro} value={fmtNum(r.amount)} onChange={(e) => setRow(i, { amount: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => focusId(`ed-r${i}-kari`))} inputMode="numeric" placeholder="0" style={amountInput(!!rowErr[r.key]?.startsWith('金額'))} />}
                     {!st.shared && <ComboField id={`ed-r${i}-kari`} kind="account" value={r.kari} onChange={(v) => setRow(i, { kari: v })} onCommit={() => focusId(`ed-r${i}-kashi`)} placeholder="借方科目" disabled={ro} invalid={fieldState(ri, 'kari', 'pair')} fontSize={14} padY={7} listWidth={380} />}
-                    {!st.shared && <ComboField id={`ed-r${i}-kashi`} kind="account" value={r.kashi} onChange={(v) => setRow(i, { kashi: v })} onCommit={() => focusId(`ed-r${i}-tekiyo`)} placeholder="貸方科目" disabled={ro} invalid={fieldState(ri, 'kashi', 'pair')} fontSize={14} padY={7} listWidth={380} />}
-                    <ComboField id={`ed-r${i}-tekiyo`} kind="summary" freeText value={r.tekiyo} onChange={(v) => setRow(i, { tekiyo: v })} onCommit={() => focusId(`ed-r${i}-gyosha`)} placeholder="摘要" disabled={ro} fontSize={14} padY={7} listWidth={340} />
-                    <ComboField id={`ed-r${i}-gyosha`} kind="vendor" value={r.gyosha} onChange={(v) => setRow(i, { gyosha: v })} onCommit={() => focusId(`ed-r${i}-amount`)} placeholder="取引先" disabled={ro} fontSize={14} padY={7} listWidth={300} />
-                    <input id={`ed-r${i}-amount`} className="ef-input" disabled={ro} value={fmtNum(r.amount)} onChange={(e) => setRow(i, { amount: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => rowNext(i))} inputMode="numeric" placeholder="0" style={{ ...numInput, padding: '7px 9px', fontWeight: 700, fontSize: 14, borderColor: rowErr[r.key]?.startsWith('金額') ? '#c0392b' : '#cfd8e0' }} />
+                    {!st.shared && <ComboField id={`ed-r${i}-kashi`} kind="account" value={r.kashi} onChange={(v) => setRow(i, { kashi: v })} onCommit={() => { if (isTr && !r.kashiAmount && r.amount) setRow(i, { kashiAmount: r.amount }); focusId(isTr ? `ed-r${i}-kashiamt` : `ed-r${i}-tekiyo`); }} placeholder="貸方科目" disabled={ro} invalid={fieldState(ri, 'kashi', 'pair')} fontSize={14} padY={7} listWidth={380} />}
+                    {isTr && <input id={`ed-r${i}-kashiamt`} data-amount="kashi" aria-label={`${i + 1}行目 貸方金額`} className="ef-input" disabled={ro} value={fmtNum(r.kashiAmount)} onChange={(e) => setRow(i, { kashiAmount: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => focusId(`ed-r${i}-tekiyo`))} inputMode="numeric" placeholder="0" style={amountInput(!!rowErr[r.key]?.startsWith('金額'))} />}
+                    {!isTr && <ComboField id={`ed-r${i}-tekiyo`} kind="summary" freeText value={r.tekiyo} onChange={(v) => setRow(i, { tekiyo: v })} onCommit={() => focusId(`ed-r${i}-gyosha`)} placeholder="摘要" disabled={ro} fontSize={14} padY={7} listWidth={340} />}
+                    {!isTr && <ComboField id={`ed-r${i}-gyosha`} kind="vendor" value={r.gyosha} onChange={(v) => setRow(i, { gyosha: v })} onCommit={() => focusId(`ed-r${i}-amount`)} placeholder="取引先" disabled={ro} fontSize={14} padY={7} listWidth={300} />}
+                    {!isTr && <input id={`ed-r${i}-amount`} className="ef-input" disabled={ro} value={fmtNum(r.amount)} onChange={(e) => setRow(i, { amount: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => rowNext(i))} inputMode="numeric" placeholder="0" style={amountInput(!!rowErr[r.key]?.startsWith('金額'))} />}
                     {!viewOnly && <div style={{ display: 'flex', gap: 3 }}>
                       <button type="button" className="ef-act" disabled={ro || i === 0} title="この行を1つ上へ" onClick={() => moveRow(i, -1)} style={smallBtn}>▲</button>
                       <button type="button" className="ef-act" disabled={ro || i === st.rows.length - 1} title="この行を1つ下へ" onClick={() => moveRow(i, 1)} style={smallBtn}>▼</button>
                       <button type="button" className="ef-act" disabled={!canRow} title={canRow ? 'この行を削除' : !editable ? reason : '1伝票1行の形式です'} onClick={() => delRow(i)} style={{ ...smallBtn, color: '#c0392b', marginLeft: 6 }}>行削除</button>
                     </div>}
                   </div>
+                  {/* 行の下段：予備入力1・予備入力2 は行ごと（確認メモ #198）。振替伝票形式は摘要・取引先、振替単一形式は行ごとの内部取引と相手区分もここに置く */}
+                  <div data-row-sub={i} style={{ display: 'grid', gridTemplateColumns: SUB_GRID, gap: 8, alignItems: 'center', margin: '6px 140px 0 42px' }}>
+                    {isTr && <div style={subWrap}><span style={subLab}>摘要</span><div style={{ flex: 1, minWidth: 0 }}><ComboField id={`ed-r${i}-tekiyo`} kind="summary" freeText value={r.tekiyo} onChange={(v) => setRow(i, { tekiyo: v })} onCommit={() => focusId(`ed-r${i}-gyosha`)} placeholder="摘要" disabled={ro} fontSize={14} padY={5} listWidth={340} /></div></div>}
+                    {isTr && <div style={subWrap}><span style={subLab}>取引先</span><div style={{ flex: 1, minWidth: 0 }}><ComboField id={`ed-r${i}-gyosha`} kind="vendor" value={r.gyosha} onChange={(v) => setRow(i, { gyosha: v })} onCommit={() => rowNext(i)} placeholder="取引先（任意）" disabled={ro} fontSize={14} padY={5} listWidth={300} /></div></div>}
+                    {spareCells(r, i)}
+                    {isTs && (
+                      <label data-row-internal={i} title={rowLocked ? '内部取引科目を使っているため、この行は内部取引です' : 'この行を内部取引として登録します（相手区分を指定します）'} style={{ ...subWrap, fontSize: 14, fontWeight: 700, color: rowIn ? '#b45309' : '#5b6773', cursor: ro || rowLocked ? 'default' : 'pointer' }}>
+                        <input type="checkbox" checked={rowIn} disabled={ro || rowLocked} onChange={(e) => setRow(i, e.target.checked ? { internal: true } : { internal: false, aite: '' })} />
+                        内部取引
+                      </label>
+                    )}
+                    {isTs && <div style={subWrap}><span style={{ ...subLab, color: rowIn ? '#b45309' : '#b8c1cb' }}>相手区分</span><div style={{ flex: 1, minWidth: 0 }}><ComboField id={`ed-r${i}-aite`} kind="service" value={r.aite} onChange={(v) => setRow(i, { aite: v })} onCommit={() => rowNext(i)} placeholder={rowIn ? '相手先の区分' : '内部取引のとき'} disabled={ro || !rowIn} invalid={rowIn ? fieldState(ri, 'aite') : undefined} fontSize={14} padY={5} /></div></div>}
+                  </div>
+                  {taxOn && (
+                    <div data-row-tax={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 190px minmax(0,1fr) 190px', gap: 8, alignItems: 'center', margin: '6px 140px 0 42px' }}>
+                      {taxCells(r, i, 'kari')}
+                      {taxCells(r, i, 'kashi')}
+                    </div>
+                  )}
                   {(rowErr[r.key] || ri.length > 0) && (
                     <div style={{ margin: '6px 0 2px 42px', display: 'grid', gap: 5 }}>
                       {rowErr[r.key] && <div role="alert" style={{ fontSize: 14, fontWeight: 700, color: '#a5281b' }}>× {rowErr[r.key]}</div>}
@@ -437,17 +565,26 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
             })}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 12px', borderTop: '2px solid #e2e8ee', background: '#fbfcfd', borderRadius: '0 0 10px 10px' }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>合計（{st.rows.length} 行）</span>
-              <span style={{ marginLeft: 'auto', fontSize: 17, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{yen(total)} <span style={{ fontSize: 14, fontWeight: 600, color: '#7a8794' }}>円</span></span>
+              {isTr ? (
+                <span data-totals style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'baseline', gap: 14, fontVariantNumeric: 'tabular-nums' }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: BLUE }}>借方合計</span><span style={{ fontSize: 17, fontWeight: 800 }}>{yen(total)}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: PINK }}>貸方合計</span><span style={{ fontSize: 17, fontWeight: 800 }}>{yen(kashiTotal)}</span>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: '#7a8794' }}>円</span>
+                  <span style={{ padding: '2px 9px', borderRadius: 8, fontSize: 12, fontWeight: 800, background: total === kashiTotal ? '#e6f4ec' : '#fdeee9', color: total === kashiTotal ? '#1f7a52' : '#a5281b' }}>{total === kashiTotal ? '貸借一致' : `差額 ${yen(Math.abs(total - kashiTotal))}`}</span>
+                </span>
+              ) : (
+                <span style={{ marginLeft: 'auto', fontSize: 17, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{yen(total)} <span style={{ fontSize: 14, fontWeight: 600, color: '#7a8794' }}>円</span></span>
+              )}
             </div>
           </div>
           {!st.shared && hasWarn(allIssues) && !hasError(allIssues) && !ro && (
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button id="ed-confirm" type="button" className="ef-act" onClick={() => save(true)} style={{ padding: '6px 14px', borderRadius: 7, border: '1px solid #b07d00', background: '#d99a00', color: '#fff', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}>確認して登録</button></div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+          {/* 小切手No は伝票に1つ。予備入力1・予備入力2 は行ごと（各行の下段。確認メモ #198） */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12, alignItems: 'end' }}>
             <Field label="小切手No"><input className="ef-input" disabled={ro} value={st.cheque} onChange={(e) => set({ cheque: e.target.value })} style={cell} /></Field>
-            <Field label="予備入力1（摘要予備）"><input className="ef-input" disabled={ro} value={st.spare1} onChange={(e) => set({ spare1: e.target.value })} style={cell} /></Field>
-            <Field label="予備入力2（取引先予備）"><input className="ef-input" disabled={ro} value={st.spare2} onChange={(e) => set({ spare2: e.target.value })} style={cell} /></Field>
+            <div style={{ fontSize: 12, color: '#8290a0', paddingBottom: 9 }}>予備入力1（摘要予備）・予備入力2（取引先予備）は、行ごとに各行の下段で入力します。{taxOn ? '税区分・税額は、借方と貸方のそれぞれに入力します。' : ''}</div>
           </div>
 
           {msg && <div role={msg.tone === 'error' ? 'alert' : 'status'} style={{ padding: '8px 12px', borderRadius: 9, fontSize: 14, fontWeight: 700, background: msg.tone === 'error' ? '#fdeee9' : '#eef4fb', color: msg.tone === 'error' ? '#a5281b' : '#2c5f9e', border: '1px solid ' + (msg.tone === 'error' ? '#f0b9ae' : '#c9dcf2') }}>{msg.text}</div>}

@@ -45,11 +45,12 @@ export function DivisionPicker({ accent, compact }: { accent: string; compact?: 
         data-menu="区分・年度の切替"
         onClick={() => setOpen(true)}
         title="区分・年度を切り替える"
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: compact ? '3px 9px' : '4px 10px', borderRadius: 8, border: '1px solid ' + (isPast ? '#1f7a52' : isFuture ? '#b7791f' : '#dde4ea'), background: isPast ? '#eaf5ef' : isFuture ? '#fff7e6' : '#f7f9fb', color: '#22303c', fontSize: compact ? 14 : 14, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: compact ? '3px 9px' : '4px 10px', borderRadius: 8, border: (isPast ? '2px solid #d7191c' : '1px solid ' + (isFuture ? '#b7791f' : '#dde4ea')), background: isPast ? '#fdeaea' : isFuture ? '#fff7e6' : '#f7f9fb', color: '#22303c', fontSize: compact ? 14 : 14, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}
       >
         <span style={{ color: '#68757f' }}>会計期間</span>
         <b style={{ fontWeight: 700 }}>{s.fiscalYear}</b>
-        {isPast && <span style={{ fontSize: 12, fontWeight: 800, color: '#1f7a52' }}>過去年度</span>}
+        {/* 過去年度（確認メモ #218）：帯と同じ色の塗りつぶしで示す */}
+        {isPast && <span data-year-chip="past" style={{ fontSize: 12, fontWeight: 800, color: '#fff', background: '#d7191c', padding: '2px 8px', borderRadius: 8 }}>過去年度を参照中</span>}
         {isFuture && <span style={{ fontSize: 12, fontWeight: 800, color: '#b7791f' }}>翌年度</span>}
         <span style={{ color: '#c3ccd4' }}>｜</span>
         <span style={{ color: '#68757f' }}>{s.divisionPath.slice(-2, -1)[0]}</span>

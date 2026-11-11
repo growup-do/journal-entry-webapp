@@ -14,6 +14,7 @@ import { yen } from './ui';
 import { BALANCE_ACCOUNTS } from '../data';
 import { metaOf } from '../lib/accounts';
 import { inPeriod, type Period } from '../lib/period';
+import { BALANCE_DEFAULT_MONTH, balanceAsOf, systemBalances, useBookBalances } from '../lib/balanceCheck';
 import { FUSEN_COLORS, useVouchers, type Voucher } from '../store/journalStore';
 import { useSession } from '../store/session';
 import { canEnterVoucher } from '../lib/entryDivision';
@@ -101,6 +102,10 @@ export function WidePanel({ accent, layout, state, top = 0, highlightIds, return
   // 伝票入力の画面の中のパネルなので、親区分で起動中でも配下の入力区分の伝票を訂正できる（確認メモ #182）
   const editable = canEnterVoucher(sess);
   const [month, setMonth] = useState<MonthFilter>('8');
+  // 残高照合の月（確認メモ #201）。日記帳・元帳の月とは別に覚える。通帳残高は「残高照合」の画面でその月に入力した値
+  const [balMonth, setBalMonth] = useState(BALANCE_DEFAULT_MONTH);
+  const balBook = useBookBalances(balMonth);
+  const balSystem = systemBalances(balMonth);
   const [acc1, setAcc1] = useState(() => read(state.storageKey + ':ledger1') ?? sess.env.ledger1Init);
   const [acc2, setAcc2] = useState(() => read(state.storageKey + ':ledger2') ?? sess.env.ledger2Init);
   const [edit, setEdit] = useState<Voucher | null>(null);
@@ -173,6 +178,12 @@ export function WidePanel({ accent, layout, state, top = 0, highlightIds, return
           </div>
         )}
         {(view === '日記帳' || slot > 0) && <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} withAll />}
+        {view === '残高照合' && (
+          <div data-balance-months style={{ display: 'grid', gap: 5 }}>
+            <FiscalMonthTabs current={balMonth} accent={accent} onSelect={(v) => { if (v) setBalMonth(v); }} />
+            <span style={{ fontSize: 12, color: '#8290a0' }}>{balanceAsOf(balMonth)}</span>
+          </div>
+        )}
         {slot > 0 && (
           <div className="ef-field">
             <FieldLabel>{view}の科目</FieldLabel>
@@ -188,22 +199,23 @@ export function WidePanel({ accent, layout, state, top = 0, highlightIds, return
           <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
             <thead><tr><th style={TH}>現預金科目</th><th style={{ ...TH, width: 44 }}>判定</th><th style={{ ...TH, textAlign: 'right' }}>通帳残高</th><th style={{ ...TH, textAlign: 'right' }}>システム残高</th><th style={{ ...TH, textAlign: 'right' }}>差額</th></tr></thead>
             <tbody>
-              {BALANCE_ACCOUNTS.map((a) => {
-                const ok = a.system === 0;
+              {BALANCE_ACCOUNTS.map((a, i) => {
+                const diff = balBook[i] - balSystem[i];
+                const ok = diff === 0;
                 return (
                   <tr key={a.name} style={{ background: ok ? 'transparent' : '#fff7f5' }}>
                     <td style={{ ...TD, fontWeight: 500 }}>{a.name}</td>
                     <td style={TD}><span style={{ fontSize: 12, fontWeight: 800, padding: '1px 6px', borderRadius: 6, background: ok ? '#e8f0fb' : '#c0392b', color: ok ? '#2c5f9e' : '#fff' }}>{ok ? 'OK' : 'NG'}</span></td>
-                    <td style={NUM}>0</td>
-                    <td style={NUM}>{yen(a.system)}</td>
-                    <td style={{ ...NUM, fontWeight: 700, color: ok ? '#22303c' : '#c0392b' }}>{ok ? '0' : '-' + yen(a.system)}</td>
+                    <td style={NUM}>{yen(balBook[i])}</td>
+                    <td style={NUM}>{yen(balSystem[i])}</td>
+                    <td style={{ ...NUM, fontWeight: 700, color: ok ? '#22303c' : '#c0392b' }}>{diff < 0 ? '-' : ''}{yen(Math.abs(diff))}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
           <div style={{ padding: '10px 14px', fontSize: 12, color: '#9aa5b1', lineHeight: 1.7, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span>ここでは結果の確認だけができます。通帳残高の入力は「残高照合」の画面で行います。</span>
+            <span>ここでは選んだ月の結果の確認だけができます。通帳残高の入力は「残高照合」の画面で行います（月ごとに入力します）。</span>
             {onNavigate && <button type="button" className="ef-act" data-menu="参照パネル:残高照合の画面を開く" onClick={() => onNavigate('残高照合')} style={{ flex: 'none', padding: '5px 10px', borderRadius: 7, border: '1px solid ' + accent, background: '#fff', color: accent, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>残高照合の画面を開く</button>}
           </div>
         </div>

@@ -92,6 +92,14 @@ const FA_CATS: { cat: FaCat; note: string }[] = [
   { cat: '効率性', note: '収入に対する費用の割合' },
   { cat: 'その他', note: '職員・園児 1 人当たりの指標など' },
 ];
+/** カテゴリの色（確認メモ #223）。カテゴリは色つきの帯と大きい文字、項目は字下げした通常の文字で区別する */
+const FA_CAT_COLOR: Record<FaCat, { fg: string; bg: string }> = {
+  成長性: { fg: '#1e6b3a', bg: '#e3f3e8' },
+  安全性: { fg: '#1d4f91', bg: '#e3edfb' },
+  健全性: { fg: '#6b3fa0', bg: '#efe8f9' },
+  効率性: { fg: '#8a5200', bg: '#fcefd8' },
+  その他: { fg: '#46525e', bg: '#e9edf1' },
+};
 const FA_ACCOUNTS: { name: string; code: string; cls: FaCls }[] = [
   ...ACCOUNT_META.map((m) => ({ name: m.name, code: m.code, cls: m.cls as FaCls })),
   { name: '建物', code: '1610', cls: '資産' }, { name: '器具及び備品', code: '1620', cls: '資産' },
@@ -151,15 +159,30 @@ export function FinancialAnalysisSettingsPage({ variant, accent, onNavigate }: M
           </ScopeBar>
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 320px) minmax(0, 1fr)', minHeight: 520 }}>
             {/* 指標の一覧（分野別） */}
-            <div style={{ borderRight: '1px solid #eef2f5', padding: '12px 0', overflow: 'auto', maxHeight: 'calc(100vh - 300px)' }}>
-              {FA_CATS.map((c) => (
-                <div key={c.cat} style={{ marginBottom: 10 }}>
-                  <div style={{ padding: '6px 18px', fontSize: 14, fontWeight: 800, color: '#48565f' }}>{c.cat}<span style={{ fontWeight: 500, color: '#9aa5b1', marginLeft: 8, fontSize: 12 }}>{c.note}</span></div>
-                  {FA_DEFS.filter((d) => d.cat === c.cat).map((d) => {
+            <div style={{ borderRight: '1px solid #eef2f5', padding: '0 0 12px', overflow: 'auto', maxHeight: 'calc(100vh - 300px)' }}>
+              {/* 見方：カテゴリ（色つきの帯・大きい文字）と項目（字下げ・通常の文字）。確認メモ #223 */}
+              <div data-fa-legend style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 14px', fontSize: 12, color: '#7a8794', borderBottom: '1px solid #eef2f5' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span aria-hidden="true" style={{ width: 18, height: 12, borderRadius: 3, background: '#e3edfb', borderLeft: '4px solid #1d4f91' }} /><b style={{ color: '#3d4a56' }}>カテゴリ</b></span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: '50%', background: '#1d4f91' }} />項目（指標）</span>
+              </div>
+              {FA_CATS.map((c) => {
+                const col = FA_CAT_COLOR[c.cat];
+                const defs = FA_DEFS.filter((d) => d.cat === c.cat);
+                return (
+                <div key={c.cat} data-fa-cat={c.cat} style={{ marginBottom: 6 }}>
+                  <div role="heading" aria-level={3} style={{ padding: '9px 14px 8px', background: col.bg, borderLeft: '6px solid ' + col.fg, borderTop: '1px solid ' + col.fg + '33', borderBottom: '1px solid ' + col.fg + '33' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                      <span style={{ fontSize: 17, fontWeight: 800, color: col.fg, fontFamily: "'Zen Kaku Gothic New', sans-serif", letterSpacing: '.04em' }}>{c.cat}</span>
+                      <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: col.fg, whiteSpace: 'nowrap' }}>{defs.length} 項目</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: '#5b6773', marginTop: 1 }}>{c.note}</div>
+                  </div>
+                  {defs.map((d) => {
                     const on = d.name === cur;
                     const n = d.parts.reduce((a, _, i) => a + (picked[faKey(d.name, i)]?.length ?? 0), 0);
                     return (
-                      <button key={d.name} type="button" onClick={() => { setCur(d.name); setQ(''); }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '9px 18px', border: 'none', borderLeft: '4px solid ' + (on ? accent : 'transparent'), background: on ? '#eef2f6' : 'transparent', fontFamily: 'inherit', fontSize: 14, fontWeight: on ? 700 : 500, color: '#22303c', cursor: 'pointer' }}>
+                      <button key={d.name} type="button" data-fa-item={d.name} aria-current={on ? 'true' : undefined} onClick={() => { setCur(d.name); setQ(''); }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '8px 14px 8px 26px', border: 'none', borderLeft: '6px solid ' + (on ? col.fg : 'transparent'), background: on ? '#eef2f6' : 'transparent', fontFamily: 'inherit', fontSize: 14, fontWeight: on ? 700 : 400, color: '#22303c', cursor: 'pointer' }}>
+                        <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: '50%', background: col.fg, opacity: on ? 1 : 0.55, flex: 'none' }} />
                         <span style={{ flex: 1 }}>{d.name}</span>
                         {dirty(d) && <span style={{ fontSize: 12, fontWeight: 800, padding: '1px 6px', borderRadius: 6, background: '#fff1b8', color: '#8a6d00' }}>未保存</span>}
                         <span style={{ fontSize: 12, color: n ? '#7a8794' : '#c0392b', whiteSpace: 'nowrap' }}>{n ? `${n} 科目` : '未設定'}</span>
@@ -167,14 +190,17 @@ export function FinancialAnalysisSettingsPage({ variant, accent, onNavigate }: M
                     );
                   })}
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* 指標の詳細：算式・科目選択・ガイド */}
             <div style={{ padding: 20, display: 'grid', gap: 14, alignContent: 'start' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 12, fontWeight: 800, padding: '2px 9px', borderRadius: 10, background: '#eef2f6', color: '#3d4a56' }}>{def.cat}</span>
-                <span style={{ fontSize: 17, fontWeight: 700, fontFamily: "'Zen Kaku Gothic New', sans-serif" }}>{def.name}</span>
+              <div data-fa-head style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, padding: '3px 12px', borderRadius: 8, background: FA_CAT_COLOR[def.cat].bg, color: FA_CAT_COLOR[def.cat].fg, border: '1px solid ' + FA_CAT_COLOR[def.cat].fg + '55' }}><span style={{ fontSize: 12, fontWeight: 700 }}>カテゴリ</span><span style={{ fontSize: 15, fontWeight: 800 }}>{def.cat}</span></span>
+                <span aria-hidden="true" style={{ color: '#9aa5b1' }}>›</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>項目</span>
+                <span style={{ fontSize: 19, fontWeight: 700, fontFamily: "'Zen Kaku Gothic New', sans-serif" }}>{def.name}</span>
                 <button type="button" className="btn-outline" onClick={() => setGuide(true)} style={{ ...btn('#5b6773', false, true), marginLeft: 'auto' }}>ガイドを表示</button>
               </div>
               <div>

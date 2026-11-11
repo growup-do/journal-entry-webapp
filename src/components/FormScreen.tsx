@@ -11,15 +11,16 @@ import type { CSSProperties, ReactNode } from 'react';
 import { DivisionPicker } from './DivisionPicker';
 import { FiscalYearBanner } from './FiscalYearPage';
 import { AttachedStatementModal, BudgetGraphModal, BudgetHintLive, EntryConfirmModal, EntryDivisionField, SpecialAmountModal, TorihikiBadge, useEntryTools } from './EntryExtras';
-import { ComboField, ENTRY_MONTH_HELP, EntryMonthNote, EntryStyles, isIme, FieldLabel, FundAccountLine, PAPER, PaperBox, PaperDate, PaperStyles, PaperTitle, entryYearOf, parseEntryMonth, fieldMessage, fieldState, fmtNum, focusId, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, watchedStatement, type FundMode, type FusenColor, FusenTab, VoucherMarks } from './EntryCommon';
+import { ComboField, ENTRY_MONTH_HELP, EntryMonthNote, EntryStyles, isIme, FieldLabel, FundAccountLine, PAPER, PaperBox, PaperDate, PaperStyles, PaperTitle, parseEntryDate, useEntryYear, ENTRY_DATE_RANGE, ENTRY_YEAR_HELP, INTERNAL_SIDES, autoInternalSide, isSpecialParent, specialChildrenOf, type InternalSide, fieldMessage, fieldState, fmtNum, focusId, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, watchedStatement, type FundMode, type FusenColor, FusenTab, VoucherMarks } from './EntryCommon';
 import { WIDE_TAB_SPACE, WIDE_WIDTH, WidePanel, useWidePanel } from './WidePanel';
 import { Menu as ClassicMenu } from './classic/ClassicMenu';
 import { VersionBadge } from './VersionBadge';
 import { useLayoutMode } from '../store/layout';
 import { ToastView, useToast } from './Toast';
-import { judgeTorihiki } from '../lib/accounts';
+import { judgeTorihiki, metaOf } from '../lib/accounts';
+import { TAX_OPTS, taxAmountOf, taxDefaultOf } from '../lib/transferTax';
 import { addVoucher, getVouchers, updateVoucher, useVouchers } from '../store/journalStore';
-import { setSession, specialRatesOf, useSession, type JournalTemplate, type TemplateLine } from '../store/session';
+import { setSession, specialRatesOf, useSession } from '../store/session';
 import { canEnterVoucher, useEntryDivision } from '../lib/entryDivision';
 import { HeaderTools } from './HeaderTools';
 import { UserMenu } from './UserMenu';
@@ -166,30 +167,20 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
 /* 伝票入力（仕訳伝票形式）本体                                          */
 /*   ショートカット（Alt＋英字）を登録するため、この画面を表示しているときだけマウントする。 */
 /* ------------------------------------------------------------------ */
-interface Row { id: number; tekiyo: string; gyosha: string; /** 数字のみ。先頭が '+' のときは特殊金額入力の入力途中 */ amount: string }
+/** 明細の行。入力予備１・２は行ごとに持つ（確認メモ #188）。tax＝行ごとの消費税コード（特殊摘要伝票のとき。空は科目からの既定。確認メモ #190） */
+interface Row { id: number; tekiyo: string; gyosha: string; /** 数字のみ。先頭が '+' のときは特殊金額入力の入力途中 */ amount: string; spare1: string; spare2: string; tax: string }
 /** 証憑・チェック・付箋は伝票1枚につき1つ（10/16 鈴木さん決定。確認メモ #47） */
 interface VoucherFlags { check: boolean; fusen: FusenColor; shohyo: boolean }
 const DEFAULT_FLAGS: VoucherFlags = { check: false, fusen: '', shohyo: true };
 let rowSeq = 1;
-const blankRow = (p?: Partial<Row>): Row => ({ id: rowSeq++, tekiyo: '', gyosha: '', amount: '', ...p });
-const rowBlank = (r: Row) => !r.tekiyo.trim() && !r.gyosha && !r.amount;
+const blankRow = (p?: Partial<Row>): Row => ({ id: rowSeq++, tekiyo: '', gyosha: '', amount: '', spare1: '', spare2: '', tax: '', ...p });
+const rowBlank = (r: Row) => !r.tekiyo.trim() && !r.gyosha && !r.amount && !r.spare1.trim() && !r.spare2.trim();
 /** 明細は、はじめから 6 行目まで入力できるようにしておく（確認メモ #155）。足りない分は空の行で補う */
 const MIN_ROWS = 6;
 const padRows = (list: Row[]): Row[] => (list.length >= MIN_ROWS ? list : [...list, ...Array.from({ length: MIN_ROWS - list.length }, () => blankRow())]);
-type LineGroup = { kari: string; kashi: string; lines: TemplateLine[] };
-/** 定型仕訳の行を、借方・貸方の科目が同じもの（＝伝票1枚分）ごとにまとめる */
-function groupLines(lines: TemplateLine[]): LineGroup[] {
-  const out: LineGroup[] = [];
-  lines.forEach((l) => {
-    const last = out[out.length - 1];
-    if (last && last.kari === l.kari && last.kashi === l.kashi) last.lines.push(l);
-    else out.push({ kari: l.kari, kashi: l.kashi, lines: [l] });
-  });
-  return out;
-}
 
 const SUBMIT_ID = 'fe-submit';
-const ENTER_ORDER = '月 → 日 →（伝票No）→ 借方科目 → 貸方科目 → 内部取引スイッチ（Shift+Enter でオン／オフ）→（オンのとき：相手区分）→ 1行目の摘要 → 取引先 → 金額 → 次の行の摘要 …（最後の行の金額で Enter を押すと、新しい行を追加します）　入力が終わったら、何も入力していない行の摘要で Enter を押すと「登録する」へ移ります';
+const ENTER_ORDER = '月（年は月に合わせて自動で入ります。翌年度の予備月を入力するときだけ年の欄を直します）→ 日 →（伝票No）→ 借方科目 → 貸方科目 → 内部取引（なし／借方／貸方。←→ か Shift+Enter で切替）→（借方か貸方を選んだとき：相手区分）→ 1行目の摘要 → 取引先 →（入力予備１・２）→ 金額 → 次の行の摘要 …（最後の行の金額で Enter を押すと、新しい行を追加します）　入力が終わったら、何も入力していない行の摘要で Enter を押すと「登録する」へ移ります';
 const FE_CSS = `
 .fe-actions { background: #fff; }
 /* 機能ボタンの下部固定は縦に十分な余裕がある画面だけ（低い画面では入力欄が隠れるため通常配置）。下端はプロトタイプの切替バー／メモボタンと重ならないよう余白を取る */
@@ -210,6 +201,8 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
 
   // 日付：年は会計年度から自動、月・日は未入力で始める（入力は月から）
   const [month, setMonthV] = useState('');
+  // 年：月を入れると自動で合う。翌年度の予備月（4〜6月）は年を直して入力する（確認メモ #184 の修正）
+  const yr = useEntryYear();
   const [day, setDayV] = useState('');
   // 画面を開いたら「月」にカーソルを置く（ここから入力を始めることが分かるように）
   useEffect(() => { const t = window.setTimeout(() => document.getElementById('fe-month')?.focus(), 80); return () => window.clearTimeout(t); }, []);
@@ -217,7 +210,8 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
   const [kari, setKari] = useState('');
   const [kashi, setKashi] = useState('');
   const [aite, setAite] = useState('');
-  const [internal, setInternal] = useState(false);
+  // 内部取引にする側（なし／借方／貸方。確認メモ #186）
+  const [internalSide, setInternalSide] = useState<InternalSide>('');
   const [fundMode, setFundMode] = useState<FundMode>('自動資金');
   const [rows, setRowsRaw] = useState<Row[]>(() => padRows([]));
   /** 行を更新する。6 行に満たないときは空の行を補う（確認メモ #155） */
@@ -226,24 +220,44 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
   const setFlags = (p: Partial<VoucherFlags>) => setFlagsState((f) => ({ ...f, ...p }));
   const [cur, setCur] = useState(0);
   const [cheque, setCheque] = useState('');
-  const [spare, setSpare] = useState(['', '']);
+  // 消費税コード（貸借それぞれ。空は科目からの既定。確認メモ #190）
+  const [kariTax, setKariTax] = useState('');
+  const [kashiTax, setKashiTax] = useState('');
   const [err, setErr] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [graphAcct, setGraphAcct] = useState<string | null>(null);
   const [special, setSpecial] = useState<{ row: number; total: number } | null>(null);
   const [stmt, setStmt] = useState<{ label: string; entry: { kari: string; kashi: string; tekiyo: string; amount: number } } | null>(null);
-  const [queue, setQueue] = useState<LineGroup[]>([]);
   const [hi, setHi] = useState<number[]>([]);
 
   // 入力内容が変わったら、登録時のメッセージを消す
-  useEffect(() => { setErr(''); }, [month, day, manualNo, kari, kashi, aite, internal, fundMode, rows]);
+  useEffect(() => { setErr(''); }, [yr.year, month, day, manualNo, kari, kashi, aite, internalSide, fundMode, rows]);
 
   const curIdx = Math.min(cur, rows.length - 1);
   const total = rows.reduce((s, r) => s + toNum(r.amount), 0);
-  const partner = needsPartner({ kari, kashi, internal });
-  const issues = judgeEntry({ kari, kashi, amount: total, fundMode, internal, aite, division }, sess.env);
+  // 内部取引にする側（確認メモ #186）。内部取引科目（区分間繰入金など）を使っているときは、その側に固定する
+  const autoSide = autoInternalSide(kari, kashi);
+  const side: InternalSide = autoSide || internalSide;
+  const partner = needsPartner({ kari, kashi, internalSide: side });
+  // 特殊摘要伝票（確認メモ #189）：借方か貸方に特殊摘要科目（親）を選ぶと、摘要欄は子の一覧から選ぶ。貸借の両方を親にはできない
+  const parentSide = isSpecialParent(kari) ? '借方' : isSpecialParent(kashi) ? '貸方' : '';
+  const bothParent = isSpecialParent(kari) && isSpecialParent(kashi);
+  const children = parentSide ? specialChildrenOf(parentSide === '借方' ? kari : kashi) : null;
+  const isChild = (name: string) => !!children?.some((c) => c.value === name);
+  // 消費税コード（確認メモ #190。各種設定の消費税で有効にしているとき）：通常の科目は資金科目の欄に、特殊摘要伝票は行ごとに入力する
+  /** その側の資金科目の欄に消費税コードを出すか：資金科目を持つ科目（費用・収益）。強制資金のときは現金・預金以外の科目（貸借それぞれ） */
+  const taxOnSide = (name: string) => {
+    if (!sess.taxEntry || !name || isSpecialParent(name)) return false;
+    const cls = metaOf(name)?.cls;
+    return cls === '費用' || cls === '収益' || (fundMode === '強制資金' && cls !== '現預金');
+  };
+  const kariTaxOn = taxOnSide(kari), kashiTaxOn = taxOnSide(kashi);
+  const kTax = kariTax || taxDefaultOf(kari), sTax = kashiTax || taxDefaultOf(kashi);
+  const rowTaxOn = sess.taxEntry && !!children;
+  const rowTaxOf = (r: Row) => r.tax || taxDefaultOf(r.tekiyo.trim());
+  const issues = judgeEntry({ kari, kashi, amount: total, fundMode, internalSide: side, aite, division }, sess.env);
   const warns = issues.filter((i) => i.level === 'warn');
-  const blocked = hasError(issues);
+  const blocked = hasError(issues) || bothParent;
   const dirty = !!(kari || kashi || rows.some((r) => !rowBlank(r)));
   const nextSeq = vouchers.reduce((m, r) => Math.max(m, r.seq), 0) + 1;
   const manual = inp.voucherNo === '手入力';
@@ -271,7 +285,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
   const afterTekiyo = (i: number, v: string) => {
     const r = rows[i];
     // 何も入力していない行（その下の行もすべて空）の摘要で Enter → 入力が終わったとみなして「登録する」へ
-    if (i > 0 && !v.trim() && !r.gyosha && !r.amount && rows.slice(i + 1).every(rowBlank)) { focusId(SUBMIT_ID); return; }
+    if (i > 0 && rowBlank({ ...r, tekiyo: v }) && rows.slice(i + 1).every(rowBlank)) { focusId(SUBMIT_ID); return; }
     focusId(`fe-gyo-${i}`);
   };
   /** 金額欄で Enter：特殊金額入力（＋金額）なら按分。それ以外は次の行へ進み、最後の行なら新しい行を追加する（確認メモ #154）。Shift+Enter：この行の下に1行挿入 */
@@ -289,37 +303,41 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
   /* ---- 登録 ---- */
   const basicError = (): string => {
     const d = parseInt(day, 10);
-    if (!parseEntryMonth(month).ok || !(d >= 1 && d <= 31)) return '伝票日付（月・日）を正しく入力してください。月は 1〜12、決算月は 99、翌年4〜6月（予備月）は 13〜15 です。';
+    if (!parseEntryDate(yr.year, month).ok || !(d >= 1 && d <= 31)) return `伝票日付（年・月・日）を正しく入力してください。入力できるのは、${ENTRY_DATE_RANGE}です。`;
     if (manual && !manualNo.trim()) return '伝票Noを入力してください（入力の変更で自動採番に切り替えられます）。';
     if (!kari || !kashi) return '借方科目・貸方科目を入力してください。';
+    if (bothParent) return '借方と貸方の両方を特殊摘要科目（親）にすることはできません。どちらかを通常の科目にしてください。';
     const plus = rows.findIndex((r) => r.amount.startsWith('+'));
     if (plus >= 0) return `${plus + 1}行目：特殊金額入力（＋）は、金額欄で Enter を押して確定してください。`;
     const noAmt = rows.findIndex((r) => !rowBlank(r) && toNum(r.amount) <= 0);
     if (noAmt >= 0) return `${noAmt + 1}行目の金額が未入力です。`;
     if (!rows.some((r) => toNum(r.amount) > 0)) return '金額を入力した行がありません。摘要・取引先・金額を1行以上入力してください。';
+    if (children) { const ng = rows.findIndex((r) => toNum(r.amount) > 0 && !isChild(r.tekiyo.trim())); if (ng >= 0) return `${ng + 1}行目：摘要欄で特殊摘要科目（子）を選んでください。`; }
     return '';
-  };
-  const applyGroup = (g: LineGroup) => {
-    setKari(g.kari); setKashi(g.kashi);
-    setRows(g.lines.map((l) => blankRow({ tekiyo: l.tekiyo, gyosha: l.gyosha ?? '', amount: String(l.amount ?? '').replace(/[^0-9]/g, '') })));
-    setCur(0);
   };
   /** 登録後・中止後の初期化。keepAccounts＝直前の借方・貸方科目を残す（入力の変更「登録後も直前の科目を残す」。確認メモ #47） */
   const reset = (keepAccounts = false) => {
-    if (!keepAccounts) { setKari(''); setKashi(''); }
-    setAite(''); setInternal(false); setFundMode('自動資金');
-    setRows([blankRow()]); setCur(0); setCheque(''); setSpare(['', '']); setManualNo(''); setFlagsState(DEFAULT_FLAGS);
+    if (!keepAccounts) { setKari(''); setKashi(''); setKariTax(''); setKashiTax(''); }
+    setAite(''); setInternalSide(''); setFundMode('自動資金');
+    setRows([blankRow()]); setCur(0); setCheque(''); setManualNo(''); setFlagsState(DEFAULT_FLAGS);
   };
   const finalize = () => {
     const list = rows.filter((r) => toNum(r.amount) > 0);
     if (!list.length) return;
-    // 決算月（99）は 3月、予備月（13〜15）は翌年4〜6月の日付として持ち、term で区別する（確認メモ #184）
-    const em = parseEntryMonth(month);
+    // 決算月（月に 99）は 3月、翌年度の予備月（翌年の 4〜6月）は 4〜6月の日付として持ち、term で区別する（確認メモ #184）
+    const em = parseEntryDate(yr.year, month);
     const date = `${em.month}/${parseInt(day, 10)}`;
     const seq = getVouchers().reduce((m, r) => Math.max(m, r.seq), 0) + 1;
     const no = manual && manualNo.trim() ? manualNo.trim() : `${em.month}-${seq}`;
     const ids = list.map((r) => {
-      const vch = addVoucher({ kind: '伝票', seq, no, date, kari, kashi, tekiyo: r.tekiyo.trim(), amount: toNum(r.amount), service: division, gyosha: r.gyosha || undefined, shohyo: inp.shohyo ? flags.shohyo : true, cheque: cheque.trim() || undefined, spare1: spare[0].trim() || undefined, spare2: spare[1].trim() || undefined, internal: partner || undefined, term: em.term });
+      const amt = toNum(r.amount);
+      // 特殊摘要伝票：親の側の科目は、その行で選んだ子の科目で登録する（確認メモ #189）
+      const child = children ? r.tekiyo.trim() : '';
+      const k = child && parentSide === '借方' ? child : kari, s = child && parentSide === '貸方' ? child : kashi;
+      // 消費税コード（確認メモ #190）：通常の科目は伝票に 1 つ（貸借それぞれ）、特殊摘要科目の側は行ごと。税額は内税の自動計算
+      const kt = parentSide === '借方' ? (rowTaxOn ? rowTaxOf(r) : undefined) : kariTaxOn ? kTax : undefined;
+      const st = parentSide === '貸方' ? (rowTaxOn ? rowTaxOf(r) : undefined) : kashiTaxOn ? sTax : undefined;
+      const vch = addVoucher({ kind: children ? '特摘' : '伝票', seq, no, date, kari: k, kashi: s, tekiyo: r.tekiyo.trim(), amount: amt, service: division, gyosha: r.gyosha || undefined, shohyo: inp.shohyo ? flags.shohyo : true, cheque: cheque.trim() || undefined, spare1: (inp.spare1 && r.spare1.trim()) || undefined, spare2: (inp.spare2 && r.spare2.trim()) || undefined, internal: partner || undefined, internalSide: side || undefined, kariTax: kt, kariTaxAmt: kt ? taxAmountOf(kt, amt) : undefined, kashiTax: st, kashiTaxAmt: st ? taxAmountOf(st, amt) : undefined, term: em.term });
       if (flags.check || flags.fusen) updateVoucher(vch.id, { check: flags.check, fusen: flags.fusen });
       if (partner) setPartner(vch.id, aite);
       return vch.id;
@@ -329,17 +347,10 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
     const w = watchedStatement(kari, kashi);
     const dep = isDepreciationAccount(kari) || isDepreciationAccount(kashi);
     if (w) setStmt({ label: w.label, entry: { kari, kashi, tekiyo: list[0].tekiyo, amount: sum } });
-    const [next, ...rest] = queue;
     reset(sess.input.keepLast);
-    if (next) {
-      applyGroup(next); setQueue(rest);
-      toast.show(`伝票No ${no} を登録しました。定型仕訳の次の伝票（残り ${rest.length + 1} 枚）を呼び出しました`);
-      focusId(SUBMIT_ID);
-    } else {
-      toast.show(`伝票No ${no}（${list.length} 行・合計 ${sum.toLocaleString('ja-JP')} 円）を登録しました${dep ? '。固定資産の登録は「減価償却」メニューで行ってください' : ''}`);
-      // 科目を残す設定のときは、次の伝票の1行目（摘要）から続けて入力できるようにする
-      focusId(sess.input.keepLast ? 'fe-tek-0' : 'fe-month');
-    }
+    toast.show(`伝票No ${no}（${list.length} 行・合計 ${sum.toLocaleString('ja-JP')} 円）を登録しました${dep ? '。固定資産の登録は「減価償却」メニューで行ってください' : ''}`);
+    // 科目を残す設定のときは、次の伝票の1行目（摘要）から続けて入力できるようにする
+    focusId(sess.input.keepLast ? 'fe-tek-0' : 'fe-month');
   };
   const submit = (): void => {
     if (!editable) return;
@@ -370,25 +381,22 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
     fundMode,
     onFundMode: setFundMode,
     onSubmit: submit,
-    onCancel: () => { reset(); setQueue([]); focusId('fe-month'); },
+    onCancel: () => { reset(); focusId('fe-month'); },
     onRowAdd: rowAdd,
     onRowInsert: rowInsert,
     onRowDelete: rowDelete,
     internal: partner,
-    internalLocked: needsPartner({ kari, kashi, internal: false }),
+    internalSide: side,
+    // 側を切り替えてもカーソルは動かさない（続けて ←→ で選び直せるように）。相手区分へは Enter で進む
+    onInternalSide: (x) => { setInternalSide(x); if (!x) setAite(''); },
+    internalLocked: !!autoSide,
     internalId: 'fe-internal',
     onInternalNext: () => focusId(partner ? 'fe-aite' : 'fe-tek-0'),
     blocked,
-    onInternal: () => { const on = !internal; setInternal(on); if (on) focusId('fe-aite'); else if (!needsPartner({ kari, kashi, internal: false })) setAite(''); },
-    onLoadTemplate: (t: JournalTemplate, mode) => {
-      const groups = groupLines(t.lines);
-      if (!groups.length) { toast.show('この定型仕訳には行がありません'); return; }
-      applyGroup(groups[0]); setQueue(groups.slice(1));
-      toast.show(`${mode === '連続' ? '連続定型' : '定型仕訳'}「${t.name}」を呼び出しました${groups.length > 1 ? `（残り ${groups.length - 1} 枚は、登録後に順に呼び出します）` : ''}`);
-      focusId('fe-amt-0');
-    },
+    onInternal: () => { if (autoSide) return; const next = INTERNAL_SIDES[(INTERNAL_SIDES.indexOf(side) + 1) % INTERNAL_SIDES.length]; setInternalSide(next); if (!next) setAite(''); focusId('fe-internal'); },
     onRegistered: setHi,
-    onPickDate: (m, d) => { setMonthV(m); setDayV(d); },
+    year: yr.year,
+    onPickDate: (m, d, y) => { setMonthV(m); setDayV(d); if (y) yr.set(y); },
     onOpenPanel: () => wide.setCollapsed(false),
     submitId: SUBMIT_ID,
     enterOrder: ENTER_ORDER,
@@ -397,8 +405,10 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
   // 旧レイアウト（プロトタイプ確認用）では、参照パネルを開くと本文を左に押し出す（以前の動き）
   const pushOut = useLayoutMode() === 'classic' && !wide.collapsed && !wide.narrow;
   const smallInput: CSSProperties = { padding: '4px 8px', border: '1px solid #cfd8e0', borderRadius: 7, fontSize: 14, fontFamily: 'inherit' };
-  /** 明細の列：コード（行番号）｜摘要・取引先｜金額｜行の操作（証憑・チェック・付箋／挿入・削除） */
-  const GRID = '52px minmax(0,1fr) 170px 158px';
+  /** 明細の列：コード（行番号）｜摘要・取引先｜（入力予備１）｜（入力予備２）｜（消費税コード）｜金額｜行の操作（挿入・削除）。入力予備は入力の変更で有効にしたときだけ（行ごとに持つ。確認メモ #188）、消費税コードは特殊摘要伝票のときだけ（確認メモ #190） */
+  const sp1 = inp.spare1, sp2 = inp.spare2;
+  const extraCols = (sp1 ? 1 : 0) + (sp2 ? 1 : 0) + (rowTaxOn ? 1 : 0);
+  const GRID = ['52px', 'minmax(0,1fr)', ...(sp1 ? ['96px'] : []), ...(sp2 ? ['96px'] : []), ...(rowTaxOn ? ['172px'] : []), extraCols ? '150px' : '170px', extraCols ? '116px' : '158px'].join(' ');
   const rowBtn: CSSProperties = { padding: '3px 7px', borderRadius: 6, border: '1px solid #cfd8e0', background: '#fff', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', color: '#5b6773' };
   const paperDate: CSSProperties = { ...dateInput, border: '1px solid transparent', borderRadius: 4, background: 'transparent' };
   const divisionName = division.replace(/^\d+\s*/, '');
@@ -450,7 +460,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
               <PaperTitle
                 title="仕訳伝票"
                 division={`${divisionName} 拠点区分`}
-                badge={<span style={{ fontSize: 12, fontWeight: 700, color: GREEN, whiteSpace: 'nowrap' }}>仕訳伝票形式（複数行）　<span style={{ color: '#7a8794', fontWeight: 500 }}>{sess.fiscalYear}</span></span>}
+                badge={<span style={{ fontSize: 12, fontWeight: 700, color: GREEN, whiteSpace: 'nowrap' }}>仕訳伝票形式（複数行）{children && <span data-special-voucher title="借方か貸方に特殊摘要科目（親）を選んでいます。摘要欄では、特殊摘要科目（子）を選びます" style={{ marginLeft: 8, padding: '1px 8px', borderRadius: 10, background: '#fff3e0', color: '#b25e00', border: '1px solid #f3d6a8', fontSize: 12, fontWeight: 800 }}>特殊摘要伝票</span>}　<span style={{ color: '#7a8794', fontWeight: 500 }}>{sess.fiscalYear}</span></span>}
                 right={tools.templateButton}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 14, borderLeft: `1px solid ${PAPER.lineSoft}` }}>
@@ -467,9 +477,9 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                 <div className="ef-field" style={{ display: 'flex', alignItems: 'center' }}>
                   <PaperDate
                     label="伝票日付"
-                    year={entryYearOf(month)}
-                    note={<EntryMonthNote month={month} />}
-                    month={<input id="fe-month" className="ef-input pp-input" aria-label="月" title={ENTRY_MONTH_HELP} disabled={!editable} value={month} onChange={(e) => setNum2(setMonthV)(e.target.value)} onFocus={(e) => e.currentTarget.select()} onKeyDown={onEnter(() => { if (parseEntryMonth(month).term === '決算' && !day) setDayV('31'); focusId('fe-day'); })} inputMode="numeric" autoComplete="off" style={paperDate} />}
+                    yearInput={<input id="fe-year" className="ef-input pp-input" aria-label="年" title={ENTRY_YEAR_HELP} disabled={!editable} value={yr.year} onChange={(e) => yr.edit(e.target.value)} onFocus={(e) => e.currentTarget.select()} onKeyDown={onEnter(() => focusId('fe-month'))} inputMode="numeric" autoComplete="off" style={paperDate} />}
+                    note={<EntryMonthNote month={month} year={yr.year} />}
+                    month={<input id="fe-month" className="ef-input pp-input" aria-label="月" title={ENTRY_MONTH_HELP} disabled={!editable} value={month} onChange={(e) => setNum2((v) => { setMonthV(v); yr.onMonth(v); })(e.target.value)} onFocus={(e) => e.currentTarget.select()} onKeyDown={onEnter(() => { if (parseEntryDate(yr.year, month).term === '決算' && !day) setDayV('31'); focusId('fe-day'); })} inputMode="numeric" autoComplete="off" style={paperDate} />}
                     day={<input id="fe-day" className="ef-input pp-input" aria-label="日" disabled={!editable} value={day} onChange={(e) => setNum2(setDayV)(e.target.value)} onFocus={(e) => e.currentTarget.select()} onKeyDown={onEnter(() => focusId(manual ? 'fe-no' : 'fe-kari'))} inputMode="numeric" autoComplete="off" style={paperDate} />}
                   />
                 </div>
@@ -478,7 +488,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                     {manual ? (
                       <input id="fe-no" className="ef-input pp-input" disabled={!editable} value={manualNo} onChange={(e) => setManualNo(e.target.value)} onKeyDown={onEnter(() => focusId('fe-kari'))} placeholder="例 8-101" autoComplete="off" style={{ height: 34, width: '100%', padding: '0 8px', fontSize: 14 }} />
                     ) : (
-                      <span className="pp-ro" style={{ whiteSpace: 'nowrap' }}>自動採番（<span className="pp-num" style={{ color: '#22303c', fontWeight: 700 }}>{parseEntryMonth(month).month || 8}-{nextSeq}</span>）</span>
+                      <span className="pp-ro" style={{ whiteSpace: 'nowrap' }}>自動採番（<span className="pp-num" style={{ color: '#22303c', fontWeight: 700 }}>{parseEntryDate(yr.year, month).month || 8}-{nextSeq}</span>）</span>
                     )}
                   </PaperBox>
                 </div>
@@ -487,9 +497,9 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
               {/* 2段目：借方（BS&PL）／貸方（BS&PL）と、その下の資金（CF） */}
               <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 14, marginBottom: 12 }}>
                 {([
-                  { side: '借方', id: 'fe-kari', color: BLUE, value: kari, other: kashi, set: setKari, commit: () => focusId('fe-kashi'), state: fieldState(issues, 'kari', 'pair'), msg: fieldMessage(issues, 'kari') },
-                  { side: '貸方', id: 'fe-kashi', color: PINK, value: kashi, other: kari, set: setKashi, commit: () => focusId('fe-internal'), state: fieldState(issues, 'kashi', 'pair'), msg: fieldMessage(issues, 'kashi', 'pair') },
-                ] as const).map((s) => (
+                  { side: '借方', id: 'fe-kari', color: BLUE, value: kari, other: kashi, set: (v: string) => { setKari(v); setKariTax(''); }, commit: () => focusId('fe-kashi'), state: fieldState(issues, 'kari', 'pair'), msg: fieldMessage(issues, 'kari'), taxOn: kariTaxOn, tax: kTax, setTax: setKariTax },
+                  { side: '貸方', id: 'fe-kashi', color: PINK, value: kashi, other: kari, set: (v: string) => { setKashi(v); setKashiTax(''); }, commit: () => focusId('fe-internal'), state: bothParent ? 'error' as const : fieldState(issues, 'kashi', 'pair'), msg: bothParent ? '借方と貸方の両方を特殊摘要科目（親）にすることはできません' : fieldMessage(issues, 'kashi', 'pair'), taxOn: kashiTaxOn, tax: sTax, setTax: setKashiTax },
+                ]).map((s) => (
                   <div key={s.id} className="pp-table ef-field" style={{ gridTemplateColumns: '1fr' }}>
                     <div className="pp-row" style={{ gridTemplateColumns: '64px minmax(0,1fr)' }}>
                       <div className="pp-lab" style={{ color: s.color }}>
@@ -504,6 +514,15 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                       <div className="pp-cell pp-col pp-auto" style={{ padding: '2px 8px 7px' }}>
                         <FundAccountLine name={s.value} other={s.other} mode={fundMode} />
                         <BudgetHintLive account={s.value} threshold={budgetTh} onOpen={() => setGraphAcct(s.value)} />
+                        {/* 消費税コード（確認メモ #190）：資金科目の欄に置く。強制資金で貸借の両方に資金科目があるときは、それぞれに出る */}
+                        {s.taxOn && (
+                          <label data-tax-side={s.side} style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5, fontSize: 12, minWidth: 0, flexWrap: 'wrap' }}>
+                            <span style={{ flex: 'none', fontWeight: 700, color: '#8290a0' }}>消費税コード</span>
+                            <select id={s.side === '借方' ? 'fe-tax-kari' : 'fe-tax-kashi'} className="ef-input" aria-label={`${s.side}の消費税コード`} disabled={!editable} value={s.tax} onChange={(e) => s.setTax(e.target.value)} style={{ padding: '3px 6px', border: '1px solid #cfd8e0', borderRadius: 7, background: '#fff', fontSize: 14, fontFamily: 'inherit' }}>{TAX_OPTS.map((t) => <option key={t} value={t}>{t}</option>)}</select>
+                            {taxAmountOf(s.tax, total) > 0 && <span data-tax-amount title="内税として、金額から自動で計算した税額です" style={{ color: '#7a8794', whiteSpace: 'nowrap' }}>うち税額 {taxAmountOf(s.tax, total).toLocaleString('ja-JP')} 円</span>}
+                          </label>
+                        )}
+                        {isSpecialParent(s.value) && <div data-special-parent style={{ marginTop: 5, fontSize: 12, fontWeight: 700, color: '#b25e00' }}>特殊摘要科目（親）：明細の摘要欄で、子の科目を選びます{sess.taxEntry ? '。消費税コードは行ごとに入力します' : ''}</div>}
                       </div>
                     </div>
                   </div>
@@ -512,11 +531,11 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
 
               {/* 内部取引相手区分の枠と、伝票の印（Seq No・チェック・証憑・付箋）の枠を横並びに置く（別々の枠。10/16 鈴木さん指示） */}
               <div style={{ display: 'flex', alignItems: 'stretch', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-              <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} style={{ flex: '1 1 480px', display: 'grid', gridTemplateColumns: 'auto minmax(0,320px)', gap: 16, alignItems: 'center', padding: '10px 14px', border: '1px solid ' + (partner ? '#e0d6f3' : '#e2e8ee'), background: partner ? '#faf7ff' : '#f1f3f5', borderRadius: 12, transition: 'background .15s, border-color .15s' }}>
+              <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} data-side={side || 'なし'} style={{ flex: '1 1 480px', display: 'grid', gridTemplateColumns: 'auto minmax(0,320px)', gap: 16, alignItems: 'center', padding: '10px 14px', border: '1px solid ' + (partner ? '#e0d6f3' : '#e2e8ee'), background: partner ? '#faf7ff' : '#f1f3f5', borderRadius: 12, transition: 'background .15s, border-color .15s' }}>
                 <div style={{ alignSelf: 'center' }}>{tools.internalSwitch}</div>
                 <div style={{ opacity: partner ? 1 : 0.5, transition: 'opacity .15s' }}>
-                  <FieldLabel color={partner ? '#6b3fb5' : '#8895a3'}>内部取引相手区分{partner ? '（必須）' : ''}</FieldLabel>
-                  <ComboField id="fe-aite" title={!partner ? '左の「内部取引」スイッチをオンにすると入力できます（内部取引科目を選ぶと自動でオンになります）' : undefined} kind="service" value={aite} onChange={setAite} onCommit={() => focusId('fe-tek-0')} disabled={!editable || !partner} invalid={partner ? fieldState(issues, 'aite') : undefined} message={partner ? fieldMessage(issues, 'aite') : undefined} placeholder="コード・区分名・フリガナ" />
+                  <FieldLabel color={partner ? '#6b3fb5' : '#8895a3'}>内部取引相手区分{partner ? `（${side}が内部取引・必須）` : ''}</FieldLabel>
+                  <ComboField id="fe-aite" title={!partner ? '左の「内部取引」で借方か貸方を選ぶと入力できます（内部取引科目を選ぶと、その側に自動で決まります）' : undefined} kind="service" value={aite} onChange={setAite} onCommit={() => focusId('fe-tek-0')} disabled={!editable || !partner} invalid={partner ? fieldState(issues, 'aite') : undefined} message={partner ? fieldMessage(issues, 'aite') : undefined} placeholder="コード・区分名・フリガナ" />
                 </div>
               </div>
               <VoucherMarks variant="panel" seq={nextSeq} flags={flags} onChange={setFlags} disabled={!editable} viewOnly={tools.viewOnly} showShohyo={inp.shohyo} />
@@ -526,7 +545,10 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
               <div className="pp-table" style={{ gridTemplateColumns: '1fr' }}>
                 <div className="pp-row" style={{ gridTemplateColumns: GRID }}>
                   <div className="pp-lab">コード<span className="pp-sub">行</span></div>
-                  <div className="pp-lab" style={{ fontSize: 14 }}>摘要／取引先</div>
+                  <div className="pp-lab" style={{ fontSize: 14 }}>{children ? '特殊摘要科目（子）／取引先' : '摘要／取引先'}</div>
+                  {sp1 && <div className="pp-lab" title="入力予備１（行ごとに入力します）" style={{ fontSize: 14 }}>予備１</div>}
+                  {sp2 && <div className="pp-lab" title="入力予備２（行ごとに入力します）" style={{ fontSize: 14 }}>予備２</div>}
+                  {rowTaxOn && <div className="pp-lab" style={{ fontSize: 14 }}>消費税コード</div>}
                   <div className="pp-lab" style={{ fontSize: 14 }}>金額</div>
                   <div className="pp-lab"><span>行の操作<span className="pp-sub">挿入／削除</span></span></div>
                 </div>
@@ -543,13 +565,21 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                       </div>
                       <div className="pp-cell" style={{ padding: '6px 8px', gap: 8, background: on ? '#f7fbf9' : undefined }}>
                         <div style={{ flex: '1.4 1 0', minWidth: 0 }}>
-                          <ComboField id={`fe-tek-${i}`} kind="summary" freeText value={r.tekiyo} onChange={(v) => patchRow(i, { tekiyo: v })} onCommit={(v) => afterTekiyo(i, v)} onFocusField={() => setCur(i)} disabled={!editable} placeholder={inp.tekiyoCode ? '摘要（コード・フリガナでも検索）' : '摘要を入力'} padY={8} listWidth={360} />
+                          <ComboField id={`fe-tek-${i}`} kind="summary" freeText={!children} options={children ?? undefined} value={r.tekiyo} onChange={(v) => patchRow(i, { tekiyo: v })} onCommit={(v) => afterTekiyo(i, v)} onFocusField={() => setCur(i)} disabled={!editable} invalid={children && r.tekiyo.trim() && !isChild(r.tekiyo.trim()) ? 'error' : undefined} message={children && r.tekiyo.trim() && !isChild(r.tekiyo.trim()) ? '特殊摘要科目（子）から選んでください' : undefined} placeholder={children ? '特殊摘要科目（子）：コード・科目名・フリガナ' : inp.tekiyoCode ? '摘要（コード・フリガナでも検索）' : '摘要を入力'} padY={8} listWidth={360} />
                         </div>
                         <span aria-hidden style={{ flex: 'none', color: PAPER.lineSoft, fontSize: 16 }}>／</span>
                         <div style={{ flex: '1 1 0', minWidth: 0 }}>
-                          <ComboField id={`fe-gyo-${i}`} kind="vendor" value={r.gyosha} onChange={(v) => patchRow(i, { gyosha: v })} onCommit={() => focusId(`fe-amt-${i}`)} onFocusField={() => setCur(i)} disabled={!editable} placeholder="取引先（任意）" padY={8} listWidth={300} />
+                          <ComboField id={`fe-gyo-${i}`} kind="vendor" value={r.gyosha} onChange={(v) => patchRow(i, { gyosha: v })} onCommit={() => focusId(sp1 ? `fe-sp1-${i}` : sp2 ? `fe-sp2-${i}` : `fe-amt-${i}`)} onFocusField={() => setCur(i)} disabled={!editable} placeholder="取引先（任意）" padY={8} listWidth={300} />
                         </div>
                       </div>
+                      {sp1 && <div className="pp-cell" style={{ padding: '6px 6px', background: on ? '#f7fbf9' : undefined }}><input id={`fe-sp1-${i}`} className="ef-input pp-input" aria-label={`${i + 1}行目の入力予備１`} disabled={!editable} value={r.spare1} onChange={(e) => patchRow(i, { spare1: e.target.value })} onFocus={() => setCur(i)} onKeyDown={onEnter(() => focusId(sp2 ? `fe-sp2-${i}` : `fe-amt-${i}`))} autoComplete="off" style={{ width: '100%', padding: '8px 6px', fontSize: 14 }} /></div>}
+                      {sp2 && <div className="pp-cell" style={{ padding: '6px 6px', background: on ? '#f7fbf9' : undefined }}><input id={`fe-sp2-${i}`} className="ef-input pp-input" aria-label={`${i + 1}行目の入力予備２`} disabled={!editable} value={r.spare2} onChange={(e) => patchRow(i, { spare2: e.target.value })} onFocus={() => setCur(i)} onKeyDown={onEnter(() => focusId(`fe-amt-${i}`))} autoComplete="off" style={{ width: '100%', padding: '8px 6px', fontSize: 14 }} /></div>}
+                      {rowTaxOn && (
+                        <div className="pp-cell pp-col" style={{ padding: '5px 6px', gap: 2, justifyContent: 'center', background: on ? '#f7fbf9' : undefined }}>
+                          <select id={`fe-tax-${i}`} className="ef-input pp-input" aria-label={`${i + 1}行目の消費税コード`} disabled={!editable} value={rowTaxOf(r)} onChange={(e) => patchRow(i, { tax: e.target.value })} onFocus={() => setCur(i)} style={{ width: '100%', padding: '6px 4px', fontSize: 14, fontFamily: 'inherit' }}>{TAX_OPTS.map((t) => <option key={t} value={t}>{t}</option>)}</select>
+                          {taxAmountOf(rowTaxOf(r), toNum(r.amount)) > 0 && <span data-tax-amount title="内税として、金額から自動で計算した税額です" style={{ fontSize: 12, color: '#7a8794', textAlign: 'right' }}>うち税額 {taxAmountOf(rowTaxOf(r), toNum(r.amount)).toLocaleString('ja-JP')} 円</span>}
+                        </div>
+                      )}
                       <div className="pp-cell" style={{ padding: '6px 8px', background: on ? '#f7fbf9' : undefined }}>
                         <input
                           id={`fe-amt-${i}`}
@@ -597,21 +627,8 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                   </div>
                 </div>
               </div>
-
-              {(inp.spare1 || inp.spare2) && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 10, fontSize: 14, color: '#5b6773', flexWrap: 'wrap' }}>
-                  {inp.spare1 && <label className="ef-field" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>予備1 <input className="ef-input" disabled={!editable} value={spare[0]} onChange={(e) => setSpare([e.target.value, spare[1]])} style={{ ...smallInput, width: 120 }} /></label>}
-                  {inp.spare2 && <label className="ef-field" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>予備2 <input className="ef-input" disabled={!editable} value={spare[1]} onChange={(e) => setSpare([spare[0], e.target.value])} style={{ ...smallInput, width: 120 }} /></label>}
-                </div>
-              )}
             </div>
 
-            {queue.length > 0 && (
-              <div role="status" style={{ marginTop: 12, padding: '7px 12px', borderRadius: 9, background: '#eef6f1', border: '1px solid #cfe5d8', color: '#1f6a48', fontSize: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span>定型仕訳の続き：この伝票を登録すると、次の伝票（残り {queue.length} 枚）を呼び出します。</span>
-                <button type="button" className="ef-act" onClick={() => { setQueue([]); toast.show('定型仕訳の続きを取り消しました'); }} style={{ marginLeft: 'auto', padding: '3px 10px', borderRadius: 7, border: '1px solid #b7d6c5', background: '#fff', color: '#1f6a48', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>続きを取り消す</button>
-              </div>
-            )}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
               <div role="alert" style={{ flex: 1, minHeight: 20, color: '#c0392b', fontSize: 14, fontWeight: 600 }}>{err}</div>
               {tools.submitButton}
@@ -653,7 +670,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
           if (!editable || !r) return;
           if (!kari || !kashi) { toast.show('先に借方・貸方の科目を選んでください'); focusId(kari ? 'fe-kashi' : 'fe-kari'); return; }
           const list = parts.filter((p) => p.amount > 0);
-          const em = parseEntryMonth(month);
+          const em = parseEntryDate(yr.year, month);
           const date = `${em.ok ? em.month : 8}/${parseInt(day, 10) || 1}`;
           const ids = list.map((p) => addVoucher({ kind: '伝票', date, kari, kashi, tekiyo: `${r.tekiyo.trim() || '特殊金額入力'}（${p.division.split(' ')[1] ?? p.division}）`, amount: p.amount, service: p.division, gyosha: r.gyosha || undefined, shohyo: inp.shohyo ? flags.shohyo : true, term: em.term }).id);
           setHi(ids);

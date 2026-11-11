@@ -9,7 +9,7 @@ import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
-import { ACCOUNTS, SUMMARIES, VENDORS, displayName } from '../data';
+import { ACCOUNTS, JOURNAL_ROWS, SUMMARIES, VENDORS, displayName } from '../data';
 import { Tabs } from './ui';
 import { TAX_MODES, setSession, setTaxMode, taxModeUsesTax, useSession, type TaxMode } from '../store/session';
 import { DivisionTreeEditor } from './DivisionTreeEditor';
@@ -49,7 +49,7 @@ const input: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: 
 const lbl: CSSProperties = { display: 'block', fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 5 };
 
 /* ---------------- マスタ管理（汎用） ---------------- */
-interface Field { key: string; label: string; type?: 'text' | 'number' | 'select' | 'color'; options?: string[]; width?: number; align?: 'right' }
+interface Field { key: string; label: string; type?: 'text' | 'number' | 'select' | 'color'; options?: string[]; width?: number; align?: 'right'; /** 編集画面で入力させない（ほかの画面で決まる項目） */ readOnly?: boolean; /** 編集画面の入力欄の下に出す説明 */ hint?: string; /** 編集画面で横いっぱいに置く */ wide?: boolean }
 interface MasterConfig { title: string; desc: string; fields: Field[]; rows: Record<string, string>[]; addLabel: string }
 type Row = Record<string, string>; // _id（空なら新規）・_on（'1'=有効）を含む
 
@@ -100,6 +100,15 @@ const acctRows = (): Record<string, string>[] => {
 const VENDOR_KANA: Record<string, string> = { 東京電力: 'トウキョウデンリョク', 'ＮＴＴ東日本': 'エヌティティヒガシニホン', 中央リース: 'チュウオウリース', みどり商店: 'ミドリショウテン', 市役所: 'シヤクショ', 保護者: 'ホゴシャ' };
 /** 摘要のフリガナ（サンプル。SUMMARIES の順。確認メモ #92） */
 const SUMMARY_KANA = ['シャカイホケンリョウ', 'コウセイネンキン', 'ケンコウホケン', 'ショクインホウキュウ', 'イタクヒ', 'デンワリョウキン', 'デンキダイ', 'フクショクヒ', 'インサツダイ', 'ホイクザイリョウ', 'フリコミテスウリョウ'];
+/** 合算集計用の取引先（サンプル）。「取引先」の画面で、区分の取引先ごとにこの名簿から対応先を選ぶ（確認メモ #220） */
+const SUM_VENDORS: Record<string, string>[] = [
+  { code: '901', name: '東京電力', kana: 'トウキョウデンリョク', map: '001：101 ／ 002：101 ／ 004：101' },
+  { code: '902', name: 'ＮＴＴ東日本', kana: 'エヌティティヒガシニホン', map: '001：102 ／ 002：102' },
+  { code: '903', name: '中央リース', kana: 'チュウオウリース', map: '002：103 ／ 003：104 ／ 004：102' },
+];
+const sumVendorLabel = (v: Record<string, string>) => `${v.code} ${v.name}`;
+/** 取引先（この区分）→ 対応する合算集計用の取引先（サンプル。同じ名前のものだけ対応づけ済み） */
+const sumVendorOf = (name: string) => { const hit = SUM_VENDORS.find((v) => v.name === name); return hit ? sumVendorLabel(hit) : ''; };
 const MASTERS: Record<string, MasterConfig> = {
   勘定科目: { title: '勘定科目', desc: '仕訳で使う勘定科目の一覧。分類・区分・資金科目の対応を管理します。', addLabel: '科目を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '科目名' }, { key: 'group', label: '分類', type: 'select', options: ACCOUNTS.map((g) => g.group) }, { key: 'kind', label: '区分', type: 'select', options: ['BS 資産', 'BS 負債', 'BS 純資産', 'PL 収益', 'PL 費用'], width: 110 }, { key: 'fund', label: '資金科目', width: 120 }], rows: acctRows() },
   // 名称は「印刷名称」（帳票に印字）と「入力名称」（伝票入力の候補に表示）の2種類。「表示順」は候補・一覧の並び順（確認メモ #177）。課税区分に「不明」を追加（現行の消費税コード「課税区分不明」用。確認メモ #178）
@@ -107,9 +116,10 @@ const MASTERS: Record<string, MasterConfig> = {
   // 摘要はショートカットではなくコードを持つ（現行の摘要コードと同じ。確認メモ #92）
   摘要辞書: { title: '摘要辞書', desc: 'よく使う摘要の候補。コードを入力するか、入力時のドロップダウンから選べます。', addLabel: '摘要を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '摘要' }, { key: 'kana', label: 'フリガナ' }, { key: 'acct', label: 'よく使う科目', type: 'select', options: ACCOUNTS.flatMap((g) => g.items) }], rows: SUMMARIES.map((s, i) => ({ code: String(i + 1).padStart(3, '0'), name: s, kana: SUMMARY_KANA[i] ?? '', acct: ['法定福利費', '法定福利費', '法定福利費', '職員俸給', '委託費収益', '通信運搬費', '水道光熱費（事業）', 'その他の利用料収益', '印刷製本費', '保育材料費', '手数料'][i] ?? '' })) },
   仕訳辞書: { title: '仕訳辞書', desc: '定型仕訳のひな形。単一入力・伝票入力で呼び出して金額だけ入力できます（既存の「連続定型」に相当）。', addLabel: '定型仕訳を追加', fields: [{ key: 'name', label: '名称' }, { key: 'kari', label: '借方科目', type: 'select', options: ACCOUNTS.flatMap((g) => g.items) }, { key: 'kashi', label: '貸方科目', type: 'select', options: ACCOUNTS.flatMap((g) => g.items) }, { key: 'tekiyo', label: '摘要' }, { key: 'amount', label: '金額（任意）', type: 'number', width: 110, align: 'right' }], rows: [{ name: '電話料金', kari: '通信運搬費', kashi: '普通預金（保育園）', tekiyo: '電話料金', amount: '' }, { name: '給与支給（本俸）', kari: '職員俸給', kashi: '普通預金（保育園）', tekiyo: '職員俸給', amount: '' }, { name: '副食費 保護者より', kari: '現金（収入）', kashi: 'その他の利用料収益', tekiyo: '副食費ー保護者より', amount: '4500' }, { name: 'コピー機リース', kari: '賃借料（事業）', kashi: '普通預金（保育園）', tekiyo: 'コピー機リース代', amount: '10995' }] },
-  '取引先（合算集計用）': { title: '取引先（合算集計用）', desc: '合算区分（法人全体・事業区分）で取引先元帳・取引先推移表を集計するときに、各区分の取引先をまとめて扱うための名簿です。区分ごとの取引先コードが違っていても、ここで同じ取引先として対応づけます。', addLabel: '合算用の取引先を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '取引先名' }, { key: 'kana', label: 'フリガナ' }, { key: 'map', label: '対応する区分の取引先（区分：コード）' }], rows: [{ code: '901', name: 'みどり電力', kana: 'ミドリデンリョク', map: '001：101 ／ 002：103 ／ 004：101' }, { code: '902', name: '山田文具', kana: 'ヤマダブング', map: '001：102 ／ 002：105' }, { code: '903', name: 'さくら給食サービス', kana: 'サクラキュウショクサービス', map: '002：104 ／ 003：104 ／ 004：102' }] },
-  // 取引先は現行の業者登録と同じ コード・名称・フリガナ（種別・連絡先・備考は持たない。確認メモ #91）
-  取引先: { title: '取引先', desc: '仕入先・保護者・行政などの取引先。仕訳の「取引先」欄と取引先元帳に使われます。フリガナは入力時のカナ検索に使います。', addLabel: '取引先を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '取引先名' }, { key: 'kana', label: 'フリガナ' }], rows: VENDORS.filter((v) => v !== '（なし）').map((v, i) => ({ code: String(101 + i), name: v, kana: VENDOR_KANA[v] ?? '' })) },
+  '取引先（合算集計用）': { title: '取引先（合算集計用）', desc: '合算区分（法人全体・事業区分）で取引先元帳・取引先推移表を集計するときに、各区分の取引先をまとめて扱うための名簿です。区分ごとの取引先コードが違っていても、ここで同じ取引先として対応づけます。', addLabel: '合算用の取引先を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '取引先名' }, { key: 'kana', label: 'フリガナ' }, { key: 'map', label: '対応する区分の取引先（区分：コード）', readOnly: true, wide: true, hint: '対応づけは、各区分の「取引先」の画面で「対応する合算集計用の取引先」を選んで行います。ここでは結果の確認だけができます。' }], rows: SUM_VENDORS },
+  // 取引先は現行の業者登録と同じ コード・名称・フリガナ（種別・連絡先・備考は持たない。確認メモ #91）。
+  // 「対応する合算集計用の取引先」は、現行と同じくこの画面で合算集計用の名簿から選ぶ（確認メモ #220）
+  取引先: { title: '取引先', desc: '仕入先・保護者・行政などの取引先。仕訳の「取引先」欄と取引先元帳に使われます。フリガナは入力時のカナ検索に使います。合算区分で取引先をまとめて集計するときは、「編集」で「対応する合算集計用の取引先」を選びます。', addLabel: '取引先を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '取引先名' }, { key: 'kana', label: 'フリガナ' }, { key: 'sum', label: '対応する合算集計用の取引先', type: 'select', options: SUM_VENDORS.map(sumVendorLabel), wide: true, hint: '合算区分（法人全体・事業区分）の取引先元帳・取引先推移表では、ここで選んだ取引先にまとめて集計します。候補は「取引先（合算集計用）」のタブに登録した取引先です。' }], rows: VENDORS.filter((v) => v !== '（なし）').map((v, i) => ({ code: String(101 + i), name: v, kana: VENDOR_KANA[v] ?? '', sum: sumVendorOf(v) })) },
 };
 
 /** 消費税の方式ごとの説明（確認メモ #175） */
@@ -137,6 +147,45 @@ function MasterPage({ variant, accent, label, tabs, title }: { variant: 'form' |
   const cell = (r: Row, f: Field) => (f.type === 'number' && f.key !== 'rate' && r[f.key] ? Number(r[f.key]) : r[f.key] ?? '');
   // CSV出力：表示中（検索後）の一覧。見出しは画面の項目名＋「有効」
   const exportCsv = () => setExp({ kind: 'csv', title: cfg.title, fileName: `${cfg.title}一覧`, meta: `${list.length} 件${q ? `　検索：${q}` : ''}`, header: [...cfg.fields.map((f) => f.label), '有効'], rows: list.map((r) => [...cfg.fields.map((f) => cell(r, f)), r._on === '1' ? 1 : 0]) });
+  // 印刷：取引先・取引先（合算集計用）のそれぞれに置く（確認メモ #221）。表示中（検索後）の一覧を印刷する
+  const isVendor = label === '取引先' || label === '取引先（合算集計用）';
+  const printList = () => {
+    if (list.length === 0) return toast.show('印刷する行がありません');
+    setExp({ kind: 'print', title: `${cfg.title}一覧表`, meta: `${label === '取引先' ? `${sess.division}　` : ''}${list.length} 件${q ? `　検索：${q}` : ''}`, header: [...cfg.fields.map((f) => f.label), '有効'], rows: list.map((r) => [...cfg.fields.map((f) => cell(r, f)), r._on === '1' ? '有効' : '無効']) });
+  };
+  // 削除：ブラウザー標準の確認ではなく、影響と注意事項を示す確認画面を出す（確認メモ #219）
+  const [del, setDel] = useState<Row | null>(null);
+  const [delAck, setDelAck] = useState(false);
+  const askDelete = (r: Row) => { setDelAck(false); setDel(r); };
+  const closeDelete = () => setDel(null);
+  const nameOf = (r: Row) => r.name ?? r[cfg.fields[0].key] ?? '';
+  /** この取引先を使っている伝票の数（サンプルの伝票から数える） */
+  const usedCount = del && label === '取引先' ? JOURNAL_ROWS.filter((j) => j.gyosha === del.name).length : 0;
+  const delImpacts: string[] = !del ? [] : label === '取引先' ? [
+    usedCount > 0 ? `この取引先を使っている伝票が ${usedCount} 件あります。伝票そのものは消えませんが、取引先元帳・取引先推移表で、この取引先の名前では集計できなくなります。` : 'この取引先を使っている伝票はありません。',
+    '伝票入力・単一入力などの「取引先」の候補から消え、コードを入力しても呼び出せなくなります。',
+    ...(del.sum ? [`合算集計用の取引先「${del.sum}」との対応づけが外れ、合算区分（法人全体・事業区分）の集計に含まれなくなります。`] : []),
+    '削除した取引先は元に戻せません。',
+  ] : label === '取引先（合算集計用）' ? [
+    del.map ? `対応づけている区分の取引先（${del.map}）との対応が、すべて外れます。` : 'この取引先に対応づけている区分の取引先はありません。',
+    '合算区分（法人全体・事業区分）の取引先元帳・取引先推移表で、各区分の取引先をまとめて集計できなくなります。区分ごとの取引先と伝票は消えません。',
+    '削除した取引先は元に戻せません。',
+  ] : [
+    `この${cfg.title}を使っている伝票や設定がある場合、入力時の候補や帳票に表示されなくなります。`,
+    '削除したデータは元に戻せません。',
+  ];
+  const doDelete = () => {
+    if (!del || !delAck) return;
+    setRows((rs) => rs.filter((x) => x._id !== del._id));
+    toast.show(`「${nameOf(del)}」を削除しました`);
+    setDel(null);
+  };
+  const disableInstead = () => {
+    if (!del) return;
+    setRows((rs) => rs.map((x) => (x._id === del._id ? { ...x, _on: '0' } : x)));
+    toast.show(`「${nameOf(del)}」を無効にしました（削除はしていません）`);
+    setDel(null);
+  };
   // CSV取込：ファイルを読んで対応付け → プレビュー → 取り込む（一覧の末尾に追加）
   const loadCsvText = (name: string, text: string) => {
     const parsed = csvToRows(cfg.fields, parseCsv(text));
@@ -173,6 +222,7 @@ function MasterPage({ variant, accent, label, tabs, title }: { variant: 'form' |
     <Shell variant={variant} title={title ?? displayName(cfg.title)} desc={cfg.desc} actions={<>
       {/* CSV取込・出力：部門は簡単に変更できない項目のため不要（チャイルド社回答 2026/10/2）。税区分は検討中のため暫定で表示 */}
       {label === '税区分' && <ScreenPrintMenu page="税区分" accent={accent} />}
+      {isVendor && <button type="button" className="btn-outline" data-master-print={label} onClick={printList} title={`${cfg.title}の一覧表を印刷します（表示中の ${list.length} 件）`} style={{ ...btn(), display: 'inline-flex', alignItems: 'center', gap: 6 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9V3h12v6" /><rect x="3" y="9" width="18" height="9" rx="2" /><path d="M7 14h10v7H7z" /></svg>印刷</button>}
       {label !== '部門' && <button type="button" className="btn-outline" onClick={() => setImp({ open: true, name: '', rows: [], byHeader: false, error: '' })} style={btn()}>CSV取込</button>}
       {label !== '部門' && <button type="button" className="btn-outline" onClick={exportCsv} style={btn()}>CSV出力</button>}
       <button type="button" className="submit-btn" onClick={() => setEdit(blank())} style={btn(accent, true)}>＋ {cfg.addLabel}</button>
@@ -210,9 +260,9 @@ function MasterPage({ variant, accent, label, tabs, title }: { variant: 'form' |
           <tbody>
             {list.map((r) => (
               <tr key={r._id} style={{ opacity: r._on === '1' ? 1 : 0.5 }}>
-                {cfg.fields.map((f) => <td key={f.key} style={f.align === 'right' ? NUM : TD}>{f.type === 'color' ? <span style={{ display: 'inline-block', width: 14, height: 14, borderRadius: 4, background: r[f.key], verticalAlign: 'middle' }} /> : f.type === 'number' && r[f.key] ? (f.key === 'rate' ? `${r[f.key]}%` : yen(Number(r[f.key]))) : r[f.key]}</td>)}
+                {cfg.fields.map((f) => <td key={f.key} style={f.align === 'right' ? NUM : TD}>{f.type === 'color' ? <span style={{ display: 'inline-block', width: 14, height: 14, borderRadius: 4, background: r[f.key], verticalAlign: 'middle' }} /> : f.type === 'number' && r[f.key] ? (f.key === 'rate' ? `${r[f.key]}%` : yen(Number(r[f.key]))) : f.key === 'sum' && !r[f.key] ? <span style={{ color: '#9aa5b1' }}>（未設定）</span> : r[f.key]}</td>)}
                 <td style={TD}><span onClick={() => setRows((rs) => rs.map((x) => (x._id === r._id ? { ...x, _on: x._on === '1' ? '0' : '1' } : x)))} role="switch" aria-checked={r._on === '1'} style={{ display: 'inline-block', width: 34, height: 18, borderRadius: 9, background: r._on === '1' ? accent : '#cfd8e0', position: 'relative', cursor: 'pointer' }}><span style={{ position: 'absolute', top: 2, left: r._on === '1' ? 18 : 2, width: 14, height: 14, borderRadius: '50%', background: '#fff', transition: 'left .15s' }} /></span></td>
-                <td style={{ ...TD, textAlign: 'right' }}><div style={{ display: 'inline-flex', gap: 6 }}><button type="button" className="btn-outline" onClick={() => setEdit({ ...r })} style={{ ...btn(), padding: '4px 10px', fontSize: 12 }}>編集</button><button type="button" className="btn-outline" onClick={() => { if (confirm('削除しますか？')) setRows((rs) => rs.filter((x) => x._id !== r._id)); }} style={{ ...btn('#c0392b'), padding: '4px 10px', fontSize: 12 }}>削除</button></div></td>
+                <td style={{ ...TD, textAlign: 'right' }}><div style={{ display: 'inline-flex', gap: 6 }}><button type="button" className="btn-outline" onClick={() => setEdit({ ...r })} style={{ ...btn(), padding: '4px 10px', fontSize: 12 }}>編集</button><button type="button" className="btn-outline" data-master-del={r.code ?? r._id} onClick={() => askDelete(r)} style={{ ...btn('#c0392b'), padding: '4px 10px', fontSize: 12 }}>削除</button></div></td>
               </tr>
             ))}
             {list.length === 0 && <tr><td colSpan={cfg.fields.length + 2} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>該当するデータがありません。</td></tr>}
@@ -248,17 +298,61 @@ function MasterPage({ variant, accent, label, tabs, title }: { variant: 'form' |
         {edit && (
           <div style={{ padding: '14px 22px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             {cfg.fields.map((f) => (
-              <div key={f.key} style={{ gridColumn: f.key === 'name' || f.key === 'tekiyo' || f.key === 'use' || f.key === 'note' ? 'span 2' : undefined }}>
+              <div key={f.key} data-master-field={f.key} style={{ gridColumn: f.wide || f.key === 'name' || f.key === 'tekiyo' || f.key === 'use' || f.key === 'note' ? 'span 2' : undefined }}>
                 <span style={lbl}>{f.label}</span>
-                {f.type === 'select' ? <select value={edit[f.key]} onChange={(e) => setEdit({ ...edit, [f.key]: e.target.value })} style={input}><option value="">選択</option>{f.options!.map((o) => <option key={o}>{o}</option>)}</select>
+                {f.readOnly ? <div style={{ ...input, background: '#f4f6f8', color: '#5b6773', minHeight: 36 }}>{edit[f.key] || '（まだ対応づけがありません）'}</div>
+                  : f.type === 'select' ? <select value={edit[f.key] ?? ''} onChange={(e) => setEdit({ ...edit, [f.key]: e.target.value })} style={input}><option value="">{f.key === 'sum' ? '（対応づけない）' : '選択'}</option>{f.options!.map((o) => <option key={o}>{o}</option>)}</select>
                   : f.type === 'color' ? <input type="color" value={edit[f.key] || '#2c5f9e'} onChange={(e) => setEdit({ ...edit, [f.key]: e.target.value })} style={{ width: 60, height: 36, border: '1px solid #cfd8e0', borderRadius: 8, padding: 2, background: '#fff' }} />
                   : <input className="field-input ring" value={edit[f.key] ?? ''} onChange={(e) => setEdit({ ...edit, [f.key]: f.type === 'number' ? e.target.value.replace(/[^0-9.]/g, '') : e.target.value })} inputMode={f.type === 'number' ? 'decimal' : undefined} style={{ ...input, textAlign: f.align }} />}
+                {f.hint && <div style={{ fontSize: 12, color: '#7a8794', lineHeight: 1.6, marginTop: 5 }}>{f.hint}</div>}
               </div>
             ))}
             <label style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}><input type="checkbox" checked={edit._on === '1'} onChange={() => setEdit({ ...edit, _on: edit._on === '1' ? '0' : '1' })} />有効（入力時の候補に表示する）</label>
             <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
               <button type="button" onClick={() => setEdit(null)} style={btn()}>キャンセル</button>
               <button type="button" className="submit-btn" onClick={save} style={btn(accent, true)}>保存</button>
+            </div>
+          </div>
+        )}
+      </Modal>
+      {/* 削除の確認（確認メモ #219）。Esc・外側クリックでは閉じない。影響を確認するチェックを入れるまで「削除する」は押せない */}
+      <Modal open={!!del} onClose={closeDelete} width={620} title={`${cfg.title}の削除`}>
+        {del && (
+          <div data-master-delete style={{ padding: '14px 22px 20px', display: 'grid', gap: 14 }}>
+            <div role="alert" style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', borderRadius: 10, background: '#fdecea', border: '1px solid #f1b5ae', color: '#96281b' }}>
+              <span aria-hidden="true" style={{ fontSize: 22, lineHeight: 1 }}>⚠</span>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 800 }}>削除すると元に戻せません</div>
+                <div style={{ fontSize: 14, lineHeight: 1.7, marginTop: 2 }}>下の「削除すると起きること」を確認してから、削除してください。</div>
+              </div>
+              {label === '取引先' && <span data-delete-level style={{ marginLeft: 'auto', flex: 'none', fontSize: 12, fontWeight: 800, padding: '4px 10px', borderRadius: 8, background: usedCount > 0 ? '#c0392b' : '#fff', color: usedCount > 0 ? '#fff' : '#96281b', border: '1px solid #c0392b', whiteSpace: 'nowrap' }}>{usedCount > 0 ? `影響：大（使用中の伝票 ${usedCount} 件）` : '影響：小（使用中の伝票なし）'}</span>}
+            </div>
+            <div>
+              <span style={lbl}>削除する{cfg.title}</span>
+              <div style={{ display: 'flex', gap: 14, alignItems: 'baseline', flexWrap: 'wrap', padding: '10px 14px', border: '1px solid #dde4ea', borderRadius: 10, background: '#f8fafc' }}>
+                {del.code && <span style={{ fontSize: 14, color: '#5b6773', fontVariantNumeric: 'tabular-nums' }}>コード {del.code}</span>}
+                <span style={{ fontSize: 17, fontWeight: 800, color: '#22303c' }}>{nameOf(del)}</span>
+                {del.kana && <span style={{ fontSize: 12, color: '#8290a0' }}>{del.kana}</span>}
+              </div>
+            </div>
+            <div>
+              <span style={lbl}>削除すると起きること</span>
+              <ul style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 6, fontSize: 14, lineHeight: 1.7, color: '#22303c' }}>
+                {delImpacts.map((t) => <li key={t}>{t}</li>)}
+              </ul>
+            </div>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '10px 14px', borderRadius: 10, background: '#f1f6fb', border: '1px solid #d5e2ef' }}>
+              <div style={{ fontSize: 14, lineHeight: 1.7, color: '#3d4a56' }}>
+                <b>今後使わないだけなら、削除ではなく「無効」にできます。</b><br />無効にすると、入力時の候補には出なくなりますが、これまでの伝票と帳票はそのまま残り、いつでも有効に戻せます。
+              </div>
+              {del._on === '1' && <button type="button" className="btn-outline" data-delete-act="disable" onClick={disableInstead} style={{ ...btn(accent), marginLeft: 'auto', flex: 'none' }}>無効にする</button>}
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 700, color: '#22303c', cursor: 'pointer' }}>
+              <input type="checkbox" data-delete-ack checked={delAck} onChange={(e) => setDelAck(e.target.checked)} />上の内容を確認しました。この{cfg.title}を削除します
+            </label>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button type="button" data-delete-act="cancel" onClick={closeDelete} style={btn()}>キャンセル</button>
+              <button type="button" data-delete-act="run" disabled={!delAck} onClick={doDelete} style={{ ...btn('#c0392b', true), opacity: delAck ? 1 : 0.45, cursor: delAck ? 'pointer' : 'not-allowed' }}>削除する</button>
             </div>
           </div>
         )}

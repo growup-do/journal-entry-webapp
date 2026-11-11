@@ -23,7 +23,7 @@ export const FORMAT_NOTE: Record<EntryFormat, string> = {
   伝票入力: '1枚の伝票に複数行。借方・貸方の科目は伝票につき1組',
   単一入力: '1伝票＝1行',
   振替入力: '行ごとに借方・貸方の科目と金額（複数行）',
-  振替単一: '振替伝票形式の1伝票1行版',
+  振替単一: '1枚の伝票に複数行。金額は行ごとに1つ（借方と貸方は同額）',
 };
 /** 仕訳の種別（共有ストアの kind）との対応 */
 export const FORMAT_KIND: Record<EntryFormat, '伝票' | '単一' | '振替' | '振単'> = { 伝票入力: '伝票', 単一入力: '単一', 振替入力: '振替', 振替単一: '振単' };
@@ -107,8 +107,13 @@ const EXTRA_ACCOUNTS: Candidate[] = [
   { value: '手数料', code: '5290', kana: 'テスウリョウ', group: '事業費' },
   { value: '減価償却費', code: '5310', kana: 'ゲンカショウキャクヒ', group: '事業費' },
   { value: '寄附金収益', code: '4210', kana: 'キフキンシュウエキ', group: '事業収益' },
+  { value: '社会保険料', code: '5121', kana: 'シャカイホケンリョウ', group: '特殊摘要科目（親）' },
   { value: '健康保険', code: '5122', kana: 'ケンコウホケン', group: '特殊摘要科目' },
   { value: '厚生年金', code: '5123', kana: 'コウセイネンキン', group: '特殊摘要科目' },
+  { value: '雇用保険', code: '5124', kana: 'コヨウホケン', group: '特殊摘要科目' },
+  { value: '労災保険', code: '5125', kana: 'ロウサイホケン', group: '特殊摘要科目' },
+  { value: '職員預り金', code: '2140', kana: 'ショクインアズカリキン', group: '特殊摘要科目（親）' },
+  { value: '所得税', code: '2141', kana: 'ショトクゼイ', group: '特殊摘要科目' },
   { value: '住民税', code: '2150', kana: 'ジュウミンゼイ', group: '特殊摘要科目' },
   { value: '拠点区分間繰入金費用', code: '6110', kana: 'キョテンクブンカンクリイレキンヒヨウ', group: '内部取引' },
   { value: '拠点区分間繰入金収益', code: '6120', kana: 'キョテンクブンカンクリイレキンシュウエキ', group: '内部取引' },
@@ -130,6 +135,14 @@ const CANDIDATES: Record<ComboKind, Candidate[]> = {
 };
 export const candidatesOf = (kind: ComboKind) => CANDIDATES[kind];
 export const codeOf = (kind: ComboKind, value: string) => CANDIDATES[kind].find((c) => c.value === value)?.code ?? '';
+
+/* ---------------- 特殊摘要伝票（仕訳伝票形式だけの機能。確認メモ #189） ---------------- */
+/** 特殊摘要科目（親）と、摘要欄で選ぶ特殊摘要科目（子）。現行の科目体系の資料がないため、親子の組み合わせはサンプル */
+const SPECIAL_TREE: Record<string, string[]> = { 社会保険料: ['健康保険', '厚生年金', '雇用保険', '労災保険'], 職員預り金: ['所得税', '住民税'] };
+const SPECIAL_CHILDREN: Record<string, Candidate[]> = Object.fromEntries(Object.entries(SPECIAL_TREE).map(([p, cs]) => [p, cs.map((c) => CANDIDATES.account.find((x) => x.value === c)).filter((x): x is Candidate => !!x)]));
+/** 特殊摘要科目（親）なら、摘要欄で選ぶ子の一覧を返す（親でなければ null） */
+export const specialChildrenOf = (name: string): Candidate[] | null => SPECIAL_CHILDREN[name] ?? null;
+export const isSpecialParent = (name: string) => !!SPECIAL_CHILDREN[name];
 /** 区分は「001 本部」の形で保持しているので、候補の表示名からはコードを外す */
 const nameOf = (kind: ComboKind, c: Candidate) => (kind === 'service' ? c.value.replace(/^\d+\s*/, '') : c.value);
 
@@ -168,10 +181,12 @@ interface ComboProps {
   listWidth?: number;
   onFocusField?: () => void;
   title?: string;
+  /** 候補を差し替える（特殊摘要伝票の摘要欄＝特殊摘要科目（子）の一覧。確認メモ #189） */
+  options?: Candidate[];
 }
 
-export function ComboField({ id, kind, value, onChange, onCommit, placeholder, freeText, dropUp, disabled, invalid, message, fontSize = 14, padY = 9, listWidth, onFocusField, title }: ComboProps) {
-  const all = useMemo(() => candidatesOf(kind), [kind]);
+export function ComboField({ id, kind, value, onChange, onCommit, placeholder, freeText, dropUp, disabled, invalid, message, fontSize = 14, padY = 9, listWidth, onFocusField, title, options }: ComboProps) {
+  const all = useMemo(() => options ?? candidatesOf(kind), [kind, options]);
   const [text, setText] = useState(value);
   const [editing, setEditing] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -361,12 +376,19 @@ export interface JudgeInput {
   fundMode: FundMode;
   /** 「内部取引」ボタンで内部取引として指定した */
   internal?: boolean;
+  /** 内部取引にする側（借方か貸方のどちらか一方。確認メモ #186） */
+  internalSide?: InternalSide;
   /** 内部取引相手区分 */
   aite?: string;
   /** 入力中の区分 */
   division?: string;
 }
-export const needsPartner = (x: Pick<JudgeInput, 'kari' | 'kashi' | 'internal'>) => !!x.internal || isInternalAccount(x.kari) || isInternalAccount(x.kashi);
+/** 内部取引にする側。貸借の両方を内部取引にすることはできない（確認メモ #186） */
+export type InternalSide = '' | '借方' | '貸方';
+export const INTERNAL_SIDES: InternalSide[] = ['', '借方', '貸方'];
+/** 科目から決まる内部取引の側（内部取引科目を使っている側。なければ空） */
+export const autoInternalSide = (kari: string, kashi: string): InternalSide => (isInternalAccount(kari) ? '借方' : isInternalAccount(kashi) ? '貸方' : '');
+export const needsPartner = (x: Pick<JudgeInput, 'kari' | 'kashi' | 'internal' | 'internalSide'>) => !!x.internal || !!x.internalSide || isInternalAccount(x.kari) || isInternalAccount(x.kashi);
 
 /** 借方・貸方の組み合わせを判定し、エラー（登録不可）と警告（確認して登録可）を返す */
 export function judgeEntry(x: JudgeInput, env: EnvSettings): Issue[] {
@@ -378,8 +400,9 @@ export function judgeEntry(x: JudgeInput, env: EnvSettings): Issue[] {
   // 内部取引
   const ik = isInternalAccount(kari), is = isInternalAccount(kashi);
   if (needsPartner(x)) {
-    if (ik !== is && (ik || is)) {
-      out.push({ level: 'error', code: 'oneside', title: `${ik ? '借方' : '貸方'}だけが内部取引科目です`, detail: `${ik ? '貸方' : '借方'}にも内部取引科目を指定してください。`, field: ik ? 'kashi' : 'kari' });
+    // 内部取引は借方か貸方のどちらか一方だけ（確認メモ #186。貸借の両方を内部取引にすることはできない）
+    if (ik && is) {
+      out.push({ level: 'error', code: 'both-internal', title: '借方と貸方の両方が内部取引科目です', detail: '内部取引科目は、借方か貸方のどちらか一方だけに指定してください。', field: 'kashi' });
     }
     if (!x.aite) out.push({ level: 'error', code: 'aite', title: '内部取引相手区分が未入力です', detail: '内部取引科目を使う仕訳は、相手先の区分を指定してください。', field: 'aite' });
     else if (x.division && x.aite === x.division) out.push({ level: 'error', code: 'aite-same', title: '内部取引相手区分が入力中の区分と同じです', detail: '相手区分には、取引の相手先となる別の区分を指定してください。', field: 'aite' });
@@ -643,13 +666,14 @@ export function ReadOnlyBanner({ reason }: { reason: string }) {
 /* ------------------------------------------------------------------ */
 /* 小さな確認ダイアログ（伝票中止・形式切替）                            */
 /* ------------------------------------------------------------------ */
-export function ConfirmModal({ open, title, children, okLabel, cancelLabel = '入力に戻る', danger, onOk, onClose, accent, focusOk }: { open: boolean; title: string; children: ReactNode; okLabel: string; cancelLabel?: string; danger?: boolean; onOk: () => void; onClose: () => void; accent: string; /** 初期フォーカスを実行側のボタンに置く（Enter でそのまま進める。登録の確認など） */ focusOk?: boolean }) {
+export function ConfirmModal({ open, title, children, okLabel, cancelLabel = '入力に戻る', danger, onOk, onClose, accent, focusOk, extra }: { open: boolean; title: string; children: ReactNode; okLabel: string; cancelLabel?: string; danger?: boolean; onOk: () => void; onClose: () => void; accent: string; /** 初期フォーカスを実行側のボタンに置く（Enter でそのまま進める。登録の確認など） */ focusOk?: boolean; /** キャンセルと実行の間に置くボタン（「登録して印刷」など） */ extra?: ReactNode }) {
   return (
     <Modal open={open} onClose={onClose} width={480} title={title} strict>
       <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 14 }}>
         <div style={{ fontSize: 14, lineHeight: 1.8 }}>{children}</div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button type="button" className="ef-act" autoFocus={!focusOk} onClick={onClose} style={btn()}>{cancelLabel}</button>
+          {extra}
           <button type="button" className="ef-act" data-confirm-ok autoFocus={focusOk} onClick={onOk} style={btn(danger ? '#c0392b' : accent, true)}>{okLabel}</button>
         </div>
       </div>
@@ -843,30 +867,92 @@ export function parseEntryMonth(raw: string): EntryMonth {
   if (n >= 1 && n <= 12) return { ok: true, month: n, note: '', nextYear: n <= 3 };
   return { ok: false, month: 0, note: '', nextYear: false };
 }
+/** 会計年度（令和の年）。プロトタイプは令和 8 年度（令和8年4月〜令和9年3月）で固定 */
+export const ENTRY_FY = 8;
+/**
+ * 年欄と月欄の入力を解釈する（確認メモ #184 の修正。年も入力できる）。
+ * 令和8年4月〜令和9年3月＝当年度の月／令和9年・月 99＝決算月／令和9年4〜6月＝翌年度の予備月。
+ * 保存の形（月と term）は parseEntryMonth と同じ
+ */
+export function parseEntryDate(year: string, raw: string, fy = ENTRY_FY): EntryMonth {
+  const y = parseInt(String(year).normalize('NFKC'), 10);
+  const n = parseInt(String(raw).normalize('NFKC'), 10);
+  const bad: EntryMonth = { ok: false, month: 0, note: '', nextYear: false };
+  if (n === 99) return y === fy + 1 ? { ok: true, month: 3, term: '決算', note: '決算月', nextYear: true } : bad;
+  if (!(n >= 1 && n <= 12)) return bad;
+  if (y === fy) return n >= 4 ? { ok: true, month: n, note: '', nextYear: false } : bad;
+  if (y === fy + 1) {
+    if (n <= 3) return { ok: true, month: n, note: '', nextYear: true };
+    if (n <= 6) return { ok: true, month: n, term: '予備', note: '翌年度の予備月', nextYear: true };
+  }
+  return bad;
+}
+/** 年と月を、カレンダーの内部キー（1〜12／99＝決算月／13〜15＝翌年4〜6月）に直す */
+export function entryMonthKey(year: string, raw: string): string {
+  const em = parseEntryDate(year, raw);
+  if (!em.ok) return '';
+  return em.term === '決算' ? '99' : em.term === '予備' ? String(em.month + 9) : String(em.month);
+}
+/** カレンダーの内部キーを、年欄と月欄の値に直す */
+export function entryDateOfKey(key: string, fy = ENTRY_FY): { year: string; month: string } {
+  const n = parseInt(String(key).normalize('NFKC'), 10);
+  if (n === 99) return { year: String(fy + 1), month: '99' };
+  if (n >= 13 && n <= 15) return { year: String(fy + 1), month: String(n - 9) };
+  return { year: String(n >= 1 && n <= 3 ? fy + 1 : fy), month: String(n) };
+}
+/**
+ * 伝票日付の年欄。月を入れると年を自動で合わせる（1〜3月と決算月は翌年、7〜12月は当年）。
+ * 4〜6月は当年度の月と翌年度の予備月の両方があるので、年を手で直した場合はそのままにする
+ */
+export function useEntryYear(fy = ENTRY_FY) {
+  const [year, setYear] = useState(String(fy));
+  const manual = useRef(false);
+  return {
+    year,
+    /** 年欄への入力 */
+    edit: (v: string) => { manual.current = true; setYear(v.normalize('NFKC').replace(/\D/g, '').slice(0, 2)); },
+    /** 月欄が変わったとき */
+    onMonth: (m: string) => {
+      const n = parseInt(m.normalize('NFKC'), 10);
+      if (n === 99 || (n >= 1 && n <= 3)) { manual.current = false; setYear(String(fy + 1)); }
+      else if (n >= 7 && n <= 12) { manual.current = false; setYear(String(fy)); }
+      else if (n >= 4 && n <= 6 && !manual.current) setYear(String(fy));
+    },
+    /** カレンダーなどから年を指定する */
+    set: (y: string) => { manual.current = true; setYear(y); },
+  };
+}
+/** 伝票日付が入力できる範囲の説明 */
+export const ENTRY_DATE_RANGE = `令和${ENTRY_FY}年4月〜令和${ENTRY_FY + 1}年3月、決算月（令和${ENTRY_FY + 1}年・月に 99）、翌年度の予備月（令和${ENTRY_FY + 1}年4〜6月）`;
 /** 月欄の入力から、年の表示（令和の年）を返す */
 export const entryYearOf = (raw: string) => (parseEntryMonth(raw).nextYear ? '9' : '8');
 /** 月欄の入力方法（title 用） */
-export const ENTRY_MONTH_HELP = '1〜12：当年度の月　99：決算月　13〜15：翌年4〜6月（予備月。年度更新時に翌年度のデータとして引き継ぎます）';
+export const ENTRY_MONTH_HELP = `月は 1〜12 で入力します。決算月は 99。翌年度の予備月（4〜6月）は、年を ${ENTRY_FY + 1} にして月に 4〜6 を入力します（年度更新時に翌年度のデータとして引き継ぎます）`;
+/** 年欄の入力方法（title 用） */
+export const ENTRY_YEAR_HELP = `月を入れると年は自動で合います。翌年度の予備月（4〜6月）を入力するときは、年を ${ENTRY_FY + 1} に直します`;
 /** 伝票の日付の表示。決算月は「決」、予備月は「翌」を頭に付ける */
 export const termMark = (term?: EntryTerm) => (term === '決算' ? '決' : term === '予備' ? '翌' : '');
 /** 月欄の横に出す注記のバッジ（決算月／翌年の予備月のときだけ表示） */
-export function EntryMonthNote({ month, style }: { month: string; style?: CSSProperties }) {
-  const m = parseEntryMonth(month);
+export function EntryMonthNote({ month, year, style }: { month: string; /** 年欄の値。渡すと年と月の組み合わせで判定する（確認メモ #184 の修正） */ year?: string; style?: CSSProperties }) {
+  const m = year === undefined ? parseEntryMonth(month) : parseEntryDate(year, month);
+  const pill: CSSProperties = { display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 10, fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap' };
+  // 年と月の組み合わせが会計期間の外（例：令和8年2月、令和9年7月）
+  if (year !== undefined && !m.ok && month.trim() && year.trim()) return <span data-month-note="out" title={`入力できるのは、${ENTRY_DATE_RANGE}です`} style={{ ...pill, background: '#fdecea', color: '#c0392b', border: '1px solid #f1c4bd', ...style }}>期間外</span>;
   if (!m.note) return null;
   const closing = m.term === '決算';
   return (
-    <span data-month-note title={closing ? '決算月の伝票として登録します（月欄に 99 と入力）' : '翌年度の予備月の伝票として登録します。年度更新時に翌年度のデータとして引き継ぎます（月欄に 13〜15 と入力）'} style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 10, fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap', background: closing ? '#efe7fa' : '#e6f0fb', color: closing ? '#6b3fb5' : '#2c5f9e', border: '1px solid ' + (closing ? '#d6c4f0' : '#c9dbf0'), ...style }}>{m.note}</span>
+    <span data-month-note title={closing ? '決算月の伝票として登録します（月欄に 99 と入力）' : `翌年度の予備月の伝票として登録します。年度更新時に翌年度のデータとして引き継ぎます${year === undefined ? '' : `（年を ${ENTRY_FY + 1} にして、月に 4〜6 と入力）`}`} style={{ ...pill, background: closing ? '#efe7fa' : '#e6f0fb', color: closing ? '#6b3fb5' : '#2c5f9e', border: '1px solid ' + (closing ? '#d6c4f0' : '#c9dbf0'), ...style }}>{m.note}</span>
   );
 }
 
 /** 「令和 ［8］年 ［月］月 ［日］日」の枠付きセル。month／day には既存の入力欄をそのまま渡す */
-export function PaperDate({ month, day, year = '8', label = '年月日', note }: { month: ReactNode; day: ReactNode; year?: string; label?: string; /** 月の注記（決算月・予備月のバッジ） */ note?: ReactNode }) {
+export function PaperDate({ month, day, year = '8', label = '年月日', note, yearInput }: { month: ReactNode; day: ReactNode; year?: string; label?: string; /** 月の注記（決算月・予備月のバッジ） */ note?: ReactNode; /** 年の入力欄（渡すと年も入力できる。確認メモ #184 の修正） */ yearInput?: ReactNode }) {
   const cell: CSSProperties = { padding: '2px 4px', justifyContent: 'center' };
   return (
     <div className="pp-row" style={{ gridTemplateColumns: 'auto auto auto auto auto auto auto auto', border: `1px solid ${PAPER.line}`, display: 'inline-grid', verticalAlign: 'middle' }}>
       <div className="pp-lab"><span>{label}</span></div>
       <div className="pp-cell pp-auto" style={{ ...cell, padding: '2px 10px', fontSize: 14, color: '#5b6773' }}>令和</div>
-      <div className="pp-cell" style={{ ...cell, padding: '2px 10px' }}><span className="pp-ro pp-num" title="会計年度は、画面上部の「会計期間」で切り替えます" style={{ fontSize: 14, fontWeight: 700, color: '#22303c' }}>{year}</span></div>
+      {yearInput ? <div className="pp-cell" style={cell}>{yearInput}</div> : <div className="pp-cell" style={{ ...cell, padding: '2px 10px' }}><span className="pp-ro pp-num" title="会計年度は、画面上部の「会計期間」で切り替えます" style={{ fontSize: 14, fontWeight: 700, color: '#22303c' }}>{year}</span></div>}
       <div className="pp-lab">年</div>
       <div className="pp-cell" style={cell}>{month}</div>
       <div className="pp-lab">月</div>

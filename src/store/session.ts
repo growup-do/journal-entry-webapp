@@ -104,15 +104,22 @@ export const DEFAULT_PRINT: PrintCommon = {
 
 /* ---------- 定型仕訳・自動按分 ---------- */
 export interface TemplateLine { kari: string; kashi: string; tekiyo: string; amount: string; gyosha?: string }
-export interface JournalTemplate { id: string; name: string; form: '単一式' | '伝票式' | '振替伝票式' | '振替単一式'; lines: TemplateLine[] }
+export interface JournalTemplate { id: string; name: string; form: '単一式' | '伝票式' | '振替伝票式' | '振替単一式'; lines: TemplateLine[]; /** 連続定型で登録の対象にするか（未指定は有効。確認メモ #202） */ enabled?: boolean }
 export interface AllocationLine { division: string; kari: string; kashi: string; tekiyo: string; rate: number; mode: '％' | '分数' | '残り'; }
 export interface AllocationTemplate { id: string; name: string; form: '単一式' | '伝票式'; rounding: '切り捨て' | '四捨五入' | '切り上げ'; lines: AllocationLine[] }
 
+/** 仕訳伝票形式のサンプル（連続定型のダイアログで有効／無効を切り替えて登録する。確認メモ #202） */
+const SLIP_TEMPLATES: JournalTemplate[] = [
+  { id: 't5', name: '電気代・ガス代（月次）', form: '伝票式', lines: [{ kari: '水道光熱費（事業）', kashi: '当座預金（保育園）', tekiyo: '電気代', amount: '61000', gyosha: '東京電力' }, { kari: '水道光熱費（事業）', kashi: '当座預金（保育園）', tekiyo: 'ガス代', amount: '26000', gyosha: '東京電力' }] },
+  { id: 't6', name: '給食材料費の支払', form: '伝票式', lines: [{ kari: '給食費', kashi: '普通預金（保育園）', tekiyo: '給食材料', amount: '186000', gyosha: 'みどり商店' }] },
+  { id: 't7', name: '保育材料の購入', form: '伝票式', enabled: false, lines: [{ kari: '保育材料費', kashi: '普通預金（保育園）', tekiyo: '保育材料', amount: '', gyosha: '' }] },
+];
 export const DEFAULT_TEMPLATES: JournalTemplate[] = [
   { id: 't1', name: '電話料金', form: '単一式', lines: [{ kari: '通信運搬費', kashi: '普通預金（保育園）', tekiyo: '電話料金', amount: '', gyosha: 'ＮＴＴ東日本' }] },
   { id: 't2', name: '給与支給（月次）', form: '振替伝票式', lines: [{ kari: '職員俸給', kashi: '普通預金（保育園）', tekiyo: '職員俸給', amount: '' }, { kari: '特殊業務手当', kashi: '普通預金（保育園）', tekiyo: '特殊業務手当', amount: '' }, { kari: '通勤手当', kashi: '普通預金（保育園）', tekiyo: '通勤手当', amount: '' }] },
   { id: 't3', name: '副食費 保護者より', form: '単一式', lines: [{ kari: '現金（収入）', kashi: 'その他の利用料収益', tekiyo: '副食費ー保護者より', amount: '4500', gyosha: '保護者' }] },
   { id: 't4', name: 'コピー機リース', form: '単一式', lines: [{ kari: '賃借料（事業）', kashi: '普通預金（保育園）', tekiyo: 'コピー機リース代', amount: '10995', gyosha: '中央リース' }] },
+  ...SLIP_TEMPLATES,
 ];
 export const DEFAULT_ALLOCATIONS: AllocationTemplate[] = [
   { id: 'a1', name: '水道代（事務費／事業費）', form: '単一式', rounding: '切り捨て', lines: [{ division: '001 本部', kari: '水道光熱費（事務）', kashi: '普通預金（保育園）', tekiyo: '水道代', rate: 30, mode: '％' }, { division: '002 保育事業', kari: '水道光熱費（事業）', kashi: '普通預金（保育園）', tekiyo: '水道代', rate: 70, mode: '残り' }] },
@@ -207,7 +214,9 @@ let state: Session = (() => {
     const saved = JSON.parse(raw) as Partial<Session>;
     return { ...DEFAULT, ...saved, tree: normalizeTree(saved.tree ?? DEFAULT.tree), env: { ...DEFAULT_ENV, ...(saved.env ?? {}) }, input: { ...DEFAULT_INPUT, ...(saved.input ?? {}) }, print: { ...DEFAULT_PRINT, ...(saved.print ?? {}) }, homeSections: { ...DEFAULT_HOME_SECTIONS, ...(saved.homeSections ?? {}) }, ledgerTarget: null, journalTarget: null,
       // 以前の保存データ（消費税対応の On／Off だけ）には方式がないので、On は「簡易課税方式」として引き継ぐ（確認メモ #175）
-      taxMode: saved.taxMode ?? (saved.taxEntry ? '簡易課税方式' : DEFAULT.taxMode) };
+      taxMode: saved.taxMode ?? (saved.taxEntry ? '簡易課税方式' : DEFAULT.taxMode),
+      // 以前の保存データには仕訳伝票形式の定型がないので、サンプルを足す（確認メモ #202）
+      templates: saved.templates ? (saved.templates.some((t) => t.form === '伝票式') ? saved.templates : [...saved.templates, ...SLIP_TEMPLATES]) : DEFAULT_TEMPLATES };
   } catch {
     return DEFAULT;
   }

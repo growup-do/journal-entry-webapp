@@ -1,16 +1,25 @@
 // オプション：収入・支出調書 印刷（既存「AccUkagai」の再現）
 //   7種の伺（支出伺／収入伺／支出伺(振替)／支払伺／受入伺／他の伺／他の伺2）をスライド式の切替で選ぶ（10/13 鈴木さん指示）。
-//   会計月の仕訳を抽出条件で絞り込み、対象にチェックした伝票を Excel 出力（出力済みに変わる）。
+//   会計月の仕訳を抽出条件で絞り込み、対象にチェックした伝票を「印刷」から出力（出力済みに変わる）。
+//   「印刷」は出力先（プリンター／Excel／PDF）と、印刷／プレビューを選ぶ（確認メモ #213）。
 //   詳細設定（対象科目・決裁印影・タイトル／メッセージ）、未出力数（月別の集計）。
 
 import { useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
+import { runExport, type ExportKind } from './ExportDialog';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
-import { inPeriod, type Period } from '../lib/period';
+import { inPeriod, periodLabel, type Period } from '../lib/period';
 import { Modal } from './Modal';
+import { PreviewModal, type TableData } from './PrintCenter';
 import { LABEL, NUM, ReportShell, TD, TH, yen } from './ReportShell';
-import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { ToastView, useToast } from './Toast';
+
+/** 印刷の出力先（確認メモ #213）。「印刷」1 つにまとめ、Excel もここから出す */
+const PRINT_DESTS: { key: ExportKind; label: string; desc: string; action: string }[] = [
+  { key: 'print', label: 'プリンター', desc: '用紙に印刷します', action: '印刷する' },
+  { key: 'excel', label: 'Excel', desc: 'Excel ファイルとして保存します', action: 'Excelで保存する' },
+  { key: 'pdf', label: 'PDF', desc: 'PDF ファイルとして保存します', action: 'PDFで保存する' },
+];
 import { JOURNAL_COUNTS, JOURNAL_ROWS, type JournalRow } from '../data';
 import type { MonthFilter } from '../types';
 
@@ -85,11 +94,25 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
   const isOn = (r: JournalRow) => !checked.has('off:' + rowKey(r));
   const toggle = (r: JournalRow) => setChecked((s) => { const n = new Set(s); const key = 'off:' + rowKey(r); n.has(key) ? n.delete(key) : n.add(key); return n; });
   const setAll = (on: boolean) => setChecked((s) => { const n = new Set(s); rows.forEach((r) => (on ? n.delete('off:' + rowKey(r)) : n.add('off:' + rowKey(r)))); return n; });
-  const doExport = () => {
-    const targets = rows.filter(isOn);
+  // 印刷（確認メモ #213）：「Excel出力」と「印刷」を 1 つにまとめた。出力先を選び、印刷するかプレビューするかを選ぶ。
+  //   この画面から出せるのは収入・支出調書（伺書）だけ。日記帳・伝票・振替伝票は選べない
+  const [printOpen, setPrintOpen] = useState(false);
+  const [dest, setDest] = useState<ExportKind>('print');
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const targets = rows.filter(isOn);
+  const docTitle = `収入・支出調書（${k.label}）`;
+  const monthText = range ? periodLabel(range) : month == null ? '令和8年度 全ての月' : month === '決' ? '令和8年度 決算月' : `令和${parseInt(month, 10) >= 4 ? 8 : 9}年 ${month}月`;
+  const printData: TableData = { header: ['SeqNo', '日付', '伝票種別', '伝票番号', '借方科目', '貸方科目', '摘要', '金額'], rows: targets.map((r) => [r.seq, r.date, r.kind, r.no, r.kari, r.kashi, r.tekiyo, r.amount]) };
+  const openPrint = () => {
     if (targets.length === 0) return toast.show('対象の伝票がありません');
+    setPrintOpen(true);
+  };
+  const doOutput = () => {
+    const d = PRINT_DESTS.find((x) => x.key === dest) ?? PRINT_DESTS[0];
+    const msg = runExport({ kind: d.key, title: docTitle, fileName: `収入支出調書_${k.label}`, meta: `${monthText}　対象 ${targets.length} 件`, ...printData });
     setExported((s) => { const n = new Set(s); targets.forEach((r) => n.add(rowKey(r))); return n; });
-    toast.show(`${k.label} ${targets.length} 件を Excel 出力しました（プロトタイプ：ファイルは作成されません）`);
+    setPrintOpen(false);
+    toast.show(`${k.label} ${targets.length} 件を出力しました（出力済みにしました）。${msg}`);
   };
 
   const btn = (primary?: boolean): CSSProperties => ({ padding: '8px 16px', borderRadius: 8, border: primary ? 'none' : '1px solid #cfd8e0', background: primary ? accent : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
@@ -103,9 +126,8 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
       accent={accent}
       title="収入・支出調書 印刷"
       badge={badge}
-      subtitle="伺書（支出伺・収入伺など）を出力する伝票を選び、Excelへ出力します。"
-      extraTools={<ScreenPrintMenu page="収入支出" accent={accent} />}
-      tools={[{ label: '詳細設定', onClick: () => setDetailOpen(true) }, { label: '未出力数', onClick: () => setCountOpen(true) }, { label: 'Excel出力', onClick: doExport, primary: true }]}
+      subtitle="伺書（支出伺・収入伺など）を出力する伝票を選び、「印刷」から出力先（プリンター／Excel／PDF）を選んで出力します。"
+      tools={[{ label: '詳細設定', onClick: () => setDetailOpen(true) }, { label: '未出力数', onClick: () => setCountOpen(true) }, { label: '印刷', onClick: openPrint, primary: true }]}
       controls={
         <>
           {/* 伺の種類：スライド式の切替（ダッシュボード表示オプションの「最初に表示する画面」と同じ見た目） */}
@@ -158,6 +180,47 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
         <button type="button" className="btn-outline" onClick={() => setAll(false)} style={btn()}>全てOFF</button>
         <span style={{ marginLeft: 'auto', fontSize: 14, color: '#7a8794', alignSelf: 'center' }}>対象 <b style={{ color: '#22303c' }}>{rows.filter(isOn).length}</b> ／ {rows.length} 件</span>
       </div>
+
+      {/* 印刷（確認メモ #213）：出力先 → 印刷／プレビュー */}
+      <Modal open={printOpen} onClose={() => setPrintOpen(false)} width={640} title={<>収入・支出調書の印刷 <span style={{ fontSize: 14, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>{k.label}</span></>}>
+        <div data-receipt-print style={{ padding: '14px 22px 18px', display: 'grid', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr', gap: '6px 12px', padding: '10px 14px', background: '#f6f8fa', borderRadius: 10, fontSize: 14 }}>
+            <span style={{ color: '#7a8794' }}>印刷する帳票</span><b>{docTitle}</b>
+            <span style={{ color: '#7a8794' }}>会計月</span><span>{monthText}</span>
+            <span style={{ color: '#7a8794' }}>対象の伝票</span><span><b>{targets.length}</b> 件（一覧で「対象」にチェックした伝票）</span>
+          </div>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}><span style={{ display: 'inline-flex', width: 22, height: 22, borderRadius: 11, background: accent, color: '#fff', fontSize: 12, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>1</span>出力先を選ぶ</div>
+            <div role="radiogroup" aria-label="出力先" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {PRINT_DESTS.map((d) => {
+                const on = dest === d.key;
+                return (
+                  <label key={d.key} data-print-dest={d.key} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '12px 14px', border: `1px solid ${on ? accent : '#e2e8ee'}`, borderRadius: 12, background: on ? '#f6f9fc' : '#fff', cursor: 'pointer' }}>
+                    <input type="radio" name="receipt-print-dest" checked={on} onChange={() => setDest(d.key)} style={{ marginTop: 3 }} />
+                    <span><span style={{ display: 'block', fontSize: 14, fontWeight: 700 }}>{d.label}</span><span style={{ display: 'block', fontSize: 12, color: '#8290a0', marginTop: 2 }}>{d.desc}</span></span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}><span style={{ display: 'inline-flex', width: 22, height: 22, borderRadius: 11, background: accent, color: '#fff', fontSize: 12, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>2</span>印刷するか、プレビューするかを選ぶ</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <button type="button" className="btn-outline" data-print-act="preview" onClick={() => setPreviewOpen(true)} style={{ padding: '14px 16px', borderRadius: 12, border: '1px solid #cfd8e0', background: '#fff', fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left' }}>
+                <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: '#22303c' }}>プレビューする</span>
+                <span style={{ display: 'block', fontSize: 12, color: '#8290a0', marginTop: 2 }}>画面で仕上がりを確かめます（出力済みにはなりません）</span>
+              </button>
+              <button type="button" className="submit-btn" data-print-act="run" onClick={doOutput} style={{ padding: '14px 16px', borderRadius: 12, border: 'none', background: accent, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left' }}>
+                <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: '#fff' }}>{(PRINT_DESTS.find((d) => d.key === dest) ?? PRINT_DESTS[0]).action}</span>
+                <span style={{ display: 'block', fontSize: 12, color: 'rgba(255,255,255,.85)', marginTop: 2 }}>対象の {targets.length} 件を出力し、出力済みにします</span>
+              </button>
+            </div>
+          </div>
+          <div style={{ fontSize: 12, color: '#8290a0', lineHeight: 1.7 }}>この画面から印刷できるのは収入・支出調書（伺書）だけです。日記帳・伝票・振替伝票は、仕訳日記帳や伝票入力の画面にある「印刷」から印刷します。</div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" onClick={() => setPrintOpen(false)} style={btn()}>キャンセル</button></div>
+        </div>
+      </Modal>
+      <PreviewModal open={previewOpen} onClose={() => setPreviewOpen(false)} title={docTitle} accent={accent} data={printData} />
 
       {/* 詳細設定 */}
       <Modal open={detailOpen} onClose={() => setDetailOpen(false)} width={1000} title="詳細設定">

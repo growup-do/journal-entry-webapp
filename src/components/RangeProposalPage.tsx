@@ -1,9 +1,8 @@
 // 月次試算：月の範囲指定の操作案（?page=range。確認メモ #143）
-//   「何月から何月まで」を画面上で指定する操作を 4 案、実際に動く形で並べて比べるための提案用ページ。
-//   案1＝両端つまみのスライダー／案2＝月タブのドラッグ・Shift＋クリック／案3＝開始月・終了月のプルダウン＋よく使う範囲／案4＝月別の棒グラフをドラッグ。
-//   各案に、選んだ範囲の表示と、その範囲で集計した小さな試算表（サンプル）を付ける。最後に比較表と、依頼者としてのおすすめを載せる。
+//   「何月から何月まで」を画面上で指定する操作を 4 案、実際に動く形で並べて比べた提案用ページ。案2（月タブのドラッグ・Shift＋クリック）に決定し、月タブ（FiscalMonthTabs）に反映した。
+//   案1＝両端つまみのスライダー／案2＝月タブのドラッグ・Shift＋クリック（決定）／案3＝開始月・終了月のプルダウン／案4＝月別の棒グラフをドラッグ。ほかの 3 案は比べた経緯として残している。
+//   各案に、選んだ範囲の表示と、その範囲で集計した小さな試算表（サンプル）を付ける。最後に比較表を載せる。四半期・上半期・年度累計などのボタンは設けない（確認メモ #143 への指示）。
 //   月の並びは月タブ（FiscalMonthTabs）と同じ会計年度順に「初」を加えたもの（初・4〜12・1〜3・決）。金額・件数はすべて独自のサンプル。
-//   既存の月次試算の画面は変えていない（このページだけで完結）。
 
 import { useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent as RKeyboardEvent, MouseEvent as RMouseEvent, PointerEvent as RPointerEvent, ReactNode } from 'react';
@@ -15,8 +14,6 @@ const MONTHS = ['初', '4', '5', '6', '7', '8', '9', '10', '11', '12', '1', '2',
 const LAST = MONTHS.length - 1;
 /** 月の範囲（MONTHS の位置。両端を含む。開始 ≦ 終了） */
 type Range = [number, number];
-/** サンプルの「当月」＝8月（月次試算の初期表示と同じ） */
-const CURRENT = 5;
 /** 各案の初期表示：6月〜9月 */
 const INITIAL: Range = [3, 6];
 
@@ -61,20 +58,6 @@ function trialRows([a, b]: Range) {
     return { name: r.name, carry, debit, credit, balance: carry + debit - credit };
   });
 }
-
-/** よく使う範囲（案3・おすすめの組み合わせ）。呼び方は月タブの「期間を指定」と同じ */
-const PRESETS: { label: string; range: Range; title: string }[] = [
-  { label: '当月', range: [CURRENT, CURRENT], title: `当月（${monthName(CURRENT)}）だけ` },
-  { label: '年度累計', range: [1, CURRENT], title: `4月から当月（${monthName(CURRENT)}）まで` },
-  { label: '第1四半期', range: [1, 3], title: '4月〜6月' },
-  { label: '第2四半期', range: [4, 6], title: '7月〜9月' },
-  { label: '第3四半期', range: [7, 9], title: '10月〜12月' },
-  { label: '第4四半期', range: [10, 12], title: '1月〜3月' },
-  { label: '上半期', range: [1, 6], title: '4月〜9月' },
-  { label: '下半期', range: [7, 12], title: '10月〜3月' },
-  { label: '全期間', range: [1, 12], title: '4月〜3月' },
-  { label: '期首〜決算', range: [0, LAST], title: '期首残高と決算月を含む年度全体' },
-];
 
 // ───── 共通の小部品 ─────
 const TH: CSSProperties = { padding: '6px 12px', background: '#f6f8fa', fontSize: 12, fontWeight: 700, color: '#8290a0', borderBottom: '1px solid #eef2f5', textAlign: 'left', whiteSpace: 'nowrap' };
@@ -131,22 +114,6 @@ function MiniTrial({ range }: { range: Range }) {
           </tr>
         </tfoot>
       </table>
-    </div>
-  );
-}
-
-/** よく使う範囲のボタン列 */
-function PresetButtons({ value, onPick }: { value: Range; onPick: (r: Range) => void }) {
-  return (
-    <div role="group" aria-label="よく使う範囲" style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-      {PRESETS.map((p) => {
-        const on = p.range[0] === value[0] && p.range[1] === value[1];
-        return (
-          <button key={p.label} type="button" className="rp-focus" data-preset={p.label} aria-pressed={on} title={p.title} onClick={() => onPick(p.range)} style={{ height: 30, padding: '0 10px', borderRadius: 6, border: '1px solid ' + (on ? GREEN : '#d3dbe3'), background: on ? GREEN : '#fff', color: on ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-            {p.label}
-          </button>
-        );
-      })}
     </div>
   );
 }
@@ -388,14 +355,13 @@ function BarPicker({ span }: { span: Span }) {
   );
 }
 
-/** 案3：開始月・終了月のプルダウン＋よく使う範囲 */
+/** 案3：開始月・終了月のプルダウン */
 function SelectPicker({ value, onChange }: { value: Range; onChange: (r: Range) => void }) {
   const [a, b] = value;
   const sel: CSSProperties = { padding: '6px 8px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', background: '#fff', color: '#22303c', cursor: 'pointer' };
   const optLabel = (i: number) => (i === 0 ? '初（期首）' : i === LAST ? '決（決算）' : `${MONTHS[i]}月`);
   return (
     <div style={{ display: 'grid', gap: 10 }}>
-      <PresetButtons value={value} onPick={onChange} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 14, color: '#5b6773' }}>
         <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontWeight: 700 }}>開始月</span>
@@ -419,6 +385,8 @@ function SelectPicker({ value, onChange }: { value: Range; onChange: (r: Range) 
 // ───── 案のカード ─────
 interface CardProps {
   no: number;
+  /** 決定した案（それ以外は「見送り」と表示する） */
+  decided?: boolean;
   name: string;
   lead: string;
   range: Range;
@@ -430,15 +398,18 @@ interface CardProps {
   care: string;
 }
 
-function ProposalCard({ no, name, lead, range, extra, children, how, keys, good, care }: CardProps) {
+function ProposalCard({ no, decided, name, lead, range, extra, children, how, keys, good, care }: CardProps) {
   const dt: CSSProperties = { fontSize: 12, fontWeight: 700, color: '#8290a0', paddingTop: 2, whiteSpace: 'nowrap' };
   const dd: CSSProperties = { margin: 0, fontSize: 14, lineHeight: 1.65, color: '#22303c' };
   return (
-    <article className="rp-card" id={`plan${no}`} data-plan={no} style={{ ...CARD, display: 'grid', gap: 12, alignContent: 'start' }}>
+    <article className="rp-card" id={`plan${no}`} data-plan={no} data-decided={decided || undefined} style={{ ...CARD, display: 'grid', gap: 12, alignContent: 'start', ...(decided ? { border: `2px solid ${GREEN}` } : {}) }}>
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ padding: '2px 10px', borderRadius: 8, background: GREEN, color: '#fff', fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap' }}>案{no}</span>
           <h2 style={{ ...H2, margin: 0 }}>{name}</h2>
+          {decided
+            ? <span style={{ marginLeft: 'auto', padding: '2px 12px', borderRadius: 8, background: '#e3f3ea', color: GREEN, border: `1px solid ${GREEN}`, fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap' }}>この案に決定</span>
+            : <span style={{ marginLeft: 'auto', padding: '2px 12px', borderRadius: 8, background: '#f1f4f7', color: '#7a8794', border: '1px solid #d3dbe3', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>見送り</span>}
         </div>
         <div style={{ fontSize: 14, color: '#5b6773', marginTop: 4 }}>{lead}</div>
       </div>
@@ -458,13 +429,12 @@ function ProposalCard({ no, name, lead, range, extra, children, how, keys, good,
 
 /** 比較表（観点ごとに 4 案を横に並べる） */
 const COMPARE: { point: string; cells: [string, string, string, string] }[] = [
-  { point: '1か月だけを選ぶ', cells: ['2つのつまみを同じ月に重ねる', '月を1回クリック', '「当月」は1回。ほかの月はプルダウン2回', '棒を1回クリック'] },
+  { point: '1か月だけを選ぶ', cells: ['2つのつまみを同じ月に重ねる', '月を1回クリック', 'プルダウン2回', '棒を1回クリック'] },
   { point: '好きな範囲を選ぶ', cells: ['つまみを1〜2回動かす', 'ドラッグ1回、またはクリック2回', 'プルダウン2回', 'ドラッグ1回'] },
-  { point: '四半期・上半期など', cells: ['つまみを2回動かす', 'ドラッグ1回、またはクリック2回', 'ボタン1回', 'ドラッグ1回'] },
-  { point: '範囲をずらして見比べる', cells: ['帯をつかんで動かせる（月数はそのまま）', '選び直す', '選び直す（四半期はボタンで順に）', '選び直す'] },
+  { point: '範囲をずらして見比べる', cells: ['帯をつかんで動かせる（月数はそのまま）', '選び直す', '選び直す', '選び直す'] },
   { point: '操作方法の気づきやすさ', cells: ['見れば分かる', '案内が必要（ドラッグ・Shift）', '見れば分かる', '案内が必要（ドラッグ）'] },
-  { point: '画面で使う場所', cells: ['横いっぱいの1行（約70px）', 'いまの月タブのまま', '月タブとは別に1〜2行', '約130px（表の行が3〜4行減る）'] },
-  { point: 'いまの画面との違い', cells: ['月タブを置き換えるか、別に追加', 'ドラッグを足すだけ（Shift＋クリックは対応済み）', '「期間を指定」の中身を外に出す形', '新しい部品。棒に出す値の集計が必要'] },
+  { point: '画面で使う場所', cells: ['横いっぱいの1行（約70px）', 'いまの月タブのまま', '月タブとは別に1行', '約130px（表の行が3〜4行減る）'] },
+  { point: 'いまの画面との違い', cells: ['月タブを置き換えるか、別に追加', '月タブにドラッグを足す（反映済み）', '「期間を指定」の中身を外に出す形', '新しい部品。棒に出す値の集計が必要'] },
 ];
 
 export function RangeProposalPage() {
@@ -472,8 +442,6 @@ export function RangeProposalPage() {
   const tabs = useSpan(INITIAL);
   const [select, setSelect] = useState<Range>(INITIAL);
   const bars = useSpan(INITIAL);
-  /** おすすめの組み合わせ（月タブ＋よく使う範囲） */
-  const combo = useSpan(INITIAL);
   const openTrial = () => {
     const q = new URLSearchParams();
     q.set('open', '月次試算');
@@ -491,8 +459,9 @@ export function RangeProposalPage() {
         <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, background: GREEN, color: '#fff', borderRadius: 8, fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700 }}>会</span>
         <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 17 }}>月次試算　月の範囲指定の操作案</div>
         <span style={{ fontSize: 14, color: '#7a8794' }}>確認メモ #143 へのご提案（Web版プロトタイプ）</span>
+        <span data-decision style={{ padding: '2px 12px', borderRadius: 8, background: '#e3f3ea', color: GREEN, border: `1px solid ${GREEN}`, fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap' }}>案2 に決定</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <button type="button" className="rp-focus" onClick={openTrial} title="いまの月次試算の画面（月タブ・期間を指定）を開きます" style={headBtn}>いまの月次試算を開く</button>
+          <button type="button" className="rp-focus" onClick={openTrial} title="月次試算の画面を開きます。案2 の操作（月タブのドラッグ／Shift＋クリック）を実際の画面で試せます" style={headBtn}>月次試算で試す</button>
           <button type="button" className="rp-focus" onClick={() => window.print()} style={headBtn}>印刷／PDF保存</button>
           <button type="button" className="rp-focus" onClick={backToApp} style={{ ...headBtn, border: '1px solid ' + GREEN, background: GREEN, color: '#fff' }}>← システムに戻る</button>
         </div>
@@ -501,9 +470,9 @@ export function RangeProposalPage() {
       <div style={{ maxWidth: 1540, margin: '0 auto', padding: '20px 28px 60px' }}>
         {/* 前置き */}
         <div className="rp-card" style={{ ...CARD, marginBottom: 16, fontSize: 14, lineHeight: 1.75 }}>
-          月次試算で「何月から何月まで」を画面上で指定する操作を、4 つの案で用意しました。どの案もこのページの上で実際に動かせます。月を選ぶと、すぐ下の「集計期間」と試算表（サンプル）がその範囲の金額に変わります。
+          月次試算で「何月から何月まで」を画面上で指定する操作を 4 つの案で比べ、<b style={{ color: GREEN }}>案2（月タブをドラッグ／Shift＋クリック）に決定しました</b>。月次試算のほか、同じ月タブを使う画面（仕訳一覧・元帳・小口現金・預金出納・収入支出）に反映済みです。四半期・上半期・年度累計などのボタンは設けません。
           <div style={{ color: '#5b6773' }}>
-            月の並びは「初（期首残高）・4月〜3月・決（決算）」です。いまの月次試算でも、月タブの Shift＋クリックと「期間を指定」で範囲を選べます（右上の「いまの月次試算を開く」で確認できます）。このページでは、それをより直接に操作できる形を比べています。
+            ほかの 3 案は、比べた経緯として残しています。どの案もこのページの上で実際に動かせます。月を選ぶと、すぐ下の「集計期間」と試算表（サンプル）がその範囲の金額に変わります。月の並びは「初（期首残高）・4月〜3月・決（決算）」です。日付の範囲（4/15〜6/30 など）は、これまでどおり月タブの右の「期間を指定」から選びます。
           </div>
         </div>
 
@@ -524,13 +493,14 @@ export function RangeProposalPage() {
 
           <ProposalCard
             no={2}
+            decided
             name="月タブをドラッグ／Shift＋クリック"
             lead="いまの月タブをそのまま使い、なぞるだけで範囲を選べるようにします。"
             range={tabs.range}
             how="月をクリックすると1か月。開始月から終了月までドラッグするか、開始月をクリックしてから終了月を Shift＋クリックすると範囲になります。"
-            keys="Tab で月タブに移り、← → で月を移動、Shift＋← → で範囲を伸び縮みさせます。Home／End で端の月へ移ります。"
+            keys="Tab で月タブに移り、← → で月を移動、Shift＋← → で範囲を伸び縮みさせます。Home／End で端の月へ移ります。実際の画面では、← → を試算表の部の切替に使っているため、月タブは Tab で移って Enter で選び、Shift＋← → で範囲を伸び縮みさせます。"
             good="ふだんは1か月ずつ見て、ときどき範囲で見たいとき。見た目も場所もいまの月タブと同じなので、ほかの帳票の画面とも操作がそろいます。"
-            care="ドラッグや Shift＋クリックで範囲を選べることが、画面を見ただけでは伝わりにくい操作です（案内の一文やツールチップが必要）。四半期などの決まった範囲も、毎回なぞって選ぶことになります。"
+            care="ドラッグや Shift＋クリックで範囲を選べることが、画面を見ただけでは伝わりにくい操作です。実際の画面では、月タブの右に案内の一文を出し、月タブにツールチップを付けています。四半期などの決まった範囲も、毎回なぞって選ぶことになります。"
           >
             <div style={{ display: 'grid', gap: 8 }}>
               <MonthTabsPicker span={tabs} />
@@ -540,13 +510,13 @@ export function RangeProposalPage() {
 
           <ProposalCard
             no={3}
-            name="開始月・終了月のプルダウン＋よく使う範囲"
-            lead="よく使う範囲はボタン1回で。それ以外は開始月と終了月を選びます。"
+            name="開始月・終了月のプルダウン"
+            lead="開始月と終了月を、それぞれプルダウンで選びます。"
             range={select}
-            how="「当月」「年度累計」「第1四半期」などのボタンを押すと、その範囲に切り替わります。それ以外の範囲は、開始月と終了月をプルダウンで選びます。"
-            keys="Tab で順に移り、ボタンは Enter／Space、プルダウンは ↑ ↓ で選びます。"
-            good="四半期・上半期・年度累計など、決まった範囲で見ることが多いとき。操作が見たままなので、説明がなくても使えます。"
-            care="ボタンにない範囲は、プルダウンを2回開くことになり手数が多めです。ボタンを増やすほど場所を取るので、どの範囲を並べるかを決める必要があります（このページの10個は一例です）。"
+            how="開始月と終了月をプルダウンで選びます。開始月を終了月より後ろにすると、終了月が開始月に合わせて動きます。"
+            keys="Tab で順に移り、プルダウンは ↑ ↓ で選びます。"
+            good="開始月と終了月を、文字で確かめながら決めたいとき。操作が見たままなので、説明がなくても使えます。"
+            care="どの範囲でもプルダウンを2回開くことになり、手数が多めです。1か月だけを見るときも同じ操作が要ります。月タブとは別に1行使います。"
           >
             <SelectPicker value={select} onChange={setSelect} />
           </ProposalCard>
@@ -574,7 +544,7 @@ export function RangeProposalPage() {
               <thead>
                 <tr>
                   <th style={{ ...cth, width: 190 }}>比べる点</th>
-                  {['案1　スライダー', '案2　月タブ', '案3　プルダウン＋ボタン', '案4　棒グラフ'].map((h) => <th key={h} style={{ ...cth, color: '#22303c' }}>{h}</th>)}
+                  {['案1　スライダー', '案2　月タブ（決定）', '案3　プルダウン', '案4　棒グラフ'].map((h) => <th key={h} style={{ ...cth, color: '#22303c' }}>{h}</th>)}
                 </tr>
               </thead>
               <tbody>
@@ -587,39 +557,12 @@ export function RangeProposalPage() {
               </tbody>
             </table>
           </div>
-          <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 6 }}>※ どの案もキーボードだけで操作できます。案どうしは組み合わせられます（例：案2 の月タブに、案3 のボタンを添える）。</div>
-        </section>
-
-        {/* おすすめ */}
-        <section style={{ marginTop: 26 }}>
-          <h2 style={H2}>GROW UP からのおすすめ</h2>
-          <div className="rp-card" data-recommend style={{ ...CARD, borderLeft: `4px solid ${GREEN}`, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(560px, 1fr))', gap: 20 }}>
-            <div style={{ fontSize: 14, lineHeight: 1.75 }}>
-              <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 6 }}>案2（月タブ）を基本に、案3 の「よく使う範囲」ボタンを添える形</div>
-              <ul style={{ margin: 0, paddingLeft: 20 }}>
-                <li>月次試算でいちばん多い「1か月だけを見る」操作が、いまと同じ1クリックのまま変わりません。</li>
-                <li>範囲は月タブをなぞるだけ、四半期・上半期・年度累計はボタン1回で選べます。</li>
-                <li>月タブはほかの帳票の画面でも共通の部品なので、覚える操作が1つで済み、画面の場所も増えません。</li>
-              </ul>
-              <div style={{ marginTop: 10, color: '#5b6773' }}>
-                ご要望にあったスライダー（案1）は、見た目は分かりやすい一方、1か月を選ぶ手数が増えることと、月タブと役割が重なることから、第一候補にはしていません。ただし「範囲を少しずつ動かして見比べる」使い方が多い場合は、案1 のほうが合います。ふだん 1か月と範囲のどちらで見ることが多いか、よく使う範囲は何かを教えていただければ、それに合わせて決められます。
-              </div>
-            </div>
-            <div style={{ display: 'grid', gap: 10, alignContent: 'start' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>組み合わせた場合の操作（動かせます）</div>
-              <div style={{ background: '#f8fafc', border: '1px solid #e8edf2', borderRadius: 10, padding: '14px 16px', display: 'grid', gap: 8 }}>
-                <MonthTabsPicker span={combo} />
-                <PresetButtons value={combo.range} onPick={(r) => combo.set(r[0], r[1])} />
-              </div>
-              <Readout range={combo.range} />
-              <MiniTrial range={combo.range} />
-            </div>
-          </div>
+          <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 6 }}>※ どの案もキーボードだけで操作できます。</div>
         </section>
 
         <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 20, lineHeight: 1.7 }}>
           ※ 表示している金額・件数はすべてサンプルです。試算表の「前月繰越」は開始月の前月末の残高、「借方」「貸方」は範囲内の合計、「残高」は終了月の月末の残高です。「初」は期首残高を借方に計上した月として集計しています。<br />
-          ※ このページは操作を比べるための資料で、月次試算の画面そのものは変えていません。案が決まったら、月次試算（および同じ月タブを使う画面）に反映する想定です。
+          ※ 案2 は、月次試算と、同じ月タブを使う画面に反映済みです（右上の「月次試算で試す」で確認できます）。
         </div>
       </div>
     </div>

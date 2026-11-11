@@ -8,6 +8,7 @@
 import { useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Modal } from './Modal';
+import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { btn, input, lbl, yen } from './ui';
 import { ACCOUNT_META, accountMatches, metaOf } from '../lib/accounts';
 import type { JournalEntry } from '../types';
@@ -37,14 +38,31 @@ const OPENING: Record<string, number> = {
 /** 借方残の科目か（資産・現預金・費用）。負債・収益は貸方残 */
 const debitSide = (name: string) => { const c = metaOf(name)?.cls ?? '費用'; return c !== '負債' && c !== '収益'; };
 
+/** 月選択ボタン（4〜3・決）の値の位置。4〜3月＝0〜11、決＝12（確認メモ #203／#204） */
+const tabIdx = (m: string) => (m === '決' ? 12 : monthIdx(m));
+/** 伝票の位置。決算月の伝票は 12。翌年の予備月の伝票は当年度の残高に含めない */
+const entryIdx = (e: JournalEntry) => { const t = (e as { term?: string }).term; return t === '決算' ? 12 : t === '予備' ? -1 : monthIdx(monthOf(e)); };
+/** 入力中の月欄の値 → 月選択ボタンの値（4〜3 以外は決算月として開く） */
+const tabMonthOf = (m: string) => (ORDER.includes(m) ? m : '決');
+const tabMonthName = (m: string) => (m === '決' ? '決算月' : `${m}月`);
+/** 残高の画面の月選択ボタン（他の画面と同じ 4〜3・決 の並び） */
+function BalanceMonthTabs({ month, onChange, accent }: { month: string; onChange: (m: string) => void; accent: string }) {
+  return (
+    <div data-balance-months style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+      <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>表示月</span>
+      <FiscalMonthTabs current={month} accent={accent} onSelect={(v) => { if (v) onChange(v); }} />
+    </div>
+  );
+}
+
 interface Bal { name: string; cls: string; carry: number; kari: number; kashi: number; balance: number }
 function balancesOf(entries: JournalEntry[], month: string): Bal[] {
-  const mi = monthIdx(month);
+  const mi = tabIdx(month);
   return ACCOUNT_META.map((a) => {
     let carry = OPENING[a.name] ?? 0;
     let kari = 0, kashi = 0;
     entries.forEach((e) => {
-      const ei = monthIdx(monthOf(e));
+      const ei = entryIdx(e);
       if (ei < 0) return;
       if (ei < mi) { if (e.kari === a.name) carry += debitSide(a.name) ? e.amount : -e.amount; if (e.kashi === a.name) carry += debitSide(a.name) ? -e.amount : e.amount; }
       if (ei === mi) { if (e.kari === a.name) kari += e.amount; if (e.kashi === a.name) kashi += e.amount; }
@@ -60,7 +78,9 @@ const NUM: CSSProperties = { ...TD, textAlign: 'right', fontVariantNumeric: 'tab
 const CLS_COLOR: Record<string, string> = { 現預金: '#2c5f9e', 資産: '#1f7a52', 負債: '#b45309', 費用: '#b0426a', 収益: '#6b3fb5' };
 
 /* ---------------- 科目別残高 ---------------- */
-export function AccountBalanceModal({ open, onClose, accent, entries, month, focus }: { open: boolean; onClose: () => void; accent: string; entries: JournalEntry[]; month: string; focus: string[] }) {
+export function AccountBalanceModal({ open, onClose, accent, entries, month: initialMonth, focus }: { open: boolean; onClose: () => void; accent: string; entries: JournalEntry[]; month: string; focus: string[] }) {
+  // 表示月：開いたときは入力中の月。月選択ボタンで切り替えられる（確認メモ #203）
+  const [month, setMonth] = useState(() => tabMonthOf(initialMonth));
   const [q, setQ] = useState('');
   const [movedOnly, setMovedOnly] = useState(true);
   const rows = useMemo(() => balancesOf(entries, month), [entries, month]);
@@ -70,8 +90,9 @@ export function AccountBalanceModal({ open, onClose, accent, entries, month, foc
     .sort((a, b) => Number(focused.includes(b.name)) - Number(focused.includes(a.name)));
   const t = list.reduce((a, r) => ({ kari: a.kari + r.kari, kashi: a.kashi + r.kashi }), { kari: 0, kashi: 0 });
   return (
-    <Modal open={open} onClose={onClose} width={860} title={<>科目別残高 <span style={{ fontSize: 14, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>令和8年度 {month}月</span></>}>
+    <Modal open={open} onClose={onClose} width={860} title={<>科目別残高 <span style={{ fontSize: 14, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>令和8年度 {tabMonthName(month)}</span></>}>
       <div style={{ padding: '12px 22px 18px' }}>
+        <BalanceMonthTabs month={month} onChange={setMonth} accent={accent} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
           <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="科目名・コード・カナで絞り込み" autoComplete="off" style={{ ...input, width: 260 }} />
           <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: '#48565f' }}><input type="checkbox" checked={movedOnly} onChange={(e) => setMovedOnly(e.target.checked)} />当月に動きのある科目のみ</label>
@@ -108,7 +129,9 @@ export function AccountBalanceModal({ open, onClose, accent, entries, month, foc
 }
 
 /* ---------------- 現預金残高 ---------------- */
-export function CashBalanceModal({ open, onClose, accent, entries, month, focus }: { open: boolean; onClose: () => void; accent: string; entries: JournalEntry[]; month: string; focus: string[] }) {
+export function CashBalanceModal({ open, onClose, accent, entries, month: initialMonth, focus }: { open: boolean; onClose: () => void; accent: string; entries: JournalEntry[]; month: string; focus: string[] }) {
+  // 表示月：開いたときは入力中の月。月選択ボタンで切り替えられる（確認メモ #204）
+  const [month, setMonth] = useState(() => tabMonthOf(initialMonth));
   const rows = useMemo(() => balancesOf(entries, month).filter((r) => r.cls === '現預金'), [entries, month]);
   const initial = focus.find((f) => rows.some((r) => r.name === f)) ?? rows.find((r) => r.kari || r.kashi)?.name ?? rows[0]?.name ?? '';
   const [sel, setSel] = useState(initial);
@@ -116,7 +139,7 @@ export function CashBalanceModal({ open, onClose, accent, entries, month, focus 
   const daily = useMemo(() => {
     if (!cur) return [];
     const byDay = new Map<number, { in: number; out: number; n: number }>();
-    entries.filter((e) => monthOf(e) === month && (e.kari === cur.name || e.kashi === cur.name)).forEach((e) => {
+    entries.filter((e) => entryIdx(e) === tabIdx(month) && (e.kari === cur.name || e.kashi === cur.name)).forEach((e) => {
       const d = dayOf(e);
       const b = byDay.get(d) ?? { in: 0, out: 0, n: 0 };
       if (e.kari === cur.name) b.in += e.amount;
@@ -129,8 +152,9 @@ export function CashBalanceModal({ open, onClose, accent, entries, month, focus 
   }, [entries, month, cur]);
   const total = rows.reduce((a, r) => a + r.balance, 0);
   return (
-    <Modal open={open} onClose={onClose} width={900} title={<>現預金残高 <span style={{ fontSize: 14, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>令和8年度 {month}月</span></>}>
+    <Modal open={open} onClose={onClose} width={900} title={<>現預金残高 <span style={{ fontSize: 14, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>令和8年度 {tabMonthName(month)}</span></>}>
       <div style={{ padding: '12px 22px 18px', display: 'grid', gridTemplateColumns: 'minmax(300px, 1fr) minmax(360px, 1.2fr)', gap: 16 }}>
+        <div style={{ gridColumn: '1 / -1', marginBottom: -10 }}><BalanceMonthTabs month={month} onChange={setMonth} accent={accent} /></div>
         <div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}><span style={lbl}>現金・預金の残高</span><span style={{ marginLeft: 'auto', fontSize: 14, color: '#7a8794' }}>合計 <b style={{ color: '#22303c', fontVariantNumeric: 'tabular-nums' }}>{yen(total)}</b> 円</span></div>
           <div style={{ display: 'grid', gap: 8 }}>
@@ -146,7 +170,7 @@ export function CashBalanceModal({ open, onClose, accent, entries, month, focus 
           </div>
         </div>
         <div>
-          <span style={lbl}>{cur?.name ?? '—'} の日別推移（{month}月）</span>
+          <span style={lbl}>{cur?.name ?? '—'} の日別推移（{tabMonthName(month)}）</span>
           <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'auto', maxHeight: 380 }}>
             <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
               <thead><tr><th style={{ ...TH, width: 56 }}>日</th><th style={{ ...TH, width: 50 }}>件数</th><th style={{ ...TH, textAlign: 'right' }}>入金</th><th style={{ ...TH, textAlign: 'right' }}>出金</th><th style={{ ...TH, textAlign: 'right' }}>残高</th></tr></thead>
@@ -154,7 +178,7 @@ export function CashBalanceModal({ open, onClose, accent, entries, month, focus 
                 <tr><td style={{ ...TD, color: '#7a8794' }} colSpan={4}>前月繰越</td><td style={{ ...NUM, color: '#7a8794' }}>{yen(cur?.carry ?? 0)}</td></tr>
                 {daily.length === 0 && <tr><td colSpan={5} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 24 }}>当月の入出金はありません。</td></tr>}
                 {daily.map((d) => (
-                  <tr key={d.day}><td style={TD}>{month}/{d.day}</td><td style={{ ...TD, color: '#7a8794' }}>{d.n}</td><td style={{ ...NUM, color: '#2c5f9e' }}>{d.in ? yen(d.in) : ''}</td><td style={{ ...NUM, color: '#b0426a' }}>{d.out ? yen(d.out) : ''}</td><td style={{ ...NUM, fontWeight: 700, color: d.balance < 0 ? '#c0392b' : '#22303c' }}>{yen(d.balance)}</td></tr>
+                  <tr key={d.day}><td style={TD}>{month === '決' ? '3' : month}/{d.day}</td><td style={{ ...TD, color: '#7a8794' }}>{d.n}</td><td style={{ ...NUM, color: '#2c5f9e' }}>{d.in ? yen(d.in) : ''}</td><td style={{ ...NUM, color: '#b0426a' }}>{d.out ? yen(d.out) : ''}</td><td style={{ ...NUM, fontWeight: 700, color: d.balance < 0 ? '#c0392b' : '#22303c' }}>{yen(d.balance)}</td></tr>
                 ))}
               </tbody>
               {cur && <tfoot><tr><td colSpan={2} style={{ ...TD, fontWeight: 700, background: '#f6f8fa', borderTop: '1px solid #e2e8ee' }}>当月合計</td><td style={{ ...NUM, fontWeight: 700, background: '#f6f8fa', borderTop: '1px solid #e2e8ee', color: '#2c5f9e' }}>{yen(cur.kari)}</td><td style={{ ...NUM, fontWeight: 700, background: '#f6f8fa', borderTop: '1px solid #e2e8ee', color: '#b0426a' }}>{yen(cur.kashi)}</td><td style={{ ...NUM, fontWeight: 800, background: '#f6f8fa', borderTop: '1px solid #e2e8ee' }}>{yen(cur.balance)}</td></tr></tfoot>}

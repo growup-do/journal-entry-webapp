@@ -254,16 +254,37 @@ function UpdateView({ variant, depOnly, go, onNavigate }: { variant: 'form' | 's
   );
 }
 
+/** 過去年度を参照中の表示に使う色（帯・枠・ヘッダーの会計期間・帳票の対象年度で共通） */
+export const PAST_YEAR_COLOR = '#d7191c';
+
 /** 過去年度／翌年度を表示中に画面上部へ出す帯 */
 export function FiscalYearBanner() {
   const s = useSession();
   const idx = YEARS.indexOf(s.fiscalYear), cur = YEARS.indexOf(s.currentYear);
   if (idx === cur) return null;
   const past = idx < cur;
+  if (!past) {
+    return (
+      <div data-year-banner="next" style={{ background: '#b7791f', color: '#fff', fontSize: 14, fontWeight: 700, textAlign: 'center', padding: '5px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+        <span>翌年度（{s.fiscalYear}）を表示中：予算入力などに使用します</span>
+        <button type="button" onClick={() => setSession({ fiscalYear: s.currentYear })} style={{ padding: '2px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,.7)', background: 'transparent', color: '#fff', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>当年度（{s.currentYear}）に戻す</button>
+      </div>
+    );
+  }
+  // 過去年度（確認メモ #218）：どの画面でも一目で分かるように、赤の縞の帯と、画面全体を囲む枠を出す。
+  //   枠は固定表示で操作を妨げない（pointer-events: none）。入力画面（モーダル）を開いている間も見える
   return (
-    <div style={{ background: past ? '#1f7a52' : '#b7791f', color: '#fff', fontSize: 14, fontWeight: 700, textAlign: 'center', padding: '5px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-      <span>{past ? '過去の年度' : '翌年度'}（{s.fiscalYear}）を表示中{past ? '：伝票の入力・訂正はできません（閲覧のみ）' : '：予算入力などに使用します'}</span>
-      <button type="button" onClick={() => setSession({ fiscalYear: s.currentYear })} style={{ padding: '2px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,.7)', background: 'transparent', color: '#fff', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>当年度（{s.currentYear}）に戻す</button>
-    </div>
+    <>
+      <div aria-hidden data-year-frame="past" style={{ position: 'fixed', inset: 0, border: `5px solid ${PAST_YEAR_COLOR}`, pointerEvents: 'none', zIndex: 4000 }} />
+      <div role="status" data-year-banner="past" style={{ background: `repeating-linear-gradient(135deg, ${PAST_YEAR_COLOR} 0 16px, #ad1216 16px 32px)`, color: '#fff', padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, flexWrap: 'wrap', boxShadow: '0 2px 8px rgba(140,0,0,.4)' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '3px 14px', borderRadius: 8, background: '#fff', color: PAST_YEAR_COLOR, fontSize: 16, fontWeight: 800, letterSpacing: '.04em', whiteSpace: 'nowrap' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3z" /><path d="M12 10v5" /><path d="M12 17.5v.5" /></svg>
+          過去年度を参照中
+        </span>
+        <span style={{ fontSize: 18, fontWeight: 800, whiteSpace: 'nowrap', textShadow: '0 1px 2px rgba(0,0,0,.35)' }}>{s.fiscalYear}</span>
+        <span style={{ fontSize: 14, fontWeight: 700, textShadow: '0 1px 2px rgba(0,0,0,.35)' }}>伝票の入力・訂正はできません（閲覧のみ）</span>
+        <button type="button" onClick={() => setSession({ fiscalYear: s.currentYear })} style={{ padding: '4px 14px', borderRadius: 8, border: '2px solid #fff', background: 'rgba(0,0,0,.18)', color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>当年度（{s.currentYear}）に戻す</button>
+      </div>
+    </>
   );
 }

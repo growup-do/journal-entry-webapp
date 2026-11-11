@@ -2,6 +2,8 @@
 //   現行の 3 画面（設定／設定2／設定3）を 1 画面に統合し、タブで切り替える。
 //   設定2・3 の「収入に合わせる／支出に合わせる」の切替は、動作環境ではなくこの画面内で行う（全区分共通の設定）。
 //   明細入力・財産目録の行設定・注記の編集・合算テーブルは、印刷の準備として「別紙」画面（AppendixPrintPage）へ移した（5.5.3）。
+//   科目は明細書ごとにまとめてではなく、明細書の項目（借入金明細書なら中区分項目の 設備資金借入金〜役員等短期借入金）ごとに結びつける（確認メモ #217）。
+//   項目の並びは社会福祉法人会計基準の別紙3の様式に沿って置いたもの（現行システムの画面の資料がない項目は推定）。
 
 import { useState } from 'react';
 import { Modal } from './Modal';
@@ -14,7 +16,9 @@ import { displayName } from '../data';
 import { setSession, useSession } from '../store/session';
 
 /** 附属明細書で使う科目の候補（伝票の勘定科目 ＋ 明細書向けの貸借・純資産科目） */
-const EXTRA_ACCTS = ['国庫補助金等特別積立金', '国庫補助金等特別積立金取崩額', '国庫補助金等特別積立金積立額', '基本金', '基本金組入額', '基本金取崩額', '賞与引当金', '退職給付引当金', '徴収不能引当金', '寄附金収益', '施設整備等寄附金収益', '市区町村補助金収益', '都道府県補助金収益', 'その他の補助金収益', '拠点区分間繰入金収益', '拠点区分間繰入金費用', 'サービス区分間繰入金収益', 'サービス区分間繰入金費用', '施設整備等積立金', '施設整備等積立資産', '人件費積立金', '人件費積立資産', '拠点区分間貸付金', '拠点区分間借入金', 'サービス区分間貸付金', 'サービス区分間借入金', '設備資金借入金', '長期運営資金借入金', '役員等長期借入金', '役員等短期借入金', '1年以内返済予定設備資金借入金', '1年以内返済予定長期運営資金借入金'];
+const EXTRA_ACCTS = ['国庫補助金等特別積立金', '国庫補助金等特別積立金取崩額', '国庫補助金等特別積立金積立額', '基本金', '基本金組入額', '基本金取崩額', '賞与引当金', '退職給付引当金', '徴収不能引当金', '寄附金収益', '施設整備等寄附金収益', '市区町村補助金収益', '都道府県補助金収益', 'その他の補助金収益', '拠点区分間繰入金収益', '拠点区分間繰入金費用', 'サービス区分間繰入金収益', 'サービス区分間繰入金費用', '施設整備等積立金', '施設整備等積立資産', '人件費積立金', '人件費積立資産', '拠点区分間貸付金', '拠点区分間借入金', 'サービス区分間貸付金', 'サービス区分間借入金', '設備資金借入金', '長期運営資金借入金', '役員等長期借入金', '役員等短期借入金', '1年以内返済予定設備資金借入金', '1年以内返済予定長期運営資金借入金',
+  // 項目ごとの結びつけ用に追加した候補（確認メモ #217）
+  '短期運営資金借入金', '長期運営資金借入金元金償還寄附金収益', '設備資金借入金元金償還寄附金収益', '固定資産受贈額', '役員退職慰労引当金', '事業区分間繰入金収益', '事業区分間繰入金費用', '事業区分間貸付金', '事業区分間借入金'];
 const ALL_ACCTS = [...EXTRA_ACCTS, ...ACCOUNT_META.map((m) => m.name)];
 const KOKKO_TITLES_DEFAULT = ['国庫補助金', '都道府県補助金', '市町村補助金', 'その他の補助金'];
 
@@ -25,20 +29,62 @@ const TAB_DESC = [
   '事業区分間及び拠点区分間貸付金（借入金）残高明細書・サービス区分間貸付金（借入金）残高明細書で使う科目を設定します。',
 ];
 type Side = '収入' | '支出';
-interface WatchDef { key: string; tab: number; label: string; accts: string[]; /** 支出に合わせた場合の科目（設定2・3） */ acctsOut?: string[]; watch?: boolean; extra?: string }
+/** 明細書の項目（行・区分）。科目はこの項目ごとに結びつける（確認メモ #217） */
+interface ItemDef { label: string; accts: string[]; /** 支出に合わせた場合の科目（設定2・3） */ acctsOut?: string[] }
+interface WatchDef { key: string; tab: number; label: string; /** 項目の呼び名（明細書のセルに小さく出す） */ itemHead: string; items: ItemDef[]; watch?: boolean; extra?: string }
 const WATCH: WatchDef[] = [
-  { key: 'kariire', tab: 0, label: '借入金明細書（中区分項目）', accts: ['設備資金借入金', '長期運営資金借入金', '役員等長期借入金', '役員等短期借入金'], extra: '1年基準科目設定' },
-  { key: 'kokko', tab: 0, label: '国庫補助金等特別積立金明細書', accts: ['国庫補助金等特別積立金', '国庫補助金等特別積立金取崩額'], watch: true, extra: '合計タイトル（積立合計行）' },
-  { key: 'kihon', tab: 0, label: '基本金明細書', accts: ['基本金', '基本金組入額', '基本金取崩額'], watch: true },
-  { key: 'hikiate', tab: 0, label: '引当金明細書', accts: ['賞与引当金', '退職給付引当金', '徴収不能引当金'] },
-  { key: 'kifu', tab: 0, label: '寄附金収益明細書', accts: ['寄附金収益', '施設整備等寄附金収益'], watch: true },
-  { key: 'hojo', tab: 0, label: '補助金事業等収益明細書', accts: ['市区町村補助金収益', '都道府県補助金収益', 'その他の補助金収益'], watch: true },
-  { key: 'kurii', tab: 1, label: '繰入金明細書（事業区分間及び拠点区分間／サービス区分間）', accts: ['拠点区分間繰入金収益', 'サービス区分間繰入金収益'], acctsOut: ['拠点区分間繰入金費用', 'サービス区分間繰入金費用'], watch: true },
-  { key: 'tsumitate', tab: 1, label: '積立金・積立資産明細書', accts: ['施設整備等積立金', '施設整備等積立資産', '人件費積立金', '人件費積立資産'] },
-  { key: 'kashitsuke', tab: 2, label: '貸付金（借入金）残高明細書（事業区分間及び拠点区分間／サービス区分間）', accts: ['拠点区分間貸付金', 'サービス区分間貸付金'], acctsOut: ['拠点区分間借入金', 'サービス区分間借入金'] },
+  { key: 'kariire', tab: 0, label: '借入金明細書', itemHead: '中区分項目', items: [
+    { label: '設備資金借入金', accts: ['設備資金借入金'] },
+    { label: '長期運営資金借入金', accts: ['長期運営資金借入金'] },
+    { label: '短期運営資金借入金', accts: ['短期運営資金借入金'] },
+    { label: '役員等長期借入金', accts: ['役員等長期借入金'] },
+    { label: '役員等短期借入金', accts: ['役員等短期借入金'] },
+  ], extra: '1年基準科目設定' },
+  { key: 'kokko', tab: 0, label: '国庫補助金等特別積立金明細書', itemHead: '項目', items: [
+    { label: '国庫補助金等特別積立金（残高）', accts: ['国庫補助金等特別積立金'] },
+    { label: '当期積立額', accts: ['国庫補助金等特別積立金積立額'] },
+    { label: '当期取崩額', accts: ['国庫補助金等特別積立金取崩額'] },
+  ], watch: true, extra: '合計タイトル（積立合計行）' },
+  { key: 'kihon', tab: 0, label: '基本金明細書', itemHead: '項目', items: [
+    { label: '基本金（残高）', accts: ['基本金'] },
+    { label: '当期組入額', accts: ['基本金組入額'] },
+    { label: '当期取崩額', accts: ['基本金取崩額'] },
+  ], watch: true },
+  { key: 'hikiate', tab: 0, label: '引当金明細書', itemHead: '科目（行）', items: [
+    { label: '賞与引当金', accts: ['賞与引当金'] },
+    { label: '退職給付引当金', accts: ['退職給付引当金'] },
+    { label: '役員退職慰労引当金', accts: [] },
+    { label: '徴収不能引当金', accts: ['徴収不能引当金'] },
+  ] },
+  { key: 'kifu', tab: 0, label: '寄附金収益明細書', itemHead: '寄附金の区分', items: [
+    { label: '経常経費寄附金収益', accts: ['寄附金収益'] },
+    { label: '長期運営資金借入金元金償還寄附金収益', accts: [] },
+    { label: '施設整備等寄附金収益', accts: ['施設整備等寄附金収益'] },
+    { label: '設備資金借入金元金償還寄附金収益', accts: [] },
+    { label: '固定資産受贈額', accts: [] },
+  ], watch: true },
+  { key: 'hojo', tab: 0, label: '補助金事業等収益明細書', itemHead: '項目', items: [
+    { label: '補助金事業収益（公費）', accts: ['市区町村補助金収益', '都道府県補助金収益', 'その他の補助金収益'] },
+  ], watch: true },
+  { key: 'kurii', tab: 1, label: '繰入金明細書（事業区分間及び拠点区分間／サービス区分間）', itemHead: '繰入金の区分', items: [
+    { label: '事業区分間繰入金', accts: [], acctsOut: [] },
+    { label: '拠点区分間繰入金', accts: ['拠点区分間繰入金収益'], acctsOut: ['拠点区分間繰入金費用'] },
+    { label: 'サービス区分間繰入金', accts: ['サービス区分間繰入金収益'], acctsOut: ['サービス区分間繰入金費用'] },
+  ], watch: true },
+  { key: 'tsumitate', tab: 1, label: '積立金・積立資産明細書', itemHead: '項目', items: [
+    { label: '積立金', accts: ['施設整備等積立金', '人件費積立金'] },
+    { label: '積立資産', accts: ['施設整備等積立資産', '人件費積立資産'] },
+  ] },
+  { key: 'kashitsuke', tab: 2, label: '貸付金（借入金）残高明細書（事業区分間及び拠点区分間／サービス区分間）', itemHead: '貸付金（借入金）の区分', items: [
+    { label: '事業区分間貸付金（借入金）', accts: [], acctsOut: [] },
+    { label: '拠点区分間貸付金（借入金）', accts: ['拠点区分間貸付金'], acctsOut: ['拠点区分間借入金'] },
+    { label: 'サービス区分間貸付金（借入金）', accts: ['サービス区分間貸付金'], acctsOut: ['サービス区分間借入金'] },
+  ] },
 ];
-/** 科目リストの保持キー（収入／支出で科目が変わる明細書は、合わせ方ごとに別々に保持する） */
-const acctKey = (w: WatchDef, side: Side) => (w.acctsOut ? `${w.key}:${side}` : w.key);
+/** 科目リストの保持キー（明細書の項目ごと。収入／支出で科目が変わる明細書は、合わせ方ごとに別々に保持する） */
+const acctKey = (w: WatchDef, i: number, side: Side) => (w.items[i].acctsOut ? `${w.key}/${i}:${side}` : `${w.key}/${i}`);
+/** 既定の結びつけ（全明細書・全項目） */
+const defaultAccts = (): Record<string, string[]> => Object.fromEntries(WATCH.flatMap((w) => w.items.flatMap((it, i) => (it.acctsOut ? [[`${w.key}/${i}:収入`, [...it.accts]], [`${w.key}/${i}:支出`, [...it.acctsOut]]] : [[`${w.key}/${i}`, [...it.accts]]]))));
 const MOVED = ['明細入力', '財産目録の行設定', '注記の編集', '合算テーブル'];
 
 export function AttachedStatementsPage({ variant, accent, onNavigate }: { variant: 'form' | 'sheet'; accent: string; /** メニュー項目名で別画面へ移動（「別紙」画面へのリンクに使用） */ onNavigate?: (label: string) => void }) {
@@ -49,8 +95,8 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
   const side: Side = s.env.transferWatch === '支払いで監視' ? '支出' : '収入';
   const setSide = (v: Side) => { setSession({ env: { ...s.env, transferWatch: v === '支出' ? '支払いで監視' : '収入で監視' } }); toast.show(`設定2・設定3 を「${v}に合わせる」に切り替えました（全区分共通）`); };
   const [watch, setWatch] = useState<Record<string, boolean>>(Object.fromEntries(WATCH.filter((w) => w.watch !== undefined).map((w) => [w.key, !!w.watch])));
-  const [accts, setAccts] = useState<Record<string, string[]>>(() => Object.fromEntries(WATCH.flatMap((w) => (w.acctsOut ? [[`${w.key}:収入`, [...w.accts]], [`${w.key}:支出`, [...w.acctsOut]]] : [[w.key, [...w.accts]]]))));
-  const [pickFor, setPickFor] = useState<WatchDef | null>(null);
+  const [accts, setAccts] = useState<Record<string, string[]>>(defaultAccts);
+  const [pickFor, setPickFor] = useState<{ w: WatchDef; i: number } | null>(null);
   const [pickQ, setPickQ] = useState('');
   const [pickSel, setPickSel] = useState<Set<string>>(new Set());
   const [fromAcct, setFromAcct] = useState(true);
@@ -61,13 +107,15 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
   const [oneYear, setOneYear] = useState({ apply: true, long: '役員等長期借入金', short: '役員等短期借入金', setsubi: '1年以内返済予定設備資金借入金', unei: '1年以内返済予定長期運営資金借入金' });
   const [oneYearDraft, setOneYearDraft] = useState(oneYear);
 
-  const listOf = (w: WatchDef) => accts[acctKey(w, side)] ?? [];
-  const openPick = (w: WatchDef) => { setPickFor(w); setPickQ(''); setPickSel(new Set()); };
-  const applyPick = () => { if (!pickFor) return; const k = acctKey(pickFor, side); const add = [...pickSel]; setAccts((a) => ({ ...a, [k]: [...(a[k] ?? []), ...add.filter((x) => !(a[k] ?? []).includes(x))] })); toast.show(add.length ? `${add.length} 科目を追加しました` : '科目は追加されませんでした'); setPickFor(null); };
-  const pickList = pickFor ? ALL_ACCTS.filter((n) => !listOf(pickFor).includes(n) && accountMatches(n, pickQ)) : [];
+  const listOf = (w: WatchDef, i: number) => accts[acctKey(w, i, side)] ?? [];
+  /** 同じ明細書のどこかの項目に結びつけ済みの科目（1 つの科目は、同じ明細書の中で 1 つの項目にだけ結びつける） */
+  const usedIn = (w: WatchDef) => w.items.flatMap((_, i) => listOf(w, i));
+  const openPick = (w: WatchDef, i: number) => { setPickFor({ w, i }); setPickQ(''); setPickSel(new Set()); };
+  const applyPick = () => { if (!pickFor) return; const k = acctKey(pickFor.w, pickFor.i, side); const add = [...pickSel]; setAccts((a) => ({ ...a, [k]: [...(a[k] ?? []), ...add.filter((x) => !(a[k] ?? []).includes(x))] })); toast.show(add.length ? `「${pickFor.w.items[pickFor.i].label}」に ${add.length} 科目を結びつけました` : '科目は追加されませんでした'); setPickFor(null); };
+  const pickList = pickFor ? ALL_ACCTS.filter((n) => !usedIn(pickFor.w).includes(n) && accountMatches(n, pickQ)) : [];
   const openExtra = (key: string) => { setExtraFor(key); setKokkoDraft([...kokkoTitles]); setOneYearDraft(oneYear); };
   const applyExtra = () => { if (extraFor === 'kokko') { const t = kokkoDraft.map((x) => x.trim()).filter(Boolean); setKokkoTitles(t.length ? t : KOKKO_TITLES_DEFAULT); toast.show('積立合計行タイトルを保存しました'); } if (extraFor === 'kariire') { setOneYear(oneYearDraft); toast.show('1年基準科目設定を保存しました'); } setExtraFor(null); };
-  const resetTab = () => { setAccts((a) => ({ ...a, ...Object.fromEntries(WATCH.filter((w) => w.tab === ti).map((w) => [acctKey(w, side), [...(side === '支出' && w.acctsOut ? w.acctsOut : w.accts)]])) })); toast.show(`${tab.split('　')[0]} の科目を既定の内容に戻しました`); };
+  const resetTab = () => { setAccts((a) => ({ ...a, ...Object.fromEntries(WATCH.filter((w) => w.tab === ti).flatMap((w) => w.items.map((it, i) => [acctKey(w, i, side), [...(side === '支出' && it.acctsOut ? it.acctsOut : it.accts)]]))) })); toast.show(`${tab.split('　')[0]} の科目を既定の内容に戻しました`); };
   const goAppendix = () => { if (onNavigate) onNavigate('別紙（注記・明細書・財産目録）'); else toast.show('「帳票・印刷 ＞ 別紙（注記・明細書・財産目録）」を開いてください'); };
 
   return (
@@ -97,16 +145,25 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
 
         {ti === 0 && <Notice>「伝票入力時に監視する」を有効にすると、該当する科目の伝票を登録したときに「明細表へ追加しますか？」の確認が出て、その場で明細データを登録できます（連続定型仕訳で登録した伝票は対象外）。</Notice>}
 
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead><tr><th style={{ ...TH, width: '26%' }}>明細書</th><th style={TH}>使用する科目{ti >= 1 && <span style={{ fontWeight: 500 }}>（{side}に合わせた科目）</span>}</th><th style={{ ...TH, width: 170 }}>伝票入力時に監視する</th><th style={{ ...TH, width: 250 }}>追加設定</th></tr></thead>
-          <tbody>{WATCH.filter((w) => w.tab === ti).map((w) => (
-            <tr key={w.key}>
-              <td style={{ ...TD, fontWeight: 600, lineHeight: 1.6 }}>{w.label}</td>
-              <td style={TD}><div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>{listOf(w).map((a) => <span key={a} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 4px 2px 8px', background: '#eef2f6', borderRadius: 6, fontSize: 12 }}>{a}<button type="button" title={`${a} を外す`} onClick={() => setAccts((x) => ({ ...x, [acctKey(w, side)]: (x[acctKey(w, side)] ?? []).filter((n) => n !== a) }))} style={{ border: 'none', background: 'transparent', color: '#9aa5b1', cursor: 'pointer', fontSize: 14, lineHeight: 1, padding: '0 2px', fontFamily: 'inherit' }}>×</button></span>)}<button type="button" onClick={() => openPick(w)} title="科目を追加" style={{ ...btn('#5b6773', false, true), padding: '1px 8px' }}>＋ 科目</button></div></td>
-              <td style={TD}>{w.watch !== undefined ? <Toggle on={!!watch[w.key]} onChange={(v) => setWatch({ ...watch, [w.key]: v })} accent={accent} label={watch[w.key] ? '監視する' : '監視しない'} /> : <span style={{ fontSize: 14, color: '#9aa5b1' }}>—（監視の対象外）</span>}</td>
-              <td style={{ ...TD, fontSize: 14 }}>{w.key === 'hojo' ? <div style={{ display: 'grid', gap: 6 }}><label style={{ display: 'flex', gap: 5 }}><input type="checkbox" checked={fromAcct} onChange={(e) => setFromAcct(e.target.checked)} />科目から明細を作成する</label><label style={{ display: 'flex', gap: 5, alignItems: 'center', whiteSpace: 'nowrap' }}>「○○事業」を<input className="field-input" value={hojoReplace} onChange={(e) => setHojoReplace(e.target.value)} placeholder="例：保育事業" style={{ ...input, padding: '3px 8px', fontSize: 14, width: 120 }} />に置き換える</label></div> : w.extra ? <div style={{ display: 'grid', gap: 4 }}><button type="button" onClick={() => openExtra(w.key)} style={btn('#5b6773', false, true)}>{w.extra}</button><span style={{ fontSize: 12, color: '#9aa5b1' }}>{w.key === 'kokko' ? kokkoTitles.join('／') : oneYear.apply ? `1年基準を適用（${oneYear.long}／${oneYear.short}）` : '1年基準を適用しない'}</span></div> : <span style={{ color: '#9aa5b1' }}>—</span>}</td>
+        <div data-stmt-guide style={{ fontSize: 14, color: '#48565f', lineHeight: 1.8 }}>科目は、明細書の<b>項目ごと</b>に結びつけます（例：借入金明細書は、中区分項目の「設備資金借入金」から「役員等短期借入金」まで、それぞれに科目を結びつけます）。1 つの科目は、同じ明細書の中で 1 つの項目にだけ結びつけられます。科目が「未設定」の項目は、明細書に集計されません。</div>
+
+        <table data-stmt-table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead><tr><th style={{ ...TH, width: '19%' }}>明細書</th><th style={{ ...TH, width: '19%' }}>項目</th><th style={TH}>結びつける科目{ti >= 1 && <span style={{ fontWeight: 500 }}>（{side}に合わせた科目）</span>}</th><th style={{ ...TH, width: 160 }}>伝票入力時に監視する</th><th style={{ ...TH, width: 240 }}>追加設定</th></tr></thead>
+          <tbody>{WATCH.filter((w) => w.tab === ti).flatMap((w) => w.items.map((it, i) => {
+            const first = i === 0;
+            const top = first ? '2px solid #c3ced8' : undefined;
+            const list = listOf(w, i);
+            const span = w.items.length;
+            return (
+            <tr key={`${w.key}/${i}`} data-stmt={w.key} data-stmt-item={it.label}>
+              {first && <td rowSpan={span} style={{ ...TD, fontWeight: 700, lineHeight: 1.6, verticalAlign: 'top', borderTop: top, borderRight: '1px solid #eef2f5', background: '#f8fafc' }}>{w.label}<div style={{ fontSize: 12, fontWeight: 500, color: '#8290a0', marginTop: 4 }}>{w.itemHead}　{span} 項目</div></td>}
+              <td style={{ ...TD, fontWeight: 600, lineHeight: 1.6, borderTop: top }}>{it.label}</td>
+              <td style={{ ...TD, borderTop: top }}><div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>{list.map((a) => <span key={a} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 4px 2px 8px', background: '#eef2f6', borderRadius: 6, fontSize: 12 }}>{a}<button type="button" title={`${a} を「${it.label}」から外す`} onClick={() => setAccts((x) => ({ ...x, [acctKey(w, i, side)]: (x[acctKey(w, i, side)] ?? []).filter((n) => n !== a) }))} style={{ border: 'none', background: 'transparent', color: '#9aa5b1', cursor: 'pointer', fontSize: 14, lineHeight: 1, padding: '0 2px', fontFamily: 'inherit' }}>×</button></span>)}{list.length === 0 && <span data-stmt-empty style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 6, background: '#fff6e0', color: '#8a5a00', border: '1px solid #f0d48a' }}>未設定</span>}<button type="button" onClick={() => openPick(w, i)} title={`「${it.label}」に結びつける科目を追加`} style={{ ...btn('#5b6773', false, true), padding: '1px 8px' }}>＋ 科目</button></div></td>
+              {first && <td rowSpan={span} style={{ ...TD, verticalAlign: 'top', borderTop: top, borderLeft: '1px solid #eef2f5' }}>{w.watch !== undefined ? <Toggle on={!!watch[w.key]} onChange={(v) => setWatch({ ...watch, [w.key]: v })} accent={accent} label={watch[w.key] ? '監視する' : '監視しない'} /> : <span style={{ fontSize: 14, color: '#9aa5b1' }}>—（監視の対象外）</span>}</td>}
+              {first && <td rowSpan={span} style={{ ...TD, fontSize: 14, verticalAlign: 'top', borderTop: top }}>{w.key === 'hojo' ? <div style={{ display: 'grid', gap: 6 }}><label style={{ display: 'flex', gap: 5 }}><input type="checkbox" checked={fromAcct} onChange={(e) => setFromAcct(e.target.checked)} />科目から明細を作成する</label><label style={{ display: 'flex', gap: 5, alignItems: 'center', whiteSpace: 'nowrap' }}>「○○事業」を<input className="field-input" value={hojoReplace} onChange={(e) => setHojoReplace(e.target.value)} placeholder="例：保育事業" style={{ ...input, padding: '3px 8px', fontSize: 14, width: 120 }} />に置き換える</label></div> : w.extra ? <div style={{ display: 'grid', gap: 4 }}><button type="button" onClick={() => openExtra(w.key)} style={btn('#5b6773', false, true)}>{w.extra}</button><span style={{ fontSize: 12, color: '#9aa5b1' }}>{w.key === 'kokko' ? kokkoTitles.join('／') : oneYear.apply ? `1年基準を適用（${oneYear.long}／${oneYear.short}）` : '1年基準を適用しない'}</span></div> : <span style={{ color: '#9aa5b1' }}>—</span>}</td>}
             </tr>
-          ))}</tbody>
+            );
+          }))}</tbody>
         </table>
         <div><button type="button" onClick={resetTab} style={btn('#5b6773', false, true)}>このタブの科目を既定の内容に戻す</button></div>
       </div>
@@ -119,9 +176,10 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
       </div>
 
       {/* 科目の追加（科目検索） */}
-      <Modal open={!!pickFor} onClose={() => setPickFor(null)} width={560} title={`科目の追加 ― ${pickFor?.label ?? ''}`}>
+      <Modal open={!!pickFor} onClose={() => setPickFor(null)} width={560} title={`科目の追加 ― ${pickFor ? `${pickFor.w.label} ＞ ${pickFor.w.items[pickFor.i].label}` : ''}`}>
         {pickFor && (
-          <div style={{ padding: '12px 22px 18px', display: 'grid', gap: 10 }}>
+          <div data-stmt-pick style={{ padding: '12px 22px 18px', display: 'grid', gap: 10 }}>
+            <div style={{ fontSize: 12, color: '#7a8794', lineHeight: 1.6 }}>{pickFor.w.itemHead}「{pickFor.w.items[pickFor.i].label}」に結びつける科目を選びます。この明細書のほかの項目に結びつけた科目は、候補に出ません。</div>
             <input className="search-input" autoFocus value={pickQ} onChange={(e) => setPickQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229 && pickList.length === 1) { const n = new Set(pickSel); n.add(pickList[0]); setPickSel(n); setPickQ(''); } }} placeholder="科目名・コード・フリガナで検索（Enter で候補が1件なら選択）" style={input} />
             <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: 320, overflow: 'auto' }}>
               {pickList.map((n) => { const m = ACCOUNT_META.find((x) => x.name === n); const on = pickSel.has(n); return (
