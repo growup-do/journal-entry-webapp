@@ -2,6 +2,8 @@
 //   CarryoverJudgmentPage … 繰越判断の基準（収支分析表／高額繰越／前期末支払資金残高の取り扱い（委託費）／取崩による事前協議）
 //   DepreciationLinkPage  … 減価償却との連動設定（固定資産科目の連動／借入元金償還補助の連動／国庫補助金等特別積立金の自動積立）
 //   どちらも「科目の指定（チェックリスト）＋端数処理・監視の設定」という共通の形。判断の目安をその場で計算して見せる。
+//   繰越判断の基準は、変更したのに保存していないあいだ、変更した項目を入力可能枠と同じ黄色で示し、
+//   「保存されていません。」の表示・タブの印・画面の色で知らせる。ほかの画面へ移ろうとすると確認を出す（確認メモ #225）。
 
 import { useState } from 'react';
 import type { ReactNode } from 'react';
@@ -10,6 +12,7 @@ import { ToastView, useToast } from './Toast';
 import { Field, Notice, SettingsShell, Tabs, Toggle, btn, card, cardHead, input, lbl, yen } from './ui';
 import { ACCOUNT_META } from '../lib/accounts';
 import { ScopeBar, type MaintenancePageProps } from './MaintenancePages';
+import { CHANGED_BG, CHANGED_BORDER, UNSAVED_FG, useUnsaved } from '../store/unsaved';
 
 /* ---------------- 共通部品 ---------------- */
 interface Item { code: string; name: string }
@@ -18,11 +21,14 @@ const extra = (list: [string, string][]): Item[] => list.map(([code, name]) => (
 const codes = (items: Item[], re: RegExp) => items.filter((i) => re.test(i.name)).map((i) => i.code);
 
 /** 科目のチェックリスト（旧画面の「―― ○○に集計する科目 ――」の枠） */
-function PickList({ title, items, value, onChange, height = 220, note }: { title: string; items: Item[]; value: string[]; onChange: (v: string[]) => void; height?: number; note?: ReactNode }) {
+function PickList({ title, items, value, onChange, height = 220, note, saved }: { title: string; items: Item[]; value: string[]; onChange: (v: string[]) => void; height?: number; note?: ReactNode; /** 保存済みの値。渡すと、保存済みと違う行を入力可能枠と同じ黄色で示す（確認メモ #225） */ saved?: string[] }) {
   const toggle = (c: string) => onChange(value.includes(c) ? value.filter((x) => x !== c) : [...value, c]);
+  const diff = (c: string) => !!saved && saved.includes(c) !== value.includes(c);
+  const changed = !!saved && items.some((i) => diff(i.code));
   return (
-    <div style={card}>
+    <div data-changed={changed || undefined} style={changed ? { ...card, border: '1px solid ' + CHANGED_BORDER } : card}>
       <div style={cardHead}>{title}<span style={{ fontSize: 12, fontWeight: 600, color: value.length ? '#5b6773' : '#c0392b', marginLeft: 6 }}>{value.length ? `${value.length} 科目` : '未設定'}</span>
+        {changed && <span style={{ fontSize: 12, fontWeight: 800, color: UNSAVED_FG }}>変更あり</span>}
         <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
           <button type="button" onClick={() => onChange(items.map((i) => i.code))} style={btn('#5b6773', false, true)}>全て ON</button>
           <button type="button" onClick={() => onChange([])} style={btn('#5b6773', false, true)}>全て OFF</button>
@@ -30,10 +36,11 @@ function PickList({ title, items, value, onChange, height = 220, note }: { title
       </div>
       <div style={{ maxHeight: height, overflow: 'auto' }}>
         {items.map((i) => (
-          <label key={i.code} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px', fontSize: 14, borderTop: '1px solid #f1f4f7', background: value.includes(i.code) ? '#fffbe6' : '#fff', cursor: 'pointer' }}>
+          <label key={i.code} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px', fontSize: 14, borderTop: '1px solid #f1f4f7', background: saved ? (diff(i.code) ? CHANGED_BG : value.includes(i.code) ? '#f1f8f4' : '#fff') : value.includes(i.code) ? '#fffbe6' : '#fff', cursor: 'pointer' }} data-changed={diff(i.code) || undefined}>
             <input type="checkbox" checked={value.includes(i.code)} onChange={() => toggle(i.code)} />
             <span style={{ fontVariantNumeric: 'tabular-nums', color: '#7a8794', width: 48, fontSize: 12 }}>{i.code}</span>
             <span>{i.name}</span>
+            {diff(i.code) && <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: UNSAVED_FG, flex: 'none' }}>{value.includes(i.code) ? '追加' : '解除'}</span>}
           </label>
         ))}
       </div>
@@ -45,11 +52,15 @@ function PickList({ title, items, value, onChange, height = 220, note }: { title
 type Rounding = '切り上げ' | '切り捨て' | '四捨五入';
 const ROUNDINGS: Rounding[] = ['切り上げ', '切り捨て', '四捨五入'];
 const roundBy = (n: number, r: Rounding) => (r === '切り上げ' ? Math.ceil(n) : r === '切り捨て' ? Math.floor(n) : Math.round(n));
-function RoundingField({ label, value, onChange }: { label: string; value: Rounding; onChange: (r: Rounding) => void }) {
+/** 変更した項目を囲む枠（入力可能枠と同じ黄色） */
+const changedBox = (changed?: boolean) => ({ border: '1px solid ' + (changed ? CHANGED_BORDER : 'transparent'), background: changed ? CHANGED_BG : 'transparent', borderRadius: 8, padding: '6px 8px', margin: '-6px -8px' });
+function RoundingField({ label, value, onChange, changed }: { label: string; value: Rounding; onChange: (r: Rounding) => void; /** 保存済みと違う（確認メモ #225） */ changed?: boolean }) {
   return (
+    <div data-changed={changed || undefined} style={changedBox(changed)}>
     <Field label={label}>
       <div style={{ display: 'flex', gap: 14, fontSize: 14, paddingTop: 2 }}>{ROUNDINGS.map((r) => <label key={r} style={{ display: 'flex', gap: 4, alignItems: 'center' }}><input type="radio" checked={value === r} onChange={() => onChange(r)} />{r}</label>)}</div>
     </Field>
+    </div>
   );
 }
 
@@ -105,6 +116,24 @@ export function CarryoverJudgmentPage({ variant, accent, onNavigate }: Maintenan
   // 事前協議 3%
   const [r3, setR3] = useState<Rounding>('切り上げ');
 
+  // 保存済みの値との比較（確認メモ #225）。配列は並び順を問わず中身で比べる
+  const cur = { reserveOut, incomeAll, r5, otherReserve, incomeSrc, incomeManual, incomePrev, r50, itaku, r30, r3 };
+  type Snap = typeof cur;
+  const [saved, setSaved] = useState<Snap>(cur);
+  const same = (x: unknown, y: unknown) => (Array.isArray(x) && Array.isArray(y) ? x.length === y.length && x.every((v) => y.includes(v)) : x === y);
+  const ch = (k: keyof Snap) => !same(cur[k], saved[k]);
+  const TAB_KEYS: Record<string, (keyof Snap)[]> = { 収支分析表: ['reserveOut', 'incomeAll', 'r5'], 高額繰越: ['otherReserve', 'incomeSrc', 'incomeManual', 'incomePrev', 'r50'], '前期末支払資金残高の取り扱い（委託費）': ['itaku', 'r30'], 取崩による事前協議: ['r3'] };
+  const dirtyTabs = TABS_C.filter((t) => TAB_KEYS[t].some(ch));
+  const dirty = dirtyTabs.length > 0;
+  const otherDirty = dirtyTabs.filter((t) => t !== tab);
+  useUnsaved('繰越判断', '繰越判断の基準', dirty);
+  const save = () => { setSaved(cur); toast.show('繰越判断の基準を保存しました'); };
+  const revert = () => {
+    setReserveOut(saved.reserveOut); setIncomeAll(saved.incomeAll); setR5(saved.r5);
+    setOtherReserve(saved.otherReserve); setIncomeSrc(saved.incomeSrc); setIncomeManual(saved.incomeManual); setIncomePrev(saved.incomePrev); setR50(saved.r50);
+    setItaku(saved.itaku); setR30(saved.r30); setR3(saved.r3);
+  };
+
   const prevIncome = incomeSrc === '手入力する' ? incomeManual : SAMPLE.prevIncome;
   const limit5 = roundBy(SAMPLE.income * 0.05, r5);
   const limit50 = roundBy(prevIncome * 0.5, r50);
@@ -114,9 +143,11 @@ export function CarryoverJudgmentPage({ variant, accent, onNavigate }: Maintenan
   const judge = (over: boolean, yes: string, no: string) => <span style={{ color: over ? '#c0392b' : '#1f7a52' }}>{over ? yes : no}</span>;
 
   return (
-    <SettingsShell variant={variant} title="繰越判断の基準" badge="マスター設定" draft={false} desc="決算書（月次決算）の「繰越判断」ボタンからも開きます（旧 F10 繰越）。委託費の繰越・積立に関する判断（収支分析表の提出、高額繰越、前期末支払資金残高の取り扱い、取崩しの事前協議）の基準となる科目と端数処理を設定します。設定した内容は、決算チェック・収支分析表の印刷で使います。" actions={<>
+    <SettingsShell variant={variant} title="繰越判断の基準" badge="マスター設定" draft={false} desc="決算書（月次決算）の「繰越判断」ボタンからも開きます（旧 F10 繰越）。委託費の繰越・積立に関する判断（収支分析表の提出、高額繰越、前期末支払資金残高の取り扱い、取崩しの事前協議）の基準となる科目と端数処理を設定します。設定した内容は、決算チェック・収支分析表の印刷で使います。" unsaved={dirty} actions={<>
       <button type="button" className="btn-outline" onClick={() => setNoticeOpen(true)} style={btn()}>関連資料（通知文）</button>
-      <button type="button" className="submit-btn" onClick={() => toast.show(`「${tab}」の基準を保存しました`)} style={btn(accent, true)}>設定を保存</button>
+      {dirty && <span role="status" data-unsaved-msg style={{ fontSize: 15, fontWeight: 800, color: UNSAVED_FG, marginRight: 4 }}>保存されていません。</span>}
+      <button type="button" data-action="変更を取り消す" onClick={revert} disabled={!dirty} title={dirty ? '保存する前の内容に戻します（すべてのタブ）' : '変更はありません'} style={{ ...btn(), opacity: dirty ? 1 : 0.5, cursor: dirty ? 'pointer' : 'default' }}>変更を取り消す</button>
+      <button type="button" className="submit-btn" data-action="設定を保存" onClick={save} title="すべてのタブの内容をまとめて保存します" style={btn(accent, true)}>設定を保存</button>
     </>}>
       <ToastView msg={toast.msg} />
       <Modal open={noticeOpen} onClose={() => setNoticeOpen(false)} width={640} title="通知文（関連資料）">
@@ -125,17 +156,24 @@ export function CarryoverJudgmentPage({ variant, accent, onNavigate }: Maintenan
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" onClick={() => setNoticeOpen(false)} style={btn(accent, true)}>OK</button></div>
         </div>
       </Modal>
-      <Tabs items={TABS_C} current={tab} onChange={setTab} accent={accent} />
+      <Tabs items={TABS_C} current={tab} onChange={setTab} accent={accent} marks={dirtyTabs} />
+      {otherDirty.length > 0 && (
+        <div data-other-unsaved style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 22px', background: '#fff1d6', borderBottom: '1px solid #f0d9a8', fontSize: 14, color: '#8a5a00', flexWrap: 'wrap' }}>
+          <span>ほかのタブにも保存されていない変更があります：</span>
+          {otherDirty.map((t) => <button key={t} type="button" onClick={() => setTab(t)} style={{ border: 'none', background: 'transparent', padding: 0, color: '#8a5a00', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', textDecoration: 'underline', cursor: 'pointer' }}>{t}</button>)}
+          <span style={{ color: '#a27a2c' }}>「設定を保存」で、すべてのタブをまとめて保存します。</span>
+        </div>
+      )}
       <ScopeBar scope="この区分のみ" note="拠点区分ごとに判断" right={onNavigate && <button type="button" className="btn-outline" onClick={() => onNavigate('印刷センター')} style={btn('#5b6773', false, true)}>収支分析表を印刷 →</button>}>
         判断は拠点区分（施設）ごとに行います。当期資金収支差額・当期末支払資金残高はシステムが自動計算します。
       </ScopeBar>
 
       {tab === '収支分析表' && (
         <div style={{ padding: 22, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) 320px', gap: 16, alignItems: 'start' }}>
-          <PickList title="各積立資産積立支出に集計する科目" items={EXPENSE_ITEMS} value={reserveOut} onChange={setReserveOut} />
-          <PickList title="当期事業活動収入計に集計する科目" items={INCOME_ITEMS} value={incomeAll} onChange={setIncomeAll} />
+          <PickList title="各積立資産積立支出に集計する科目" items={EXPENSE_ITEMS} value={reserveOut} onChange={setReserveOut} saved={saved.reserveOut} />
+          <PickList title="当期事業活動収入計に集計する科目" items={INCOME_ITEMS} value={incomeAll} onChange={setIncomeAll} saved={saved.incomeAll} />
           <div style={{ display: 'grid', gap: 12 }}>
-            <div style={card}><div style={cardHead}>端数処理</div><div style={{ padding: 14 }}><RoundingField label="当期事業活動収入計の 5% を算出する際の端数処理" value={r5} onChange={setR5} /></div></div>
+            <div style={card}><div style={cardHead}>端数処理</div><div style={{ padding: 14 }}><RoundingField label="当期事業活動収入計の 5% を算出する際の端数処理" value={r5} onChange={setR5} changed={ch('r5')} /></div></div>
             <Guide rows={[
               { label: '当期事業活動収入計', value: yen(SAMPLE.income) },
               { label: `5% 相当額（${r5}）`, value: yen(limit5), strong: true },
@@ -151,16 +189,16 @@ export function CarryoverJudgmentPage({ variant, accent, onNavigate }: Maintenan
 
       {tab === '高額繰越' && (
         <div style={{ padding: 22, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) 320px', gap: 16, alignItems: 'start' }}>
-          <PickList title="「その他の積立金」の指定" items={RESERVE_ITEMS} value={otherReserve} onChange={setOtherReserve} note="当期末支払資金残高は、流動資産 − 流動負債 の計算によりシステムが自動集計します。" />
+          <PickList title="「その他の積立金」の指定" items={RESERVE_ITEMS} value={otherReserve} onChange={setOtherReserve} saved={saved.otherReserve} note="当期末支払資金残高は、流動資産 − 流動負債 の計算によりシステムが自動集計します。" />
           <div style={{ display: 'grid', gap: 12 }}>
             <div style={card}><div style={cardHead}>収入決算額</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
-              <div style={{ display: 'flex', gap: 14, fontSize: 14 }}>{(['システムより集計する', '手入力する'] as const).map((o) => <label key={o} style={{ display: 'flex', gap: 4, alignItems: 'center' }}><input type="radio" checked={incomeSrc === o} onChange={() => setIncomeSrc(o)} />{o}</label>)}</div>
-              {incomeSrc === '手入力する' && <Field label="前年度の収入決算額"><input className="field-input" value={incomeManual.toLocaleString('ja-JP')} onChange={(e) => setIncomeManual(parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0)} style={{ ...input, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }} /></Field>}
+              <div data-changed={ch('incomeSrc') || undefined} style={{ display: 'flex', gap: 14, fontSize: 14, ...changedBox(ch('incomeSrc')) }}>{(['システムより集計する', '手入力する'] as const).map((o) => <label key={o} style={{ display: 'flex', gap: 4, alignItems: 'center' }}><input type="radio" checked={incomeSrc === o} onChange={() => setIncomeSrc(o)} />{o}</label>)}</div>
+              {incomeSrc === '手入力する' && <Field label="前年度の収入決算額"><input className="field-input" value={incomeManual.toLocaleString('ja-JP')} onChange={(e) => setIncomeManual(parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0)} data-changed={ch('incomeManual') || undefined} style={{ ...input, textAlign: 'right', fontVariantNumeric: 'tabular-nums', ...(ch('incomeManual') ? { background: CHANGED_BG, border: '1px solid ' + CHANGED_BORDER } : {}) }} /></Field>}
             </div></div>
-            {incomeSrc === 'システムより集計する' && <PickList title="収入決算額に集計する科目" items={INCOME_ITEMS} value={incomePrev} onChange={setIncomePrev} height={180} />}
+            {incomeSrc === 'システムより集計する' && <PickList title="収入決算額に集計する科目" items={INCOME_ITEMS} value={incomePrev} onChange={setIncomePrev} saved={saved.incomePrev} height={180} />}
           </div>
           <div style={{ display: 'grid', gap: 12 }}>
-            <div style={card}><div style={cardHead}>端数処理</div><div style={{ padding: 14 }}><RoundingField label="前年度収入決算額の 6 か月分（50%）の処理" value={r50} onChange={setR50} /></div></div>
+            <div style={card}><div style={cardHead}>端数処理</div><div style={{ padding: 14 }}><RoundingField label="前年度収入決算額の 6 か月分（50%）の処理" value={r50} onChange={setR50} changed={ch('r50')} /></div></div>
             <Guide rows={[
               { label: '前年度の収入決算額', value: yen(prevIncome) },
               { label: `6 か月分（50%・${r50}）`, value: yen(limit50), strong: true },
@@ -173,9 +211,9 @@ export function CarryoverJudgmentPage({ variant, accent, onNavigate }: Maintenan
 
       {tab === '前期末支払資金残高の取り扱い（委託費）' && (
         <div style={{ padding: 22, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 16, alignItems: 'start' }}>
-          <PickList title="委託費科目" items={INCOME_ITEMS} value={itaku} onChange={setItaku} />
+          <PickList title="委託費科目" items={INCOME_ITEMS} value={itaku} onChange={setItaku} saved={saved.itaku} />
           <div style={{ display: 'grid', gap: 12 }}>
-            <div style={card}><div style={cardHead}>端数処理</div><div style={{ padding: 14 }}><RoundingField label="委託費収入の 30% を算出する際の端数処理" value={r30} onChange={setR30} /></div></div>
+            <div style={card}><div style={cardHead}>端数処理</div><div style={{ padding: 14 }}><RoundingField label="委託費収入の 30% を算出する際の端数処理" value={r30} onChange={setR30} changed={ch('r30')} /></div></div>
             <Guide rows={[
               { label: '委託費収入（当年度）', value: yen(SAMPLE.itaku) },
               { label: `30% 相当額（${r30}）`, value: yen(limit30), strong: true },
@@ -189,7 +227,7 @@ export function CarryoverJudgmentPage({ variant, accent, onNavigate }: Maintenan
       {tab === '取崩による事前協議' && (
         <div style={{ padding: 22, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 16, alignItems: 'start' }}>
           <div style={{ display: 'grid', gap: 12 }}>
-            <div style={card}><div style={cardHead}>端数処理</div><div style={{ padding: 14 }}><RoundingField label="事業活動収入（予算額）の 3% を算出する際の端数処理" value={r3} onChange={setR3} /></div></div>
+            <div style={card}><div style={cardHead}>端数処理</div><div style={{ padding: 14 }}><RoundingField label="事業活動収入（予算額）の 3% を算出する際の端数処理" value={r3} onChange={setR3} changed={ch('r3')} /></div></div>
             <Notice>前期末支払資金残高を取り崩して使う額が、事業活動収入（予算額）の 3% を超える場合は、あらかじめ所轄庁との協議が必要です。この画面では 3% を算出するときの端数処理だけを設定します。</Notice>
           </div>
           <Guide rows={[

@@ -12,6 +12,7 @@ import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { LABEL, NUM, ReportShell, TD, TH, yen, SwitchPill } from './ReportShell';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { BALANCE_ACCOUNTS, JOURNAL_ROWS, displayName, type JournalRow } from '../data';
+import { matchPeriod, type Period } from '../lib/period';
 import type { MonthFilter } from '../types';
 
 const CARRY = 5_000_000;
@@ -58,13 +59,15 @@ const EMPTY: Cond = { other: '', sub: '', tax: '', tekiyo: '' };
 export function LedgerInquiryPage({ slot, variant, accent, onNavigate }: LedgerProps) {
   const [account, setAccount] = useState(slot === 'ledger1' ? '普通預金（保育園）' : '');
   const [month, setMonth] = useState<MonthFilter>('8');
+  // 月の範囲（会計月の「全月」から端の月を外したとき・月タブのドラッグ）。あれば month より優先
+  const [range, setRange] = useState<Period | null>(null);
   const [cond, setCond] = useState<Cond>(EMPTY);
   const [applied, setApplied] = useState<Cond>(EMPTY);
   const title = displayName(slot === 'ledger1' ? '元帳１' : '元帳２');
 
   const subOptions = Array.from(new Set(JOURNAL_ROWS.map(subOf).filter(Boolean)));
   const rows = JOURNAL_ROWS.filter((r) => {
-    if (month != null && r.date.split('/')[0] !== month) return false;
+    if (!matchPeriod(r.date, month, range)) return false;
     if (account && r.kari !== account && r.kashi !== account) return false;
     if (applied.other) {
       const other = account ? (r.kari === account ? r.kashi : r.kari) : '';
@@ -109,7 +112,7 @@ export function LedgerInquiryPage({ slot, variant, accent, onNavigate }: LedgerP
       tools={[{ label: '科目検索', onClick: () => openTargetCombo(comboId('acc')), primary: true }]}
       period={
         <>
-          <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} withAll />
+          <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} withAll range={range} onRange={setRange} pickRange={false} />
         </>
       }
       periodAside={[['借方計', yen(sumD)], ['貸方計', yen(sumC)], ...(account ? [['残高', yen(bal)]] : [])].map(([l, v]) => (
@@ -208,7 +211,7 @@ export function LedgerInquiryPage({ slot, variant, accent, onNavigate }: LedgerP
           {lines.length > 0 && (
             <tfoot>
               <tr style={{ background: '#f6f8fa' }}>
-                <td style={{ ...TD, fontWeight: 700 }} colSpan={5}>{month == null ? '合計' : '月計'}</td>
+                <td style={{ ...TD, fontWeight: 700 }} colSpan={5}>{month == null || range ? '合計' : '月計'}</td>
                 <td style={{ ...NUM, fontWeight: 700 }}>{yen(sumD)}</td>
                 <td style={{ ...NUM, fontWeight: 700 }}>{yen(sumC)}</td>
                 {account && <td style={{ ...NUM, fontWeight: 700 }}>{yen(bal)}</td>}

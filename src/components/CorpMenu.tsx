@@ -1,4 +1,6 @@
-// アプリバー右側のメニュー：「この区分」の調査（決算調査）・印刷（印刷センター）と、「法人」の印刷（法人全体の一括印刷）。
+// アプリバー右側のメニュー：「この区分」の 仕訳数・日次調査・決算調査・印刷（印刷センター）と、「法人」の印刷（法人全体の一括印刷）。
+//   仕訳数・日次調査・決算調査は、以前はホームの「調査・チェック」から開いていた。ホームに機能一覧ができたのでその枠をなくし、
+//   どの画面からでも開けるよう、ここ（起動中の区分の名称の横）に置いた（確認メモ #242）。
 //   旧「法人調査」は、起動中の区分を対象にした決算調査に置き換えた（確認メモ #44：法人調査→今入っている区分、法人印刷→残す、区分の印刷ボタンを追加）。
 
 import { useSession } from '../store/session';
@@ -10,7 +12,12 @@ interface Props {
 }
 
 const GROUPS: { caption: string; items: { label: string; target: string; title: string }[] }[] = [
-  { caption: '', items: [{ label: '調査', target: '決算調査', title: '起動中の区分の決算調査（28項目の決算チェック）' }, { label: '印刷', target: '印刷センター', title: '起動中の区分の帳票の印刷（印刷センター）' }] },
+  { caption: '', items: [
+    { label: '仕訳数', target: '仕訳数', title: '起動中の区分の仕訳数の問合せ（月ごとの仕訳件数と、入力済みの月）' },
+    { label: '日次調査', target: '日次調査', title: '起動中の区分の日次調査（仕訳と残高の同額・不一致の検索）' },
+    { label: '決算調査', target: '決算調査', title: '起動中の区分の決算調査（28項目の決算チェック）' },
+    { label: '印刷', target: '印刷センター', title: '起動中の区分の帳票の印刷（印刷センター）' },
+  ] },
   { caption: '法人', items: [{ label: '印刷', target: '法人印刷', title: '法人全体の決算書・附属明細書の一括印刷' }] },
 ];
 
@@ -18,6 +25,8 @@ export function CorpMenu({ accent, active, onSelect }: Props) {
   // 見出しは起動中の区分の名称（例「本部」「チャイルド保育園」）。コードは付けない
   const s = useSession();
   const divisionName = s.division.replace(/^\d+\s*/, '');
+  // 会計本体を使えないアカウントには出さない（調査・印刷は会計本体の機能）
+  if (!s.access.core) return null;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 'none' }}>
       {GROUPS.map((g) => (

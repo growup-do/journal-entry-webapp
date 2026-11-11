@@ -16,6 +16,7 @@ import { judgeTorihiki, TORIHIKI_COLOR } from '../lib/accounts';
 import { TAX_OPTS, taxAmountOf, taxDefaultOf } from '../lib/transferTax';
 import { canEdit, canReorder, editBlockReason, fusenLabel, useSession, isViewOnly } from '../store/session';
 import { canEnterVoucher, entryBlockReason } from '../lib/entryDivision';
+import { matchPeriod, type Period } from '../lib/period';
 import type { MonthFilter } from '../types';
 
 const BLUE = '#2c5f9e';
@@ -100,14 +101,16 @@ export function DeleteVoucherModal({ rows, onClose, onDeleted, multi, entry }: {
 export function VoucherPickerModal({ open, mode, onClose, onPick, accent }: { open: boolean; mode: '訂正' | '削除'; onClose: () => void; onPick: (group: VoucherGroup) => void; accent: string }) {
   const all = useVouchers(true);
   const [month, setMonth] = useState<MonthFilter>(null);
+  // 月の範囲（会計月の「全月」から端の月を外したとき・月タブのドラッグ）。あれば month より優先
+  const [range, setRange] = useState<Period | null>(null);
   const [q, setQ] = useState('');
   const [hi, setHi] = useState(0);
   const groups = useMemo(() => {
     const kw = q.trim();
     return groupVouchers(all)
-      .filter((g) => (month == null || g.head.date.split('/')[0] === month) && (!kw || g.head.no.includes(kw) || g.head.date.includes(kw) || String(g.total).includes(kw.replace(/,/g, '')) || g.rows.some((r) => [r.kari, r.kashi, r.tekiyo, r.gyosha ?? '', String(r.amount)].some((x) => x.includes(kw)))))
+      .filter((g) => matchPeriod(g.head.date, month, range) && (!kw || g.head.no.includes(kw) || g.head.date.includes(kw) || String(g.total).includes(kw.replace(/,/g, '')) || g.rows.some((r) => [r.kari, r.kashi, r.tekiyo, r.gyosha ?? '', String(r.amount)].some((x) => x.includes(kw)))))
       .reverse();
-  }, [all, month, q]);
+  }, [all, month, range, q]);
   if (!open) return null;
   const cur = Math.min(hi, Math.max(0, groups.length - 1));
   const danger = mode === '削除';
@@ -131,7 +134,7 @@ export function VoucherPickerModal({ open, mode, onClose, onPick, accent }: { op
             autoComplete="off"
             style={{ ...input, width: 300 }}
           />
-          <FiscalMonthTabs current={month} accent={accent} onSelect={(m) => { setMonth(m); setHi(0); }} withAll />
+          <FiscalMonthTabs current={month} accent={accent} onSelect={(m) => { setMonth(m); setHi(0); }} withAll range={range} onRange={(r) => { setRange(r); setHi(0); }} pickRange={false} />
           <span style={{ marginLeft: 'auto', fontSize: 14, color: '#7a8794' }}><b style={{ color: '#22303c' }}>{groups.length}</b> 伝票</span>
         </div>
         <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'hidden' }}>

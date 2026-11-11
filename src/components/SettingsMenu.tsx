@@ -77,6 +77,9 @@ export function SettingsMenu({ accent, active, onNavigate }: Props) {
   );
   const by = (k: string) => SETTINGS_GROUPS.find((g) => g.key === k)!;
 
+  // 会計本体を使えないアカウントには出さない（各種設定は会計本体の機能）
+  if (!session.access.core) return null;
+
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <button

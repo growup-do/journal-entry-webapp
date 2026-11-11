@@ -2,6 +2,7 @@
 // localStorage に保存し、useSession() で購読する。本番ではサーバー側のユーザー設定に置き換える想定。
 
 import { useSyncExternalStore } from 'react';
+import { DEFAULT_MEMBER_ACCESS, FULL_ACCESS, type Access } from './access';
 
 /* ---------- 区分（事業区分 › 拠点区分 › サービス区分 › 小サービス区分） ---------- */
 export interface DivisionNode {
@@ -183,19 +184,23 @@ export interface Session {
   specialRoundTo: string;
   /** 開始残高の「期中入力」を行うか（期の途中から導入する場合。確認メモ #167）。true のときだけ期中入力の3つのタブを出す */
   openingMidTerm: boolean;
+  /** このアカウントで使える機能（会計本体／小口現金／預金出納／減価償却）。確認事項「小口、預金、減価について」 */
+  access: Access;
+  /** ほかのアカウントの使える機能（アカウントの id → 設定）。ユーザー設定の「アカウントごとの利用できる機能」で管理者が決める */
+  memberAccess: Record<string, Access>;
 }
 
 const KEY = 'proto-session-v2'; // v2：区分ツリーの見直し（入力区分／親区分）に伴い保存形式を更新
 /** ホーム（ダッシュボード）の表示メニュー */
 export const HOME_SECTIONS = [
   // 預金残高は「推移・分析」へ（確認メモ #149）、お知らせはヘッダーのベルへ（#151）移したので、ここでは選ばない
-  { key: 'checks', label: '調査・チェック', note: '仕訳数の問合せ／日次調査／決算チェック' },
+  // 調査・チェック（仕訳数／日次調査／決算調査）は、ヘッダーの区分のボタンへ移した（確認メモ #242）
   { key: 'favorites', label: 'お気に入りメニュー', note: '登録した画面をすぐに開くボタン（メニューバーの「お気に入りメニュー」と共通）' },
   { key: 'faq', label: 'よくある質問（FAQ）', note: '操作で迷ったときの質問と回答' },
   { key: 'banners', label: 'バナー', note: 'ご案内の画像' },
 ] as const;
 export type HomeSectionKey = (typeof HOME_SECTIONS)[number]['key'];
-const DEFAULT_HOME_SECTIONS: Record<HomeSectionKey, boolean> = { checks: true, favorites: true, faq: true, banners: true };
+const DEFAULT_HOME_SECTIONS: Record<HomeSectionKey, boolean> = { favorites: true, faq: true, banners: true };
 
 const DEFAULT: Session = {
   division: '002 保育事業', divisionPath: ['社会福祉法人 チャイルド保育園', '社会福祉事業', 'チャイルド保育園', '保育事業'],
@@ -205,6 +210,7 @@ const DEFAULT: Session = {
   ledgerTarget: null, journalTarget: null, auditEnabled: {}, auditCorpEnabled: { 21: false, 22: false }, corpStartDate: '20240401', corpTax: '非課税',
   role: '入力可', startScreen: '伝票入力', homeSections: DEFAULT_HOME_SECTIONS, taxEntry: false,
   taxMode: '通常モード', specialRatesByAccount: DEFAULT_SPECIAL_RATES_BY_ACCOUNT, specialRoundTo: DEFAULT_SPECIAL_RATES[DEFAULT_SPECIAL_RATES.length - 1].division, openingMidTerm: false,
+  access: FULL_ACCESS, memberAccess: DEFAULT_MEMBER_ACCESS,
 };
 
 let state: Session = (() => {
@@ -212,7 +218,7 @@ let state: Session = (() => {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULT;
     const saved = JSON.parse(raw) as Partial<Session>;
-    return { ...DEFAULT, ...saved, tree: normalizeTree(saved.tree ?? DEFAULT.tree), env: { ...DEFAULT_ENV, ...(saved.env ?? {}) }, input: { ...DEFAULT_INPUT, ...(saved.input ?? {}) }, print: { ...DEFAULT_PRINT, ...(saved.print ?? {}) }, homeSections: { ...DEFAULT_HOME_SECTIONS, ...(saved.homeSections ?? {}) }, ledgerTarget: null, journalTarget: null,
+    return { ...DEFAULT, ...saved, tree: normalizeTree(saved.tree ?? DEFAULT.tree), env: { ...DEFAULT_ENV, ...(saved.env ?? {}) }, input: { ...DEFAULT_INPUT, ...(saved.input ?? {}) }, print: { ...DEFAULT_PRINT, ...(saved.print ?? {}) }, homeSections: { ...DEFAULT_HOME_SECTIONS, ...(saved.homeSections ?? {}) }, access: { ...FULL_ACCESS, ...(saved.access ?? {}) }, memberAccess: { ...DEFAULT_MEMBER_ACCESS, ...(saved.memberAccess ?? {}) }, ledgerTarget: null, journalTarget: null,
       // 以前の保存データ（消費税対応の On／Off だけ）には方式がないので、On は「簡易課税方式」として引き継ぐ（確認メモ #175）
       taxMode: saved.taxMode ?? (saved.taxEntry ? '簡易課税方式' : DEFAULT.taxMode),
       // 以前の保存データには仕訳伝票形式の定型がないので、サンプルを足す（確認メモ #202）

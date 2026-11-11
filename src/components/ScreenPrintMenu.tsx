@@ -11,7 +11,8 @@ export interface PrintItem { name: string; /** 詳細設定の元にする帳票
 export interface PrintGroup { label?: string; items: PrintItem[]; /** 次のグループとの区切りを点線にする（同じ種類の帳票の中の区切り） */ dashedBelow?: boolean }
 /** 画面独自の印刷処理を呼ぶ項目（出納帳の集計内訳表など）。共通の印刷ダイアログは使わない */
 export interface PrintAction { name: string; onClick: () => void; note?: string }
-export interface PrintActionGroup { label?: string; items: PrintAction[] }
+/** items には、共通の印刷ダイアログへ回す帳票（PrintItem）も混ぜられる（月次決算の WAMNET連携出力 など） */
+export interface PrintActionGroup { label?: string; items: (PrintAction | PrintItem)[]; /** この分類の下を破線で区切る */ dashedBelow?: boolean }
 
 const JOURNAL = (screenData: boolean): PrintItem[] => [{ name: '日記帳', base: '仕訳日記帳', screenData }, { name: '伝票', base: '仕訳伝票（伝票式）' }, { name: '振替伝票', base: '振替伝票（振替式）' }];
 const BUDGET_KINDS = ['前年度', '当初', '補正', '次年度'];

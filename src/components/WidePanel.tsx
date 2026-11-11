@@ -13,7 +13,7 @@ import { EditVoucherModal } from './VoucherEdit';
 import { yen } from './ui';
 import { BALANCE_ACCOUNTS } from '../data';
 import { metaOf } from '../lib/accounts';
-import { inPeriod, type Period } from '../lib/period';
+import { inPeriod, matchPeriod, type Period } from '../lib/period';
 import { BALANCE_DEFAULT_MONTH, balanceAsOf, systemBalances, useBookBalances } from '../lib/balanceCheck';
 import { FUSEN_COLORS, useVouchers, type Voucher } from '../store/journalStore';
 import { useSession } from '../store/session';
@@ -102,6 +102,8 @@ export function WidePanel({ accent, layout, state, top = 0, highlightIds, return
   // 伝票入力の画面の中のパネルなので、親区分で起動中でも配下の入力区分の伝票を訂正できる（確認メモ #182）
   const editable = canEnterVoucher(sess);
   const [month, setMonth] = useState<MonthFilter>('8');
+  // 月の範囲（会計月の「全月」から端の月を外したとき・月タブのドラッグ）。あれば month より優先
+  const [range, setRange] = useState<Period | null>(null);
   // 残高照合の月（確認メモ #201）。日記帳・元帳の月とは別に覚える。通帳残高は「残高照合」の画面でその月に入力した値
   const [balMonth, setBalMonth] = useState(BALANCE_DEFAULT_MONTH);
   const balBook = useBookBalances(balMonth);
@@ -126,7 +128,7 @@ export function WidePanel({ accent, layout, state, top = 0, highlightIds, return
     if (slot === 1) { setAcc1(v); write(state.storageKey + ':ledger1', v); }
     if (slot === 2) { setAcc2(v); write(state.storageKey + ':ledger2', v); }
   };
-  const inMonth = (r: Voucher) => month == null || r.date.split('/')[0] === month;
+  const inMonth = (r: Voucher) => matchPeriod(r.date, month, range);
   const journal = all.filter(inMonth);
   const ledger = all.filter((r) => inMonth(r) && account && (r.kari === account || r.kashi === account));
   const carry = metaOf(account)?.cls === '現預金' ? 5_000_000 : 0;
@@ -177,7 +179,7 @@ export function WidePanel({ accent, layout, state, top = 0, highlightIds, return
             <span style={{ fontSize: 12, color: '#8290a0' }}>{view === '日記帳' ? sess.fiscalYear : '前年度（閲覧のみ）'}</span>
           </div>
         )}
-        {(view === '日記帳' || slot > 0) && <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} withAll />}
+        {(view === '日記帳' || slot > 0) && <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} withAll range={range} onRange={setRange} pickRange={false} />}
         {view === '残高照合' && (
           <div data-balance-months style={{ display: 'grid', gap: 5 }}>
             <FiscalMonthTabs current={balMonth} accent={accent} onSelect={(v) => { if (v) setBalMonth(v); }} />
@@ -242,7 +244,7 @@ export function WidePanel({ accent, layout, state, top = 0, highlightIds, return
           {!account ? (
             <div style={{ padding: '36px 16px', textAlign: 'center', color: '#9aa5b1', fontSize: 14, lineHeight: 1.8 }}>科目が選ばれていません。<br />上の「{view}の科目」に、コード・科目名・フリガナを入力して指定してください。</div>
           ) : (
-            <LedgerTable account={account} month={month} editable={editable} highlightIds={highlightIds} onEdit={setEdit} />
+            <LedgerTable account={account} month={month} range={range} editable={editable} highlightIds={highlightIds} onEdit={setEdit} />
           )}
         </div>
       )}

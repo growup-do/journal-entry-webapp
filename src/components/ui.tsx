@@ -1,6 +1,7 @@
 // 追加画面で共通に使う小さな部品（ボタン／入力／ラベル／タブ／トグル／カード）
 
 import type { CSSProperties, ReactNode } from 'react';
+import { UNSAVED_BG } from '../store/unsaved';
 
 export const btn = (color = '#5b6773', solid = false, small = false): CSSProperties => ({
   padding: small ? '6px 12px' : '10px 18px', borderRadius: 8, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color,
@@ -14,7 +15,7 @@ export const cardHead: CSSProperties = { padding: '12px 16px', background: '#f6f
 export const yen = (n: number) => (n < 0 ? '△' + Math.abs(n).toLocaleString('ja-JP') : n.toLocaleString('ja-JP'));
 export const toInt = (v: string) => parseInt(v.replace(/[^0-9-]/g, ''), 10) || 0;
 
-export function Tabs({ items, current, onChange, accent, small }: { items: string[]; current: string; onChange: (v: string) => void; accent: string; small?: boolean }) {
+export function Tabs({ items, current, onChange, accent, small, marks }: { items: string[]; current: string; onChange: (v: string) => void; accent: string; small?: boolean; /** 保存されていない変更があるタブ（名称の右に印を付ける。確認メモ #225） */ marks?: string[] }) {
   return (
     <div style={{ display: 'flex', gap: 2, borderBottom: '1px solid #e2e8ee', padding: '0 22px', flexWrap: 'wrap' }}>
       {items.map((t) => {
@@ -22,6 +23,7 @@ export function Tabs({ items, current, onChange, accent, small }: { items: strin
         return (
           <button key={t} type="button" role="tab" aria-selected={on} className="tab" data-tab={t} onClick={() => onChange(t)} style={{ padding: small ? '10px 14px' : '13px 20px', border: 'none', borderBottom: '3px solid ' + (on ? accent : 'transparent'), background: 'transparent', color: on ? accent : '#5b6773', fontSize: small ? 14 : 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', marginBottom: -1 }}>
             {t}
+            {marks?.includes(t) && <span data-tab-unsaved title="保存されていない変更があります" aria-label="保存されていない変更があります" style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#c2410c', marginLeft: 7, verticalAlign: 'middle' }} />}
           </button>
         );
       })}
@@ -63,20 +65,21 @@ export function Notice({ children, tone = 'info' }: { children: ReactNode; tone?
   return <div style={{ padding: '12px 14px', background: c.bg, border: '1px solid ' + c.bd, borderRadius: 10, fontSize: 14, color: c.fg, lineHeight: 1.8 }}>{children}</div>;
 }
 
-/** 設定系画面の共通シェル（SettingsPages の Shell と同じ見た目） */
-export function SettingsShell({ variant, title, desc, badge = '設定', draft = false, actions, children }: { variant: 'form' | 'sheet'; title: string; desc: ReactNode; badge?: string; draft?: boolean; actions?: ReactNode; children: ReactNode }) {
+/** 設定系画面の共通シェル（SettingsPages の Shell と同じ見た目）。
+ *  unsaved … 変更したのに保存していないあいだ true にすると、画面の色を薄い暖色に変える（確認メモ #224・#225） */
+export function SettingsShell({ variant, title, desc, badge = '設定', draft = false, actions, unsaved = false, children }: { variant: 'form' | 'sheet'; title: string; desc: ReactNode; badge?: string; draft?: boolean; actions?: ReactNode; unsaved?: boolean; children: ReactNode }) {
   const isSheet = variant === 'sheet';
   return (
     <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
-      <div style={{ width: '100%', maxWidth: isSheet ? 'none' : 1240, background: '#fff', border: '1px solid #dde4ea', borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '22px 24px 16px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
+      <div data-unsaved={unsaved || undefined} style={{ width: '100%', maxWidth: isSheet ? 'none' : 1240, background: unsaved ? UNSAVED_BG : '#fff', border: '1px solid ' + (unsaved ? '#ecd9b4' : '#dde4ea'), borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'hidden', transition: 'background .15s, border-color .15s' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '22px 24px 16px', borderBottom: '1px solid ' + (unsaved ? '#f0e2c6' : '#eef2f5'), flexWrap: 'wrap' }}>
           <div>
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21 }}>
               {title} <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#eef2f6', color: '#3d4a56', verticalAlign: 'middle', marginLeft: 6 }}>{badge}</span>
             </div>
             <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>{desc}{draft && <span style={{ color: '#b7791f' }}>（叩き台）</span>}</div>
           </div>
-          {actions && <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>{actions}</div>}
+          {actions && <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>{actions}</div>}
         </div>
         {children}
       </div>

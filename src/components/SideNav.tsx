@@ -11,6 +11,7 @@ import { FavoritesEditModal } from './FavoritesEditModal';
 import { VersionBadge } from './VersionBadge';
 import { Chevron } from './ui';
 import { useSession } from '../store/session';
+import { firstAllowed } from '../store/access';
 
 export const SIDENAV_WIDTH = 228;
 export const SIDENAV_COMPACT = 60;
@@ -34,6 +35,10 @@ interface Props {
 
 export function SideNav({ accent, active, onSelect, collapsed, onToggle }: Props) {
   const width = collapsed ? SIDENAV_COMPACT : SIDENAV_WIDTH;
+  // 会計本体を使えないアカウント：ホーム・お気に入り・機能から探すは出さない（使える機能だけのメニューにする）
+  const access = useSession().access;
+  const core = access.core;
+  const home = core ? 'ホーム' : firstAllowed(access);
   return (
     <aside
       data-side-nav
@@ -43,7 +48,7 @@ export function SideNav({ accent, active, onSelect, collapsed, onToggle }: Props
     >
       {/* ロゴ・システム名 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: collapsed ? '10px 0 8px' : '10px 12px 8px 14px', justifyContent: collapsed ? 'center' : 'flex-start', borderBottom: '1px solid #eef2f5', minHeight: 52, flex: 'none' }}>
-        <button type="button" data-menu="ホーム（ロゴ）" onClick={() => onSelect('ホーム')} title="ホームへ" style={{ display: 'flex', alignItems: 'center', gap: 9, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: 'inherit', color: 'inherit', minWidth: 0 }}>
+        <button type="button" data-menu="ホーム（ロゴ）" onClick={() => onSelect(home)} title={core ? 'ホームへ' : undefined} style={{ display: 'flex', alignItems: 'center', gap: 9, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: 'inherit', color: 'inherit', minWidth: 0 }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, background: accent, color: '#fff', borderRadius: 8, fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16, flex: 'none' }}>会</span>
           {!collapsed && <span style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>会計基準システム</span>}
         </button>
@@ -53,9 +58,11 @@ export function SideNav({ accent, active, onSelect, collapsed, onToggle }: Props
       {/* メニュー本体。展開時は縦にスクロール、折りたたみ時はフライアウトが切れないよう overflow を解放 */}
       <div style={{ flex: 1, minHeight: 0, overflowY: collapsed ? 'visible' : 'auto', overflowX: 'visible', padding: collapsed ? '8px 0' : '8px 8px 8px' }}>
         <SideMenu accent={accent} active={active} onSelect={onSelect} compact={collapsed} />
-        <div role="separator" style={{ height: 1, background: '#eef2f5', margin: collapsed ? '8px 10px' : '8px 6px' }} />
-        <Favorites accent={accent} active={active} onNavigate={onSelect} compact={collapsed} />
-        <FinderButton accent={accent} active={active === '機能から探す'} onClick={() => onSelect('機能から探す')} compact={collapsed} />
+        {core && <>
+          <div role="separator" style={{ height: 1, background: '#eef2f5', margin: collapsed ? '8px 10px' : '8px 6px' }} />
+          <Favorites accent={accent} active={active} onNavigate={onSelect} compact={collapsed} />
+          <FinderButton accent={accent} active={active === '機能から探す'} onClick={() => onSelect('機能から探す')} compact={collapsed} />
+        </>}
       </div>
 
       {/* 折りたたみ */}

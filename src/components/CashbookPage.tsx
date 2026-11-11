@@ -1,9 +1,14 @@
 // オプション：小口現金出納帳／預金出納帳（共通部品）
-//   紙の出納帳風の表（入金額／年月日／摘要／勘定科目／出金額／残高）。最終行が入力行で、Enterで次の項目→登録。
+//   紙の出納帳風の表（入金額／年月日／摘要／勘定科目／出金額／残高）。入力行（登録欄）は見出しのすぐ下に固定し、
+//   一覧をスクロールしてもいつも見える（確認メモ #236）。Enterで次の項目→登録。登録した明細は一覧の最後に入り、そこまでスクロールする。
 //   小口現金：行ごとの「挿入・特殊行・編集・削除」（確認メモ #206／#207／#209）、集計（確認→集計済みロック）、AI自動仕訳インポート、
 //             翌年度の予備月 4〜6月（#205）、小口の設定（#210）、金銭残高金種別表（#212）
 //   預金出納：銀行CSVインポート・インポート一括削除
 //   共通：会計連動・印刷（集計内訳表／仕訳伝票／出納帳）・区分の切替（画面の中に「＋出納帳追加」。#211／#215）
+//   行の削除：確認のモーダルで消す明細の内容を示し、「削除する」を押したときだけ消す（確認メモ #237）
+//   会計連動：集計済みの明細がなくても開ける。「今回連動するデータはありません」と示し、過去の会計連動の履歴と、
+//             そのとき作成した伝票を確認できる（確認メモ #233）。OK を押したとき、対象の期間がすでに会計へ連動済みなら
+//             「会計側で伝票として既に取り込まれています」の注意を出し、連動のあとは会計側で作成された仕訳伝票を表示する（#234）
 //   集計：上から順に、どこまで集計するかを選ぶ（飛び飛びには選べない。#208）。集計済みの期間より前の日付の明細は登録・訂正できない
 //   集計 ― 確認：会計連動へ送るときの伝票日付を指定できる（明細の日付を伝票日付とする／伝票年月日／月末日。確認メモ #164）
 //   消費税を使う設定（消費税の処理方式が「通常モード」以外）のときは、明細に「消費税コード」「税額」の列を出す（#216）
@@ -111,6 +116,67 @@ const eraOf = (r: { month: string; ny?: boolean }) => (r.ny || ['1', '2', '3'].i
 /** 日付の並び順（年度内の月の順。翌年度の予備月は年度の後ろ） */
 const dateOrd = (month: string, day: string, ny?: boolean) => (ny ? 1000 : 0) + Math.max(0, FISCAL_MONTHS.indexOf(month)) * 40 + (Number(day) || 0);
 const ordOf = (r: { month: string; day: string; ny?: boolean }) => dateOrd(r.month, r.day, r.ny);
+
+// ---- 会計連動の履歴と、会計側で作成された仕訳伝票（確認メモ #233／#234） ----
+/** 伝票の 1 行 */
+interface LinkLine { kari: string; kashi: string; tekiyo: string; amount: number }
+/** 会計側で作成された仕訳伝票 1 件（伝票番号と伝票日付が同じ行は、同じ伝票にまとまる） */
+interface LinkSlip { no: string; date: string; service: string; lines: LinkLine[] }
+/** 会計連動 1 回分（at＝連動した日） */
+interface LinkRun { id: number; at: string; slips: LinkSlip[] }
+const SL = (no: string, date: string, lines: [kari: string, kashi: string, tekiyo: string, amount: number][]): LinkSlip => ({ no, date, service: '002 保育事業', lines: lines.map(([kari, kashi, tekiyo, amount]) => ({ kari, kashi, tekiyo, amount })) });
+/** 過去の会計連動のサンプル（新しい順。金額は架空の値） */
+const PETTY_LINK_SEED: LinkRun[] = [
+  { id: 3, at: '令和8年 8月3日', slips: [
+    SL('7-2', '7/2', [['手数料', '小口現金', '振込手数料', 660]]),
+    SL('7-9', '7/9', [['保育材料費', '小口現金', 'プール用品代', 5280], ['消耗器具備品費', '小口現金', '乾電池', 1100]]),
+    SL('7-15', '7/15', [['小口現金', '普通預金（保育園）', '普通預金より', 40000]]),
+    SL('7-22', '7/22', [['給食費', '小口現金', '麦茶パック代', 1296]]),
+    SL('7-28', '7/28', [['福利厚生費', '小口現金', '検便代', 6930], ['通信運搬費', '小口現金', '切手代', 840]]),
+  ] },
+  { id: 2, at: '令和8年 7月2日', slips: [
+    SL('6-3', '6/3', [['消耗器具備品費', '小口現金', 'コピー用紙代', 2750]]),
+    SL('6-10', '6/10', [['通信運搬費', '小口現金', '切手代', 1680]]),
+    SL('6-17', '6/17', [['小口現金', '普通預金（保育園）', '普通預金より', 30000]]),
+    SL('6-24', '6/24', [['修繕費', '小口現金', '網戸修理代', 4400], ['手数料', '小口現金', '振込手数料', 660]]),
+  ] },
+  { id: 1, at: '令和8年 6月2日', slips: [
+    SL('5-8', '5/8', [['保育材料費', '小口現金', '折り紙・画用紙', 3190]]),
+    SL('5-20', '5/20', [['小口現金', '普通預金（保育園）', '普通預金より', 30000]]),
+    SL('5-27', '5/27', [['福利厚生費', '小口現金', '検便代', 6930]]),
+  ] },
+];
+const BANK_LINK_SEED: LinkRun[] = [
+  { id: 2, at: '令和8年 8月3日', slips: [
+    SL('7-6', '7/6', [['通信運搬費', '普通預金（保育園）', '電話料金', 8804]]),
+    SL('7-17', '7/17', [['普通預金（保育園）', '委託費収益', '委託費－７月分', 2715900], ['職員俸給', '普通預金（保育園）', '職員俸給', 1502512]]),
+  ] },
+  { id: 1, at: '令和8年 7月2日', slips: [
+    SL('6-5', '6/5', [['通信運搬費', '普通預金（保育園）', '電話料金', 8712]]),
+    SL('6-19', '6/19', [['普通預金（保育園）', '委託費収益', '委託費－６月分', 2698150], ['職員俸給', '普通預金（保育園）', '職員俸給', 1498300]]),
+  ] },
+];
+/** 伝票日付（'M/D'）の並び順と表示 */
+const slipOrd = (date: string) => { const [m, d] = date.split('/'); return dateOrd(m, d); };
+const slipDateText = (date: string) => { const [m, d] = date.split('/'); return `令和${eraOf({ month: m })}年 ${m}月${d}日`; };
+/** 伝票日付の範囲（対象の期間） */
+function spanOf(dates: string[]): { from: string; to: string } {
+  const s = [...dates].sort((a, b) => slipOrd(a) - slipOrd(b));
+  return { from: s[0] ?? '', to: s[s.length - 1] ?? '' };
+}
+const spanText = (sp: { from: string; to: string }) => {
+  if (!sp.from) return '―';
+  if (sp.from === sp.to) return slipDateText(sp.from);
+  const [fm] = sp.from.split('/');
+  const [tm, td] = sp.to.split('/');
+  return `${slipDateText(sp.from)}〜${eraOf({ month: fm }) === eraOf({ month: tm }) ? `${tm}月${td}日` : slipDateText(sp.to)}`;
+};
+const runSpan = (run: LinkRun) => spanOf(run.slips.map((s) => s.date));
+const slipTotal = (s: LinkSlip) => s.lines.reduce((a, l) => a + l.amount, 0);
+const runTotal = (run: LinkRun) => run.slips.reduce((a, s) => a + slipTotal(s), 0);
+const runLines = (run: LinkRun) => run.slips.reduce((a, s) => a + s.lines.length, 0);
+/** 連動した日（今日）の表示 */
+const todayText = () => { const d = new Date(); return `令和${d.getFullYear() - 2018}年 ${d.getMonth() + 1}月${d.getDate()}日`; };
 /** 金銭残高金種別表の金種（確認メモ #212） */
 const DENOMS: ['紙幣' | '硬貨', number][] = [['紙幣', 10000], ['紙幣', 5000], ['紙幣', 2000], ['紙幣', 1000], ['硬貨', 500], ['硬貨', 100], ['硬貨', 50], ['硬貨', 10], ['硬貨', 5], ['硬貨', 1]];
 /** 日付（令和の年/月/日）ごとの金種別の枚数。サンプルは出納帳のサンプルの残高に合わせた作例 */
@@ -197,14 +263,22 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
   const [setting, setSetting] = useState<{ name: string; staff: string; place: string; refill: string; fixed: string; warn: string } | null>(null);
   /** 行の挿入・編集（確認メモ #206／#207）。noteOnly＝摘要行（摘要だけ直す） */
   const [rowForm, setRowForm] = useState<{ mode: 'insert' | 'edit'; targetId: number; noteOnly: boolean; ny: boolean; month: string; day: string; tekiyo: string; account: string; inAmt: string; outAmt: string; tax: string } | null>(null);
-  /** 削除などの確認（「はい」を押したときだけ実行する） */
-  const [confirm, setConfirm] = useState<{ title: string; body: string; ok: string; onOk: () => void } | null>(null);
+  /** 削除などの確認（「はい」を押したときだけ実行する）。detail＝消す対象の内容（行の削除で表示する。確認メモ #237） */
+  const [confirm, setConfirm] = useState<{ title: string; body: string; ok: string; onOk: () => void; detail?: [label: string, value: string][] } | null>(null);
   /** 金銭残高金種別表（確認メモ #212）：日付ごとの枚数、開いている日付、入力中の枚数 */
   const [denomOpen, setDenomOpen] = useState(false);
   const [denomSheets, setDenomSheets] = useState<Record<string, Record<number, number>>>(DENOM_SEED);
   const [denomDate, setDenomDate] = useState({ era: '8', month: '8', day: '30' });
   const [denomForm, setDenomForm] = useState<Record<number, string>>({});
   const [linkOpen, setLinkOpen] = useState(false);
+  /** 過去の会計連動の履歴（新しい順。この画面で連動すると先頭に足す。確認メモ #233） */
+  const [linkRuns, setLinkRuns] = useState<LinkRun[]>(isPetty ? PETTY_LINK_SEED : BANK_LINK_SEED);
+  /** 「会計側で伝票として既に取り込まれています」の注意（確認メモ #234） */
+  const [linkWarn, setLinkWarn] = useState(false);
+  /** 会計側で作成された仕訳伝票の確認（確認メモ #233／#234）。fresh＝いま連動して作成したもの */
+  const [slipView, setSlipView] = useState<{ run: LinkRun; idx: number; fresh: boolean } | null>(null);
+  /** 出納帳の一覧（スクロールする枠）。登録した明細が見える位置までスクロールする（確認メモ #236） */
+  const listRef = useRef<HTMLDivElement>(null);
   const [aiOpen, setAiOpen] = useState(false);
   const [aiLines, setAiLines] = useState<AiLine[]>([]);
   const [aiFileName, setAiFileName] = useState('');
@@ -273,6 +347,8 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
     setRows((rs) => [...rs, R(m, entry.day, entry.tekiyo, entry.account, inAmt, outAmt, { ...(nyMonth ? { ny: true } : {}), ...(entry.tax ? { tax: entry.tax } : {}) })]);
     setEntry({ inAmt: '', month: entry.month, day: '', tekiyo: '', account: '', outAmt: '', tax: '' });
     focusId('cb-in');
+    // 登録欄は一覧の上に固定しているので、一覧の最後に入った明細が見える位置までスクロールする（確認メモ #236）
+    setTimeout(() => { const el = listRef.current; if (el) el.scrollTop = el.scrollHeight; }, 0);
   };
 
   // ---- 行の挿入・編集・削除、特殊行の挿入（行の右のボタンから。確認メモ #206／#207／#209） ----
@@ -314,8 +390,11 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
   const askDelete = (r: Row) => {
     if (r.aggregated) return lockedMsg();
     if (r.special && !canInsertAt(r.id)) return lockedMsg();
-    const what = r.special ? (r.special === '摘要行' ? `摘要行「${r.tekiyo}」` : r.special) : `${r.month}月${r.day}日「${r.tekiyo}」（${yen(r.inAmt || r.outAmt)}円）`;
-    setConfirm({ title: '行の削除', body: `${what} を削除します。よろしいですか？`, ok: '削除する', onOk: () => { setRows((rs) => rs.filter((x) => x.id !== r.id)); toast.show('行を削除しました'); } });
+    // 即時には消さず、消す明細の内容を示して確認する（確認メモ #237）
+    const detail: [string, string][] = r.special
+      ? [['種類', r.special], ...(r.special === '摘要行' ? [['摘要', r.tekiyo] as [string, string]] : [])]
+      : [['年月日', dateText(r)], ['摘要', r.tekiyo || '（なし）'], ['勘定科目', `${r.code ? `${r.code} ` : ''}${r.account}`], [r.inAmt ? '入金額' : '出金額', `${yen(r.inAmt || r.outAmt)} 円`]];
+    setConfirm({ title: '行の削除', body: `次の${r.special ? '行' : '明細'}を削除します。削除すると元に戻せません。よろしいですか？`, ok: '削除する', detail, onOk: () => { setRows((rs) => rs.filter((x) => x.id !== r.id)); toast.show('行を削除しました'); } });
   };
   const openSpecial = (r: Row) => { if (!canInsertAt(r.id)) return insertLockMsg(); setSpecialTarget(r.id); };
   const specialRow = rows.find((r) => r.id === specialTarget);
@@ -451,16 +530,34 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
   });
   const linkTargets = withBal.filter((r) => !r.special && r.aggregated && !r.linked && !r.ny);
   const linkNyHold = withBal.filter((r) => !r.special && r.aggregated && !r.linked && r.ny).length;
-  const openLink = () => {
-    if (linkTargets.length === 0) return toast.show('会計連動できる明細がありません（先に「集計」を実行してください）');
-    setLinkOpen(true);
-  };
-  const runLink = () => {
+  /** 集計済みの明細がなくても開ける（過去の会計連動を確認するため。確認メモ #233） */
+  const openLink = () => setLinkOpen(true);
+  /** 今回の対象の期間（作成する伝票の日付の範囲）と、その期間に重なる過去の会計連動（確認メモ #234） */
+  const linkSpan = spanOf(linkTargets.map((r) => journalOf(r).date));
+  const linkOverlap = linkTargets.length === 0 ? [] : linkRuns.filter((run) => { const sp = runSpan(run); return slipOrd(sp.from) <= slipOrd(linkSpan.to) && slipOrd(linkSpan.from) <= slipOrd(sp.to); });
+  /** force＝「会計側で伝票として既に取り込まれています」の注意で「続ける」を押したとき */
+  const runLink = (force = false) => {
+    if (linkTargets.length === 0) return;
+    if (!force && linkOverlap.length > 0) return setLinkWarn(true);
     const service = isPetty ? curPetty?.place ?? '002 保育事業' : '002 保育事業';
-    linkTargets.forEach((r) => addVoucher({ kind: '伝票', ...journalOf(r), service, shohyo: false }));
+    // 会計側で作成された伝票を控える（伝票番号と伝票日付が同じ行は、同じ伝票にまとまる）
+    const slipMap = new Map<string, LinkSlip>();
+    linkTargets.forEach((r) => {
+      const j = journalOf(r);
+      const v = addVoucher({ kind: '伝票', ...j, service, shohyo: false });
+      const key = `${v.date}|${v.no}`;
+      const s = slipMap.get(key) ?? { no: v.no, date: v.date, service, lines: [] };
+      s.lines.push({ kari: j.kari, kashi: j.kashi, tekiyo: j.tekiyo, amount: j.amount });
+      slipMap.set(key, s);
+    });
+    const run: LinkRun = { id: Date.now(), at: todayText(), slips: [...slipMap.values()] };
     setRows((rs) => rs.map((r) => (linkTargets.some((t) => t.id === r.id) ? { ...r, linked: true } : r)));
+    setLinkRuns((rs) => [run, ...rs]);
+    setLinkWarn(false);
     setLinkOpen(false);
-    toast.show(`${linkTargets.length} 件の仕訳伝票を作成しました（仕訳一覧・元帳に反映）`);
+    // 連動のあと、会計側で作成された仕訳伝票を表示する（確認メモ #234）
+    setSlipView({ run, idx: 0, fresh: true });
+    toast.show(`仕訳伝票 ${run.slips.length} 件（明細 ${linkTargets.length} 行）を作成しました（仕訳一覧・元帳に反映）`);
   };
 
   // ---- AI自動仕訳 インポート ----
@@ -523,6 +620,8 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
 
   const cell: CSSProperties = { ...TD, padding: '6px 10px', borderRight: '1px solid #eef2f5' };
   const numCell: CSSProperties = { ...NUM, padding: '6px 10px', borderRight: '1px solid #eef2f5' };
+  /** 入力行（登録欄）のセル：固定表示のとき下の明細が透けないよう背景を塗り、下の線はスクロールしても残るよう影で引く（確認メモ #236） */
+  const entryCell: CSSProperties = { background: '#fbfcfd', borderBottom: 'none', boxShadow: `inset 0 -2px 0 ${accent}` };
   const inp: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '6px 8px', border: '1px solid #cfd8e0', borderRadius: 6, fontSize: 14, fontFamily: 'inherit', outline: 'none', background: '#fff' };
   const fieldBtn: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, width: '100%', boxSizing: 'border-box', padding: '6px 8px', background: '#fff', border: '1px solid #cfd8e0', borderRadius: 6, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left', color: 'inherit' };
   const btn = (primary?: boolean): CSSProperties => ({ padding: '8px 16px', borderRadius: 8, border: primary ? 'none' : '1px solid #cfd8e0', background: primary ? accent : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
@@ -627,9 +726,10 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       </div>
 
       {/* 出納帳 */}
-      <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 400px)' }}>
+      {/* 見出しと入力行（登録欄）は一覧の上に固定する（確認メモ #236）。勘定科目の候補を開いている間は、候補が欠けない高さを確保する */}
+      <div ref={listRef} data-cashbook-list style={{ overflow: 'auto', maxHeight: 'calc(100vh - 400px)', minHeight: assist.isOpen('acc') ? 400 : undefined }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
+          <thead data-sticky-head style={{ position: 'sticky', top: 0, zIndex: 3 }}>
             <tr>
               <th style={{ ...TH, textAlign: 'right', width: taxEntry ? 100 : 120 }}>入金額</th>
               <th style={{ ...TH, width: 160 }}>年月日</th>
@@ -640,6 +740,35 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
               <th style={{ ...TH, textAlign: 'right', width: taxEntry ? 100 : 120 }}>出金額</th>
               <th style={{ ...TH, textAlign: 'right', width: taxEntry ? 112 : 130 }}>残高</th>
               <th style={{ ...TH, width: isPetty ? 204 : 70 }} />
+            </tr>
+            {/* 入力行（登録欄）。見出しのすぐ下に置き、一覧をスクロールしても上に張り付く（確認メモ #236） */}
+            <tr data-entry-row style={{ background: '#fbfcfd' }}>
+              <td style={{ ...cell, ...entryCell, padding: '8px 8px' }}><input id="cb-in" className="field-input ring" value={entry.inAmt} onChange={(e) => setEntry({ ...entry, inAmt: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => focusId('cb-day'))} inputMode="numeric" placeholder="入金" style={{ ...inp, textAlign: 'right' }} /></td>
+              <td style={{ ...cell, ...entryCell, padding: '8px 8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 14, color: nyMonth ? '#8a6516' : '#5b6773', whiteSpace: 'nowrap' }}>
+                  <span title={nyMonth ? '翌年度の予備月（令和9年）の明細として登録します' : undefined}>令和{nyMonth ? 9 : eraOf({ month: entry.month })}</span>
+                  <input className="field-input" aria-label="月" value={nyMonth ?? entry.month} readOnly={!!nyMonth} onChange={(e) => setEntry({ ...entry, month: e.target.value.replace(/[^0-9]/g, '').slice(0, 2) })} inputMode="numeric" title={nyMonth ? '翌年度の予備月を表示中は、月を変えられません（月のボタンで切り替えます）' : undefined} style={{ ...inp, width: 34, padding: '6px 2px', textAlign: 'center', background: nyMonth ? '#fffaf0' : '#fff' }} />
+                  <input id="cb-day" className="field-input" aria-label="日" value={entry.day} onChange={(e) => setEntry({ ...entry, day: e.target.value.replace(/[^0-9]/g, '').slice(0, 2) })} onKeyDown={onEnter(() => focusId('cb-tekiyo'))} inputMode="numeric" placeholder="日" style={{ ...inp, width: 34, padding: '6px 2px', textAlign: 'center' }} />
+                </div>
+              </td>
+              <td style={{ ...cell, ...entryCell, padding: '8px 8px' }}><input id="cb-tekiyo" className="field-input ring" value={entry.tekiyo} onChange={(e) => setEntry({ ...entry, tekiyo: e.target.value })} onKeyDown={onEnter(() => focusId('cb-acc'))} placeholder="摘要" autoComplete="off" style={inp} /></td>
+              <td style={{ ...cell, ...entryCell, padding: '8px 8px' }}>
+                <AssistField buttonId="cb-acc" value={entry.account} placeholder="勘定科目検索" open={assist.isOpen('acc')} onOpen={() => assist.open('acc', 'account')} accent={accent} accentRgb={accentRgb} buttonStyle={fieldBtn} panelStyle={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, width: 260, zIndex: 60 }} groups={assist.groups} query={assist.query} empty={assist.empty} onInput={assist.setQuery} onPick={(v) => { setEntry((en) => ({ ...en, account: v })); assist.close(); focusId('cb-out'); }} />
+              </td>
+              {taxEntry && (
+                <>
+                  <td style={{ ...cell, ...entryCell, padding: '8px 6px' }}>
+                    <select aria-label="消費税コード（入力行）" value={entryTax} onChange={(e) => setEntry({ ...entry, tax: e.target.value })} title="勘定科目から自動で決まります。変える場合だけ選びます" style={{ ...inp, padding: '6px 4px' }}>
+                      <option value="">（科目から自動）</option>
+                      {TAX_CODES.map((t) => <option key={t.code} value={t.code}>{t.code} {t.name}</option>)}
+                    </select>
+                  </td>
+                  <td style={{ ...numCell, ...entryCell, color: '#5b6773' }}>{entryTax ? yen(taxAmtOf(entryTax, num(entry.inAmt) || num(entry.outAmt))) : ''}</td>
+                </>
+              )}
+              <td style={{ ...cell, ...entryCell, padding: '8px 8px' }}><input id="cb-out" className="field-input ring" value={entry.outAmt} onChange={(e) => setEntry({ ...entry, outAmt: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(add)} inputMode="numeric" placeholder="出金" style={{ ...inp, textAlign: 'right' }} /></td>
+              <td style={{ ...numCell, ...entryCell, color: '#9aa5b1', fontSize: 12 }}>自動計算</td>
+              <td style={{ ...TD, ...entryCell, padding: '8px 8px', textAlign: 'right' }}><button type="button" className="submit-btn" onClick={add} style={{ ...btn(true), padding: '7px 12px', fontSize: 14 }}>登録</button></td>
             </tr>
           </thead>
           <tbody>
@@ -681,35 +810,6 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
                 </tr>
               );
             })}
-            {/* 入力行 */}
-            <tr style={{ background: '#fbfcfd', borderTop: `2px solid ${accent}` }}>
-              <td style={{ ...cell, padding: '8px 8px' }}><input id="cb-in" className="field-input ring" value={entry.inAmt} onChange={(e) => setEntry({ ...entry, inAmt: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => focusId('cb-day'))} inputMode="numeric" placeholder="入金" style={{ ...inp, textAlign: 'right' }} /></td>
-              <td style={{ ...cell, padding: '8px 8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 14, color: nyMonth ? '#8a6516' : '#5b6773', whiteSpace: 'nowrap' }}>
-                  <span title={nyMonth ? '翌年度の予備月（令和9年）の明細として登録します' : undefined}>令和{nyMonth ? 9 : eraOf({ month: entry.month })}</span>
-                  <input className="field-input" aria-label="月" value={nyMonth ?? entry.month} readOnly={!!nyMonth} onChange={(e) => setEntry({ ...entry, month: e.target.value.replace(/[^0-9]/g, '').slice(0, 2) })} inputMode="numeric" title={nyMonth ? '翌年度の予備月を表示中は、月を変えられません（月のボタンで切り替えます）' : undefined} style={{ ...inp, width: 34, padding: '6px 2px', textAlign: 'center', background: nyMonth ? '#fffaf0' : '#fff' }} />
-                  <input id="cb-day" className="field-input" aria-label="日" value={entry.day} onChange={(e) => setEntry({ ...entry, day: e.target.value.replace(/[^0-9]/g, '').slice(0, 2) })} onKeyDown={onEnter(() => focusId('cb-tekiyo'))} inputMode="numeric" placeholder="日" style={{ ...inp, width: 34, padding: '6px 2px', textAlign: 'center' }} />
-                </div>
-              </td>
-              <td style={{ ...cell, padding: '8px 8px' }}><input id="cb-tekiyo" className="field-input ring" value={entry.tekiyo} onChange={(e) => setEntry({ ...entry, tekiyo: e.target.value })} onKeyDown={onEnter(() => focusId('cb-acc'))} placeholder="摘要" autoComplete="off" style={inp} /></td>
-              <td style={{ ...cell, padding: '8px 8px' }}>
-                <AssistField buttonId="cb-acc" value={entry.account} placeholder="勘定科目検索" open={assist.isOpen('acc')} onOpen={() => assist.open('acc', 'account')} accent={accent} accentRgb={accentRgb} buttonStyle={fieldBtn} panelStyle={{ position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, width: 260, zIndex: 60 }} groups={assist.groups} query={assist.query} empty={assist.empty} onInput={assist.setQuery} onPick={(v) => { setEntry((en) => ({ ...en, account: v })); assist.close(); focusId('cb-out'); }} />
-              </td>
-              {taxEntry && (
-                <>
-                  <td style={{ ...cell, padding: '8px 6px' }}>
-                    <select aria-label="消費税コード（入力行）" value={entryTax} onChange={(e) => setEntry({ ...entry, tax: e.target.value })} title="勘定科目から自動で決まります。変える場合だけ選びます" style={{ ...inp, padding: '6px 4px' }}>
-                      <option value="">（科目から自動）</option>
-                      {TAX_CODES.map((t) => <option key={t.code} value={t.code}>{t.code} {t.name}</option>)}
-                    </select>
-                  </td>
-                  <td style={{ ...numCell, color: '#5b6773' }}>{entryTax ? yen(taxAmtOf(entryTax, num(entry.inAmt) || num(entry.outAmt))) : ''}</td>
-                </>
-              )}
-              <td style={{ ...cell, padding: '8px 8px' }}><input id="cb-out" className="field-input ring" value={entry.outAmt} onChange={(e) => setEntry({ ...entry, outAmt: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(add)} inputMode="numeric" placeholder="出金" style={{ ...inp, textAlign: 'right' }} /></td>
-              <td style={{ ...numCell, color: '#9aa5b1', fontSize: 12 }}>自動計算</td>
-              <td style={{ ...TD, padding: '8px 8px', textAlign: 'right' }}><button type="button" className="submit-btn" onClick={add} style={{ ...btn(true), padding: '7px 12px', fontSize: 14 }}>登録</button></td>
-            </tr>
           </tbody>
         </table>
       </div>
@@ -884,28 +984,146 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
         </div>
       </Modal>
 
-      {/* ---- 会計連動：確認 ---- */}
+      {/* ---- 会計連動：確認。集計済みの明細がなくても開き、過去の会計連動を確認できる（確認メモ #233） ---- */}
       <Modal open={linkOpen} onClose={() => setLinkOpen(false)} width={860} title="会計連動 ― 作成する仕訳伝票の確認">
-        <div style={{ padding: '14px 22px 18px' }}>
-          <div style={{ fontSize: 14, marginBottom: 10 }}>集計済みの明細 <b>{linkTargets.length} 件</b> を、次の仕訳伝票として会計システムへ送ります。相手科目は <b>{cashAccount}</b> です。</div>
-          <div style={{ maxHeight: 360, overflow: 'auto', border: '1px solid #e2e8ee', borderRadius: 10 }}>
+        <div data-link style={{ padding: '14px 22px 18px' }}>
+          {linkTargets.length > 0 ? (
+            <>
+              <div style={{ fontSize: 14, marginBottom: 10 }}>集計済みの明細 <b>{linkTargets.length} 件</b> を、次の仕訳伝票として会計システムへ送ります。相手科目は <b>{cashAccount}</b> です。<span style={{ color: '#7a8794', marginLeft: 8 }}>（対象の期間：{spanText(linkSpan)}）</span></div>
+              <div style={{ maxHeight: 236, overflow: 'auto', border: '1px solid #e2e8ee', borderRadius: 10 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead><tr><th style={TH}>日付</th><th style={TH}>借方科目</th><th style={TH}>貸方科目</th><th style={TH}>摘要</th><th style={{ ...TH, textAlign: 'right' }}>金額</th></tr></thead>
+                  <tbody>
+                    {linkTargets.map((r) => { const j = journalOf(r); return (
+                      <tr key={r.id}><td style={{ ...TD, whiteSpace: 'nowrap' }}>令和{eraOf({ month: j.date.split('/')[0] })}年 {j.date.replace('/', '月')}日</td><td style={TD}>{j.kari}</td><td style={TD}>{j.kashi}</td><td style={TD}>{j.tekiyo}</td><td style={{ ...NUM, fontWeight: 700 }}>{yen(j.amount)}</td></tr>
+                    ); })}
+                    <tr style={{ background: '#f6f8fa' }}><td colSpan={4} style={{ ...TD, fontWeight: 700, textAlign: 'right' }}>合計</td><td style={{ ...NUM, fontWeight: 700 }}>{yen(linkTargets.reduce((a, r) => a + (r.inAmt || r.outAmt), 0))}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div style={{ marginTop: 10, padding: '10px 14px', background: '#f3f6f9', borderRadius: 10, fontSize: 14, color: '#48565f', lineHeight: 1.7 }}>伝票は「伝票」区分・証憑なしで登録され、仕訳一覧・勘定元帳に反映されます。連動済みの明細は二重に送られません。</div>
+            </>
+          ) : (
+            <div data-link-empty style={{ border: '2px dashed #cfd8e0', borderRadius: 12, padding: '20px 20px', textAlign: 'center' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#48565f' }}>今回連動するデータはありません</div>
+              <div style={{ fontSize: 12, color: '#7a8794', marginTop: 6, lineHeight: 1.7 }}>集計済みで、まだ会計へ連動していない明細がありません。連動するときは、先に「集計」を実行してください。<br />過去に行った会計連動は、下の一覧で確認できます。</div>
+            </div>
+          )}
+          {linkNyHold > 0 && <div data-link-ny style={{ marginTop: 8, padding: '8px 14px', background: '#fffaf0', border: '1px dashed #b98a2e', borderRadius: 10, fontSize: 14, color: '#7a5a14', lineHeight: 1.7 }}>翌年度の予備月（令和9年 4〜6月）の明細 {linkNyHold} 件は、翌年度の伝票になるため、ここでは送りません。</div>}
+          {/* 過去の会計連動の履歴（確認メモ #233）。行の「伝票を見る」で、そのとき作成した伝票を開く */}
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', margin: '16px 0 8px' }}>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>過去の会計連動</div>
+            <div style={{ fontSize: 12, color: '#7a8794' }}>「伝票を見る」で、そのとき会計側に作成した仕訳伝票を確認できます。</div>
+          </div>
+          <div data-link-history style={{ maxHeight: 180, overflow: 'auto', border: '1px solid #e2e8ee', borderRadius: 10 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead><tr><th style={TH}>日付</th><th style={TH}>借方科目</th><th style={TH}>貸方科目</th><th style={TH}>摘要</th><th style={{ ...TH, textAlign: 'right' }}>金額</th></tr></thead>
+              <thead><tr><th style={TH}>連動した日</th><th style={TH}>対象の期間</th><th style={{ ...TH, textAlign: 'right' }}>伝票の件数</th><th style={{ ...TH, textAlign: 'right' }}>金額の合計</th><th style={{ ...TH, width: 110 }} /></tr></thead>
               <tbody>
-                {linkTargets.map((r) => { const j = journalOf(r); return (
-                  <tr key={r.id}><td style={{ ...TD, whiteSpace: 'nowrap' }}>令和{eraOf({ month: j.date.split('/')[0] })}年 {j.date.replace('/', '月')}日</td><td style={TD}>{j.kari}</td><td style={TD}>{j.kashi}</td><td style={TD}>{j.tekiyo}</td><td style={{ ...NUM, fontWeight: 700 }}>{yen(j.amount)}</td></tr>
-                ); })}
-                <tr style={{ background: '#f6f8fa' }}><td colSpan={4} style={{ ...TD, fontWeight: 700, textAlign: 'right' }}>合計</td><td style={{ ...NUM, fontWeight: 700 }}>{yen(linkTargets.reduce((a, r) => a + (r.inAmt || r.outAmt), 0))}</td></tr>
+                {linkRuns.length === 0 && <tr><td colSpan={5} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 24 }}>過去の会計連動はありません。</td></tr>}
+                {linkRuns.map((run) => (
+                  <tr key={run.id} data-link-run>
+                    <td style={{ ...TD, padding: '6px 14px', whiteSpace: 'nowrap' }}>{run.at}</td>
+                    <td style={{ ...TD, padding: '6px 14px', whiteSpace: 'nowrap' }}>{spanText(runSpan(run))}</td>
+                    <td style={{ ...NUM, padding: '6px 14px' }}>{run.slips.length} 件</td>
+                    <td style={{ ...NUM, padding: '6px 14px', fontWeight: 700 }}>{yen(runTotal(run))}</td>
+                    <td style={{ ...TD, padding: '6px 10px', textAlign: 'right' }}><button type="button" className="btn-outline" onClick={() => setSlipView({ run, idx: 0, fresh: false })} style={{ ...btn(), padding: '4px 10px', whiteSpace: 'nowrap' }}>伝票を見る</button></td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-          <div style={{ marginTop: 10, padding: '10px 14px', background: '#f3f6f9', borderRadius: 10, fontSize: 14, color: '#48565f', lineHeight: 1.7 }}>伝票は「伝票」区分・証憑なしで登録され、仕訳一覧・勘定元帳に反映されます。連動済みの明細は二重に送られません。</div>
-          {linkNyHold > 0 && <div data-link-ny style={{ marginTop: 8, padding: '8px 14px', background: '#fffaf0', border: '1px dashed #b98a2e', borderRadius: 10, fontSize: 14, color: '#7a5a14', lineHeight: 1.7 }}>翌年度の予備月（令和9年 4〜6月）の明細 {linkNyHold} 件は、翌年度の伝票になるため、ここでは送りません。</div>}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
-            <button type="button" className="submit-btn" onClick={runLink} style={btn(true)}>OK（{linkTargets.length} 件を送る）</button>
-            <button type="button" onClick={() => setLinkOpen(false)} style={btn()}>キャンセル</button>
+            {linkTargets.length > 0 ? (
+              <>
+                <button type="button" className="submit-btn" onClick={() => runLink()} style={btn(true)}>OK（{linkTargets.length} 件を送る）</button>
+                <button type="button" onClick={() => setLinkOpen(false)} style={btn()}>キャンセル</button>
+              </>
+            ) : (
+              <button type="button" onClick={() => setLinkOpen(false)} style={btn()}>閉じる</button>
+            )}
           </div>
         </div>
+      </Modal>
+
+      {/* ---- 会計連動：「会計側で伝票として既に取り込まれています」の注意（確認メモ #234）。今回の対象の期間が、過去の会計連動の期間と重なるときに出す ---- */}
+      <Modal open={linkWarn} onClose={() => setLinkWarn(false)} width={640} title="会計連動 ― 注意">
+        <div data-link-warn style={{ padding: '16px 22px 18px', fontSize: 14, lineHeight: 1.8 }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+            <span style={{ flex: 'none', width: 28, height: 28, borderRadius: '50%', background: '#fff1b8', color: '#8a6d00', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>!</span>
+            <div>
+              <div style={{ fontWeight: 700 }}>会計側で伝票として既に取り込まれています。</div>
+              <div>今回の対象の期間（{spanText(linkSpan)}）には、すでに会計へ連動した伝票があります。</div>
+            </div>
+          </div>
+          <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, margin: '10px 0', maxHeight: 170, overflow: 'auto' }}>
+            {linkOverlap.map((run) => (
+              <div key={run.id} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '7px 12px', borderBottom: '1px solid #f1f4f6' }}>
+                <span style={{ flex: 1 }}>{run.at} に連動　{spanText(runSpan(run))}　伝票 {run.slips.length} 件　{yen(runTotal(run))}円</span>
+                <button type="button" className="btn-outline" onClick={() => setSlipView({ run, idx: 0, fresh: false })} style={{ ...btn(), padding: '4px 10px', whiteSpace: 'nowrap' }}>伝票を見る</button>
+              </div>
+            ))}
+          </div>
+          <div>このまま続けると、この期間の伝票が追加で作成されます。同じ内容の伝票が二重にならないか確認してください。続けますか？</div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
+            <button type="button" className="submit-btn" onClick={() => runLink(true)} style={btn(true)}>続ける（{linkTargets.length} 件を送る）</button>
+            <button type="button" onClick={() => setLinkWarn(false)} style={btn()}>キャンセル</button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ---- 会計側で作成された仕訳伝票の確認（確認メモ #233／#234）。連動の直後と、履歴の「伝票を見る」から開く。
+               本番では会計の伝票画面を開く。プロトタイプでは、この画面の中で「会計の伝票」として内容を表示する ---- */}
+      <Modal open={slipView != null} onClose={() => setSlipView(null)} width={1000} title="会計の仕訳伝票 ― 会計連動で作成した伝票">
+        {slipView && (() => { const { run, idx, fresh } = slipView; const s = run.slips[idx]; const go = (i: number) => setSlipView({ run, idx: i, fresh }); const head: [string, string][] = [['伝票番号', s.no], ['伝票日付', slipDateText(s.date)], ['伝票の形式', '仕訳伝票形式'], ['伝票入力区分', s.service], ['作成元', `${title}（会計連動）`], ['証憑', 'なし']]; return (
+          <div data-link-slips style={{ padding: '14px 22px 18px' }}>
+            {fresh && <div data-link-done style={{ marginBottom: 10, padding: '8px 14px', background: '#eaf5ef', borderRadius: 10, fontSize: 14, fontWeight: 700, color: '#1f7a52' }}>会計へ連動しました。会計側で作成された仕訳伝票は、次のとおりです。</div>}
+            <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', fontSize: 14, color: '#5b6773', marginBottom: 10 }}>
+              <span>連動した日 <b style={{ color: '#22303c' }}>{run.at}</b></span>
+              <span>対象の期間 <b style={{ color: '#22303c' }}>{spanText(runSpan(run))}</b></span>
+              <span>伝票 <b style={{ color: '#22303c' }}>{run.slips.length} 件</b>（明細 {runLines(run)} 行）</span>
+              <span>金額の合計 <b style={{ color: '#22303c', fontVariantNumeric: 'tabular-nums' }}>{yen(runTotal(run))} 円</b></span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '320px minmax(0, 1fr)', gap: 14, alignItems: 'start' }}>
+              {/* 作成された伝票の一覧（行を押すと、右にその伝票の内容を表示する） */}
+              <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'auto', maxHeight: 380 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead><tr><th style={TH}>伝票番号</th><th style={TH}>伝票日付</th><th style={{ ...TH, textAlign: 'right' }}>金額</th></tr></thead>
+                  <tbody>
+                    {run.slips.map((x, i) => (
+                      <tr key={`${i}|${x.date}|${x.no}`} data-slip-row onClick={() => go(i)} title="この伝票の内容を表示します" style={{ cursor: 'pointer', background: i === idx ? '#fff8c4' : 'transparent' }}>
+                        <td style={{ ...TD, padding: '7px 14px', fontWeight: 700 }}>{x.no}</td>
+                        <td style={{ ...TD, padding: '7px 14px', whiteSpace: 'nowrap' }}>{x.date.replace('/', '月')}日</td>
+                        <td style={{ ...NUM, padding: '7px 14px' }}>{yen(slipTotal(x))}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {/* 伝票 1 件の内容 */}
+              <div data-slip-detail style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'hidden' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) auto minmax(0, 1fr)', gap: '6px 12px', padding: '12px 14px', background: '#fbfcfd', borderBottom: '1px solid #eef2f5', fontSize: 14, alignItems: 'baseline' }}>
+                  {head.map(([k, v]) => [<span key={`${k}-l`} style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', whiteSpace: 'nowrap' }}>{k}</span>, <span key={`${k}-v`} style={{ fontWeight: k === '伝票番号' ? 700 : 400 }}>{v}</span>])}
+                </div>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead><tr><th style={{ ...TH, width: 40 }}>行</th><th style={TH}>借方科目</th><th style={TH}>貸方科目</th><th style={{ ...TH, textAlign: 'right' }}>金額</th><th style={TH}>摘要</th></tr></thead>
+                  <tbody>
+                    {s.lines.map((l, i) => (
+                      <tr key={i}><td style={{ ...TD, color: '#7a8794' }}>{i + 1}</td><td style={TD}>{l.kari}</td><td style={TD}>{l.kashi}</td><td style={{ ...NUM, fontWeight: 700 }}>{yen(l.amount)}</td><td style={TD}>{l.tekiyo}</td></tr>
+                    ))}
+                    <tr style={{ background: '#f6f8fa' }}><td colSpan={3} style={{ ...TD, fontWeight: 700, textAlign: 'right', borderBottom: 'none' }}>合計</td><td style={{ ...NUM, fontWeight: 700, borderBottom: 'none' }}>{yen(slipTotal(s))}</td><td style={{ ...TD, borderBottom: 'none' }} /></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14 }}>
+              <button type="button" className="btn-outline" disabled={idx === 0} onClick={() => go(idx - 1)} style={{ ...btn(), opacity: idx === 0 ? 0.5 : 1 }}>前の伝票</button>
+              <button type="button" className="btn-outline" disabled={idx >= run.slips.length - 1} onClick={() => go(idx + 1)} style={{ ...btn(), opacity: idx >= run.slips.length - 1 ? 0.5 : 1 }}>次の伝票</button>
+              <span style={{ fontSize: 14, color: '#7a8794' }}>{idx + 1} ／ {run.slips.length} 件目</span>
+              <span style={{ fontSize: 12, color: '#7a8794', marginLeft: 8 }}>※ 本番では会計の伝票画面を開いて表示します（プロトタイプでは、この画面で伝票の内容を表示します）。</span>
+              <button type="button" onClick={() => setSlipView(null)} style={{ ...btn(), marginLeft: 'auto' }}>閉じる</button>
+            </div>
+          </div>
+        ); })()}
       </Modal>
 
       {/* ---- AI自動仕訳 インポート ---- */}
@@ -1127,9 +1345,15 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       <ExportDialog spec={exportSpec} onClose={() => setExportSpec(null)} accent={accent} />
 
       {/* ---- 確認（削除など）。ほかのモーダルの上に重ねる ---- */}
-      <Modal open={confirm != null} onClose={() => setConfirm(null)} width={440} title={confirm?.title ?? '確認'}>
+      <Modal open={confirm != null} onClose={() => setConfirm(null)} width={confirm?.detail ? 520 : 440} title={confirm?.title ?? '確認'}>
         <div data-confirm style={{ padding: '16px 22px 18px' }}>
           <div style={{ fontSize: 14, lineHeight: 1.8 }}>{confirm?.body}</div>
+          {/* 削除する明細の内容（確認メモ #237）。どのデータを消すのかを、項目ごとに示す */}
+          {confirm?.detail && (
+            <div data-delete-target style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr)', gap: '6px 14px', marginTop: 10, padding: '12px 14px', background: '#fdf3f1', border: '1px solid #f1cfc8', borderRadius: 10, fontSize: 14, alignItems: 'baseline' }}>
+              {confirm.detail.map(([k, v]) => [<span key={`${k}-l`} style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', whiteSpace: 'nowrap' }}>{k}</span>, <span key={`${k}-v`} style={{ fontWeight: 700, overflowWrap: 'anywhere' }}>{v}</span>])}
+            </div>
+          )}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
             <button type="button" onClick={() => { const c = confirm; setConfirm(null); c?.onOk(); }} style={{ ...btn(), background: '#c0392b', color: '#fff', border: 'none' }}>{confirm?.ok ?? '削除する'}</button>
             <button type="button" onClick={() => setConfirm(null)} style={btn()}>キャンセル</button>

@@ -16,6 +16,8 @@ export function ordinal(date: string): number {
   return (mi < 0 ? 0 : mi) * 31 + (parseInt(d, 10) || 1);
 }
 export const inPeriod = (date: string, p: Period) => ordinal(date) >= ordinal(p.from) && ordinal(date) <= ordinal(p.to);
+/** 月タブ（1か月／全月）と期間（月の範囲・日付の範囲）での絞り込み。期間があれば月タブより優先する */
+export const matchPeriod = (date: string, month: string | null, range?: Period | null) => (range ? inPeriod(date, range) : month == null || date.split('/')[0] === month);
 
 /** 1か月（月初〜月末） */
 export const monthPeriod = (m: string): Period => ({ from: `${m}/1`, to: `${m}/${lastDayOf(m)}` });

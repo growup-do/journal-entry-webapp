@@ -3,9 +3,10 @@
 //   FinderPanel        … ホーム（ダッシュボード）に置く「機能から探す」：検索ボックス＋全機能の一覧。
 //                        別画面には飛ばさず、検索ボックスに入力するとその場で一覧を絞り込む（確認メモ #147／#148）。
 //   FunctionFinderPage … 左メニューの「機能から探す」から開く画面（中身はホームと同じ一覧）。
+//   重要度（確認メモ #241）：重要度の高い機能はアイコンつきの大きなタイル、中の機能はアイコンつきのやや大きいボタン、ほかは従来のボタンで出す。
 
 import { useMemo, useRef, useState } from 'react';
-import type { CSSProperties, KeyboardEvent } from 'react';
+import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import { HOME_CHECKS, MENU_GROUPS, SETTINGS_GROUPS, displayName, settingsMenuName } from '../data';
 import { startKindOf, useSession } from '../store/session';
 
@@ -14,7 +15,7 @@ interface Group { key: string; label: string; note: string; danger: boolean; ite
 function allGroups(): Group[] {
   return [
     ...MENU_GROUPS.map((g) => ({ key: g.key, label: g.label, note: '', danger: false, items: g.items })),
-    { key: 'audit', label: '調査・チェック', note: 'ホーム（ダッシュボード）から開きます', danger: false, items: HOME_CHECKS },
+    { key: 'audit', label: '調査・チェック', note: 'ヘッダーの区分名の横のボタンからも開けます', danger: false, items: HOME_CHECKS },
     ...SETTINGS_GROUPS.filter((g) => g.key !== 'web').map((g) => ({ key: 's-' + g.key, label: '各種設定 › ' + g.label, note: g.note ?? '', danger: !!g.danger, items: g.items })),
   ];
 }
@@ -44,9 +45,28 @@ function filterGroups(q: string): Group[] {
 }
 const INPUT_ONLY = ['単一入力', '伝票入力', '振替入力', '振替単一'];
 
+/* ---------------- 重要度（確認メモ #241：▲＝高、△＝中、無印＝低） ---------------- */
+type Priority = 'high' | 'mid';
+const PRIORITY: Record<string, Priority> = { 伝票入力: 'high', 印刷センター: 'high', 小口現金: 'high', 減価償却: 'high', 預金出納: 'high', 決算調査: 'mid', 予算: 'mid' };
+const PRIORITY_LABEL: Record<Priority, string> = { high: '重要度：高', mid: '重要度：中' };
+/** 重要度つきの機能のアイコン（24×24 の線画） */
+const ICONS: Record<string, ReactNode> = {
+  伝票入力: <><path d="M6 3h9l4 4v14H6z" /><path d="M15 3v4h4" /><path d="M9 12h7M9 16h7" /></>,
+  印刷センター: <><path d="M7 8V3h10v5" /><path d="M7 17H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-3" /><path d="M7 13h10v8H7z" /></>,
+  小口現金: <><path d="M4 7h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10v3" /><path d="M20 12h-4a2 2 0 0 0 0 4h4" /></>,
+  減価償却: <><path d="M3 3v18h18" /><path d="M7 8l4 4 3-3 5 6" /><path d="M19 11v4h-4" /></>,
+  預金出納: <><path d="M3 10l9-6 9 6" /><path d="M4 10h16" /><path d="M6 10v8M10 10v8M14 10v8M18 10v8" /><path d="M3 21h18M4 18h16" /></>,
+  決算調査: <><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /><path d="M8 11l2 2 4-4" /></>,
+  予算: <><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M8 7h8" /><path d="M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01" /></>,
+};
+function FnIcon({ name, size, color }: { name: string; size: number; color: string }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flex: 'none' }}>{ICONS[name]}</svg>;
+}
+
 /* ---------------- 全機能の一覧（分類ごと） ---------------- */
-function FunctionDirectory({ groups, onNavigate, first, minCol = 250 }: { groups: Group[]; onNavigate: (label: string) => void; /** 検索中：Enter で開く先頭の項目（強調表示） */ first?: string; /** 列の最小幅 */ minCol?: number }) {
+function FunctionDirectory({ groups, onNavigate, first, minCol = 250, accent }: { groups: Group[]; onNavigate: (label: string) => void; accent: string; /** 検索中：Enter で開く先頭の項目（強調表示） */ first?: string; /** 列の最小幅 */ minCol?: number }) {
   const kind = startKindOf(useSession());
+  const tint = (pct: number) => 'color-mix(in srgb, ' + accent + ' ' + pct + '%, #fff)';
   return (
     <div data-function-directory style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${minCol}px, 1fr))`, gap: 12 }}>
       {groups.length === 0 && <div style={{ gridColumn: '1 / -1', padding: 30, textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>該当する機能がありません。別の言葉でお試しください。</div>}
@@ -54,13 +74,32 @@ function FunctionDirectory({ groups, onNavigate, first, minCol = 250 }: { groups
         <div key={g.key} data-function-group={g.key} style={{ border: '1px solid ' + (g.danger ? '#f2c9c2' : '#e2e8ee'), background: g.danger ? '#fdf5f3' : '#fbfcfd', borderRadius: 12, padding: '10px 12px' }}>
           <div style={{ fontSize: 14, fontWeight: 800, color: g.danger ? '#c0392b' : '#3d4a56' }}>{g.label}</div>
           {g.note && <div style={{ fontSize: 12, color: g.danger ? '#b5564a' : '#9aa5b1', marginTop: 1 }}>{g.note}</div>}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 5, marginTop: 8 }}>
             {g.items.map((l) => {
               const off = INPUT_ONLY.includes(l) && kind !== '入力区分';
               const hit = first === l;
+              const pr = PRIORITY[l];
+              const name = g.key.startsWith('s-') ? settingsMenuName(l) : displayName(l);
+              const tip = off ? kind + 'で起動中は利用できません' : hit ? 'Enter でこの画面を開きます' : pr ? PRIORITY_LABEL[pr] : undefined;
+              const ink = off ? '#b3bcc5' : g.danger ? '#c0392b' : '#22303c';
+              const ring = hit ? '0 0 0 2px rgba(31,122,82,.18)' : 'none';
+              // 重要度・高：アイコンを上に置いた大きなタイル
+              if (pr === 'high') return (
+                <button key={l} type="button" className="btn-outline" data-menu={'機能:' + l} data-priority="high" onClick={() => onNavigate(l)} title={tip} style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5, flex: '1 1 96px', minWidth: 96, padding: '11px 10px 9px', border: '2px solid ' + (hit ? '#1f7a52' : off ? '#d3dbe3' : accent), borderRadius: 10, background: hit ? '#eaf5ef' : off ? '#f7f9fa' : tint(9), color: ink, fontSize: 15, fontWeight: 800, fontFamily: 'inherit', whiteSpace: 'nowrap', cursor: 'pointer', boxShadow: ring }}>
+                  <FnIcon name={l} size={30} color={off ? '#b3bcc5' : accent} />
+                  {name}
+                </button>
+              );
+              // 重要度・中：アイコンつきのやや大きいボタン
+              if (pr === 'mid') return (
+                <button key={l} type="button" className="btn-outline" data-menu={'機能:' + l} data-priority="mid" onClick={() => onNavigate(l)} title={tip} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px 8px 10px', border: '1.5px solid ' + (hit ? '#1f7a52' : off ? '#d3dbe3' : tint(60)), borderRadius: 9, background: hit ? '#eaf5ef' : '#fff', color: ink, fontSize: 15, fontWeight: 700, fontFamily: 'inherit', maxWidth: '100%', textAlign: 'left', lineHeight: 1.35, cursor: 'pointer', boxShadow: ring }}>
+                  <FnIcon name={l} size={20} color={off ? '#b3bcc5' : accent} />
+                  {name}
+                </button>
+              );
               return (
-                <button key={l} type="button" className="btn-outline" data-menu={'機能:' + l} onClick={() => onNavigate(l)} title={off ? `${kind}で起動中は利用できません` : hit ? 'Enter でこの画面を開きます' : undefined} style={{ padding: '5px 10px', border: '1px solid ' + (hit ? '#1f7a52' : g.danger ? '#f2c9c2' : '#cfd8e0'), borderRadius: 8, background: hit ? '#eaf5ef' : '#fff', color: off ? '#b3bcc5' : g.danger ? '#c0392b' : '#22303c', fontSize: 14, fontWeight: hit ? 700 : 600, fontFamily: 'inherit', cursor: 'pointer', boxShadow: hit ? '0 0 0 2px rgba(31,122,82,.18)' : 'none' }}>
-                  {g.key.startsWith('s-') ? settingsMenuName(l) : displayName(l)}
+                <button key={l} type="button" className="btn-outline" data-menu={'機能:' + l} onClick={() => onNavigate(l)} title={tip} style={{ padding: '5px 10px', border: '1px solid ' + (hit ? '#1f7a52' : g.danger ? '#f2c9c2' : '#cfd8e0'), borderRadius: 8, background: hit ? '#eaf5ef' : '#fff', color: ink, fontSize: 14, fontWeight: hit ? 700 : 600, fontFamily: 'inherit', cursor: 'pointer', boxShadow: ring }}>
+                  {name}
                 </button>
               );
             })}
@@ -72,7 +111,7 @@ function FunctionDirectory({ groups, onNavigate, first, minCol = 250 }: { groups
 }
 
 /* ---------------- 画面（左メニューの「機能から探す」） ---------------- */
-export function FunctionFinderPage({ onNavigate, initialQuery = '' }: { accent: string; onNavigate: (label: string) => void; initialQuery?: string }) {
+export function FunctionFinderPage({ accent, onNavigate, initialQuery = '' }: { accent: string; onNavigate: (label: string) => void; initialQuery?: string }) {
   const [q, setQ] = useState(initialQuery);
   const groups = useMemo(() => filterGroups(q), [q]);
   const total = groups.reduce((a, g) => a + g.items.length, 0);
@@ -90,7 +129,7 @@ export function FunctionFinderPage({ onNavigate, initialQuery = '' }: { accent: 
             <span style={{ fontSize: 14, color: '#7a8794' }}><b style={{ color: '#22303c' }}>{total}</b> 件</span>
           </div>
           <div style={{ padding: '14px 18px 18px' }}>
-            <FunctionDirectory groups={groups} onNavigate={onNavigate} />
+            <FunctionDirectory groups={groups} onNavigate={onNavigate} accent={accent} />
           </div>
         </section>
       </div>
@@ -155,7 +194,7 @@ export function FinderPanel({ accent, onNavigate }: { accent: string; onNavigate
       </div>
       {/* 全機能の一覧（確認メモ #147：別画面に飛ばさず、最初からダッシュボードに表示） */}
       <div style={{ padding: '14px 16px 16px' }}>
-        <FunctionDirectory groups={groups} onNavigate={go} first={first} minCol={190} />
+        <FunctionDirectory groups={groups} onNavigate={go} first={first} minCol={190} accent={accent} />
       </div>
     </section>
   );

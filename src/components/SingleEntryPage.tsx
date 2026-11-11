@@ -18,6 +18,7 @@ import { applyMonth } from '../lib/format';
 import { FUSEN_COLORS, addVoucher, deleteVoucher, getVouchers, updateVoucher } from '../store/journalStore';
 import { useSession, setSession } from '../store/session';
 import { useEntryDivision } from '../lib/entryDivision';
+import { inPeriod, type Period } from '../lib/period';
 import type { FormState, JournalEntry } from '../types';
 
 const PINK = '#b0426a';
@@ -88,6 +89,8 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
   const [meta, setMeta] = useState<Record<number, RowMeta>>({});
   const [, setHi] = useState<number[]>([]);
   const [graphAcct, setGraphAcct] = useState<string | null>(null);
+  // 一覧の表示月の範囲（会計月の「全月」から端の月を外したとき・月タブのドラッグ）。あれば表示月より優先
+  const [range, setRange] = useState<Period | null>(null);
   const pending = useRef<RowMeta | null>(null);
 
   // 登録後：小切手Noをクリアし、借方科目へフォーカス（証憑・日付・区分は保持して連続入力）。科目を残す設定のときは金額へ
@@ -128,6 +131,8 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
   };
 
   // 画面を開いたら「月」にカーソルを置く
+  // 伝票を登録したら範囲を解除して、登録した月の表示に戻す
+  useEffect(() => { if (v.lastAdded != null) setRange(null); }, [v.lastAdded]);
   useEffect(() => { const t = window.setTimeout(() => document.getElementById('se-month')?.focus(), 80); return () => window.clearTimeout(t); }, []);
 
   const doSubmit = (confirmed = false): void => {
@@ -239,7 +244,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
 
   const wd = weekdayOf(yr.year, f.month, f.day);
   // 一覧は、現在の入力区分の伝票だけを表示する（確認メモ #158）。予備月（翌年4〜6月）の伝票は「全月」のときだけ表示する
-  const rows = applyMonth(v.journal, v.monthFilter).filter((e) => (e.service ?? SEED_DIVISION) === division && (v.monthFilter == null || e.term !== '予備'));
+  const rows = (range ? v.journal.filter((e) => inPeriod(String(e.date), range)) : applyMonth(v.journal, v.monthFilter)).filter((e) => (e.service ?? SEED_DIVISION) === division && ((v.monthFilter == null && !range) || e.term !== '予備'));
   const isSheet = variant === 'sheet';
   const showCheque = sess.input.cheque;
 
@@ -339,7 +344,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
           {/* 会計月タブ */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '4px 0 10px' }}>
             <span style={{ fontSize: 12, color: PAPER.ink, fontWeight: 700, flex: 'none' }}>表示月</span>
-            <FiscalMonthTabs current={v.monthFilter} accent={accent} onSelect={v.setMonth} withAll />
+            <FiscalMonthTabs current={v.monthFilter} accent={accent} onSelect={v.setMonth} withAll range={range} onRange={setRange} pickRange={false} />
             <span data-list-division title="一覧には、現在の入力区分の伝票だけを表示しています" style={{ marginLeft: 'auto', fontSize: 14, color: '#8895a3', flex: 'none', whiteSpace: 'nowrap' }}>
               <b style={{ color: '#22303c', fontWeight: 700 }}>{division}</b> の伝票のみ表示　<b style={{ color: '#22303c', fontWeight: 700 }}>{rows.length}</b> 件
             </span>
@@ -360,7 +365,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
           </div>
           <div id="journal-scroll" className="pp-table" style={{ gridTemplateColumns: '1fr', overflowY: 'auto', minHeight: 150, maxHeight: 'calc(100vh - 720px)', alignContent: 'start' }}>
             {rows.length === 0 && (
-              <div className="pp-cell pp-center" style={{ padding: '40px 22px', color: '#9aa5b1', fontSize: 14 }}>{division} の{v.monthFilter == null ? '' : 'この月の'}伝票はありません。下の入力行から登録してください。</div>
+              <div className="pp-cell pp-center" style={{ padding: '40px 22px', color: '#9aa5b1', fontSize: 14 }}>{division} の{range ? 'この期間の' : v.monthFilter == null ? '' : 'この月の'}伝票はありません。下の入力行から登録してください。</div>
             )}
             {rows.map((e, i) => {
               const isNew = e.id === v.lastAdded;

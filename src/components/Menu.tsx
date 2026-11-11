@@ -11,6 +11,7 @@ import { MENU_GROUPS, displayName, groupOf, isOptionMenu, type MenuGroup } from 
 import { startKindOf, useSession, type Session } from '../store/session';
 import { Chevron } from './ui';
 import { canEnterVoucher } from '../lib/entryDivision';
+import { ACCESS_DENIED, canOpen, type Access } from '../store/access';
 
 /**
  * 分類メニューの開閉（確認メモ #144）。
@@ -40,12 +41,23 @@ export function useMenuOpen() {
 
 /** メニュー項目の状態（依頼書 5.1.1／5.1.4）：起動区分の種類で変わる。使えない項目は隠さず、グレーアウトの無効表示にする（理由はツールチップのみ。確認事項 10/9 回答） */
 function itemState(label: string, s: Session): { disabled?: string; tag?: string } {
+  // アカウントごとの機能制限：使える機能にない項目は開けない
+  if (!canOpen(label, s.access)) return { disabled: ACCESS_DENIED };
   const kind = startKindOf(s);
   // 伝票入力：入力区分で起動中のほか、親区分で起動中でも、入力権限があり配下に入力区分があれば開ける（確認メモ #182）
   if (['単一入力', '伝票入力', '振替入力', '振替単一'].includes(label) && kind !== '入力区分' && !canEnterVoucher(s)) return { disabled: `${kind}で起動中は伝票を入力できません（入力区分に切り替えてください）` };
   if (['業者元帳', '業者推移'].includes(label) && kind === '合算区分') return { disabled: '合算区分で起動中は利用できません' };
   if (isOptionMenu(label) && kind === '合算区分') return { disabled: '合算区分で起動中は利用できません（入力区分・拠点区分などで起動してください）' };
   return {};
+}
+
+/**
+ * メニューに出す分類。会計本体を使えるアカウントはすべての分類（使えない項目は「利用不可」の表示）。
+ * 会計本体を使えないアカウントは、使える機能（小口現金・預金出納・減価償却）だけを出す。
+ */
+export function visibleGroups(a: Access): MenuGroup[] {
+  if (a.core) return MENU_GROUPS;
+  return MENU_GROUPS.map((g) => ({ ...g, items: g.items.filter((l) => canOpen(l, a)) })).filter((g) => g.items.length > 0);
 }
 
 interface Props {
@@ -69,14 +81,16 @@ function FullMenu({ accent, active, onSelect }: Omit<Props, 'compact'>) {
   useEffect(() => {
     if (activeGroup) setOpened((s) => (s.has(activeGroup) ? s : new Set([...s, activeGroup])));
   }, [activeGroup]);
+  const core = session.access.core;
   const toggle = (k: string) => setOpened((s) => { const n = new Set(s); n.has(k) ? n.delete(k) : n.add(k); return n; });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-      <HomeButton active={active === 'ホーム'} accent={accent} onClick={() => onSelect('ホーム')} />
-      {MENU_GROUPS.map((g) => {
+      {core && <HomeButton active={active === 'ホーム'} accent={accent} onClick={() => onSelect('ホーム')} />}
+      {visibleGroups(session.access).map((g) => {
         const on = activeGroup === g.key;
-        const isOpen = opened.has(g.key);
+        // 会計本体を使えないアカウントは項目が少ないので、開いたままにする
+        const isOpen = opened.has(g.key) || !core;
         const color = on ? accent : '#3d4a56';
         return (
           <div key={g.key} style={{ borderRadius: 8 }}>
@@ -114,8 +128,8 @@ function CompactMenu({ accent, active, onSelect }: Omit<Props, 'compact'>) {
 
   return (
     <div ref={root} style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'stretch' }}>
-      <HomeButton active={active === 'ホーム'} accent={accent} onClick={() => onSelect('ホーム')} compact />
-      {MENU_GROUPS.map((g) => {
+      {session.access.core && <HomeButton active={active === 'ホーム'} accent={accent} onClick={() => onSelect('ホーム')} compact />}
+      {visibleGroups(session.access).map((g) => {
         const on = activeGroup === g.key;
         const isOpen = open === g.key;
         const color = on ? accent : '#3d4a56';

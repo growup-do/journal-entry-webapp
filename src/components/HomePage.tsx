@@ -1,4 +1,5 @@
-// ホーム：機能から探す（検索ボックス＋全機能の一覧）／調査・チェック／お気に入りメニュー／FAQ／バナースペース
+// ホーム：機能から探す（検索ボックス＋全機能の一覧）／お気に入りメニュー／FAQ／バナースペース
+//   「調査・チェック」の枠は、機能一覧ができたのでなくした。仕訳数・日次調査・決算調査はヘッダーの区分名の横のボタンから開く（確認メモ #242）。
 //   表示するメニューと最初に表示する画面は、ヘッダーの「各種設定」›「ダッシュボード表示オプション」で選ぶ（確認メモ #152）。
 //   お知らせはヘッダーのベルへ（#151）、預金残高は「推移・分析」›「預金残高」へ移した（#149）。「伝票入力をはじめる」ボタンは廃止（#150）。
 //   年度更新の時期には、上部に年度更新を促す案内を表示する。
@@ -6,18 +7,11 @@
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { ToastView, useToast } from './Toast';
-import { HOME_CHECKS, HOME_FAQ, displayName } from '../data';
+import { HOME_FAQ, displayName } from '../data';
 import { FinderPanel } from './FunctionFinder';
 import { FavoritesEditModal } from './FavoritesEditModal';
 import { useSession } from '../store/session';
 import { SUPPORT_URL } from './SettingsMenu';
-
-/** 調査・チェック（メニューバーには置かず、ホームから開く）の説明 */
-const CHECK_NOTE: Record<string, string> = {
-  仕訳数: '月ごとの仕訳件数と、入力済みの月を確認します。',
-  日次調査: '仕訳と残高の同額・不一致を検索し、不一致の日の伝票を確認します。',
-  決算調査: '決算前に、残高や設定の28項目をまとめて点検します。',
-};
 
 interface Props {
   variant: 'form' | 'sheet';
@@ -74,20 +68,6 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
         <div style={{ display: 'grid', gridTemplateColumns: hasRight ? 'minmax(0,1.6fr) minmax(280px,1fr)' : 'minmax(0,1fr)', gap: 20, alignItems: 'start' }}>
         {/* 左列 */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
-
-          {/* 調査・チェック：仕訳数の問合せ／日次調査／決算チェック（メニューバーには置かず、ここから開く） */}
-          {show.checks && <section style={card} data-home-checks>
-            <div style={h2}>調査・チェック<span style={{ fontSize: 12, fontWeight: 500, color: '#7a8794' }}>入力した仕訳の点検は、ここから開きます</span></div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12, padding: 16 }}>
-              {HOME_CHECKS.map((l) => (
-                <button key={l} type="button" className="btn-outline" data-menu={l} onClick={() => onNavigate(l)} style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'stretch', textAlign: 'left', padding: '12px 14px', border: '1px solid #cfd8e0', borderRadius: 12, background: '#fff', color: '#22303c', fontFamily: 'inherit', cursor: 'pointer', minWidth: 0 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.4 }}>{displayName(l)}</span>
-                  <span style={{ fontSize: 12, color: '#7a8794', lineHeight: 1.6, flex: 1 }}>{CHECK_NOTE[l]}</span>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: accent, textAlign: 'right' }}>開く ›</span>
-                </button>
-              ))}
-            </div>
-          </section>}
 
           {/* お気に入りメニュー */}
           {show.favorites && <section style={card}>

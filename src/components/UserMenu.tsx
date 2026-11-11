@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useSession } from '../store/session';
+import { accessLabel, canOpen } from '../store/access';
 
 export const USER_MENU_ITEMS = ['事業者設定', 'ユーザー設定'];
 
@@ -55,8 +56,10 @@ export function UserMenu({ accent, soft, onNavigate }: Props) {
             <div style={{ fontSize: 14, fontWeight: 700 }}>経理 担当者</div>
             <div style={{ fontSize: 12, color: '#7a8794' }}>社会福祉法人 チャイルド保育園</div>
             <div style={{ marginTop: 6, fontSize: 12, color: '#5b6773' }}>権限：<b style={{ color: session.role === '入力可' ? '#1f7a52' : '#b7791f' }}>{session.role}</b></div>
+            <div data-user-access style={{ marginTop: 3, fontSize: 12, color: '#5b6773' }}>利用できる機能：<b style={{ color: '#22303c' }}>{accessLabel(session.access)}</b></div>
           </div>
-          {USER_MENU_ITEMS.map((label) => (
+          {/* 会計の機能を使えないアカウントには「事業者設定」を出さない（左のメニューと同じ扱い） */}
+          {USER_MENU_ITEMS.filter((label) => label !== '事業者設定' || canOpen('事業者', session.access)).map((label) => (
             <button key={label} type="button" className="menu-sub" data-menu={label} onClick={() => { setOpen(false); onNavigate(label === '事業者設定' ? '事業者' : label); }} style={item}>
               <MenuIcon kind={label} />
               {label}

@@ -11,9 +11,11 @@ import { FavoritesMenu } from './FavoritesMenu';
 import { Chevron } from '../ui';
 import { useMenuOpen } from '../Menu';
 import { canEnterVoucher } from '../../lib/entryDivision';
+import { ACCESS_DENIED, canOpen } from '../../store/access';
 
 /** メニュー項目の状態（依頼書 5.1.1／5.1.4）：起動区分の種類で変わる。使えない項目は隠さず、グレーアウトの無効表示にする（理由はツールチップのみ。確認事項 10/9 回答） */
 function itemState(label: string, s: Session): { disabled?: string; tag?: string } {
+  if (!canOpen(label, s.access)) return { disabled: ACCESS_DENIED };
   const kind = startKindOf(s);
   // 伝票入力：入力区分で起動中のほか、親区分で起動中でも、入力権限があり配下に入力区分があれば開ける（確認メモ #182）
   if (['単一入力', '伝票入力', '振替入力', '振替単一'].includes(label) && kind !== '入力区分' && !canEnterVoucher(s)) return { disabled: `${kind}で起動中は伝票を入力できません（入力区分に切り替えてください）` };

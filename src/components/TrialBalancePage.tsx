@@ -1,9 +1,11 @@
 // 試算表（月次試算）／決算書（月次決算）（共通部品）
 //   骨格は ReportShell 共通：集計期間（月）＋部の切替（右上のボタン／← → キー）→ 表示切替 → 一覧。
-//   表示切替＝表示階層（大区分〜細々区分）・行の配色パターン（5種。確認メモ #28 の定義。「標準」は色分けなし＝すべて白）・表示列・内訳（合算区分・親区分で起動時）。
+//   表示切替＝表示階層（大区分〜細々区分）・行の配色パターン（標準／科目項目／資金／内部／寄付補助。塗り分けの基準は確認メモ #28、色と名称は現行システムに合わせる。確認メモ #132。「標準」は色分けなし）・表示列・内訳（合算区分・親区分で起動時）。
+//   月次試算の表は、見出し・合計行・地の色も現行システムの色にする（確認メモ #132。月次決算の表は従来の色のまま）。
 //   表示列の切り替えは合算区分・親区分で起動したときだけ。入力区分（下層の区分）で起動中は全列を固定表示する（確認メモ #131）。
 //   一覧表のヘッダー行はスクロールしても上に固定する（確認メモ #135）。
 //   決算書のみ「残高グラフ」。印刷メニューは決算書を計算書の種類ごと、準決算書を区分ごとに点線で区切り、拠点区分の帳票名に区分の名称を付ける（確認メモ #139／#140）。
+//   決算書の印刷は、メニューで帳票を選ぶと「帳票一括印刷」ダイアログ（年月指定＝月ボタンと開始・終了年月／出力先の指定）を開く（現行と同じ。確認メモ #141）。
 //   貸借対照表の借方合計と貸方合計が一致しないときは、確認メッセージ（借方合計・貸方合計・差額）を出す（確認メモ #130。プロトタイプでは一覧見出しの切り替えで不一致の状態にして確認する）。
 //   科目行から元帳へドリルダウン：画面遷移せず右側の元帳パネルに表示（押した行を見たまま内訳を確認。別の行を押すと差し替わる）。
 //   パネルの「元帳の画面で開く」で全画面の元帳へ移り、その「← 戻る」で同じ月・部・階層に戻る（表示状態は sessionStorage に保持）。
@@ -13,7 +15,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { useState } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
-import { periodLabel as periodText, type Period } from '../lib/period';
+import { FISCAL_MONTHS, lastDayOf, periodLabel as periodText, type Period } from '../lib/period';
 import { CHECK, LABEL, NUM, ReportShell, Segmented, SwitchPill, TD, TH, useMoney, useViewState } from './ReportShell';
 import { BS_ASSET_ROWS, displayName, type HierRow } from '../data';
 import { grandTotal, rollup } from '../lib/hier';
@@ -23,24 +25,37 @@ import { Modal } from './Modal';
 import { divisionLabel, flattenDivisions, startKindOf, useSession, type Session } from '../store/session';
 import { LedgerDrawer, useLedgerDrawer } from './LedgerDrawer';
 import { SCREEN_PRINTS, ScreenPrintMenu, type PrintGroup, type PrintItem } from './ScreenPrintMenu';
+import { OUTPUTS, PreviewModal, outputKind, sampleReportData } from './PrintCenter';
+import { runExport } from './ExportDialog';
+import { ToastView, useToast } from './Toast';
+import { btn } from './ui';
 
 const PARTS = ['資産の部', '負債の部', '事業活動', '資金の部'];
 /** 表示階層（「就労授産」は不要のため廃止。確認メモ #133） */
 const DEPTHS = ['大区分', '中区分', '小区分', '細区分', '細々区分'] as const;
-const PATTERNS = ['標準', '科目項目', '資金', '内部', '寄附補助'] as const;
+/** 行の配色。名称は現行システムのボタンに合わせる（「寄付補助」は現行の表記。確認メモ #132） */
+const PATTERNS = ['標準', '科目項目', '資金', '内部', '寄付補助'] as const;
 type Depth = (typeof DEPTHS)[number];
 type Pattern = (typeof PATTERNS)[number];
 
-/** 配色パターンごとの塗り分け（凡例にも使う）。塗り分けの基準はクライアント回答（確認メモ #28）に合わせる。「標準」は色分けなし（確認メモ #134） */
+/** 月次試算の表の色（現行システムの色。確認メモ #132）。月次決算の表には使わない。
+ *  head＝見出し／total＝合計行／base＝表の地の色（現行の色）。headSub（内訳の見出し）・headText・headLine は、現行の色に合わせて決めた色 */
+const TRIAL_COLORS = { head: '#999ef1', headSub: '#b9bdf6', headText: '#22303c', headLine: '#7f85e0', total: '#cfcff8', base: '#fffff4' };
+
+/** 配色パターンごとの塗り分け（凡例にも使う）。塗り分けの基準はクライアント回答（確認メモ #28）、色は現行システムに合わせる（確認メモ #132）。
+ *  該当しない行は表の地の色のまま。「標準」は色分けなし（確認メモ #134）
+ *  ・科目項目／資金／寄付補助の色は、現行の画面の色
+ *  ・内部の色は、現行の画面で色のついた行を確認できていないため、現行の色の系統に合わせた仮の色
+ *  ・寄付補助は、現行の画面で色がついていた「固定資産」の行にも色をつける（現行の規則は未確認） */
 const PATTERN_INFO: Record<Pattern, { color: string; note: string; test: (name: string, leaf: boolean) => boolean }> = {
-  標準: { color: '#fff', note: '色分けなし（すべて白）', test: () => false },
-  科目項目: { color: '#fff1b8', note: '黄＝項目（親）／白＝科目（子）を判別', test: (_n, leaf) => !leaf },
-  資金: { color: '#d8f0f5', note: '水色＝科目マスターの「資金処理区分」が資金の科目（白＝非資金）', test: (n, leaf) => { const m = metaOf(n); return leaf && !!m && (m.cls === '現預金' || m.cls === '費用' || m.cls === '収益'); } },
-  内部: { color: '#fbe3c4', note: '橙＝科目マスターの「内部取引」が通常取引以外の科目', test: (n) => /区分間|拠点間|内部/.test(n) },
-  寄附補助: { color: '#e9defa', note: '紫＝決算附属明細書設定で寄附金収益明細書・補助金事業等収益明細書の科目にチェックのある科目', test: (n) => WATCHED.filter((w) => w.key === 'kifu' || w.key === 'hojo').some((w) => w.test.test(n)) },
+  標準: { color: 'transparent', note: '色分けなし（すべて地の色）', test: () => false },
+  科目項目: { color: '#e1fcfd', note: '水色＝項目（子を持つ親の科目）／地の色＝科目（末端の科目）を判別', test: (_n, leaf) => !leaf },
+  資金: { color: '#dfffdf', note: '薄緑＝科目マスターの「資金処理区分」が資金の科目（地の色＝非資金の科目と親の項目）', test: (n, leaf) => { const m = metaOf(n); return leaf && !!m && (m.cls === '現預金' || m.cls === '費用' || m.cls === '収益'); } },
+  内部: { color: '#ffe4c8', note: '薄橙＝科目マスターの「内部取引」が通常取引以外の科目（該当の科目がなければ色はつきません）', test: (n) => /区分間|拠点間|内部/.test(n) },
+  寄付補助: { color: '#a6d99b', note: '緑＝決算附属明細書設定で寄附金収益明細書・補助金事業等収益明細書の科目にチェックのある科目と「固定資産」', test: (n) => n === '固定資産' || WATCHED.filter((w) => w.key === 'kifu' || w.key === 'hojo').some((w) => w.test.test(n)) },
 };
 
-/** サンプル：配色パターン（内部／寄附補助）を確認できるよう、資産の部に該当科目の金額を補う */
+/** サンプル：配色パターン（内部／寄付補助）を確認できるよう、資産の部に該当科目の金額を補う */
 const ROWS: HierRow[] = BS_ASSET_ROWS.flatMap((r) => {
   if (r.name === '未収補助金') return [{ ...r, v: [0, 0, 300000, 660000] }];
   if (r.name === '貯蔵品') return [{ name: '拠点区分間貸付金', level: 1, v: [500000, 500000, 0, 0] }, { name: '事業区分間貸付金', level: 1, v: [0, 0, 0, 0] }, r];
@@ -119,6 +134,141 @@ function closingPrints(s: Session): PrintGroup[] {
 /** サンプル：貸借対照表が不一致のときの差額（確認メモ #130。プロトタイプ確認用の値） */
 const BS_GAP = 12_600;
 
+/* ---------------- 帳票一括印刷（月次決算の印刷。現行のダイアログに合わせる。確認メモ #141） ---------------- */
+/** 出力先（現行と同じ 3 つ）：プリンターから印刷する（既定）／画面へプレビューする／Excelファイル出力 */
+const BATCH_OUTPUTS = [OUTPUTS[0], OUTPUTS[1], OUTPUTS[3]];
+/** 年月（令和 y 年 m 月）。m は 1〜12、または「決」（決算月） */
+interface YM { y: string; m: string }
+interface BatchOpts { from: string; to: string; output: string }
+/** 会計年度（例：'令和8年度' → 8） */
+const eraYearOf = (fiscalYear: string) => parseInt(fiscalYear.replace(/[^0-9]/g, ''), 10) || 8;
+/** 月ボタン（4〜3・決）→ 年月。1〜3月と「決」は翌年 */
+const ymOf = (fy: number, m: string): YM => ({ y: String(m === '決' || Number(m) <= 3 ? fy + 1 : fy), m });
+/** 年月の並び順（「決」は 3月の後）。読めない入力は null */
+function ymOrder(v: YM): number | null {
+  const y = /^\d+$/.test(v.y) ? parseInt(v.y, 10) : NaN;
+  const m = v.m === '決' ? 3.5 : /^\d+$/.test(v.m) ? parseInt(v.m, 10) : NaN;
+  return y >= 1 && m >= 1 && m <= 12 ? y * 12 + m : null;
+}
+/** 期間の表記（開始は月初、終了は月末。「決」は 3月） */
+function ymDay(v: YM, end: boolean): string {
+  const m = v.m === '決' ? '3' : String(parseInt(v.m, 10));
+  return `令和${parseInt(v.y, 10)}年${m}月${end ? lastDayOf(m) : 1}日`;
+}
+
+/** 年・月の入力欄：全角の数字は半角に直し、数字以外は入れない（月は「決」も可）。
+ *  日本語入力の変換中は直さず、変換を確定したとき・欄を離れたときに直す。Enter での確定（印刷の実行）は作らない */
+function YmInput({ value, onChange, month, label, name }: { value: string; onChange: (v: string) => void; month?: boolean; label: string; name: string }) {
+  const norm = (t: string) => { const n = t.normalize('NFKC'); return month && n.includes('決') ? '決' : n.replace(/[^0-9]/g, '').slice(0, 2); };
+  return (
+    <input
+      type="text" inputMode="numeric" autoComplete="off" aria-label={label} data-batch-ym={name} value={value}
+      onFocus={(e) => e.currentTarget.select()}
+      onChange={(e) => onChange((e.nativeEvent as InputEvent).isComposing ? e.target.value : norm(e.target.value))}
+      onCompositionEnd={(e) => onChange(norm(e.currentTarget.value))}
+      onBlur={(e) => onChange(norm(e.target.value))}
+      style={{ width: 46, boxSizing: 'border-box', padding: '6px 8px', border: '1px solid #cfd8e0', borderRadius: 6, fontSize: 14, fontFamily: 'inherit', textAlign: 'center', fontVariantNumeric: 'tabular-nums', outline: 'none', background: '#fff', color: '#22303c' }}
+    />
+  );
+}
+
+/** 帳票一括印刷の中身。開くたびに作り直すので、月の初期値は開いたときに画面で選んでいる月（範囲）になる */
+function BatchPrintForm({ item, fy, init, accent, onCancel, onRun }: { item: PrintItem; fy: number; /** 画面で選んでいる月（開始・終了） */ init: [string, string]; accent: string; onCancel: () => void; onRun: (opts: BatchOpts) => void }) {
+  const [from, setFrom] = useState<YM>(() => ymOf(fy, init[0]));
+  const [to, setTo] = useState<YM>(() => ymOf(fy, init[1]));
+  /** 月ボタンを次に押したときに決まるほう（1回目＝開始、2回目＝終了） */
+  const [next, setNext] = useState<'開始' | '終了'>('開始');
+  const [output, setOutput] = useState(BATCH_OUTPUTS[0]);
+  const [err, setErr] = useState('');
+  const fo = ymOrder(from), too = ymOrder(to);
+  const pick = (m: string) => {
+    const v = ymOf(fy, m);
+    setErr('');
+    // 1回目：開始（終了も同じ月にして単月の指定にする）
+    if (next === '開始') { setFrom(v); setTo(v); setNext('終了'); return; }
+    // 2回目：終了。開始より前の月を押したときは、開始と終了を入れ替える
+    if (fo != null && (ymOrder(v) ?? 0) < fo) { setTo(from); setFrom(v); } else setTo(v);
+    setNext('開始');
+  };
+  const run = () => {
+    if (fo == null || too == null) { setErr(`${fo == null ? '開始年月' : '終了年月'}を正しく入力してください（年は数字、月は 1〜12 または「決」）`); return; }
+    if (fo > too) { setErr('終了年月は、開始年月と同じか後の年月にしてください'); return; }
+    onRun({ from: ymDay(from, false), to: ymDay(to, true), output });
+  };
+  const head: CSSProperties = { fontSize: 14, fontWeight: 700, color: '#48565f' };
+  const ymRow = (label: string, key: 'from' | 'to', v: YM, set: (x: YM) => void) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14 }}>
+      <span style={{ width: 76, fontWeight: 700, color: '#48565f' }}>{label}</span>
+      <span>令和</span>
+      <YmInput value={v.y} onChange={(y) => { setErr(''); set({ ...v, y }); }} label={`${label}の年`} name={`${key}-y`} />
+      <span>年</span>
+      <YmInput value={v.m} onChange={(m) => { setErr(''); set({ ...v, m }); }} month label={`${label}の月`} name={`${key}-m`} />
+      <span>月</span>
+    </div>
+  );
+  return (
+    <div data-batch-print style={{ padding: '14px 22px 18px', display: 'grid', gap: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '8px 12px', borderRadius: 8, background: '#f6f8fa', border: '1px solid #e2e8ee', fontSize: 14 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', flex: 'none' }}>印刷する帳票</span>
+        <span data-batch-report style={{ fontWeight: 700 }}>{item.name}</span>
+        {item.note && <span style={{ fontSize: 12, color: '#9aa5b1', flex: 'none' }}>{item.note}</span>}
+      </div>
+      <div style={{ display: 'grid', gap: 10 }}>
+        <div style={head}>年月指定</div>
+        <div role="group" aria-label="年月指定" style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          {FISCAL_MONTHS.map((m) => {
+            const o = ymOrder(ymOf(fy, m));
+            const on = fo != null && too != null && o != null && o >= fo && o <= too;
+            return (
+              <button key={m} type="button" data-batch-month={m} aria-pressed={on} onClick={() => pick(m)} title={m === '決' ? '決算月' : `${m}月`} style={{ width: 34, height: 32, padding: 0, borderRadius: 6, border: `1px solid ${on ? accent : '#cfd8e0'}`, background: on ? accent : '#fff', color: on ? '#fff' : accent, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{m}</button>
+            );
+          })}
+        </div>
+        {ymRow('開始年月', 'from', from, setFrom)}
+        {ymRow('終了年月', 'to', to, setTo)}
+        <div data-batch-next={next} style={{ fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>月のボタンは、1回目に押した月が開始年月、2回目に押した月が終了年月になります（次に押す月：<b style={{ color: accent }}>{next}年月</b>）。入力欄でも直せます。</div>
+      </div>
+      <fieldset data-batch-output style={{ margin: 0, padding: '8px 14px 12px', border: '1px solid #cfd8e0', borderRadius: 8, display: 'grid', gap: 8, justifyItems: 'start' }}>
+        <legend style={{ ...head, padding: '0 6px' }}>出力先（印刷）の指定</legend>
+        {BATCH_OUTPUTS.map((o) => (
+          <label key={o} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, cursor: 'pointer' }}>
+            <input type="radio" name="batch-output" checked={output === o} onChange={() => setOutput(o)} />{o}
+          </label>
+        ))}
+      </fieldset>
+      {err && <div data-batch-error role="alert" style={{ fontSize: 14, fontWeight: 700, color: '#c0392b' }}>{err}</div>}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <button type="button" data-action="キャンセル" onClick={onCancel} style={btn('#5b6773')}>キャンセル</button>
+        <button type="button" data-action="印刷" onClick={run} style={{ ...btn(accent, true), minWidth: 96 }}>印刷</button>
+      </div>
+    </div>
+  );
+}
+
+/** 帳票一括印刷ダイアログ。item＝印刷メニューで選んだ帳票（null のとき非表示）。Esc・背景クリックでは閉じない（×・キャンセル・印刷で閉じる） */
+function BatchPrintDialog({ item, onClose, accent, fy, init }: { item: PrintItem | null; onClose: () => void; accent: string; fy: number; init: [string, string] }) {
+  const toast = useToast();
+  const [preview, setPreview] = useState<{ title: string; opts: BatchOpts } | null>(null);
+  const run = (opts: BatchOpts) => {
+    if (!item) return;
+    const kind = outputKind(opts.output);
+    // 画面へプレビューする：ダイアログは開いたまま、手前にプレビューを重ねる（ほかの画面の印刷と同じ）
+    if (!kind) { setPreview({ title: item.name, opts }); return; }
+    // プリンターから印刷する／Excelファイル出力：出力して閉じる（帳票の中身はサンプル表）
+    toast.show(runExport({ kind, title: item.name, meta: `（自）${opts.from}　（至）${opts.to}`, ...sampleReportData(item.name) }));
+    onClose();
+  };
+  return (
+    <>
+      <ToastView msg={toast.msg} />
+      <Modal open={!!item} onClose={onClose} width={560} title="帳票一括印刷">
+        {item && <BatchPrintForm item={item} fy={fy} init={init} accent={accent} onCancel={onClose} onRun={run} />}
+      </Modal>
+      <PreviewModal open={!!preview} onClose={() => setPreview(null)} title={preview?.title ?? ''} opts={preview?.opts} accent={accent} data={preview ? sampleReportData(preview.title) : undefined} />
+    </>
+  );
+}
+
 interface Props {
   mode: 'trial' | 'closing';
   variant: 'form' | 'sheet';
@@ -167,7 +317,14 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
   const rows = all.filter((r) => r.level <= depthIndex && (!zeroCut || r.values.some((x) => x !== 0)));
   const hiddenZero = all.filter((r) => r.level <= depthIndex).length - rows.length;
   const total = grandTotal(all, width);
-  const info = PATTERN_INFO[view.pattern];
+  // 以前の表示状態に旧名称（寄附補助）が残っているときは、現行の名称（寄付補助）として扱う
+  const pattern: Pattern = PATTERNS.includes(view.pattern) ? view.pattern : (view.pattern as string) === '寄附補助' ? '寄付補助' : '標準';
+  const info = PATTERN_INFO[pattern];
+  // 月次試算の表だけ、見出し・合計行・地の色を現行システムの色にする（確認メモ #132）。月次決算の表は従来の色のまま
+  const tc = isClosing ? null : TRIAL_COLORS;
+  const th: CSSProperties = tc ? { ...TH, background: tc.head, color: tc.headText, borderBottom: `1px solid ${tc.headLine}` } : TH;
+  const thSubBg = tc ? tc.headSub : '#f0f5fa';
+  const thDivider = `1px solid ${tc ? tc.headLine : '#e6ecf1'}`;
 
   // 列の定義：合計（起動区分）→ 内訳（区分ごと）→ 内部取引消去（決算書のみ）
   type Col = { head: string; get: (v: number[]) => number; first?: boolean; muted?: boolean };
@@ -188,15 +345,22 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
   const drawer = useLedgerDrawer(KEY);
   const openLedger = (name: string) => drawer.open({ account: name, month: view.month, kind: 'account', from: KEY });
   const picked = (name: string) => !drawer.collapsed && drawer.target?.account === name;
-  // 行の配色：「標準」は色分けなし（すべて白。確認メモ #134）。ほかのパターンは該当する行だけ色を付ける
-  const rowBg = (r: { name: string; level: number; leaf: boolean }) => (info.test(r.name, r.leaf) ? info.color : 'transparent');
+  // 行の配色：「標準」は色分けなし（すべて地の色。確認メモ #134）。ほかのパターンは該当する行だけ色を付ける（該当しない行は地の色）
+  const toned = (r: { name: string; leaf: boolean }) => info.test(r.name, r.leaf);
+  const rowBg = (r: { name: string; leaf: boolean }) => (toned(r) ? info.color : 'transparent');
   const linkBtn: CSSProperties = { marginLeft: 10, padding: '1px 8px', borderRadius: 6, border: '1px solid #dde4ea', background: '#fff', color: accent, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' };
   /** 表示する列のチェック（切り替えできないときは薄く表示） */
   const colCheck: CSSProperties = colsLocked ? { ...CHECK, cursor: 'not-allowed', opacity: 0.6 } : CHECK;
   // 一覧表のヘッダー行：スクロールしても上に固定する（確認メモ #135）。固定中は下の罫線が消えるので、影で線を補う
-  const headLine = 'inset 0 -1px 0 #e2e8ee';
+  const headLine = `inset 0 -1px 0 ${tc ? tc.headLine : '#e2e8ee'}`;
   // 月次決算の印刷メニュー（決算書・準決算書の区切りと、拠点区分の帳票名。確認メモ #139／#140）
   const prints = isClosing ? closingPrints(s) : null;
+  // 月次決算の印刷：メニューで帳票を選ぶと「帳票一括印刷」ダイアログを開く（確認メモ #141）。batch＝選んだ帳票
+  const [batch, setBatch] = useState<PrintItem | null>(null);
+  // 帳票を選ぶと「帳票一括印刷」を開く。CSV の出力（WAMNET連携出力）は印刷ではないので、従来の出力ダイアログへ回す
+  const printActions = prints?.map((g) => ({ label: g.label, dashedBelow: g.dashedBelow, items: g.items.map((it) => (it.base.includes('CSV') ? it : { name: it.name, note: it.note, onClick: () => setBatch(it) })) }));
+  /** 帳票一括印刷の月の初期値：画面で選んでいる月（範囲を選んでいるときは、その開始月〜終了月） */
+  const batchInit: [string, string] = range ? [range.from.split('/')[0], range.to.split('/')[0]] : [view.month, view.month];
   // 貸借対照表の借方合計・貸方合計（サンプル。不一致の状態では貸方合計を差額の分だけずらす）
   const debitTotal = total[1];
   const creditTotal = debitTotal - (unbalanced ? BS_GAP : 0);
@@ -207,11 +371,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
       variant={variant}
       accent={accent}
       asideWidth={drawer.asideWidth}
-      extraTools={prints ? (
-        <>
-          <ScreenPrintMenu page={KEY} groups={prints} accent={accent} />
-        </>
-      ) : <ScreenPrintMenu page={KEY} accent={accent} />}
+      extraTools={printActions ? <ScreenPrintMenu page={KEY} actions={printActions} accent={accent} /> : <ScreenPrintMenu page={KEY} accent={accent} />}
       title={displayName(KEY)}
       subtitle={<>{isClosing ? '当年度末（決算）の残高を一覧します。' : '前月繰越・当月の借方／貸方・残高を一覧します。'}科目の行の「元帳」ボタン（または行のダブルクリック）で、右側に総勘定元帳を表示します。別の行を押すと差し替わり、全画面で見たいときはパネルの「元帳の画面で開く」を使います。</>}
       tools={isClosing ? [
@@ -250,7 +410,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
       switches={
         <>
           <Segmented label="表示階層" items={DEPTHS} value={depth} onChange={(d) => setView({ depth: d })} accent={accent} />
-          <Segmented label="行の配色" items={PATTERNS} value={view.pattern} onChange={(p) => setView({ pattern: p })} accent={accent} />
+          <Segmented label="行の配色" items={PATTERNS} value={pattern} onChange={(p) => setView({ pattern: p })} accent={accent} />
           <SwitchPill label="内訳（区分ごと）" on={members.length > 0 && view.breakdown} onChange={(v) => setView({ breakdown: v })} accent={accent} disabled={members.length === 0} title={members.length === 0 ? `入力区分（${s.division}）で起動中は内訳がないため切り替えできません。合算区分または親区分（法人・事業区分・拠点区分）で起動すると、区分ごとの金額を表示できます` : '区分ごとの金額の列を表示します'} />
         </>
       }
@@ -278,8 +438,8 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
           )}
           {colsLocked && <span data-cols-locked style={{ fontSize: 12, color: '#9aa5b1' }}>入力区分で起動中は切り替えできません（全列を表示）</span>}
           <span data-pattern-legend style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#7a8794' }}>
-            <span style={{ width: 14, height: 14, borderRadius: 3, background: info.color, border: '1px solid #c3ccd4' }} />
-            配色「{view.pattern}」：{info.note}
+            <span style={{ width: 14, height: 14, borderRadius: 3, background: pattern === '標準' ? tc?.base ?? '#fff' : info.color, border: '1px solid #c3ccd4' }} />
+            配色「{pattern}」：{info.note}
           </span>
         </div>
       }
@@ -290,26 +450,26 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
         ) : flat.length === 0 ? (
           <div style={{ padding: '48px 22px', textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>表示する列を1つ以上選んでください。</div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table data-table-tone={tc ? '現行' : undefined} style={{ width: '100%', borderCollapse: 'collapse', background: tc?.base }}>
             <thead data-sticky-head style={{ position: 'sticky', top: 0, zIndex: 2 }}>
               <tr>
-                <th style={{ ...TH, minWidth: 260, boxShadow: headLine }} rowSpan={2}>科目名</th>
+                <th style={{ ...th, minWidth: 260, boxShadow: headLine }} rowSpan={2}>科目名</th>
                 {groups.map((g, i) => (
-                  <th key={i} style={{ ...TH, textAlign: 'center', borderLeft: '1px solid #e6ecf1', background: g.breakdown ? '#f0f5fa' : TH.background }} colSpan={g.cols.length}>
+                  <th key={i} style={{ ...th, textAlign: 'center', borderLeft: thDivider, background: g.breakdown ? thSubBg : th.background }} colSpan={g.cols.length}>
                     {g.breakdown && <span style={{ marginRight: 6, padding: '0 5px', borderRadius: 4, background: '#fff', border: '1px solid #d3dbe3', fontSize: 12 }}>内訳</span>}
                     {g.label}
                   </th>
                 ))}
               </tr>
               <tr>
-                {flat.map((c, i) => <th key={i} style={{ ...TH, textAlign: 'right', fontWeight: 500, borderLeft: c.first ? '1px solid #e6ecf1' : undefined, background: c.breakdown ? '#f0f5fa' : TH.background, boxShadow: headLine }}>{c.head}</th>)}
+                {flat.map((c, i) => <th key={i} style={{ ...th, textAlign: 'right', fontWeight: 500, borderLeft: c.first ? thDivider : undefined, background: c.breakdown ? thSubBg : th.background, boxShadow: headLine }}>{c.head}</th>)}
               </tr>
             </thead>
             <tbody>
               {rows.map((r, i) => {
                 const bold = r.level === 0;
                 return (
-                  <tr key={r.name + ':' + r.level + ':' + i} data-account={r.name} onDoubleClick={() => { if (r.leaf) openLedger(r.name); }} title={r.leaf ? 'ダブルクリックで元帳を開く' : undefined} data-picked={picked(r.name) || undefined} style={{ background: picked(r.name) ? '#eaf5ef' : hit(r.name) ? '#fff8d6' : rowBg(r), boxShadow: picked(r.name) ? `inset 3px 0 0 ${accent}` : undefined, cursor: r.leaf ? 'pointer' : 'default' }}>
+                  <tr key={r.name + ':' + r.level + ':' + i} data-account={r.name} onDoubleClick={() => { if (r.leaf) openLedger(r.name); }} title={r.leaf ? 'ダブルクリックで元帳を開く' : undefined} data-picked={picked(r.name) || undefined} data-pattern-hit={toned(r) || undefined} style={{ background: picked(r.name) ? '#eaf5ef' : hit(r.name) ? '#fff8d6' : rowBg(r), boxShadow: picked(r.name) ? `inset 3px 0 0 ${accent}` : undefined, cursor: r.leaf ? 'pointer' : 'default' }}>
                     <td style={{ ...TD, paddingLeft: 12 + r.level * 18, fontWeight: bold || picked(r.name) ? 700 : r.level === 1 ? 600 : 400, whiteSpace: 'nowrap' }}>
                       {r.name}
                       {r.leaf && <button type="button" className="btn-outline" data-action="元帳" onClick={(e) => { e.stopPropagation(); openLedger(r.name); }} style={linkBtn}>元帳 ›</button>}
@@ -320,7 +480,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
               })}
             </tbody>
             <tfoot>
-              <tr style={{ background: '#e9eef3' }}>
+              <tr data-total-row style={{ background: tc ? tc.total : '#e9eef3' }}>
                 <td style={{ ...TD, fontWeight: 700 }}>合計</td>
                 {flat.map((c, k) => <td key={k} style={{ ...NUM, fontWeight: 700, borderLeft: c.first ? '1px solid #dde4ea' : undefined }}>{money(c.get(total))}</td>)}
               </tr>
@@ -353,6 +513,9 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
           <div style={{ display: 'flex', justifyContent: 'center' }}><button type="button" data-action="OK" autoFocus onClick={() => setWarn(false)} style={{ minWidth: 110, padding: '8px 22px', borderRadius: 8, border: 'none', background: accent, color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>OK</button></div>
         </div>
       </Modal>
+
+      {/* 帳票一括印刷（月次決算の印刷メニューで帳票を選ぶと開く。確認メモ #141）。閉じるのは ×・キャンセル・印刷だけ */}
+      {isClosing && <BatchPrintDialog item={batch} onClose={() => setBatch(null)} accent={accent} fy={eraYearOf(s.fiscalYear)} init={batchInit} />}
     </ReportShell>
     <LedgerDrawer state={drawer} accent={accent} onNavigate={onNavigate} />
     </>

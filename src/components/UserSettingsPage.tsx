@@ -1,4 +1,6 @@
-// ユーザー設定：プロフィール／パスワード変更／通知／表示設定（一般的な構成）
+// ユーザー設定：プロフィール／パスワード変更／通知／表示設定（一般的な構成）／アカウントごとの利用できる機能
+//   利用できる機能（確認事項「小口、預金、減価について」）：アカウントごとに 会計本体・小口現金・預金出納・減価償却 のどれを使えるかを決める。
+//   設定できるのは会計本体を使えるアカウントだけ。会計本体を使えないアカウントには、自分の利用できる機能の表示だけを出す。
 //   パスワードの変更は、登録済みメールアドレスに届く確認コードでの確認のみ（二段階認証は行わない）。
 
 import { useRef, useState } from 'react';
@@ -6,6 +8,8 @@ import type { CSSProperties, KeyboardEvent } from 'react';
 import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
 import { Notice } from './ui';
+import { setSession, useSession } from '../store/session';
+import { ACCESS_ITEMS, ACCOUNTS, FULL_ACCESS, accessLabel, type Access, type AccessKey } from '../store/access';
 
 /** IME 変換確定の Enter を無視する */
 const onEnter = (fn: () => void) => (e: KeyboardEvent) => {
@@ -22,6 +26,16 @@ interface Props {
 
 export function UserSettingsPage({ variant, accent }: Props) {
   const toast = useToast();
+  const session = useSession();
+  // アカウントごとの利用できる機能。ログイン中のアカウント（me）は session.access、ほかは session.memberAccess
+  const accessOf = (id: string): Access => (id === 'me' ? session.access : session.memberAccess[id] ?? FULL_ACCESS);
+  const toggleAccess = (id: string, name: string, key: AccessKey) => {
+    const cur = accessOf(id);
+    const next: Access = { ...cur, [key]: !cur[key] };
+    if (id === 'me') setSession({ access: next });
+    else setSession({ memberAccess: { ...session.memberAccess, [id]: next } });
+    toast.show(name + ' の利用できる機能を変更しました');
+  };
   const [profile, setProfile] = useState({ name: '経理 担当者', kana: 'ケイリ タントウシャ', email: 'keiri@example.jp', dept: '本部 経理', role: '経理担当（入力・照会）' });
   const [pw, setPw] = useState({ cur: '', next: '', confirm: '' });
   const [notify, setNotify] = useState({ closing: true, audit: true, news: false, mail: true });
@@ -45,6 +59,8 @@ export function UserSettingsPage({ variant, accent }: Props) {
   const h2: CSSProperties = { padding: '14px 18px', borderBottom: '1px solid #eef2f5', fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16 };
   const label: CSSProperties = { display: 'block', fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 6 };
   const input: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '9px 11px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none', color: '#22303c', background: '#fff' };
+  const th: CSSProperties = { textAlign: 'left', padding: '8px 10px', fontSize: 12, fontWeight: 700, color: '#8290a0', borderBottom: '1px solid #dde4ea', whiteSpace: 'nowrap' };
+  const td: CSSProperties = { padding: '9px 10px', borderBottom: '1px solid #f1f4f6', verticalAlign: 'middle' };
   const btn = (primary?: boolean): CSSProperties => ({ padding: '9px 20px', borderRadius: 8, border: primary ? 'none' : '1px solid #cfd8e0', background: primary ? accent : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
   const Toggle = ({ on, onChange, text }: { on: boolean; onChange: () => void; text: string }) => (
     <label style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid #f1f4f6', cursor: 'pointer', fontSize: 14 }}>
@@ -73,7 +89,7 @@ export function UserSettingsPage({ variant, accent }: Props) {
       <div style={{ width: '100%', maxWidth: 1000, display: 'flex', flexDirection: 'column', gap: 20 }}>
         <div>
           <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 18 : 22 }}>ユーザー設定</div>
-          <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>ご自身のアカウント情報・パスワード・通知・表示の設定です。事業者全体の設定は「設定」メニューから行います。</div>
+          <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>ご自身のアカウント情報・パスワード・通知・表示の設定です。{session.access.core && '事業者全体の設定は「設定」メニューから行います。'}</div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 20, alignItems: 'start' }}>
@@ -99,6 +115,7 @@ export function UserSettingsPage({ variant, accent }: Props) {
               <div style={{ gridColumn: 'span 2' }}><span style={label}>メールアドレス（ログインID）</span><input className="field-input ring" value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} style={input} /></div>
               <div><span style={label}>所属</span><input className="field-input ring" value={profile.dept} onChange={(e) => setProfile({ ...profile, dept: e.target.value })} style={input} /></div>
               <div><span style={label}>権限</span><div style={{ ...input, background: '#f5f7f9', color: '#5b6773' }}>{profile.role}</div><div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 4 }}>権限の変更は管理者が行います</div></div>
+              <div style={{ gridColumn: 'span 2' }}><span style={label}>利用できる機能</span><div data-my-access style={{ ...input, background: '#f5f7f9', color: '#5b6773' }}>{accessLabel(session.access)}</div><div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 4 }}>利用できる機能は管理者が設定します{session.access.core ? '（下の「アカウントごとの利用できる機能」）' : ''}</div></div>
               <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end' }}>
                 <button type="button" className="submit-btn" onClick={() => toast.show('プロフィールを保存しました（プロトタイプ）')} style={btn(true)}>保存</button>
               </div>
@@ -139,6 +156,53 @@ export function UserSettingsPage({ variant, accent }: Props) {
               <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end' }}><button type="button" className="submit-btn" onClick={() => toast.show('表示設定を保存しました（プロトタイプ）')} style={btn(true)}>保存</button></div>
             </div>
           </section>
+
+          {/* アカウントごとの利用できる機能（確認事項「小口、預金、減価について」）。会計本体を使えるアカウントだけが設定できる */}
+          {session.access.core && <section style={{ ...card, gridColumn: '1 / -1' }} data-account-access>
+            <div style={h2}>アカウントごとの利用できる機能</div>
+            <div style={{ padding: 18 }}>
+              <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.8, marginBottom: 12 }}>アカウントごとに、使える機能を選びます。<b>会計本体</b>を外したアカウントは、会計本体では区分・年度の切替だけができ、チェックを入れた 小口現金・預金出納・減価償却 だけを開けます。メニューにも、その機能だけを表示します。</div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                  <thead>
+                    <tr>
+                      <th style={th}>アカウント</th>
+                      <th style={th}>権限</th>
+                      {ACCESS_ITEMS.map((it) => <th key={it.key} style={{ ...th, textAlign: 'center', width: 88 }} title={it.note}>{it.label}</th>)}
+                      <th style={th}>利用できる機能</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ACCOUNTS.map((a) => {
+                      const acc = accessOf(a.id);
+                      const count = ACCESS_ITEMS.filter((it) => acc[it.key]).length;
+                      const me = a.id === 'me';
+                      return (
+                        <tr key={a.id} data-account={a.id}>
+                          <td style={td}>
+                            <div style={{ fontWeight: 700, color: '#22303c', whiteSpace: 'nowrap' }}>{a.name}{me && <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 700, padding: '1px 8px', borderRadius: 9, background: '#eaf5ef', color: '#1f7a52' }}>ログイン中</span>}</div>
+                            <div style={{ fontSize: 12, color: '#8290a0' }}>{a.email}</div>
+                          </td>
+                          <td style={{ ...td, whiteSpace: 'nowrap', color: '#5b6773' }}>{a.role}</td>
+                          {ACCESS_ITEMS.map((it) => {
+                            // 1 つは残す。ログイン中のアカウントの会計本体は、この表では外せない（設定できる人がいなくなるため）
+                            const lock = (acc[it.key] && count === 1) || (me && it.key === 'core');
+                            const why = me && it.key === 'core' ? 'ログイン中のアカウントの会計本体は外せません' : lock ? '利用できる機能を 1 つは残してください' : a.name + '：' + it.label;
+                            return (
+                              <td key={it.key} style={{ ...td, textAlign: 'center' }}>
+                                <input type="checkbox" data-access-check={a.id + ':' + it.key} checked={acc[it.key]} aria-disabled={lock || undefined} data-locked={lock || undefined} onChange={() => { if (lock) toast.show(why); else toggleAccess(a.id, a.name, it.key); }} title={why} aria-label={a.name + ' の ' + it.label} style={{ width: 18, height: 18, accentColor: accent, cursor: lock ? 'not-allowed' : 'pointer' }} />
+                              </td>
+                            );
+                          })}
+                          <td style={{ ...td, color: acc.core ? '#22303c' : '#b7791f', fontWeight: 600, whiteSpace: 'nowrap' }}>{accessLabel(acc)}{!acc.core && <span style={{ fontWeight: 500, color: '#8290a0' }}>　のみ（会計本体は区分の切替だけ）</span>}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>}
         </div>
       </div>
 

@@ -12,15 +12,18 @@ import { SettlementAuditModal } from './components/SettlementAuditModal';
 import { JournalCountModal } from './components/JournalCountModal';
 import { DailyAuditModal } from './components/DailyAuditPage';
 import { CorporatePrintModal } from './components/CorporatePrintModal';
-import { DEFAULT_MENU } from './data';
+import { DEFAULT_MENU, displayName } from './data';
 import { LoginPage } from './components/LoginPage';
 import { isReviewMode, setReviewMode } from './store/review';
 import { FeatureListPage } from './components/FeatureListPage';
 import { LegalPage } from './components/LegalPage';
 import { FlowMapPage } from './components/FlowMapPage';
-import { RangeProposalPage } from './components/RangeProposalPage';
 import { IssueBoardPage } from './components/IssueBoardPage';
 import { setLayoutMode, useLayoutMode } from './store/layout';
+import { clearUnsaved, unsavedLabel } from './store/unsaved';
+import { ACCESS_DENIED, ACCESS_ITEMS, canOpen, firstAllowed } from './store/access';
+import { Modal } from './components/Modal';
+import { btn } from './components/ui';
 
 type Mode = 'form' | 'sheet';
 /** ページ遷移ではなくモーダルで開くメニュー */
@@ -93,6 +96,8 @@ export default function App() {
     }
   });
   useFontScale(loggedIn);
+  // このアカウントで使える機能（確認事項「小口、預金、減価について」）。許可のない画面は開かず、許可された最初の画面を出す
+  const access = useSession().access;
   const login = (kind: 'standard' | 'review' = 'standard') => {
     // 確認用アカウントならプロトタイプ確認用の表示を出さないモードに（通常アカウントで解除）
     setReviewMode(kind === 'review');
@@ -108,6 +113,11 @@ export default function App() {
     try { sessionStorage.removeItem('proto-logged-in'); } catch { /* ignore */ }
     setLoggedIn(false);
   };
+  // 保存されていない変更があるまま、ほかの画面へ移ろうとしたときの確認（確認メモ #224・#225）
+  const [leave, setLeave] = useState<null | { label: string; go: () => void }>(null);
+  const guard = (go: () => void) => { const label = unsavedLabel(); if (label) setLeave({ label, go }); else go(); };
+  // 使える機能にない画面を開こうとしたときの案内
+  const [denied, setDenied] = useState<string | null>(null);
   // 表示中のUI案・画面は sessionStorage に保持（静的ページから戻ったときに元の画面へ復帰）
   // 画面構成はフォーム型のみ（スプレッドシート型の案は廃止。メモの画面キーは互換のため 'form:' を維持）
   const mode: Mode = 'form';
@@ -118,18 +128,23 @@ export default function App() {
   const [dailyOpen, setDailyOpen] = useState(boot?.open === '日次調査');
   const [corpPrintOpen, setCorpPrintOpen] = useState(boot?.open === '法人印刷');
   // モーダル（決算調査／仕訳数／日次調査／法人印刷）を開いている間は、確認メモをそのモーダルの画面として扱う
-  const screenKey = auditOpen ? `${mode}:決算調査` : countOpen ? `${mode}:仕訳数` : dailyOpen ? `${mode}:日次調査` : corpPrintOpen ? `${mode}:法人印刷` : `${mode}:${page}`;
+  // 表示する画面：使える機能にない画面が残っていたら（保存済みの画面・初期画面など）、許可された最初の画面に読み替える
+  const shown = canOpen(page, access) ? page : firstAllowed(access);
+  const screenKey = auditOpen ? `${mode}:決算調査` : countOpen ? `${mode}:仕訳数` : dailyOpen ? `${mode}:日次調査` : corpPrintOpen ? `${mode}:法人印刷` : `${mode}:${shown}`;
 
   // メニュー選択：決算調査はページ遷移ではなくモーダルで開く（既存システムと同じ）
   const selectMenu = (label: string) => {
     // ログアウトは確認画面を挟まず、そのままログイン画面へ
-    if (label === 'ログアウト') { logout(); return; }
+    if (label === 'ログアウト') { guard(logout); return; }
+    // このアカウントで使えない機能は開かない（メニューには出していないが、画面内のリンクなどから来たとき用）
+    if (!canOpen(alive(label), access)) { setDenied(alive(label)); return; }
     // 法人調査は決算調査と同じ内容（右上ボタンの要否は確認メモで確認中）
+    // 調査・印刷のモーダルは今の画面の上に開くだけなので、未保存の確認はしない
     if (label === '決算調査' || label === '法人調査') setAuditOpen(true);
     else if (label === '仕訳数') setCountOpen(true);
     else if (label === '日次調査') setDailyOpen(true);
     else if (label === '法人印刷') setCorpPrintOpen(true);
-    else setPage(label);
+    else if (alive(label) !== shown) guard(() => setPage(label));
   };
 
   const screenLabel = labelOf;
@@ -139,11 +154,15 @@ export default function App() {
     if (!p) return;
     // 確認メモから移るときは、開いているモーダルを閉じてから目的の画面を開く
     // （決算調査を開いたまま日次調査のメモを選ぶと、画面キーが決算調査のままでメモが開けなかった。確認メモ #126）
-    setAuditOpen(p === '決算調査' || p === '法人調査');
-    setCountOpen(p === '仕訳数');
-    setDailyOpen(p === '日次調査');
-    setCorpPrintOpen(p === '法人印刷');
-    if (!MODAL_MENU.includes(p)) setPage(p);
+    if (!canOpen(alive(p), access)) { setDenied(alive(p)); return; }
+    const go = () => {
+      setAuditOpen(p === '決算調査' || p === '法人調査');
+      setCountOpen(p === '仕訳数');
+      setDailyOpen(p === '日次調査');
+      setCorpPrintOpen(p === '法人印刷');
+      if (!MODAL_MENU.includes(p)) setPage(p);
+    };
+    if (MODAL_MENU.includes(p) || alive(p) === shown) go(); else guard(go);
   };
 
   if (!loggedIn) {
@@ -165,28 +184,50 @@ export default function App() {
   }
   if (staticPage === 'terms') return <LegalPage />;
   if (staticPage === 'flow') return <FlowMapPage />;
-  // 範囲指定のご提案（確認メモ #143）：数パターンを見比べるための提案用ページ
-  if (staticPage === 'range') return <RangeProposalPage />;
   if (staticPage === 'issues' && !review) return <IssueBoardPage />;
 
   return (
     <>
-      <FormScreen page={page} onNavigate={selectMenu} onLogout={logout} />
-      <RoleSwitchBar review={review} />
+      <FormScreen page={shown} onNavigate={selectMenu} onLogout={() => guard(logout)} />
+      <RoleSwitchBar review={review} guard={guard} />
       <CorporatePrintModal open={corpPrintOpen} onClose={() => setCorpPrintOpen(false)} />
 
-      <SettlementAuditModal open={auditOpen} onClose={() => setAuditOpen(false)} onNavigate={(p) => { setAuditOpen(false); setPage(p); }} />
+      <SettlementAuditModal open={auditOpen} onClose={() => setAuditOpen(false)} onNavigate={(p) => { if (alive(p) === shown) setAuditOpen(false); else guard(() => { setAuditOpen(false); setPage(p); }); }} />
       <JournalCountModal open={countOpen} onClose={() => setCountOpen(false)} />
       <DailyAuditModal open={dailyOpen} onClose={() => setDailyOpen(false)} onNavigate={(p) => { setDailyOpen(false); selectMenu(p); }} accent="#1f7a52" />
 
       {!review && <MemoLayer screenKey={screenKey} screenLabel={screenLabel} onNavigate={navigateTo} />}
+
+      {/* 保存されていない変更があるときの確認（確認メモ #224・#225）。Esc・外側のクリックでは閉じない */}
+      <Modal open={!!leave} onClose={() => setLeave(null)} title="保存されていない変更があります" width={520}>
+        <div data-unsaved-confirm style={{ padding: '18px 22px 20px' }}>
+          <div style={{ fontSize: 15, lineHeight: 1.9, color: '#28323c' }}>
+            <b>{leave?.label}</b> の変更が保存されていません。<br />
+            このまま移動すると、変更した内容は失われます。保存せずに移動しますか？
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
+            <button type="button" style={btn('#1f7a52', true)} onClick={() => setLeave(null)}>この画面に戻る</button>
+            <button type="button" style={btn('#b23b3b')} onClick={() => { const go = leave?.go; setLeave(null); clearUnsaved(); go?.(); }}>保存せずに移動する</button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 使える機能にない画面を開こうとしたときの案内 */}
+      <Modal open={!!denied} onClose={() => setDenied(null)} title="この機能は利用できません" width={480}>
+        <div data-access-denied style={{ padding: '18px 22px 20px' }}>
+          <div style={{ fontSize: 15, lineHeight: 1.9, color: '#28323c' }}>「{denied ? displayName(denied) : ''}」は、{ACCESS_DENIED}。</div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 18 }}>
+            <button type="button" style={btn('#5b6773', true)} onClick={() => setDenied(null)}>閉じる</button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }
 
-/** プロトタイプ用：権限の切替バー（画面下中央）。右端に、プロトタイプ確認用のページ（機能一覧／画面遷移図／確認事項・やりとり）への入口を置く（製品のメニューやフッターには置かない）。
+/** プロトタイプ用：権限・使える機能の切替バー（画面下中央）。右端に、プロトタイプ確認用のページ（機能一覧／画面遷移図／確認事項・やりとり）への入口を置く（製品のメニューやフッターには置かない）。
  *  参照のみ権限のときの見え方（訂正・削除・入換の無効表示）を確認するための仕掛けで、本番の画面要素ではない */
-function RoleSwitchBar({ review }: { /** 確認用アカウント：確認事項・やりとりへの入口を出さない */ review: boolean }) {
+function RoleSwitchBar({ review, guard }: { /** 確認用アカウント：確認事項・やりとりへの入口を出さない */ review: boolean; /** 未保存の変更があれば確認してから実行する */ guard: (go: () => void) => void }) {
   const s = useSession();
   const layout = useLayoutMode();
   const ROLES: { key: typeof s.role; label: string; hint: string; accent: string }[] = [
@@ -206,6 +247,18 @@ function RoleSwitchBar({ review }: { /** 確認用アカウント：確認事項
         );
       })}
       <span style={{ width: 1, alignSelf: 'stretch', background: '#e2e8ee', margin: '4px 4px' }} />
+      {/* 使える機能の切替：アカウントごとの機能制限（会計本体／小口現金／預金出納／減価償却）の見え方を確かめる。最後の 1 つは外せない */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '2px 4px' }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', letterSpacing: '.03em', padding: '0 6px' }}>使える機能</span>
+        <div role="group" aria-label="このアカウントで使える機能" style={{ display: 'flex', gap: 2 }}>
+          {ACCESS_ITEMS.map((it) => {
+            const on = s.access[it.key];
+            const last = on && ACCESS_ITEMS.filter((x) => s.access[x.key]).length === 1;
+            return <button key={it.key} type="button" data-access={it.key} aria-pressed={on} disabled={last} onClick={() => guard(() => setSession((cur) => ({ access: { ...cur.access, [it.key]: !cur.access[it.key] } })))} title={last ? '使える機能を 1 つは残してください' : `${it.label}：${it.note}（押すと ${on ? '使えない' : '使える'} 状態にします）`} style={{ padding: '4px 9px', border: 'none', borderRadius: 7, cursor: last ? 'default' : 'pointer', fontFamily: 'inherit', background: on ? '#2c5f9e' : 'transparent', color: on ? '#fff' : '#9aa5b1', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', textDecoration: on ? 'none' : 'line-through' }}>{it.short}</button>;
+          })}
+        </div>
+      </div>
+      <span style={{ width: 1, alignSelf: 'stretch', background: '#e2e8ee', margin: '4px 4px' }} />
       {/* レイアウトの切替：旧レイアウト（11/10 より前の上部メニューバー）は、それ以前に置かれた確認メモの位置を確かめるためのもの */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '2px 4px' }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', letterSpacing: '.03em', padding: '0 6px' }}>レイアウト</span>
@@ -220,8 +273,8 @@ function RoleSwitchBar({ review }: { /** 確認用アカウント：確認事項
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '2px 6px 2px 4px' }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', letterSpacing: '.03em', padding: '0 6px' }}>プロトタイプ確認用</span>
         <div style={{ display: 'flex', gap: 2 }}>
-          {([['features', '機能一覧'], ['flow', '画面遷移図'], ['range', '範囲指定のご提案'], ['issues', '確認事項・やりとり']] as const).filter(([key]) => !review || key !== 'issues').map(([key, label]) => (
-            <button key={key} type="button" className="btn-outline" data-proto-link={key} onClick={() => { window.location.href = '?page=' + key; }} title="プロトタイプ確認用のページ（製品の機能ではありません）" style={{ padding: '4px 8px', border: 'none', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', background: 'transparent', color: '#3d4a56', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>{label}</button>
+          {([['features', '機能一覧'], ['flow', '画面遷移図'], ['issues', '確認事項・やりとり']] as const).filter(([key]) => !review || key !== 'issues').map(([key, label]) => (
+            <button key={key} type="button" className="btn-outline" data-proto-link={key} onClick={() => guard(() => { clearUnsaved(); window.location.href = '?page=' + key; })} title="プロトタイプ確認用のページ（製品の機能ではありません）" style={{ padding: '4px 8px', border: 'none', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', background: 'transparent', color: '#3d4a56', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>{label}</button>
           ))}
         </div>
       </div>

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { NUM, TD, TH, yen } from './ReportShell';
 import { PREV_YEAR_ROWS } from '../data';
+import { monthsIn, type Period } from '../lib/period';
 import type { MonthFilter } from '../types';
 
 interface Props {
@@ -14,7 +15,9 @@ interface Props {
 
 export function PrevYearJournal({ accent, compact }: Props) {
   const [month, setMonth] = useState<MonthFilter>('決');
-  const rows = PREV_YEAR_ROWS.filter((r) => month == null || r.date === month);
+  // 月の範囲（会計月の「全月」から端の月を外したとき・月タブのドラッグ）。あれば month より優先
+  const [range, setRange] = useState<Period | null>(null);
+  const rows = PREV_YEAR_ROWS.filter((r) => (range ? monthsIn(range).includes(r.date) : month == null || r.date === month));
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
       <div style={{ padding: compact ? '12px 14px 10px' : '10px 22px', borderBottom: '1px solid #eef2f5', display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -23,7 +26,7 @@ export function PrevYearJournal({ accent, compact }: Props) {
           <span style={{ fontSize: 14, color: '#7a8794' }}>令和7年度・閲覧のみ</span>
           <span style={{ marginLeft: 'auto', fontSize: 14, color: '#8895a3' }}>{rows.length} 件</span>
         </div>
-        <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} withAll />
+        <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} withAll range={range} onRange={setRange} pickRange={false} />
       </div>
       <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
         {rows.length === 0 ? (
