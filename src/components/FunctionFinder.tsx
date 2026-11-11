@@ -9,15 +9,17 @@ import { useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import { HOME_CHECKS, MENU_GROUPS, SETTINGS_GROUPS, displayName, settingsMenuName } from '../data';
 import { startKindOf, useSession } from '../store/session';
+import { canOpen, type Access } from '../store/access';
 
 interface Group { key: string; label: string; note: string; danger: boolean; items: string[] }
 /** 検索対象：メインメニュー＋各種設定（Web版の追加案は除く）＋ホーム・機能一覧 */
-function allGroups(): Group[] {
-  return [
+function allGroups(a: Access): Group[] {
+  // アカウントで使えない機能は出さない
+  return ([
     ...MENU_GROUPS.map((g) => ({ key: g.key, label: g.label, note: '', danger: false, items: g.items })),
     { key: 'audit', label: '調査・チェック', note: 'ヘッダーの区分名の横のボタンからも開けます', danger: false, items: HOME_CHECKS },
     ...SETTINGS_GROUPS.filter((g) => g.key !== 'web').map((g) => ({ key: 's-' + g.key, label: '各種設定 › ' + g.label, note: g.note ?? '', danger: !!g.danger, items: g.items })),
-  ];
+  ] as Group[]).map((g) => ({ ...g, items: g.items.filter((l) => canOpen(l, a)) })).filter((g) => g.items.length > 0);
 }
 /** 旧名称・別名でも探せるようにする（サポートが口頭で案内しやすいように） */
 const ALIASES: Record<string, string[]> = {
@@ -39,9 +41,9 @@ export const matchesFunction = (key: string, q: string) => {
 };
 
 /** 検索語で絞り込んだ分類（分類名に一致したときは、その分類の項目をすべて出す） */
-function filterGroups(q: string): Group[] {
+function filterGroups(q: string, a: Access): Group[] {
   const s = q.trim();
-  return allGroups().map((g) => ({ ...g, items: g.items.filter((l) => matchesFunction(l, s) || (!!s && g.label.includes(s))) })).filter((g) => g.items.length > 0);
+  return allGroups(a).map((g) => ({ ...g, items: g.items.filter((l) => matchesFunction(l, s) || (!!s && g.label.includes(s))) })).filter((g) => g.items.length > 0);
 }
 const INPUT_ONLY = ['単一入力', '伝票入力', '振替入力', '振替単一'];
 
@@ -113,7 +115,8 @@ function FunctionDirectory({ groups, onNavigate, first, minCol = 250, accent }: 
 /* ---------------- 画面（左メニューの「機能から探す」） ---------------- */
 export function FunctionFinderPage({ accent, onNavigate, initialQuery = '' }: { accent: string; onNavigate: (label: string) => void; initialQuery?: string }) {
   const [q, setQ] = useState(initialQuery);
-  const groups = useMemo(() => filterGroups(q), [q]);
+  const access = useSession().access;
+  const groups = useMemo(() => filterGroups(q, access), [q, access]);
   const total = groups.reduce((a, g) => a + g.items.length, 0);
   const card: CSSProperties = { background: '#fff', border: '1px solid #dde4ea', borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'hidden' };
   return (
@@ -143,9 +146,10 @@ const FINDER_EXAMPLES = ['試算表', '元帳', '科目', '年度更新', 'バ�
 export function FinderPanel({ accent, onNavigate }: { accent: string; onNavigate: (label: string) => void }) {
   const [q, setQ] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
-  const groups = useMemo(() => filterGroups(q), [q]);
+  const access = useSession().access;
+  const groups = useMemo(() => filterGroups(q, access), [q, access]);
   const total = groups.reduce((a, g) => a + g.items.length, 0);
-  const all = useMemo(() => allGroups().reduce((a, g) => a + g.items.length, 0), []);
+  const all = useMemo(() => allGroups(access).reduce((a, g) => a + g.items.length, 0), [access]);
   const searching = !!q.trim();
   const first = searching ? groups[0]?.items[0] : undefined;
   const go = (key: string) => { setQ(''); onNavigate(key); };

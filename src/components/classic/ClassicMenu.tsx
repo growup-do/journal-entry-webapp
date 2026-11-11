@@ -5,11 +5,11 @@
 
 import { useEffect, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { MENU_GROUPS, displayName, groupOf, isOptionMenu, type MenuGroup } from '../../data';
+import { displayName, groupOf, isOptionMenu, type MenuGroup } from '../../data';
 import { startKindOf, useSession, type Session } from '../../store/session';
 import { FavoritesMenu } from './FavoritesMenu';
 import { Chevron } from '../ui';
-import { useMenuOpen } from '../Menu';
+import { useMenuOpen, visibleGroups } from '../Menu';
 import { canEnterVoucher } from '../../lib/entryDivision';
 import { ACCESS_DENIED, canOpen } from '../../store/access';
 
@@ -47,8 +47,8 @@ function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
     <div style={{ display: 'flex', alignItems: 'stretch', flexWrap: 'wrap', gap: 2, flex: 1, minWidth: 0 }}>
       {/* 左：メニュー。幅が足りないときは項目が折り返す。右側（お気に入りメニュー・機能から探す）は、最後の行に入れば同じ行の右端、入らなければ次の行の右端に置く（重ならない。確認メモ #66） */}
       <div ref={root} style={{ display: 'contents' }}>
-      <HomeButton active={active === 'ホーム'} accent={accent} onClick={() => onSelect('ホーム')} />
-      {MENU_GROUPS.map((g) => {
+      {session.access.core && <HomeButton active={active === 'ホーム'} accent={accent} onClick={() => onSelect('ホーム')} />}
+      {visibleGroups(session.access).map((g) => {
         const on = activeGroup === g.key;
         const isOpen = open === g.key;
         const color = on ? accent : '#3d4a56';
@@ -139,8 +139,8 @@ function VMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <HomeButton active={active === 'ホーム'} accent={accent} onClick={() => onSelect('ホーム')} vertical />
-      {MENU_GROUPS.map((g) => {
+      {session.access.core && <HomeButton active={active === 'ホーム'} accent={accent} onClick={() => onSelect('ホーム')} vertical />}
+      {visibleGroups(session.access).map((g) => {
         const on = activeGroup === g.key;
         const isOpen = opened.has(g.key);
         const color = on ? accent : '#3d4a56';

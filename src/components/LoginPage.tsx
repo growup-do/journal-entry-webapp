@@ -1,4 +1,4 @@
-// ログイン画面（プロトタイプ：通常アカウント／確認用アカウントの2つだけログインできる。パスワードは store/review.ts）
+// ログイン画面（プロトタイプ：通常アカウント／確認用アカウント／機能制限のあるアカウントでログインできる。パスワードは store/review.ts）
 //   確認用アカウント（store/review.ts）でログインすると、確認メモなどプロトタイプ確認用の表示を出さない。
 
 import { useState } from 'react';
@@ -14,7 +14,7 @@ const RESET_STEPS = ['メールアドレス', '確認コード', '新しいパ�
 /** IME 変換確定の Enter（isComposing／keyCode 229）を無視する */
 const isImeEnter = (e: KeyboardEvent) => e.nativeEvent.isComposing || (e.nativeEvent as unknown as { keyCode: number }).keyCode === 229;
 
-export function LoginPage({ onLogin }: { onLogin: (kind: 'standard' | 'review') => void }) {
+export function LoginPage({ onLogin }: { onLogin: (kind: 'standard' | 'review', id: string) => void }) {
   const [email, setEmail] = useState('keiri@example.jp');
   const [pw, setPw] = useState('');
   const [show, setShow] = useState(false);
@@ -25,11 +25,11 @@ export function LoginPage({ onLogin }: { onLogin: (kind: 'standard' | 'review') 
   const lbl: CSSProperties = { display: 'block', fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 6 };
   const submit = () => {
     if (!email.trim() || !pw) return toast.show('メールアドレスとパスワードを入力してください');
-    // 通常アカウント／確認用アカウント（確認メモなどを出さない）のどちらかに一致したときだけ入れる
-    const kind = matchAccount(email, pw);
-    if (!kind) return toast.show('メールアドレスまたはパスワードが違います');
+    // 登録済みのアカウント（通常／確認用／機能制限のあるアカウント）に一致したときだけ入れる
+    const hit = matchAccount(email, pw);
+    if (!hit) return toast.show('メールアドレスまたはパスワードが違います');
     setBusy(true);
-    setTimeout(() => { setBusy(false); onLogin(kind); }, 500);
+    setTimeout(() => { setBusy(false); onLogin(hit.kind, hit.id); }, 500);
   };
   const onEnter = (e: KeyboardEvent) => {
     if (e.key === 'Enter' && !isImeEnter(e)) submit();

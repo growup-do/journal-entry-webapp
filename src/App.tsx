@@ -21,7 +21,7 @@ import { FlowMapPage } from './components/FlowMapPage';
 import { IssueBoardPage } from './components/IssueBoardPage';
 import { setLayoutMode, useLayoutMode } from './store/layout';
 import { clearUnsaved, unsavedLabel } from './store/unsaved';
-import { ACCESS_DENIED, ACCESS_ITEMS, canOpen, firstAllowed } from './store/access';
+import { ACCESS_DENIED, FULL_ACCESS, canOpen, firstAllowed } from './store/access';
 import { Modal } from './components/Modal';
 import { btn } from './components/ui';
 
@@ -98,9 +98,11 @@ export default function App() {
   useFontScale(loggedIn);
   // このアカウントで使える機能（確認事項「小口、預金、減価について」）。許可のない画面は開かず、許可された最初の画面を出す
   const access = useSession().access;
-  const login = (kind: 'standard' | 'review' = 'standard') => {
-    // 確認用アカウントならプロトタイプ確認用の表示を出さないモードに（通常アカウントで解除）
+  const login = (kind: 'standard' | 'review' = 'standard', id = 'me') => {
+    // 確認用アカウントならプロトタイプ確認用の表示を出さないモードに（ほかのアカウントで解除）
     setReviewMode(kind === 'review');
+    // ログインしたアカウントと、そのアカウントの使える機能（ユーザー設定で管理者が決めたもの）
+    setSession((cur) => ({ accountId: id, access: cur.memberAccess[id] ?? FULL_ACCESS }));
     try { sessionStorage.setItem('proto-logged-in', '1'); } catch { /* ignore */ }
     setLoggedIn(true);
     // ?open=／?page= で直接開いたときは、ログイン後にその画面へ（区分・年度の選択は挟まない）
@@ -225,7 +227,7 @@ export default function App() {
   );
 }
 
-/** プロトタイプ用：権限・使える機能の切替バー（画面下中央）。右端に、プロトタイプ確認用のページ（機能一覧／画面遷移図／確認事項・やりとり）への入口を置く（製品のメニューやフッターには置かない）。
+/** プロトタイプ用：権限の切替バー（画面下中央。使える機能はログインするアカウントで決まる）。右端に、プロトタイプ確認用のページ（機能一覧／画面遷移図／確認事項・やりとり）への入口を置く（製品のメニューやフッターには置かない）。
  *  参照のみ権限のときの見え方（訂正・削除・入換の無効表示）を確認するための仕掛けで、本番の画面要素ではない */
 function RoleSwitchBar({ review, guard }: { /** 確認用アカウント：確認事項・やりとりへの入口を出さない */ review: boolean; /** 未保存の変更があれば確認してから実行する */ guard: (go: () => void) => void }) {
   const s = useSession();
@@ -246,18 +248,6 @@ function RoleSwitchBar({ review, guard }: { /** 確認用アカウント：確�
           </button>
         );
       })}
-      <span style={{ width: 1, alignSelf: 'stretch', background: '#e2e8ee', margin: '4px 4px' }} />
-      {/* 使える機能の切替：アカウントごとの機能制限（会計本体／小口現金／預金出納／減価償却）の見え方を確かめる。最後の 1 つは外せない */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '2px 4px' }}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', letterSpacing: '.03em', padding: '0 6px' }}>使える機能</span>
-        <div role="group" aria-label="このアカウントで使える機能" style={{ display: 'flex', gap: 2 }}>
-          {ACCESS_ITEMS.map((it) => {
-            const on = s.access[it.key];
-            const last = on && ACCESS_ITEMS.filter((x) => s.access[x.key]).length === 1;
-            return <button key={it.key} type="button" data-access={it.key} aria-pressed={on} disabled={last} onClick={() => guard(() => setSession((cur) => ({ access: { ...cur.access, [it.key]: !cur.access[it.key] } })))} title={last ? '使える機能を 1 つは残してください' : `${it.label}：${it.note}（押すと ${on ? '使えない' : '使える'} 状態にします）`} style={{ padding: '4px 9px', border: 'none', borderRadius: 7, cursor: last ? 'default' : 'pointer', fontFamily: 'inherit', background: on ? '#2c5f9e' : 'transparent', color: on ? '#fff' : '#9aa5b1', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', textDecoration: on ? 'none' : 'line-through' }}>{it.short}</button>;
-          })}
-        </div>
-      </div>
       <span style={{ width: 1, alignSelf: 'stretch', background: '#e2e8ee', margin: '4px 4px' }} />
       {/* レイアウトの切替：旧レイアウト（11/10 より前の上部メニューバー）は、それ以前に置かれた確認メモの位置を確かめるためのもの */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '2px 4px' }}>

@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useSession } from '../store/session';
-import { accessLabel, canOpen } from '../store/access';
+import { accessLabel, accountOf, canOpen } from '../store/access';
 
 export const USER_MENU_ITEMS = ['事業者設定', 'ユーザー設定'];
 
@@ -48,12 +48,12 @@ export function UserMenu({ accent, soft, onNavigate }: Props) {
         title="ユーザーメニュー"
         style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: '50%', background: soft, color: accent, fontSize: 14, fontWeight: 700, border: '2px solid ' + (open ? accent : 'transparent'), cursor: 'pointer', fontFamily: 'inherit' }}
       >
-        経
+        {accountOf(session.accountId).name.charAt(0)}
       </button>
       {open && (
         <div role="menu" style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 240, background: '#fff', border: '1px solid #dde4ea', borderRadius: 12, boxShadow: '0 12px 32px rgba(24,42,62,.18)', padding: 6, zIndex: 130, fontFamily: "'Noto Sans JP', sans-serif" }}>
           <div style={{ padding: '10px 12px 8px', borderBottom: '1px solid #eef2f5', marginBottom: 4 }}>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>経理 担当者</div>
+            <div data-user-name style={{ fontSize: 14, fontWeight: 700 }}>{accountOf(session.accountId).name}</div>
             <div style={{ fontSize: 12, color: '#7a8794' }}>社会福祉法人 チャイルド保育園</div>
             <div style={{ marginTop: 6, fontSize: 12, color: '#5b6773' }}>権限：<b style={{ color: session.role === '入力可' ? '#1f7a52' : '#b7791f' }}>{session.role}</b></div>
             <div data-user-access style={{ marginTop: 3, fontSize: 12, color: '#5b6773' }}>利用できる機能：<b style={{ color: '#22303c' }}>{accessLabel(session.access)}</b></div>

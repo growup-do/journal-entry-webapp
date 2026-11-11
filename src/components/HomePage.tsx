@@ -11,6 +11,7 @@ import { HOME_FAQ, displayName } from '../data';
 import { FinderPanel } from './FunctionFinder';
 import { FavoritesEditModal } from './FavoritesEditModal';
 import { useSession } from '../store/session';
+import { canOpen } from '../store/access';
 import { SUPPORT_URL } from './SettingsMenu';
 
 interface Props {
@@ -73,10 +74,10 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
           {show.favorites && <section style={card}>
             <div style={h2}>お気に入りメニュー<button type="button" style={link} onClick={() => setFavEdit(true)}>編集 ›</button></div>
             <div style={{ display: 'flex', gap: 8, padding: 16, flexWrap: 'wrap' }}>
-              {s.favorites.map((l) => (
+              {s.favorites.filter((l) => canOpen(l, s.access)).map((l) => (
                 <button key={l} type="button" className="btn-outline" onClick={() => onNavigate(l)} style={{ padding: '9px 16px', border: '1px solid #cfd8e0', borderRadius: 9, background: '#fff', color: '#22303c', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}> {displayName(l)}</button>
               ))}
-              {s.favorites.length === 0 && <span style={{ fontSize: 14, color: '#9aa5b1' }}>「編集」からよく使う画面を登録できます。</span>}
+              {!s.favorites.some((l) => canOpen(l, s.access)) && <span style={{ fontSize: 14, color: '#9aa5b1' }}>「編集」からよく使う画面を登録できます。</span>}
             </div>
           </section>}
 

@@ -1,6 +1,6 @@
 // ユーザー設定：プロフィール／パスワード変更／通知／表示設定（一般的な構成）／アカウントごとの利用できる機能
 //   利用できる機能（確認事項「小口、預金、減価について」）：アカウントごとに 会計本体・小口現金・預金出納・減価償却 のどれを使えるかを決める。
-//   設定できるのは会計本体を使えるアカウントだけ。会計本体を使えないアカウントには、自分の利用できる機能の表示だけを出す。
+//   設定できるのは管理者だけ。ほかのアカウントには、自分の利用できる機能の表示だけを出す。
 //   パスワードの変更は、登録済みメールアドレスに届く確認コードでの確認のみ（二段階認証は行わない）。
 
 import { useRef, useState } from 'react';
@@ -9,7 +9,7 @@ import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
 import { Notice } from './ui';
 import { setSession, useSession } from '../store/session';
-import { ACCESS_ITEMS, ACCOUNTS, FULL_ACCESS, accessLabel, type Access, type AccessKey } from '../store/access';
+import { ACCESS_ITEMS, ACCOUNTS, FULL_ACCESS, accessLabel, accountOf, canOpen, firstAllowed, type Access, type AccessKey } from '../store/access';
 
 /** IME 変換確定の Enter を無視する */
 const onEnter = (fn: () => void) => (e: KeyboardEvent) => {
@@ -27,19 +27,23 @@ interface Props {
 export function UserSettingsPage({ variant, accent }: Props) {
   const toast = useToast();
   const session = useSession();
-  // アカウントごとの利用できる機能。ログイン中のアカウント（me）は session.access、ほかは session.memberAccess
-  const accessOf = (id: string): Access => (id === 'me' ? session.access : session.memberAccess[id] ?? FULL_ACCESS);
+  // ログイン中のアカウント。アカウントごとの利用できる機能を設定できるのは管理者だけ
+  const account = accountOf(session.accountId);
+  const isAdmin = account.role === '管理者';
+  // アカウントごとの利用できる機能。ログイン中のアカウントは session.access（memberAccess と同じ内容）
+  const accessOf = (id: string): Access => (id === session.accountId ? session.access : session.memberAccess[id] ?? FULL_ACCESS);
   const toggleAccess = (id: string, name: string, key: AccessKey) => {
     const cur = accessOf(id);
     const next: Access = { ...cur, [key]: !cur[key] };
-    if (id === 'me') setSession({ access: next });
-    else setSession({ memberAccess: { ...session.memberAccess, [id]: next } });
+    setSession((c) => ({ memberAccess: { ...c.memberAccess, [id]: next }, ...(id === c.accountId ? { access: next } : {}) }));
     toast.show(name + ' の利用できる機能を変更しました');
   };
-  const [profile, setProfile] = useState({ name: '経理 担当者', kana: 'ケイリ タントウシャ', email: 'keiri@example.jp', dept: '本部 経理', role: '経理担当（入力・照会）' });
+  const [profile, setProfile] = useState({ name: account.name, kana: account.kana, email: account.email, dept: account.dept, role: isAdmin ? '管理者（経理担当）' : '担当者' });
   const [pw, setPw] = useState({ cur: '', next: '', confirm: '' });
   const [notify, setNotify] = useState({ closing: true, audit: true, news: false, mail: true });
-  const [view, setView] = useState({ start: 'ホーム', density: '標準' });
+  // ログイン後に開く画面：このアカウントで使える画面だけを選べる
+  const startOptions = ['ホーム', '単一入力', '伝票入力', '仕訳一覧', '小口現金', '預金出納', '減価償却'].filter((o) => canOpen(o, session.access));
+  const [view, setView] = useState({ start: canOpen('ホーム', session.access) ? 'ホーム' : firstAllowed(session.access), density: '標準' });
   // プロフィール画像（DataURL で保持。本番ではサーバーへアップロード）
   const [avatar, setAvatar] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -99,7 +103,7 @@ export function UserSettingsPage({ variant, accent }: Props) {
             <div style={{ padding: 18, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: 14 }}>
                 <span style={{ width: 56, height: 56, borderRadius: '50%', background: '#eef4f0', color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700, overflow: 'hidden', flex: 'none' }}>
-                  {avatar ? <img src={avatar} alt="プロフィール画像" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '経'}
+                  {avatar ? <img src={avatar} alt="プロフィール画像" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : profile.name.charAt(0)}
                 </span>
                 <div>
                   <div style={{ display: 'flex', gap: 6 }}>
@@ -115,7 +119,7 @@ export function UserSettingsPage({ variant, accent }: Props) {
               <div style={{ gridColumn: 'span 2' }}><span style={label}>メールアドレス（ログインID）</span><input className="field-input ring" value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} style={input} /></div>
               <div><span style={label}>所属</span><input className="field-input ring" value={profile.dept} onChange={(e) => setProfile({ ...profile, dept: e.target.value })} style={input} /></div>
               <div><span style={label}>権限</span><div style={{ ...input, background: '#f5f7f9', color: '#5b6773' }}>{profile.role}</div><div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 4 }}>権限の変更は管理者が行います</div></div>
-              <div style={{ gridColumn: 'span 2' }}><span style={label}>利用できる機能</span><div data-my-access style={{ ...input, background: '#f5f7f9', color: '#5b6773' }}>{accessLabel(session.access)}</div><div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 4 }}>利用できる機能は管理者が設定します{session.access.core ? '（下の「アカウントごとの利用できる機能」）' : ''}</div></div>
+              <div style={{ gridColumn: 'span 2' }}><span style={label}>利用できる機能</span><div data-my-access style={{ ...input, background: '#f5f7f9', color: '#5b6773' }}>{accessLabel(session.access)}</div><div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 4 }}>利用できる機能は管理者が設定します{isAdmin ? '（下の「アカウントごとの利用できる機能」）' : ''}</div></div>
               <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end' }}>
                 <button type="button" className="submit-btn" onClick={() => toast.show('プロフィールを保存しました（プロトタイプ）')} style={btn(true)}>保存</button>
               </div>
@@ -150,15 +154,15 @@ export function UserSettingsPage({ variant, accent }: Props) {
             <div style={h2}>表示設定</div>
             <div style={{ padding: 18, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div><span style={label}>ログイン後に開く画面</span>
-                <select value={view.start} onChange={(e) => setView({ ...view, start: e.target.value })} style={input}>{['ホーム', '単一入力', '伝票入力', '仕訳一覧'].map((o) => <option key={o}>{o}</option>)}</select></div>
+                <select value={view.start} onChange={(e) => setView({ ...view, start: e.target.value })} style={input}>{startOptions.map((o) => <option key={o}>{o}</option>)}</select></div>
               <div><span style={label}>表の行間</span>
                 <select value={view.density} onChange={(e) => setView({ ...view, density: e.target.value })} style={input}>{['標準', 'コンパクト', 'ゆったり'].map((o) => <option key={o}>{o}</option>)}</select></div>
               <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end' }}><button type="button" className="submit-btn" onClick={() => toast.show('表示設定を保存しました（プロトタイプ）')} style={btn(true)}>保存</button></div>
             </div>
           </section>
 
-          {/* アカウントごとの利用できる機能（確認事項「小口、預金、減価について」）。会計本体を使えるアカウントだけが設定できる */}
-          {session.access.core && <section style={{ ...card, gridColumn: '1 / -1' }} data-account-access>
+          {/* アカウントごとの利用できる機能（確認事項「小口、預金、減価について」）。管理者だけが設定できる */}
+          {isAdmin && session.access.core && <section style={{ ...card, gridColumn: '1 / -1' }} data-account-access>
             <div style={h2}>アカウントごとの利用できる機能</div>
             <div style={{ padding: 18 }}>
               <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.8, marginBottom: 12 }}>アカウントごとに、使える機能を選びます。<b>会計本体</b>を外したアカウントは、会計本体では区分・年度の切替だけができ、チェックを入れた 小口現金・預金出納・減価償却 だけを開けます。メニューにも、その機能だけを表示します。</div>
@@ -176,7 +180,7 @@ export function UserSettingsPage({ variant, accent }: Props) {
                     {ACCOUNTS.map((a) => {
                       const acc = accessOf(a.id);
                       const count = ACCESS_ITEMS.filter((it) => acc[it.key]).length;
-                      const me = a.id === 'me';
+                      const me = a.id === session.accountId;
                       return (
                         <tr key={a.id} data-account={a.id}>
                           <td style={td}>

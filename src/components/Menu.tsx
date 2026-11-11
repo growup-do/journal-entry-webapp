@@ -52,11 +52,10 @@ function itemState(label: string, s: Session): { disabled?: string; tag?: string
 }
 
 /**
- * メニューに出す分類。会計本体を使えるアカウントはすべての分類（使えない項目は「利用不可」の表示）。
+ * メニューに出す分類。アカウントで使えない機能は出さない（グレーアウトにもしない）。
  * 会計本体を使えないアカウントは、使える機能（小口現金・預金出納・減価償却）だけを出す。
  */
 export function visibleGroups(a: Access): MenuGroup[] {
-  if (a.core) return MENU_GROUPS;
   return MENU_GROUPS.map((g) => ({ ...g, items: g.items.filter((l) => canOpen(l, a)) })).filter((g) => g.items.length > 0);
 }
 

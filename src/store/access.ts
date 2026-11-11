@@ -47,16 +47,22 @@ export function accessLabel(a: Access): string {
 /** 使えない項目のツールチップ・案内 */
 export const ACCESS_DENIED = 'このアカウントでは利用できません（利用できる機能は管理者が設定します）';
 
-/** アカウントの一覧（プロトタイプのサンプル）。me がログイン中のアカウント */
-export const ACCOUNTS: { id: string; name: string; email: string; role: string }[] = [
-  { id: 'me', name: '経理 担当者', email: 'keiri@example.jp', role: '管理者' },
-  { id: 'encho', name: '園長', email: 'encho@example.jp', role: '担当者' },
-  { id: 'koguchi', name: '小口 担当者', email: 'koguchi@example.jp', role: '担当者' },
-  { id: 'yokin', name: '預金 担当者', email: 'yokin@example.jp', role: '担当者' },
-  { id: 'shisan', name: '資産 担当者', email: 'shisan@example.jp', role: '担当者' },
+/**
+ * アカウントの一覧（プロトタイプのサンプル）。どれでもログインできる（パスワードは store/review.ts）。
+ * me は管理者（通常アカウント・確認用アカウントでログインしたとき）。アカウントごとの利用できる機能を設定できるのは管理者だけ。
+ */
+export const ACCOUNTS: { id: string; name: string; kana: string; email: string; dept: string; role: '管理者' | '担当者' }[] = [
+  { id: 'me', name: '経理 担当者', kana: 'ケイリ タントウシャ', email: 'keiri@example.jp', dept: '本部 経理', role: '管理者' },
+  { id: 'encho', name: '園長', kana: 'エンチョウ', email: 'encho@example.jp', dept: 'チャイルド保育園', role: '担当者' },
+  { id: 'koguchi', name: '小口 担当者', kana: 'コグチ タントウシャ', email: 'koguchi@example.jp', dept: 'チャイルド保育園 事務', role: '担当者' },
+  { id: 'yokin', name: '預金 担当者', kana: 'ヨキン タントウシャ', email: 'yokin@example.jp', dept: '本部 経理', role: '担当者' },
+  { id: 'shisan', name: '資産 担当者', kana: 'シサン タントウシャ', email: 'shisan@example.jp', dept: '本部 総務', role: '担当者' },
 ];
-/** ログイン中以外のアカウントの既定の設定 */
+/** id のアカウント（見つからなければ管理者） */
+export const accountOf = (id: string) => ACCOUNTS.find((a) => a.id === id) ?? ACCOUNTS[0];
+/** アカウントごとの使える機能の既定 */
 export const DEFAULT_MEMBER_ACCESS: Record<string, Access> = {
+  me: FULL_ACCESS,
   encho: FULL_ACCESS,
   koguchi: only('petty'),
   yokin: only('bank'),

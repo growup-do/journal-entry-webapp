@@ -186,8 +186,10 @@ export interface Session {
   openingMidTerm: boolean;
   /** このアカウントで使える機能（会計本体／小口現金／預金出納／減価償却）。確認事項「小口、預金、減価について」 */
   access: Access;
-  /** ほかのアカウントの使える機能（アカウントの id → 設定）。ユーザー設定の「アカウントごとの利用できる機能」で管理者が決める */
+  /** アカウントごとの使える機能（アカウントの id → 設定）。ユーザー設定の「アカウントごとの利用できる機能」で管理者が決める */
   memberAccess: Record<string, Access>;
+  /** ログイン中のアカウント（store/access.ts の ACCOUNTS の id）。access はこのアカウントの memberAccess と同じ内容 */
+  accountId: string;
 }
 
 const KEY = 'proto-session-v2'; // v2：区分ツリーの見直し（入力区分／親区分）に伴い保存形式を更新
@@ -210,7 +212,7 @@ const DEFAULT: Session = {
   ledgerTarget: null, journalTarget: null, auditEnabled: {}, auditCorpEnabled: { 21: false, 22: false }, corpStartDate: '20240401', corpTax: '非課税',
   role: '入力可', startScreen: '伝票入力', homeSections: DEFAULT_HOME_SECTIONS, taxEntry: false,
   taxMode: '通常モード', specialRatesByAccount: DEFAULT_SPECIAL_RATES_BY_ACCOUNT, specialRoundTo: DEFAULT_SPECIAL_RATES[DEFAULT_SPECIAL_RATES.length - 1].division, openingMidTerm: false,
-  access: FULL_ACCESS, memberAccess: DEFAULT_MEMBER_ACCESS,
+  access: FULL_ACCESS, memberAccess: DEFAULT_MEMBER_ACCESS, accountId: 'me',
 };
 
 let state: Session = (() => {
@@ -218,7 +220,7 @@ let state: Session = (() => {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULT;
     const saved = JSON.parse(raw) as Partial<Session>;
-    return { ...DEFAULT, ...saved, tree: normalizeTree(saved.tree ?? DEFAULT.tree), env: { ...DEFAULT_ENV, ...(saved.env ?? {}) }, input: { ...DEFAULT_INPUT, ...(saved.input ?? {}) }, print: { ...DEFAULT_PRINT, ...(saved.print ?? {}) }, homeSections: { ...DEFAULT_HOME_SECTIONS, ...(saved.homeSections ?? {}) }, access: { ...FULL_ACCESS, ...(saved.access ?? {}) }, memberAccess: { ...DEFAULT_MEMBER_ACCESS, ...(saved.memberAccess ?? {}) }, ledgerTarget: null, journalTarget: null,
+    return { ...DEFAULT, ...saved, tree: normalizeTree(saved.tree ?? DEFAULT.tree), env: { ...DEFAULT_ENV, ...(saved.env ?? {}) }, input: { ...DEFAULT_INPUT, ...(saved.input ?? {}) }, print: { ...DEFAULT_PRINT, ...(saved.print ?? {}) }, homeSections: { ...DEFAULT_HOME_SECTIONS, ...(saved.homeSections ?? {}) }, access: { ...FULL_ACCESS, ...(saved.access ?? {}) }, memberAccess: { ...DEFAULT_MEMBER_ACCESS, me: { ...FULL_ACCESS, ...(saved.access ?? {}) }, ...(saved.memberAccess ?? {}) }, ledgerTarget: null, journalTarget: null,
       // 以前の保存データ（消費税対応の On／Off だけ）には方式がないので、On は「簡易課税方式」として引き継ぐ（確認メモ #175）
       taxMode: saved.taxMode ?? (saved.taxEntry ? '簡易課税方式' : DEFAULT.taxMode),
       // 以前の保存データには仕訳伝票形式の定型がないので、サンプルを足す（確認メモ #202）

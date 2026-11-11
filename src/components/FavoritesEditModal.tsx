@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { Modal } from './Modal';
 import { HOME_CHECKS, IMPLEMENTED_MENU, MENU_GROUPS, SETTINGS_MENU, displayName } from '../data';
 import { setSession, useSession } from '../store/session';
+import { canOpen } from '../store/access';
 
 /** 登録できる機能（プロトタイプで画面があるもの） */
 const CANDIDATES = [...MENU_GROUPS.flatMap((g) => g.items), ...HOME_CHECKS, '元帳１', '元帳２', '残高照合', '法人印刷', ...SETTINGS_MENU].filter((l) => IMPLEMENTED_MENU.includes(l) || l === '印刷センター' || l === '予算' || SETTINGS_MENU.includes(l));
@@ -45,7 +46,7 @@ export function FavoritesEditModal({ open, onClose, accent }: { open: boolean; o
         <div>
           <div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 6 }}>登録できる機能（クリックで追加）</div>
           <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: 300, overflow: 'auto' }}>
-            {CANDIDATES.filter((c) => !s.favorites.includes(c)).map((c) => <button key={c} type="button" onClick={() => setSession({ favorites: [...s.favorites, c] })} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', border: 'none', borderBottom: '1px solid #f1f4f6', background: '#fff', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', color: '#22303c' }}>＋ {displayName(c)}</button>)}
+            {CANDIDATES.filter((c) => !s.favorites.includes(c) && canOpen(c, s.access)).map((c) => <button key={c} type="button" onClick={() => setSession({ favorites: [...s.favorites, c] })} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', border: 'none', borderBottom: '1px solid #f1f4f6', background: '#fff', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', color: '#22303c' }}>＋ {displayName(c)}</button>)}
           </div>
         </div>
         <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end' }}><button type="button" onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: accent, color: '#fff', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>閉じる</button></div>

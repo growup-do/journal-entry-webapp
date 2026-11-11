@@ -11,7 +11,7 @@ import { FavoritesEditModal } from './FavoritesEditModal';
 import { VersionBadge } from './VersionBadge';
 import { Chevron } from './ui';
 import { useSession } from '../store/session';
-import { firstAllowed } from '../store/access';
+import { canOpen, firstAllowed } from '../store/access';
 
 export const SIDENAV_WIDTH = 228;
 export const SIDENAV_COMPACT = 60;
@@ -91,8 +91,8 @@ function Favorites({ accent, active, onNavigate, compact }: { accent: string; ac
   const star = <span aria-hidden style={{ color: '#d9a400', fontSize: compact ? 20 : 15, lineHeight: 1, flex: 'none' }}>★</span>;
   const items = (
     <>
-      {s.favorites.map((l) => <SubItem key={l} label={l} active={active === l} accent={accent} indent={!compact} onClick={() => { setOpen(false); onNavigate(l); }} />)}
-      {s.favorites.length === 0 && <div style={{ padding: compact ? '8px 12px' : '6px 10px 6px 34px', fontSize: 13, color: '#9aa5b1', whiteSpace: 'nowrap' }}>まだ登録がありません。</div>}
+      {s.favorites.filter((l) => canOpen(l, s.access)).map((l) => <SubItem key={l} label={l} active={active === l} accent={accent} indent={!compact} onClick={() => { setOpen(false); onNavigate(l); }} />)}
+      {!s.favorites.some((l) => canOpen(l, s.access)) && <div style={{ padding: compact ? '8px 12px' : '6px 10px 6px 34px', fontSize: 13, color: '#9aa5b1', whiteSpace: 'nowrap' }}>まだ登録がありません。</div>}
       <button type="button" data-menu="お気に入りメニューを編集" onClick={() => { setOpen(false); setEdit(true); }} style={{ display: 'flex', alignItems: 'center', width: '100%', textAlign: 'left', padding: compact ? '8px 14px' : '6px 10px 6px 34px', border: 'none', background: 'transparent', borderRadius: 7, fontSize: 13, fontWeight: 700, color: accent, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>お気に入りメニューを編集…</button>
     </>
   );

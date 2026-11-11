@@ -7,6 +7,7 @@ import { FavoritesEditModal } from '../FavoritesEditModal';
 import { Chevron } from '../ui';
 import { displayName } from '../../data';
 import { useSession } from '../../store/session';
+import { canOpen } from '../../store/access';
 
 export function FavoritesMenu({ accent, active, onNavigate }: { accent: string; active: string; onNavigate: (label: string) => void }) {
   const s = useSession();
@@ -35,11 +36,11 @@ export function FavoritesMenu({ accent, active, onNavigate }: { accent: string; 
       {open && (
         <div role="menu" style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', zIndex: 120, minWidth: 220, background: '#fff', border: '1px solid #e2e8ee', borderRadius: 12, boxShadow: '0 12px 36px rgba(20,30,40,.16)', padding: 6 }}>
           <div style={{ padding: '4px 10px 6px', fontSize: 12, fontWeight: 700, color: '#8290a0', letterSpacing: '.03em' }}>お気に入りメニュー</div>
-          {s.favorites.map((l) => {
+          {s.favorites.filter((l) => canOpen(l, s.access)).map((l) => {
             const on = active === l;
             return <button key={l} type="button" role="menuitem" data-menu={'お気に入りメニュー:' + l} onClick={() => { setOpen(false); onNavigate(l); }} style={{ ...item, background: on ? accent + '14' : 'transparent', color: on ? accent : '#22303c' }}><span aria-hidden style={{ width: 6, height: 6, borderRadius: 3, background: on ? accent : '#c3ccd4', flex: 'none' }} />{displayName(l)}</button>;
           })}
-          {s.favorites.length === 0 && <div style={{ padding: '8px 10px', fontSize: 14, color: '#9aa5b1' }}>まだ登録がありません。</div>}
+          {!s.favorites.some((l) => canOpen(l, s.access)) && <div style={{ padding: '8px 10px', fontSize: 14, color: '#9aa5b1' }}>まだ登録がありません。</div>}
           <div style={{ borderTop: '1px solid #eef2f5', marginTop: 4, paddingTop: 4 }}>
             <button type="button" role="menuitem" onClick={() => { setOpen(false); setEdit(true); }} style={{ ...item, color: accent }}>お気に入りメニューを編集…</button>
           </div>
