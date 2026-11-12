@@ -3,7 +3,8 @@
 //   FinderPanel        … ホーム（ダッシュボード）に置く「機能から探す」：検索ボックス＋全機能の一覧。
 //                        別画面には飛ばさず、検索ボックスに入力するとその場で一覧を絞り込む（確認メモ #147／#148）。
 //   FunctionFinderPage … 左メニューの「機能から探す」から開く画面（中身はホームと同じ一覧）。
-//   重要度（確認メモ #241）：重要度の高い機能はアイコンつきの大きなタイル、中の機能はアイコンつきのやや大きいボタン、ほかは従来のボタンで出す。
+//   一覧の形：分類ごとに、左に大きなアイコンと分類名、右にその分類の機能を文字のリンクで並べる。
+//   重要度（確認メモ #241）：分類の先頭の機能と重要度・高の機能は大きな見出しの文字、中の機能はやや大きい文字で出す。
 
 import { useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
@@ -51,69 +52,65 @@ const INPUT_ONLY = ['単一入力', '伝票入力', '振替入力', '振替単�
 type Priority = 'high' | 'mid';
 const PRIORITY: Record<string, Priority> = { 伝票入力: 'high', 印刷センター: 'high', 小口現金: 'high', 減価償却: 'high', 預金出納: 'high', 決算調査: 'mid', 予算: 'mid' };
 const PRIORITY_LABEL: Record<Priority, string> = { high: '重要度：高', mid: '重要度：中' };
-/** 重要度つきの機能のアイコン（24×24 の線画） */
-const ICONS: Record<string, ReactNode> = {
-  伝票入力: <><path d="M6 3h9l4 4v14H6z" /><path d="M15 3v4h4" /><path d="M9 12h7M9 16h7" /></>,
-  印刷センター: <><path d="M7 8V3h10v5" /><path d="M7 17H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-3" /><path d="M7 13h10v8H7z" /></>,
-  小口現金: <><path d="M4 7h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10v3" /><path d="M20 12h-4a2 2 0 0 0 0 4h4" /></>,
-  減価償却: <><path d="M3 3v18h18" /><path d="M7 8l4 4 3-3 5 6" /><path d="M19 11v4h-4" /></>,
-  預金出納: <><path d="M3 10l9-6 9 6" /><path d="M4 10h16" /><path d="M6 10v8M10 10v8M14 10v8M18 10v8" /><path d="M3 21h18M4 18h16" /></>,
-  決算調査: <><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /><path d="M8 11l2 2 4-4" /></>,
-  予算: <><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M8 7h8" /><path d="M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01" /></>,
-};
-function FnIcon({ name, size, color }: { name: string; size: number; color: string }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flex: 'none' }}>{ICONS[name]}</svg>;
-}
 
-/* ---------------- 全機能の一覧（分類ごと） ---------------- */
-function FunctionDirectory({ groups, onNavigate, first, minCol = 250, accent }: { groups: Group[]; onNavigate: (label: string) => void; accent: string; /** 検索中：Enter で開く先頭の項目（強調表示） */ first?: string; /** 列の最小幅 */ minCol?: number }) {
+/** 分類ごとのアイコン（24×24 の線画。一覧では大きく表示する） */
+const GROUP_ICONS: Record<string, ReactNode> = {
+  input: <><path d="M6 3h9l4 4v14H6z" /><path d="M15 3v4h4" /><path d="M9 12h7M9 16h7" /></>,
+  ledger: <><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z" /><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z" /><path d="M6.5 8h2.5M6.5 11h2.5M15.5 8h2M15.5 11h2" /></>,
+  trend: <><path d="M3 3v18h18" /><path d="M7 15l4-4 3 3 6-7" /><path d="M16 7h4v4" /></>,
+  compare: <><rect x="3.5" y="4" width="17" height="16" rx="1.5" /><path d="M3.5 9h17M3.5 14.5h17M9.5 9v11" /></>,
+  print: <><path d="M7 8V3h10v5" /><path d="M7 17H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-3" /><path d="M7 13h10v8H7z" /></>,
+  option: <><path d="M4 7h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10v3" /><path d="M20 12h-4a2 2 0 0 0 0 4h4" /></>,
+  audit: <><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /><path d="M8 11l2 2 4-4" /></>,
+  's-master': <><ellipse cx="12" cy="5.5" rx="7" ry="2.5" /><path d="M5 5.5v13c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-13" /><path d="M5 12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5" /></>,
+  's-config': <><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1" /><circle cx="15" cy="6" r="2" /><circle cx="9" cy="12" r="2" /><circle cx="17" cy="18" r="2" /></>,
+  's-register': <><rect x="8" y="3" width="12" height="14" rx="1.5" /><path d="M16 17v2.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 4 19.5v-11A1.5 1.5 0 0 1 5.5 7H8" /><path d="M11 8h6M11 12h6" /></>,
+  's-maint': <><path d="M14.7 6.3a4 4 0 0 0 5 5L21 13l-8 8-3-3 6.7-6.7a4 4 0 0 1-5-5L10 4.6 4.6 10" /><path d="M3 21l6-6" /></>,
+  's-update': <><rect x="3.5" y="5" width="17" height="15" rx="1.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /><path d="M15 14.5a3 3 0 1 1-1-2.2" /><path d="M14.5 11.5v1.5H13" /></>,
+};
+const DEFAULT_ICON: ReactNode = <><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M8 9h8M8 13h8M8 17h5" /></>;
+
+/* ---------------- 全機能の一覧（分類ごと） ----------------
+ *  分類ごとに、左に大きなアイコンと分類名、右にその分類の機能を文字のリンクで並べる。
+ *  先頭の機能と重要度・高の機能（確認メモ #241）は大きな見出しの文字、重要度・中はやや大きい文字にする。 */
+function FunctionDirectory({ groups, onNavigate, first, minCol = 270, accent }: { groups: Group[]; onNavigate: (label: string) => void; accent: string; /** 検索中：Enter で開く先頭の項目（強調表示） */ first?: string; /** 列の最小幅 */ minCol?: number }) {
   const kind = startKindOf(useSession());
-  const tint = (pct: number) => 'color-mix(in srgb, ' + accent + ' ' + pct + '%, #fff)';
   return (
-    <div data-function-directory style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${minCol}px, 1fr))`, gap: 12 }}>
+    <div data-function-directory style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${minCol}px, 1fr))`, columnGap: 14, rowGap: 6 }}>
+      <style>{'[data-fn-link]:not(:disabled):hover{text-decoration:underline;text-underline-offset:3px}'}</style>
       {groups.length === 0 && <div style={{ gridColumn: '1 / -1', padding: 30, textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>該当する機能がありません。別の言葉でお試しください。</div>}
-      {groups.map((g) => (
-        <div key={g.key} data-function-group={g.key} style={{ border: '1px solid ' + (g.danger ? '#f2c9c2' : '#e2e8ee'), background: g.danger ? '#fdf5f3' : '#fbfcfd', borderRadius: 12, padding: '10px 12px' }}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: g.danger ? '#c0392b' : '#3d4a56' }}>{g.label}</div>
-          {g.note && <div style={{ fontSize: 12, color: g.danger ? '#b5564a' : '#9aa5b1', marginTop: 1 }}>{g.note}</div>}
-          {/* ボタンは行の幅いっぱいに伸ばす。1 行に 1 つならボックスの幅、2 つなら 2 つで幅いっぱい */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch', gap: 6, marginTop: 8 }}>
-            {g.items.map((l) => {
-              const off = INPUT_ONLY.includes(l) && kind !== '入力区分';
-              const hit = first === l;
-              const pr = PRIORITY[l];
-              const name = g.key.startsWith('s-') ? settingsMenuName(l) : displayName(l);
-              const tip = off ? kind + 'で起動中は利用できません' : hit ? 'Enter でこの画面を開きます' : pr ? PRIORITY_LABEL[pr] : undefined;
-              const ink = off ? '#b3bcc5' : g.danger ? '#c0392b' : '#22303c';
-              const ring = hit ? '0 0 0 2px rgba(31,122,82,.18)' : 'none';
-              // 1 行に最大 3 つ。名前が収まる限り 3 つ・2 つ・1 つの順に詰め、各行はボックスの幅いっぱいに伸ばす。
-              // 長い名前（ボックスの幅でも 1 行に収まらないもの）は 1 行に 1 つで、折り返して表示する
-              const basis = name.length <= (pr === 'mid' ? 8 : 10) ? 'calc(33.333% - 4px)' : '100%';
-              // 短い名前は折り返さない（半分の幅に収まらないときは、自動で 1 行に 1 つになる）
-              const ws = basis === '100%' ? 'normal' : 'nowrap';
-              // 重要度・高：アイコンを上に置いた大きなタイル
-              if (pr === 'high') return (
-                <button key={l} type="button" className="btn-outline" data-menu={'機能:' + l} data-priority="high" onClick={() => onNavigate(l)} title={tip} style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5, flex: '1 1 ' + basis, boxSizing: 'border-box', minWidth: 96, padding: '11px 10px 9px', border: '2px solid ' + (hit ? '#1f7a52' : off ? '#d3dbe3' : accent), borderRadius: 10, background: hit ? '#eaf5ef' : off ? '#f7f9fa' : tint(9), color: ink, fontSize: 15, fontWeight: 800, fontFamily: 'inherit', whiteSpace: 'nowrap', cursor: 'pointer', boxShadow: ring }}>
-                  <FnIcon name={l} size={30} color={off ? '#b3bcc5' : accent} />
-                  {name}
-                </button>
-              );
-              // 重要度・中：アイコンつきのやや大きいボタン
-              if (pr === 'mid') return (
-                <button key={l} type="button" className="btn-outline" data-menu={'機能:' + l} data-priority="mid" onClick={() => onNavigate(l)} title={tip} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, flex: '1 1 ' + basis, boxSizing: 'border-box', whiteSpace: ws, padding: '8px 13px 8px 10px', border: '1.5px solid ' + (hit ? '#1f7a52' : off ? '#d3dbe3' : tint(60)), borderRadius: 9, background: hit ? '#eaf5ef' : '#fff', color: ink, fontSize: 15, fontWeight: 700, fontFamily: 'inherit', maxWidth: '100%', textAlign: 'center', lineHeight: 1.35, cursor: 'pointer', boxShadow: ring }}>
-                  <FnIcon name={l} size={20} color={off ? '#b3bcc5' : accent} />
-                  {name}
-                </button>
-              );
-              return (
-                <button key={l} type="button" className="btn-outline" data-menu={'機能:' + l} onClick={() => onNavigate(l)} title={tip} style={{ flex: '1 1 ' + basis, boxSizing: 'border-box', whiteSpace: ws, maxWidth: '100%', padding: '5px 10px', textAlign: 'center', lineHeight: 1.35, border: '1px solid ' + (hit ? '#1f7a52' : g.danger ? '#f2c9c2' : '#cfd8e0'), borderRadius: 8, background: hit ? '#eaf5ef' : '#fff', color: ink, fontSize: 14, fontWeight: hit ? 700 : 600, fontFamily: 'inherit', cursor: 'pointer', boxShadow: ring }}>
-                  {name}
-                </button>
-              );
-            })}
+      {groups.map((g) => {
+        const iconInk = g.danger ? '#c0392b' : '#3d4a56';
+        const linkInk = g.danger ? '#c0392b' : accent;
+        // 分類名は「各種設定 › マスター設定」のように長いものを 2 行に分ける
+        const [l1, l2] = g.label.includes(' › ') ? g.label.split(' › ') : [g.label, ''];
+        return (
+          <div key={g.key} data-function-group={g.key} style={{ display: 'grid', gridTemplateColumns: '106px 1fr', columnGap: 12, alignItems: 'start', padding: '14px 8px' }}>
+            <div title={g.note || undefined} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, paddingTop: 4, textAlign: 'center' }}>
+              <svg width={66} height={66} viewBox="0 0 24 24" fill="none" stroke={iconInk} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{GROUP_ICONS[g.key] ?? DEFAULT_ICON}</svg>
+              <div style={{ fontSize: 13, fontWeight: 700, color: iconInk, lineHeight: 1.35 }}>
+                {l2 ? <><span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: g.danger ? '#b5564a' : '#7a8794' }}>{l1}</span>{l2}</> : l1}
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3, minWidth: 0 }}>
+              {g.items.map((l, i) => {
+                const off = INPUT_ONLY.includes(l) && kind !== '入力区分';
+                const hit = first === l;
+                const pr = PRIORITY[l];
+                const head = i === 0 || pr === 'high';
+                const name = g.key.startsWith('s-') ? settingsMenuName(l) : displayName(l);
+                const tip = off ? kind + 'で起動中は利用できません' : hit ? 'Enter でこの画面を開きます' : pr ? PRIORITY_LABEL[pr] : undefined;
+                return (
+                  <button key={l} type="button" data-fn-link data-menu={'機能:' + l} data-priority={pr} onClick={() => onNavigate(l)} title={tip}
+                    style={{ border: 'none', background: hit ? '#eaf5ef' : 'transparent', boxShadow: hit ? '0 0 0 2px rgba(31,122,82,.25)' : 'none', borderRadius: 6, padding: head ? '1px 4px 2px' : '1px 4px', margin: head && i > 0 ? '4px 0 0' : 0, color: off ? '#b3bcc5' : linkInk, fontSize: head ? 18 : pr === 'mid' ? 15 : 14, fontWeight: head ? 800 : 700, lineHeight: 1.4, textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', maxWidth: '100%' }}>
+                    {name}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -204,7 +201,7 @@ export function FinderPanel({ accent, onNavigate }: { accent: string; onNavigate
       </div>
       {/* 全機能の一覧（確認メモ #147：別画面に飛ばさず、最初からダッシュボードに表示） */}
       <div style={{ padding: '14px 16px 16px' }}>
-        <FunctionDirectory groups={groups} onNavigate={go} first={first} minCol={190} accent={accent} />
+        <FunctionDirectory groups={groups} onNavigate={go} first={first} accent={accent} />
       </div>
     </section>
   );
