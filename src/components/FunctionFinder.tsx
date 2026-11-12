@@ -76,7 +76,8 @@ function FunctionDirectory({ groups, onNavigate, first, minCol = 250, accent }: 
         <div key={g.key} data-function-group={g.key} style={{ border: '1px solid ' + (g.danger ? '#f2c9c2' : '#e2e8ee'), background: g.danger ? '#fdf5f3' : '#fbfcfd', borderRadius: 12, padding: '10px 12px' }}>
           <div style={{ fontSize: 14, fontWeight: 800, color: g.danger ? '#c0392b' : '#3d4a56' }}>{g.label}</div>
           {g.note && <div style={{ fontSize: 12, color: g.danger ? '#b5564a' : '#9aa5b1', marginTop: 1 }}>{g.note}</div>}
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 5, marginTop: 8 }}>
+          {/* ボタンは行の幅いっぱいに伸ばす。1 行に 1 つならボックスの幅、2 つなら 2 つで幅いっぱい */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch', gap: 6, marginTop: 8 }}>
             {g.items.map((l) => {
               const off = INPUT_ONLY.includes(l) && kind !== '入力区分';
               const hit = first === l;
@@ -85,22 +86,26 @@ function FunctionDirectory({ groups, onNavigate, first, minCol = 250, accent }: 
               const tip = off ? kind + 'で起動中は利用できません' : hit ? 'Enter でこの画面を開きます' : pr ? PRIORITY_LABEL[pr] : undefined;
               const ink = off ? '#b3bcc5' : g.danger ? '#c0392b' : '#22303c';
               const ring = hit ? '0 0 0 2px rgba(31,122,82,.18)' : 'none';
+              // 1 行に最大 2 つ。短い名前は半分の幅（2 つで幅いっぱい）、長い名前は 1 行に 1 つ。並びの最後に残った 1 つは幅いっぱいに伸ばす
+              const basis = name.length <= (pr === 'mid' ? 6 : pr === 'high' ? 8 : 7) ? 'calc(50% - 3px)' : '100%';
+              // 短い名前は折り返さない（半分の幅に収まらないときは、自動で 1 行に 1 つになる）
+              const ws = basis === '100%' ? 'normal' : 'nowrap';
               // 重要度・高：アイコンを上に置いた大きなタイル
               if (pr === 'high') return (
-                <button key={l} type="button" className="btn-outline" data-menu={'機能:' + l} data-priority="high" onClick={() => onNavigate(l)} title={tip} style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5, flex: '1 1 96px', minWidth: 96, padding: '11px 10px 9px', border: '2px solid ' + (hit ? '#1f7a52' : off ? '#d3dbe3' : accent), borderRadius: 10, background: hit ? '#eaf5ef' : off ? '#f7f9fa' : tint(9), color: ink, fontSize: 15, fontWeight: 800, fontFamily: 'inherit', whiteSpace: 'nowrap', cursor: 'pointer', boxShadow: ring }}>
+                <button key={l} type="button" className="btn-outline" data-menu={'機能:' + l} data-priority="high" onClick={() => onNavigate(l)} title={tip} style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5, flex: '1 1 ' + basis, boxSizing: 'border-box', minWidth: 96, padding: '11px 10px 9px', border: '2px solid ' + (hit ? '#1f7a52' : off ? '#d3dbe3' : accent), borderRadius: 10, background: hit ? '#eaf5ef' : off ? '#f7f9fa' : tint(9), color: ink, fontSize: 15, fontWeight: 800, fontFamily: 'inherit', whiteSpace: 'nowrap', cursor: 'pointer', boxShadow: ring }}>
                   <FnIcon name={l} size={30} color={off ? '#b3bcc5' : accent} />
                   {name}
                 </button>
               );
               // 重要度・中：アイコンつきのやや大きいボタン
               if (pr === 'mid') return (
-                <button key={l} type="button" className="btn-outline" data-menu={'機能:' + l} data-priority="mid" onClick={() => onNavigate(l)} title={tip} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px 8px 10px', border: '1.5px solid ' + (hit ? '#1f7a52' : off ? '#d3dbe3' : tint(60)), borderRadius: 9, background: hit ? '#eaf5ef' : '#fff', color: ink, fontSize: 15, fontWeight: 700, fontFamily: 'inherit', maxWidth: '100%', textAlign: 'left', lineHeight: 1.35, cursor: 'pointer', boxShadow: ring }}>
+                <button key={l} type="button" className="btn-outline" data-menu={'機能:' + l} data-priority="mid" onClick={() => onNavigate(l)} title={tip} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, flex: '1 1 ' + basis, boxSizing: 'border-box', whiteSpace: ws, padding: '8px 13px 8px 10px', border: '1.5px solid ' + (hit ? '#1f7a52' : off ? '#d3dbe3' : tint(60)), borderRadius: 9, background: hit ? '#eaf5ef' : '#fff', color: ink, fontSize: 15, fontWeight: 700, fontFamily: 'inherit', maxWidth: '100%', textAlign: 'center', lineHeight: 1.35, cursor: 'pointer', boxShadow: ring }}>
                   <FnIcon name={l} size={20} color={off ? '#b3bcc5' : accent} />
                   {name}
                 </button>
               );
               return (
-                <button key={l} type="button" className="btn-outline" data-menu={'機能:' + l} onClick={() => onNavigate(l)} title={tip} style={{ padding: '5px 10px', border: '1px solid ' + (hit ? '#1f7a52' : g.danger ? '#f2c9c2' : '#cfd8e0'), borderRadius: 8, background: hit ? '#eaf5ef' : '#fff', color: ink, fontSize: 14, fontWeight: hit ? 700 : 600, fontFamily: 'inherit', cursor: 'pointer', boxShadow: ring }}>
+                <button key={l} type="button" className="btn-outline" data-menu={'機能:' + l} onClick={() => onNavigate(l)} title={tip} style={{ flex: '1 1 ' + basis, boxSizing: 'border-box', whiteSpace: ws, maxWidth: '100%', padding: '5px 10px', textAlign: 'center', lineHeight: 1.35, border: '1px solid ' + (hit ? '#1f7a52' : g.danger ? '#f2c9c2' : '#cfd8e0'), borderRadius: 8, background: hit ? '#eaf5ef' : '#fff', color: ink, fontSize: 14, fontWeight: hit ? 700 : 600, fontFamily: 'inherit', cursor: 'pointer', boxShadow: ring }}>
                   {name}
                 </button>
               );
