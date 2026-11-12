@@ -86,8 +86,9 @@ function FunctionDirectory({ groups, onNavigate, first, minCol = 250, accent }: 
               const tip = off ? kind + 'で起動中は利用できません' : hit ? 'Enter でこの画面を開きます' : pr ? PRIORITY_LABEL[pr] : undefined;
               const ink = off ? '#b3bcc5' : g.danger ? '#c0392b' : '#22303c';
               const ring = hit ? '0 0 0 2px rgba(31,122,82,.18)' : 'none';
-              // 1 行に最大 2 つ。短い名前は半分の幅（2 つで幅いっぱい）、長い名前は 1 行に 1 つ。並びの最後に残った 1 つは幅いっぱいに伸ばす
-              const basis = name.length <= (pr === 'mid' ? 6 : pr === 'high' ? 8 : 7) ? 'calc(50% - 3px)' : '100%';
+              // 1 行に最大 3 つ。名前が収まる限り 3 つ・2 つ・1 つの順に詰め、各行はボックスの幅いっぱいに伸ばす。
+              // 長い名前（ボックスの幅でも 1 行に収まらないもの）は 1 行に 1 つで、折り返して表示する
+              const basis = name.length <= (pr === 'mid' ? 8 : 10) ? 'calc(33.333% - 4px)' : '100%';
               // 短い名前は折り返さない（半分の幅に収まらないときは、自動で 1 行に 1 つになる）
               const ws = basis === '100%' ? 'normal' : 'nowrap';
               // 重要度・高：アイコンを上に置いた大きなタイル
