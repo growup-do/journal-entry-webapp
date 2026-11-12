@@ -4,7 +4,7 @@
 //                        別画面には飛ばさず、検索ボックスに入力するとその場で一覧を絞り込む（確認メモ #147／#148）。
 //   FunctionFinderPage … 左メニューの「機能から探す」から開く画面（中身はホームと同じ一覧）。
 //   一覧の形：分類ごとに、左に大きなアイコンと分類名、右にその分類の機能を文字のリンクで並べる。
-//   重要度（確認メモ #241）：分類の先頭の機能と重要度・高の機能は大きな見出しの文字、中の機能はやや大きい文字で出す。
+//   重要度（確認メモ #241）：分類の先頭の機能と重要度・高の機能は大きな見出しの文字、ほかは枠つきのボタン（中の機能は緑の枠と文字）。分類の間は仕切り線で区切る。
 
 import { useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
@@ -75,42 +75,62 @@ const DEFAULT_ICON: ReactNode = <><rect x="4" y="4" width="16" height="16" rx="2
  *  先頭の機能と重要度・高の機能（確認メモ #241）は大きな見出しの文字、重要度・中はやや大きい文字にする。 */
 function FunctionDirectory({ groups, onNavigate, first, minCol = 270, accent }: { groups: Group[]; onNavigate: (label: string) => void; accent: string; /** 検索中：Enter で開く先頭の項目（強調表示） */ first?: string; /** 列の最小幅 */ minCol?: number }) {
   const kind = startKindOf(useSession());
+  const tint = (pct: number) => 'color-mix(in srgb, ' + accent + ' ' + pct + '%, #fff)';
+  const LINE = '1px solid #e3e9ee';
+  // ボタンと見出しのマウスオーバー（使えない項目・検索で強調中の項目は変えない）
+  const css = '[data-fn-btn]:not([data-off]):not([data-hit]):hover{border-color:var(--fn-accent)!important;color:var(--fn-accent)!important;background:var(--fn-tint)!important}'
+    + '[data-fn-btn][data-danger]:not([data-off]):not([data-hit]):hover{border-color:#c0392b!important;color:#c0392b!important;background:#fdf1ee!important}'
+    + '[data-fn-head]:not([data-off]):hover{text-decoration:underline;text-underline-offset:4px}';
   return (
-    <div data-function-directory style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${minCol}px, 1fr))`, columnGap: 14, rowGap: 6 }}>
-      <style>{'[data-fn-link]:not(:disabled):hover{text-decoration:underline;text-underline-offset:3px}'}</style>
-      {groups.length === 0 && <div style={{ gridColumn: '1 / -1', padding: 30, textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>該当する機能がありません。別の言葉でお試しください。</div>}
-      {groups.map((g) => {
-        const iconInk = g.danger ? '#c0392b' : '#3d4a56';
-        const linkInk = g.danger ? '#c0392b' : accent;
-        // 分類名は「各種設定 › マスター設定」のように長いものを 2 行に分ける
-        const [l1, l2] = g.label.includes(' › ') ? g.label.split(' › ') : [g.label, ''];
-        return (
-          <div key={g.key} data-function-group={g.key} style={{ display: 'grid', gridTemplateColumns: '106px 1fr', columnGap: 12, alignItems: 'start', padding: '14px 8px' }}>
-            <div title={g.note || undefined} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, paddingTop: 4, textAlign: 'center' }}>
-              <svg width={66} height={66} viewBox="0 0 24 24" fill="none" stroke={iconInk} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{GROUP_ICONS[g.key] ?? DEFAULT_ICON}</svg>
-              <div style={{ fontSize: 13, fontWeight: 700, color: iconInk, lineHeight: 1.35 }}>
-                {l2 ? <><span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: g.danger ? '#b5564a' : '#7a8794' }}>{l1}</span>{l2}</> : l1}
+    // 仕切り線：各分類の上と左に線を引き、外周の線は外側の枠で隠す（内側の仕切りだけが見える）
+    <div style={{ overflow: 'hidden' }}>
+      <style>{css}</style>
+      <div data-function-directory style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${minCol}px, 1fr))`, margin: '-1px 0 0 -1px', ['--fn-accent' as string]: accent, ['--fn-tint' as string]: tint(8) } as CSSProperties}>
+        {groups.length === 0 && <div style={{ gridColumn: '1 / -1', padding: 30, textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>該当する機能がありません。別の言葉でお試しください。</div>}
+        {groups.map((g) => {
+          const iconInk = g.danger ? '#c0392b' : '#3d4a56';
+          const linkInk = g.danger ? '#c0392b' : accent;
+          // 分類名は「各種設定 › マスター設定」のように長いものを 2 行に分ける
+          const [l1, l2] = g.label.includes(' › ') ? g.label.split(' › ') : [g.label, ''];
+          return (
+            <div key={g.key} data-function-group={g.key} style={{ display: 'grid', gridTemplateColumns: '92px 1fr', columnGap: 12, alignItems: 'start', padding: '18px 14px 18px 6px', borderTop: LINE, borderLeft: LINE, background: g.danger ? '#fdf7f5' : undefined }}>
+              <div title={g.note || undefined} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, paddingTop: 2, textAlign: 'center' }}>
+                <svg width={50} height={50} viewBox="0 0 24 24" fill="none" stroke={iconInk} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{GROUP_ICONS[g.key] ?? DEFAULT_ICON}</svg>
+                <div style={{ fontSize: 12, fontWeight: 700, color: iconInk, lineHeight: 1.35, whiteSpace: 'nowrap' }}>
+                  {l2 ? <><span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: g.danger ? '#b5564a' : '#7a8794' }}>{l1}</span>{l2}</> : l1}
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch', gap: 6, minWidth: 0 }}>
+                {g.items.map((l, i) => {
+                  const off = INPUT_ONLY.includes(l) && kind !== '入力区分';
+                  const hit = first === l;
+                  const pr = PRIORITY[l];
+                  const head = i === 0 || pr === 'high';
+                  const name = g.key.startsWith('s-') ? settingsMenuName(l) : displayName(l);
+                  const tip = off ? kind + 'で起動中は利用できません' : hit ? 'Enter でこの画面を開きます' : pr ? PRIORITY_LABEL[pr] : undefined;
+                  const ring = hit ? '0 0 0 2px rgba(31,122,82,.22)' : undefined;
+                  // 見出し：分類の先頭の機能と重要度・高の機能。大きな文字で 1 行を占める
+                  if (head) return (
+                    <button key={l} type="button" data-fn-head data-off={off || undefined} data-menu={'機能:' + l} data-priority={pr} onClick={() => onNavigate(l)} title={tip}
+                      style={{ flex: '1 1 100%', display: 'inline-flex', alignItems: 'center', gap: 4, border: 'none', background: hit ? '#eaf5ef' : 'transparent', boxShadow: ring, borderRadius: 6, padding: '0 2px 2px', margin: i > 0 ? '6px 0 0' : '0 0 2px', color: off ? '#b3bcc5' : linkInk, fontSize: 16, fontWeight: 800, lineHeight: 1.35, textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer' }}>
+                      <span>{name}</span>
+                      <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flex: 'none', opacity: 0.7 }}><path d="M9 6l6 6-6 6" /></svg>
+                    </button>
+                  );
+                  // そのほかの機能：枠つきのボタン。短い名前は折り返さず、各行は幅いっぱいに伸ばす
+                  const short = name.length <= 10;
+                  return (
+                    <button key={l} type="button" className="btn-outline" data-fn-btn data-off={off || undefined} data-hit={hit || undefined} data-danger={g.danger || undefined} data-menu={'機能:' + l} data-priority={pr} onClick={() => onNavigate(l)} title={tip}
+                      style={{ flex: short ? '1 1 auto' : '1 1 100%', boxSizing: 'border-box', whiteSpace: short ? 'nowrap' : 'normal', padding: '5px 10px', border: '1px solid ' + (hit ? '#1f7a52' : off ? '#e3e8ec' : g.danger ? '#f2c9c2' : pr === 'mid' ? tint(55) : '#d5dde4'), borderRadius: 8, background: hit ? '#eaf5ef' : off ? '#f7f9fa' : '#fff', boxShadow: ring ?? '0 1px 1px rgba(34,48,60,.04)', color: off ? '#b3bcc5' : g.danger ? '#c0392b' : pr === 'mid' ? accent : '#22303c', fontSize: 14, fontWeight: pr === 'mid' ? 700 : 600, lineHeight: 1.4, textAlign: 'center', fontFamily: 'inherit', cursor: 'pointer' }}>
+                      {name}
+                    </button>
+                  );
+                })}
               </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3, minWidth: 0 }}>
-              {g.items.map((l, i) => {
-                const off = INPUT_ONLY.includes(l) && kind !== '入力区分';
-                const hit = first === l;
-                const pr = PRIORITY[l];
-                const head = i === 0 || pr === 'high';
-                const name = g.key.startsWith('s-') ? settingsMenuName(l) : displayName(l);
-                const tip = off ? kind + 'で起動中は利用できません' : hit ? 'Enter でこの画面を開きます' : pr ? PRIORITY_LABEL[pr] : undefined;
-                return (
-                  <button key={l} type="button" data-fn-link data-menu={'機能:' + l} data-priority={pr} onClick={() => onNavigate(l)} title={tip}
-                    style={{ border: 'none', background: hit ? '#eaf5ef' : 'transparent', boxShadow: hit ? '0 0 0 2px rgba(31,122,82,.25)' : 'none', borderRadius: 6, padding: head ? '1px 4px 2px' : '1px 4px', margin: head && i > 0 ? '4px 0 0' : 0, color: off ? '#b3bcc5' : linkInk, fontSize: head ? 18 : pr === 'mid' ? 15 : 14, fontWeight: head ? 800 : 700, lineHeight: 1.4, textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', maxWidth: '100%' }}>
-                    {name}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
