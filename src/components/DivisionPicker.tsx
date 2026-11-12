@@ -229,7 +229,7 @@ function DivisionList({ items, accent, selected, onSelect, onConfirm }: { items:
               <tr key={node.id} data-division={label} aria-selected={on} onClick={() => !disabled && onSelect(label)} onDoubleClick={() => !disabled && onConfirm(label)} title={disabled ? '非使用の区分' : 'クリックで選択、ダブルクリックで確定'} style={{ background: on ? accent + '1a' : undefined, cursor: disabled ? 'default' : 'pointer', color: disabled ? '#b8c2cc' : '#22303c' }}>
                 <td style={{ ...cellS, paddingLeft: 10 + (path.length - 1) * 18, fontWeight: on ? 800 : 500, whiteSpace: 'normal' }}>{node.name}</td>
                 {/* 種類（事業区分・サービス区分など）は、区分設定で決めた色の囲みに入れる（確認メモ #161）。色のない区分は白地の囲み */}
-                <td style={cellS}><span data-division-chip style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 7, background: node.color ?? '#fff', border: '1px solid rgba(34,48,60,.22)', fontWeight: 700, color: disabled ? '#9aa5b1' : '#22303c', opacity: disabled ? 0.6 : 1, lineHeight: 1.5 }}>{node.kind}</span></td>
+                <td style={cellS}><span data-division-chip style={{ display: 'inline-block', padding: '1px 8px', borderRadius: 7, background: node.color ?? '#fff', border: '1px solid rgba(34,48,60,.22)', fontSize: 12, fontWeight: 700, color: disabled ? '#9aa5b1' : '#22303c', opacity: disabled ? 0.6 : 1, lineHeight: 1.5 }}>{node.kind}</span></td>
                 <td style={cellS}>{node.code || '—'}</td>
                 <td style={cellS}>{path.length > 1 ? path[path.length - 2] : '—'}</td>
                 <td style={cellS}>{node.entry ? (disabled ? '非使用' : '○ 入力区分') : '集計・参照'}</td>
