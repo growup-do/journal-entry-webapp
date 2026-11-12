@@ -502,6 +502,26 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
     toast.show(`${aggSel.size} 件を集計しました${aggLink ? `（会計連動フォルダへ送信。伝票日付：${sd ? `${sd.replace('/', '月')}日` : '明細の日付'}）` : ''}`);
     setAggSel(new Set());
   };
+  // ---- 集計取消（確認メモ #232）：集計と同じく上から順の範囲で扱う。取り消す最初の行を押すと、その行から下の集計済みの明細をまとめて取り消す。
+  //      会計連動で伝票を作成済みの明細は取り消せない（その行より上も、取消の開始位置にはできない） ----
+  const [unaggOpen, setUnaggOpen] = useState(false);
+  const [unaggFrom, setUnaggFrom] = useState<number | null>(null);
+  const aggregatedRows = withBal.filter((r) => !r.special && r.aggregated);
+  /** その行から下に、会計連動済みの明細がないか（取消の開始位置にできるか） */
+  const canUnaggFrom = (i: number) => aggregatedRows.slice(i).every((r) => !r.linked);
+  const unaggIdx = unaggFrom == null ? -1 : aggregatedRows.findIndex((r) => r.id === unaggFrom);
+  const unaggRange = unaggIdx < 0 ? [] : aggregatedRows.slice(unaggIdx);
+  const openUnagg = () => { setUnaggFrom(null); setUnaggOpen(true); };
+  const pickUnagg = (id: number, i: number) => {
+    if (!canUnaggFrom(i)) return toast.show('会計連動で伝票を作成済みの明細があるため、ここからは取り消せません（会計連動済みの明細より下の行を選んでください）');
+    setUnaggFrom((f) => (f === id ? null : id));
+  };
+  const runUnagg = () => {
+    const ids = new Set(unaggRange.map((r) => r.id));
+    setRows((rs) => rs.map((r) => (ids.has(r.id) ? { ...r, aggregated: false, slipDate: undefined } : r)));
+    setUnaggOpen(false);
+    toast.show(`${ids.size} 件の集計を取り消しました（訂正・削除・行の挿入ができます）`);
+  };
   const importCsv = () => {
     const imp: Row[] = [
       R('8', '20', '（CSV）ﾌﾘｺﾐ ｼｸﾞﾏﾘｰｽ', '賃借料（事業）', 0, 18216, { imported: true }),
@@ -667,6 +687,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
         { label: '会計連動', onClick: openLink },
         { label: isPetty ? '小口区分の切替' : '区分の切替', onClick: openSwitch },
         ...(isPetty ? [{ label: '小口の設定', onClick: openSetting, title: 'この出納帳の名称・担当者・定額・残高の下限などを設定します' }] : []),
+        { label: '集計取消', onClick: openUnagg, title: '集計済みの明細の集計を取り消します（会計連動済みの明細は取り消せません）' },
         { label: '集計', onClick: () => setAggOpen(true), primary: true },
       ]}
       controls={
@@ -857,6 +878,37 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
             <button type="button" className="btn-outline" onClick={() => setAggSel(new Set())} style={btn()}>選択を外す</button>
             <span data-tip={aggSel.size === 0 ? '集計する明細にチェックを入れると押せます' : undefined} style={{ display: 'inline-flex' }}><button type="button" className="submit-btn" disabled={aggSel.size === 0} onClick={openAggConfirm} style={{ ...btn(true), opacity: aggSel.size ? 1 : 0.5 }}>OK</button></span>
             <button type="button" onClick={() => setAggOpen(false)} style={btn()}>キャンセル</button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ---- 集計取消（確認メモ #232）。閉じるのは「集計を取り消す」「キャンセル」と × だけ ---- */}
+      <Modal open={unaggOpen} onClose={() => setUnaggOpen(false)} width={860} title="集計取消">
+        <div style={{ padding: '14px 22px 18px' }} data-unagg>
+          <div style={{ fontSize: 14, marginBottom: 10 }}>集計を取り消す最初の行を押してください（その行から下の集計済みの明細がすべて選ばれます）。会計連動で伝票を作成済みの明細は取り消せません。<span style={{ fontSize: 14, color: '#7a8794', marginLeft: 8 }}>（選択 {unaggRange.length} 件）</span></div>
+          <div style={{ maxHeight: 380, overflow: 'auto', border: '1px solid #e2e8ee', borderRadius: 10 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead><tr><th style={{ ...TH, width: 36 }} /><th style={{ ...TH, textAlign: 'right' }}>入金額</th><th style={TH}>年月日</th><th style={TH}>摘要</th><th style={TH}>勘定科目</th><th style={{ ...TH, textAlign: 'right' }}>出金額</th><th style={TH}>状態</th></tr></thead>
+              <tbody>
+                {aggregatedRows.length === 0 && <tr><td colSpan={7} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 30 }}>集計済みの明細がありません。</td></tr>}
+                {aggregatedRows.map((r, i) => {
+                  const on = unaggRange.some((x) => x.id === r.id);
+                  const ok = canUnaggFrom(i);
+                  return (
+                    <tr key={r.id} data-unagg-row={r.id} onClick={() => pickUnagg(r.id, i)} title={ok ? 'この行から下の集計を取り消します（もう一度押すと選択を外します）' : '会計連動済みの明細があるため、ここからは取り消せません'} style={{ background: on ? '#fde8e6' : r.linked ? '#f3f6f9' : 'transparent', color: r.linked ? '#8290a0' : undefined, cursor: ok ? 'pointer' : 'not-allowed' }}>
+                      <td style={TD}><input type="checkbox" checked={on} disabled={!ok} readOnly aria-label={`${r.month}月${r.day}日 ${r.tekiyo} から下の集計を取り消す`} /></td>
+                      <td style={NUM}>{r.inAmt ? yen(r.inAmt) : ''}</td><td style={{ ...TD, whiteSpace: 'nowrap' }}>{r.month}/{r.day}</td><td style={TD}>{r.tekiyo}</td><td style={TD}>{r.account}</td><td style={NUM}>{r.outAmt ? yen(r.outAmt) : ''}</td>
+                      <td style={{ ...TD, whiteSpace: 'nowrap', fontSize: 12, fontWeight: 700, color: r.linked ? '#8290a0' : '#8a6516' }}>{r.linked ? '会計連動済み' : '集計済み'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {unaggRange.length > 0 && <div style={{ marginTop: 10, fontSize: 14, color: '#5b6773' }}>令和{eraOf(unaggRange[0])}年 {unaggRange[0].month}月{unaggRange[0].day}日 〜 令和{eraOf(unaggRange[unaggRange.length - 1])}年 {unaggRange[unaggRange.length - 1].month}月{unaggRange[unaggRange.length - 1].day}日 の <b>{unaggRange.length} 件</b>の集計を取り消します。取り消した明細は、訂正・削除・行の挿入ができるようになります。</div>}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 14 }}>
+            <span data-tip={unaggRange.length === 0 ? '取り消す最初の行を選ぶと押せます' : undefined} style={{ display: 'inline-flex' }}><button type="button" className="submit-btn" data-action="集計を取り消す" disabled={unaggRange.length === 0} onClick={runUnagg} style={{ ...btn(true), opacity: unaggRange.length ? 1 : 0.5 }}>集計を取り消す</button></span>
+            <button type="button" onClick={() => setUnaggOpen(false)} style={btn()}>キャンセル</button>
           </div>
         </div>
       </Modal>

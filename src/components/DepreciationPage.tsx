@@ -1301,7 +1301,7 @@ function ClosingView({ accent, vouchers, setVouchers, onCreated, toast }: { acce
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div><div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 4 }}>伝票の名称</div><input className="field-input ring" value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} placeholder="例：令和8年度 減価償却" style={input} /></div>
-          <div><div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 4 }}>【伝票形式】</div><select value={v.format} onChange={(e) => setV({ ...v, format: e.target.value })} style={input}><option>仕訳伝票形式</option><option>振替伝票形式</option></select></div>
+          <div><div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 4 }}>【伝票形式】</div><select value={v.format} onChange={(e) => setV({ ...v, format: e.target.value })} style={input}>{/* 会計と同じ 4 種類（確認メモ #239） */}{['仕訳伝票形式', '単一式形式', '振替伝票形式', '振替単一形式'].map((f) => <option key={f}>{f}</option>)}</select></div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>伝票年月日 <input className="field-input" value={v.date} onChange={(e) => setV({ ...v, date: e.target.value })} style={{ ...input, width: 180 }} /></div>
         </div>
         <div>

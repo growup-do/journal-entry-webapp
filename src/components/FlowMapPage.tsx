@@ -116,6 +116,7 @@ const NODES: Node[] = [
   N('cashlink', '会計連動（作成する仕訳伝票の確認）', 'modal', 'option', { open: '小口現金', note: '集計済みの明細がなくても開ける。過去の会計連動の履歴も確認できる' }),
   N('cashlinkwarn', '会計連動の注意', 'modal', 'option', { open: '小口現金', note: '対象の期間がすでに会計へ連動済みのとき（会計側で伝票として既に取り込まれています）' }),
   N('cashslip', '会計の仕訳伝票', 'modal', 'option', { open: '小口現金', note: '会計連動で作成された伝票の一覧と 1 件ごとの内容' }),
+  N('cashunagg', '集計取消', 'modal', 'option', { open: '小口現金', note: '押した行から下の集計済みの明細を取り消す。会計連動済みは不可（預金出納も同じ）' }),
   N('dep', '減価償却', 'page', 'option', { open: '減価償却', note: '固定資産台帳の詳細から 変更／全項目手入力（年度ごとに最大 80 年を手入力）を開く' }),
   N('bank', '預金出納帳', 'page', 'option', { open: '預金出納' }),
   N('bankswitch', '区分の切替（出納帳の追加）', 'modal', 'option', { open: '預金出納', note: '「＋出納帳追加」で出納帳を追加' }),
@@ -175,9 +176,9 @@ const EDGES: Edge[] = [
   E('s-update', 'division', '完了後：会計期間を開く', true), E('s-update', 's-backup', 'バックアップの確認', true),
   E('s-acct', 's-attached', '関連する設定', true), E('s-carry', 'printflow', '収支分析表を印刷', true), E('s-deprlink', 's-acct', '科目設定で確認', true), E('s-deprlink', 'dep', '減価償却を開く', true), E('s-env', 'commonprint', '印刷の詳細設定を開く', true), E('auditset', 's-attached', '1年基準科目', true),
   E('s-template', 'template', '伝票入力で呼出', true),
-  E('petty', 'pettyrow', '行の「挿入」「編集」', true), E('petty', 'pettyset', '小口の設定', true), E('petty', 'pettydenom', '印刷 ▾', true), E('petty', 'cashlink', '会計連動', true), E('bank', 'cashlink', '会計連動', true), E('cashlink', 'cashlinkwarn', '連動済みの期間と重なるとき', true), E('cashlinkwarn', 'cashslip', '続ける', true), E('cashlink', 'cashslip', '連動のあと・「伝票を見る」', true),
+  E('petty', 'pettyrow', '行の「挿入」「編集」', true), E('petty', 'pettyset', '小口の設定', true), E('petty', 'pettydenom', '印刷 ▾', true), E('petty', 'cashlink', '会計連動', true), E('petty', 'cashunagg', '集計取消', true), E('bank', 'cashlink', '会計連動', true), E('cashlink', 'cashlinkwarn', '連動済みの期間と重なるとき', true), E('cashlinkwarn', 'cashslip', '続ける', true), E('cashlink', 'cashslip', '連動のあと・「伝票を見る」', true),
   E('bank', 'bankswitch', '区分の切替', true), E('s-vendor', 'vendordel', '削除', true),
-  E('usersettings', 'login', 'ログアウト（確認なし）', true), E('usersettings', 'accessdenied', '利用できる機能にない画面', true), E('s-fin', 'unsavedconfirm', '未保存のまま移動', true), E('s-carry', 'unsavedconfirm', '未保存のまま移動', true),
+  E('usersettings', 'login', 'ログアウト（確認なし）', true), E('usersettings', 'accessdenied', '利用できる機能にない画面', true), E('s-fin', 'unsavedconfirm', '未保存のまま移動', true), E('s-carry', 'unsavedconfirm', '未保存のまま移動', true), E('s-deprlink', 'unsavedconfirm', '未保存のまま移動', true),
   E('e-voucher', 'dep', '固定資産科目の登録時', true),
 ];
 

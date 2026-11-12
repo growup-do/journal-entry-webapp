@@ -492,6 +492,8 @@ export function JournalRefreshPage({ variant, accent, onNavigate }: MaintenanceP
   const [from, setFrom] = useState(0);
   const [to, setTo] = useState(11);
   const [agree, setAgree] = useState(false);
+  // 仕訳日記帳・元帳で入れ換えた表示順を、伝票の登録順に戻す（現行と同じチェック。確認メモ #229）
+  const [resetOrder, setResetOrder] = useState(false);
   const [last, setLast] = useState({ at: '令和8年9月10日 10:12', by: '鈴木', count: 196 });
   const entryDivs = SERVICES.length;
   const lo = Math.min(from, to), hi = Math.max(from, to);
@@ -502,7 +504,7 @@ export function JournalRefreshPage({ variant, accent, onNavigate }: MaintenanceP
   const targetLabel = target === 'この区分' ? s.division : `法人内のすべての入力区分（${entryDivs} 区分）`;
   const run = () => {
     setStep(2);
-    prog.start(target === 'この区分' ? 3200 : 5600, () => { setStep(3); setLast({ at: warekiNow(), by: '鈴木', count: total }); toast.show(`仕訳更新が完了しました（${total.toLocaleString('ja-JP')} 件）`); });
+    prog.start(target === 'この区分' ? 3200 : 5600, () => { setStep(3); setLast({ at: warekiNow(), by: '鈴木', count: total }); toast.show(`仕訳更新が完了しました（${total.toLocaleString('ja-JP')} 件${resetOrder ? '。表示順をリセットしました' : ''}）`); });
   };
   const reset = () => { setStep(0); setAgree(false); };
   const row: CSSProperties = { display: 'grid', gridTemplateColumns: '150px 1fr', gap: 10, padding: '9px 0', borderBottom: '1px solid #f1f4f6', fontSize: 14 };
@@ -538,6 +540,10 @@ export function JournalRefreshPage({ variant, accent, onNavigate }: MaintenanceP
                 </label>
               </div>
             </div>
+            <div>
+              <span style={lbl}>オプション</span>
+              <label data-reset-order style={radioRow(resetOrder, accent)}><input type="checkbox" checked={resetOrder} onChange={(e) => setResetOrder(e.target.checked)} style={{ width: 17, height: 17 }} /><span><b>仕訳日記帳・元帳の表示順をリセットする</b><br /><span style={sub}>表示順の入換で並べ替えた伝票を、伝票日付・伝票No の順に戻します</span></span></label>
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', border: '1px solid #dde4ea', borderRadius: 10, background: '#f6f8fa' }}>
               <span style={{ fontSize: 14 }}>対象の伝票</span><b style={{ fontSize: 20, fontVariantNumeric: 'tabular-nums' }}>{total.toLocaleString('ja-JP')}</b><span style={{ fontSize: 14 }}>件</span>
               <span style={sub}>目安の時間：{total > 600 ? '2〜3 分' : '1 分以内'}</span>
@@ -553,6 +559,7 @@ export function JournalRefreshPage({ variant, accent, onNavigate }: MaintenanceP
                 <div style={row}><span style={{ color: '#7a8794' }}>対象の区分</span><b>{targetLabel}</b></div>
                 <div style={row}><span style={{ color: '#7a8794' }}>対象の期間</span><b>{rangeLabel}</b></div>
                 <div style={row}><span style={{ color: '#7a8794' }}>対象の伝票</span><b>{total.toLocaleString('ja-JP')} 件</b></div>
+                <div style={row}><span style={{ color: '#7a8794' }}>表示順のリセット</span><b>{resetOrder ? 'する（仕訳日記帳・元帳の表示順を伝票日付・伝票No の順に戻す）' : 'しない'}</b></div>
                 <div style={{ ...row, borderBottom: 'none' }}><span style={{ color: '#7a8794' }}>処理の内容</span><span>勘定科目と資金科目の連動を整理し、集計データを作り直します</span></div>
               </div>
             </div>
@@ -585,6 +592,7 @@ export function JournalRefreshPage({ variant, accent, onNavigate }: MaintenanceP
                 <div style={row}><span style={{ color: '#7a8794' }}>完了した日時</span><b>{last.at}</b></div>
                 <div style={row}><span style={{ color: '#7a8794' }}>対象</span><span>{targetLabel}　{rangeLabel}</span></div>
                 <div style={row}><span style={{ color: '#7a8794' }}>整理した伝票</span><b>{total.toLocaleString('ja-JP')} 件</b></div>
+                <div style={row}><span style={{ color: '#7a8794' }}>表示順のリセット</span><span>{resetOrder ? '実行しました' : 'していません'}</span></div>
                 <div style={{ ...row, borderBottom: 'none' }}><span style={{ color: '#7a8794' }}>資金科目が変わった伝票</span><b>{changed.toLocaleString('ja-JP')} 件</b></div>
               </div>
             </div>

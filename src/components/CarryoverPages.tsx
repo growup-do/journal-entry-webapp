@@ -273,26 +273,51 @@ export function DepreciationLinkPage({ variant, accent, onNavigate }: Maintenanc
   const [autoAcct, setAutoAcct] = useState(DEFAULTS.autoAcct);
   const [autoOn, setAutoOn] = useState(false);
   const [tekiyo, setTekiyo] = useState('国庫補助金等特別積立金 積立（自動）');
+  // 保存済みの値との比較（確認メモ #227。繰越判断の基準 #225 と同じ見せ方）。配列は並び順を問わず中身で比べる
+  const cur = { fixed, equip, reserveIn, cash, subsidy, watch, autoIn, autoAcct, autoOn, tekiyo };
+  type Snap = typeof cur;
+  const [saved, setSaved] = useState<Snap>(cur);
+  const same = (x: unknown, y: unknown) => (Array.isArray(x) && Array.isArray(y) ? x.length === y.length && x.every((v) => y.includes(v)) : x === y);
+  const ch = (k: keyof Snap) => !same(cur[k], saved[k]);
+  const TAB_KEYS: Record<string, (keyof Snap)[]> = { 固定資産科目の連動: ['fixed', 'equip', 'reserveIn'], 借入元金償還補助の連動: ['cash', 'subsidy', 'watch'], 国庫補助金等特別積立金の自動積立: ['autoIn', 'autoAcct', 'autoOn', 'tekiyo'] };
+  const dirtyTabs = TABS_D.filter((t) => TAB_KEYS[t].some(ch));
+  const dirty = dirtyTabs.length > 0;
+  const otherDirty = dirtyTabs.filter((t) => t !== tab);
+  useUnsaved('減価償却連動', '減価償却との連動設定', dirty);
+  const save = () => { setSaved(cur); toast.show('減価償却との連動設定を保存しました'); };
+  const revert = () => {
+    setFixed(saved.fixed); setEquip(saved.equip); setReserveIn(saved.reserveIn); setCash(saved.cash); setSubsidy(saved.subsidy); setWatch(saved.watch);
+    setAutoIn(saved.autoIn); setAutoAcct(saved.autoAcct); setAutoOn(saved.autoOn); setTekiyo(saved.tekiyo);
+  };
   const reset = () => { setFixed(DEFAULTS.fixed); setEquip(DEFAULTS.equip); setReserveIn(DEFAULTS.reserveIn); setCash(DEFAULTS.cash); setSubsidy(DEFAULTS.subsidy); setAutoIn(DEFAULTS.autoIn); setAutoAcct(DEFAULTS.autoAcct); toast.show('デフォルト設定に戻しました（未保存）'); };
   const go = (p: string) => (onNavigate ? onNavigate(p) : toast.show(`「${p}」を開きます（プロトタイプ）`));
   const cols3 = { padding: 22, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, alignItems: 'start' } as const;
   return (
-    <SettingsShell variant={variant} title="減価償却との連動設定" badge="マスター設定" draft={false} desc="会計の仕訳と減価償却をつなぐ設定です。固定資産の取得・備品購入の仕訳を減価償却へ連動させる科目、借入元金償還補助の仕訳を認識する科目、国庫補助金等特別積立金を自動で積み立てる仕訳の科目を指定します。" actions={<>
+    <SettingsShell variant={variant} title="減価償却との連動設定" badge="マスター設定" draft={false} desc="会計の仕訳と減価償却をつなぐ設定です。固定資産の取得・備品購入の仕訳を減価償却へ連動させる科目、借入元金償還補助の仕訳を認識する科目、国庫補助金等特別積立金を自動で積み立てる仕訳の科目を指定します。" unsaved={dirty} actions={<>
       <button type="button" className="btn-outline" onClick={reset} style={btn()}>デフォルト設定にする</button>
-      <button type="button" className="submit-btn" onClick={() => toast.show(`「${tab}」の設定を保存しました`)} style={btn(accent, true)}>OK（保存）</button>
+      {dirty && <span role="status" data-unsaved-msg style={{ fontSize: 15, fontWeight: 800, color: UNSAVED_FG, marginRight: 4 }}>保存されていません。</span>}
+      <button type="button" data-action="変更を取り消す" onClick={revert} disabled={!dirty} title={dirty ? '保存する前の内容に戻します（すべてのタブ）' : '変更はありません'} style={{ ...btn(), opacity: dirty ? 1 : 0.5, cursor: dirty ? 'pointer' : 'default' }}>変更を取り消す</button>
+      <button type="button" className="submit-btn" data-action="設定を保存" onClick={save} title="すべてのタブの内容をまとめて保存します" style={btn(accent, true)}>OK（保存）</button>
     </>}>
       <ToastView msg={toast.msg} />
-      <Tabs items={TABS_D} current={tab} onChange={setTab} accent={accent} />
+      <Tabs items={TABS_D} current={tab} onChange={setTab} accent={accent} marks={dirtyTabs} />
+      {otherDirty.length > 0 && (
+        <div data-other-unsaved style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 22px', background: '#fff1d6', borderBottom: '1px solid #f0d9a8', fontSize: 14, color: '#8a5a00', flexWrap: 'wrap' }}>
+          <span>ほかのタブにも保存されていない変更があります：</span>
+          {otherDirty.map((t) => <button key={t} type="button" onClick={() => setTab(t)} style={{ border: 'none', background: 'transparent', padding: 0, color: '#8a5a00', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', textDecoration: 'underline', cursor: 'pointer' }}>{t}</button>)}
+          <span style={{ color: '#a27a2c' }}>「OK（保存）」で、すべてのタブをまとめて保存します。</span>
+        </div>
+      )}
       <ScopeBar scope="全区分共通" note="法人全体で共有" right={<><button type="button" className="btn-outline" onClick={() => go('勘定科目')} style={btn('#5b6773', false, true)}>科目設定で確認 →</button><button type="button" className="btn-outline" onClick={() => go('減価償却')} style={btn('#5b6773', false, true)}>減価償却を開く →</button></>}>
         ここで指定した科目は、科目設定の各科目にある「減価償却連動」と同じ設定です。どちらで変更しても同じ内容になります。
       </ScopeBar>
 
       {tab === '固定資産科目の連動' && (
         <div style={cols3}>
-          <PickList title="固定資産科目" items={FIXED_ITEMS} value={fixed} onChange={setFixed} height={300} note="これらの科目を借方にした仕訳は、減価償却の「移管・取込み」に資産候補として表示されます。" />
-          <PickList title="備品科目" items={EQUIP_ITEMS} value={equip} onChange={setEquip} height={300} note="10 万円未満の備品の購入を減価償却の「備品台帳」へ連動させる科目です。" />
+          <PickList title="固定資産科目" items={FIXED_ITEMS} value={fixed} onChange={setFixed} saved={saved.fixed} height={300} note="これらの科目を借方にした仕訳は、減価償却の「移管・取込み」に資産候補として表示されます。" />
+          <PickList title="備品科目" items={EQUIP_ITEMS} value={equip} onChange={setEquip} saved={saved.equip} height={300} note="10 万円未満の備品の購入を減価償却の「備品台帳」へ連動させる科目です。" />
           <div style={{ display: 'grid', gap: 12 }}>
-            <PickList title="国庫補助金等特別積立金積立額" items={RESERVE_IN_ITEMS.filter((i) => /積立額$/.test(i.name))} value={reserveIn} onChange={setReserveIn} height={120} />
+            <PickList title="国庫補助金等特別積立金積立額" items={RESERVE_IN_ITEMS.filter((i) => /積立額$/.test(i.name))} value={reserveIn} onChange={setReserveIn} saved={saved.reserveIn} height={120} />
             <Notice>連動の対象となる仕訳は、伝票入力の「取引種別」に「償却」の印が付きます。連動を解除しても登録済みの資産は消えません。</Notice>
           </div>
         </div>
@@ -300,11 +325,11 @@ export function DepreciationLinkPage({ variant, accent, onNavigate }: Maintenanc
 
       {tab === '借入元金償還補助の連動' && (
         <div style={cols3}>
-          <PickList title="補助金収入を受ける流動資産の科目" items={CASH_ITEMS} value={cash} onChange={setCash} height={300} />
-          <PickList title="設備資金借入金元金償還補助金収益の科目" items={SUBSIDY_INCOME_ITEMS} value={subsidy} onChange={setSubsidy} height={300} />
+          <PickList title="補助金収入を受ける流動資産の科目" items={CASH_ITEMS} value={cash} onChange={setCash} saved={saved.cash} height={300} />
+          <PickList title="設備資金借入金元金償還補助金収益の科目" items={SUBSIDY_INCOME_ITEMS} value={subsidy} onChange={setSubsidy} saved={saved.subsidy} height={300} />
           <div style={{ display: 'grid', gap: 12 }}>
             <div style={card}><div style={cardHead}>監視</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
-              <Toggle on={watch} onChange={setWatch} accent={accent} label="伝票入力時に監視（機能を有効に）する" />
+              <div data-changed={ch('watch') || undefined} style={changedBox(ch('watch'))}><Toggle on={watch} onChange={setWatch} accent={accent} label="伝票入力時に監視（機能を有効に）する" /></div>
               <div style={{ fontSize: 14, color: '#7a8794' }}>左の 2 つの科目を組み合わせた仕訳を登録すると、減価償却の「補助金」に償還補助金として記録するか確認します。</div>
             </div></div>
             <Notice>借入金元金償還補助金は、国庫補助金等特別積立金の積立の対象になります。積立の仕訳を自動で起こす場合は、次のタブで設定します。</Notice>
@@ -314,12 +339,13 @@ export function DepreciationLinkPage({ variant, accent, onNavigate }: Maintenanc
 
       {tab === '国庫補助金等特別積立金の自動積立' && (
         <div style={cols3}>
-          <PickList title="国庫補助金等特別積立金積立額の科目" items={RESERVE_IN_ITEMS} value={autoIn} onChange={setAutoIn} height={260} />
-          <PickList title="国庫補助金等特別積立金の科目" items={RESERVE_ACCT_ITEMS} value={autoAcct} onChange={setAutoAcct} height={120} />
+          <PickList title="国庫補助金等特別積立金積立額の科目" items={RESERVE_IN_ITEMS} value={autoIn} onChange={setAutoIn} saved={saved.autoIn} height={260} />
+          <PickList title="国庫補助金等特別積立金の科目" items={RESERVE_ACCT_ITEMS} value={autoAcct} onChange={setAutoAcct} saved={saved.autoAcct} height={120} />
           <div style={{ display: 'grid', gap: 12 }}>
             <div style={card}><div style={cardHead}>自動積立</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
-              <Toggle on={autoOn} onChange={setAutoOn} accent={accent} label="自動積立機能を有効とする" />
-              <Field label="自動で起こす仕訳の摘要"><input className="field-input" value={tekiyo} onChange={(e) => setTekiyo(e.target.value)} disabled={!autoOn} style={{ ...input, background: autoOn ? '#fff' : '#eef2f5' }} /></Field>
+              <div data-changed={ch('autoOn') || undefined} style={changedBox(ch('autoOn'))}><Toggle on={autoOn} onChange={setAutoOn} accent={accent} label="自動積立機能を有効とする" /></div>
+              {/* 摘要は「自動積立機能を有効とする」とは独立して入力できる（現行と同じ。確認メモ #228） */}
+              <Field label="自動で起こす仕訳の摘要"><input className="field-input" value={tekiyo} onChange={(e) => setTekiyo(e.target.value)} data-changed={ch('tekiyo') || undefined} style={{ ...input, ...(ch('tekiyo') ? { background: CHANGED_BG, border: '1px solid ' + CHANGED_BORDER } : {}) }} /></Field>
               <div style={{ fontSize: 14, color: '#7a8794' }}>有効にすると、補助金で取得した資産の登録時に「{RESERVE_IN_ITEMS.find((i) => autoIn.includes(i.code))?.name ?? '積立額の科目'} ／ {RESERVE_ACCT_ITEMS[0].name}」の仕訳を自動で作成します。</div>
             </div></div>
             <div style={{ fontSize: 12, color: '#7a8794', padding: '0 4px' }}><span style={lbl}>補足</span>自動で作成した仕訳は日記帳に「自動」の印が付き、通常の仕訳と同じように訂正・削除できます。</div>
