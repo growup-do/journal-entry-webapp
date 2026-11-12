@@ -42,6 +42,8 @@ const DETAIL_SHEETS: [string, Sheet['unit'], Editor, string?][] = [
   ['就労支援事業明細書', '拠点区分', 'auto'],
   ['授産事業費用明細書', '拠点区分', 'auto'],
 ];
+/** 附属明細書の名前（①〜⑲。WAMNET連携附属明細書出力で使う） */
+export const APPENDIX_SHEET_NAMES = DETAIL_SHEETS.map(([n], i) => MARU[i] + ' ' + n);
 const SHEETS: Sheet[] = [
   { id: 'note-corp', group: '計算書類に対する注記', no: '注', name: '計算書類に対する注記（法人全体用）', unit: '法人全体', editor: 'note' },
   { id: 'note-base', group: '計算書類に対する注記', no: '注', name: '計算書類に対する注記（拠点区分用）', unit: '拠点区分', editor: 'note' },

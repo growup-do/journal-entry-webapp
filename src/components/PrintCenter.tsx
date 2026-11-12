@@ -15,6 +15,7 @@ import { Field, Notice, SettingsShell, Toggle, btn, card, cardHead, input, lbl, 
 import { ExportDialog, runExport, type ExportKind, type ExportSpec } from './ExportDialog';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { LoadDivisionSettings } from './DivisionSettingsLoad';
+import { WAMNET_ITEMS, WamnetDialog, type WamnetItem } from './WamnetDialog';
 import { ACCOUNT_META } from '../lib/accounts';
 import { ACCOUNTS, displayName } from '../data';
 import { PRINT_ITEMS, divisionLabel, flattenDivisions, fusenLabel, setSession, startKindOf, useSession, type EnvSettings, type PrintCommon, type Session, type DivisionNode } from '../store/session';
@@ -104,7 +105,7 @@ export function ScopeBlock({ kind, title, desc, right, children, toggle }: { kin
   );
 }
 
-export interface ReportDef { id: string; name: string; cat: string; note?: string; detail: string[]; scope?: boolean; /** 年次の帳票（期間は会計年度の期首〜期末。月の指定なし） */ annual?: boolean; }
+export interface ReportDef { id: string; name: string; cat: string; note?: string; detail: string[]; scope?: boolean; /** 年次の帳票（期間は会計年度の期首〜期末。月の指定なし） */ annual?: boolean; /** WAMNET連携出力：印刷ではなく WAMNET連携のダイアログを開く */ wamnet?: boolean; }
 const D = {
   journal: ['伝票番号：入力番号／自動連番（番号指定）／自動連番（Seq-No）／Seq指定', '印刷順序：入力順／日付順', '印刷科目：印刷用／表示用', '伝票種別：通常伝票／移行伝票', '伝票区分を印刷する', '科目コードを印刷する', '入力予備1（2）を印刷する', 'A4縦に印刷する', '摘要のフォントサイズを自動調整する'],
   voucher: ['伝票番号の種類', '印刷順序', 'タイトル印刷', 'カラー印刷時の基調色：緑／動作環境の色指定', '科目欄：科目／入力コード・科目／科目名・資金科目', '取引先名を印刷する', '複写の伝票を印刷する', '証ひょうの有無を印刷する', 'A4白紙に印刷する（上下連続）', 'A5白紙に印刷する', '元号を印字する'],
@@ -114,6 +115,9 @@ const D = {
   budget: ['前年度予算額を印刷する', '補正予算の内訳（月別）を印刷する', '費目行を網掛け、太字にする', '区分名を印刷する'],
   sub: ['明細表内に印刷する金額の指定（伝票を選択）', '印刷日付の指定：日付印刷しない／期首〜期末／指定月', 'タイトル（全角20文字）', '取引先コード小計：同一取引先コードがあった場合集計する', '合計行を網掛け、太字にする', '区分名を印刷する'],
   analysis: ['タイトル印刷', '伝票入力区分名を印刷する', '単位：円／千円／百万円', 'グラフ数（1ページ 3〜8個）', '縦軸スケールを自動調整', '平均値の表示'],
+  tax: ['集計期間：月別／期間指定', '税区分コードの範囲', '0円の税区分を印刷しない', '区分名を印刷する'],
+  internal: ['相手区分を印刷する', '内部取引の科目だけを印刷する', '区分名を印刷する'],
+  monthly: ['前年度予算額を印刷する', '月計の行を網掛けにする', '費目行を網掛け、太字にする', '区分名を印刷する'],
 };
 export const REPORTS: ReportDef[] = [
   { id: 'j1', name: '仕訳日記帳', cat: '仕訳日記帳', detail: D.journal },
@@ -123,13 +127,17 @@ export const REPORTS: ReportDef[] = [
   { id: 'l2', name: '資金元帳', cat: '元帳', scope: true, detail: [...D.ledger, '合計印刷時に予算残を印刷する'] },
   { id: 'l3', name: '取引先元帳', cat: '元帳', scope: true, detail: [...D.ledger, '合計印刷時に予算残を印刷する'] },
   { id: 'l4', name: '集計元帳', cat: '元帳', scope: true, detail: D.ledger },
+  { id: 'l5', name: '取引先元帳（合算集計）', cat: '元帳', scope: true, note: '法人全体の取引先を合算（旧 元帳（業者合算集計））', detail: D.ledger },
   { id: 't1', name: '資金収支計算書（試算表）', cat: '試算表', detail: D.trial },
   { id: 't2', name: '事業活動計算書（試算表）', cat: '試算表', detail: D.trial },
   { id: 't3', name: '貸借対照表（試算表）', cat: '試算表', detail: D.trial },
   { id: 't4', name: '資金収支残高試算表', cat: '試算表', detail: D.trial },
   { id: 't5', name: '残高試算表', cat: '試算表', detail: D.trial },
-  { id: 'b1', name: '予算書', cat: '予算', detail: D.budget },
+  { id: 'b1', name: '予算書', cat: '予算', note: '前年度・当初・補正・次年度（資金収支／拠点区分）', detail: D.budget },
   { id: 'b2', name: '予算管理表（予算対比表）', cat: '予算', detail: D.budget },
+  { id: 'b3', name: '資金収支月別予算推移表', cat: '予算', note: '予算管理表', detail: D.monthly },
+  { id: 'b4', name: '資金収支月別実績推移表', cat: '予算', note: '予算管理表', detail: D.monthly },
+  { id: 'b5', name: '資金収支月別予算実績推移表', cat: '予算', note: '予算管理表', detail: D.monthly },
   { id: 'c1', name: '資金収支計算書（第一号様式）', cat: '決算書', note: '帳票選択で有効にした様式のみ', detail: D.closing },
   { id: 'c2', name: '事業活動計算書（第二号様式）', cat: '決算書', detail: D.closing },
   { id: 'c3', name: '貸借対照表（第三号様式）', cat: '決算書', detail: D.closing },
@@ -137,17 +145,25 @@ export const REPORTS: ReportDef[] = [
   { id: 'c5', name: '決算附属明細書（3①〜3⑲）', cat: '決算書', note: '明細入力と印刷は「別紙」画面', detail: D.closing },
   { id: 'c6', name: '財産目録', cat: '決算書', note: '行設定と印刷は「別紙」画面', detail: ['差引純資産を網掛け、太字にする', '行送り（標準6.4mm）'] },
   { id: 'c7', name: '準決算書（C別紙6〜9／C1-5〜C3-6）', cat: '決算書', detail: D.closing },
+  { id: 'c8', name: '決算書 表紙', cat: '決算書', detail: ['法人名・年度を印刷する', '作成日を印刷する'] },
   { id: 's1', name: '補助簿（未払金・未収金）', cat: '補助簿（明細表）', detail: D.sub },
   { id: 's2', name: '補助簿（現預金・預かり金）', cat: '補助簿（明細表）', detail: D.sub },
   { id: 'o1', name: '自動按分出力（CSV）', cat: 'その他', detail: ['出力種類：貸借対照表／事業活動計算書／資金収支計算書の按分出力', '出力する列：当年度末／前年度末／増減', '合計値を印刷', '端数の加算区分'] },
   { id: 'o2', name: '収支分析表', cat: 'その他', detail: ['金額を千円単位で表示する', '設定（科目名称・金額の決定方法・色）'] },
+  { id: 'o3', name: '取引先内訳表', cat: 'その他', note: '旧 業者内訳表', detail: ['取引先コード小計', '0円の取引先を印刷しない', '区分名を印刷する'] },
   { id: 'a1', name: '財務分析一覧表（5年）', cat: '経営分析', detail: D.analysis },
   { id: 'a2', name: '財務分析グラフ（10年）', cat: '経営分析', detail: D.analysis },
   { id: 'a3', name: '経年推移表／経月推移表', cat: '経営分析', detail: D.analysis },
   { id: 'a4', name: '前年度同月対比表', cat: '経営分析', detail: D.analysis },
   { id: 'a5', name: '3期連続資金収支比較表', cat: '経営分析', detail: ['当年度予算予想額の算出方法：当月より倍率／当月累計＋過去の平均', '千円単位にする', ...D.analysis] },
+  { id: 'a6', name: '財務分析シート', cat: '経営分析', detail: D.analysis },
+  { id: 'a7', name: '基本チェック表', cat: '経営分析', detail: D.analysis },
+  // 消費税・内部取引 一覧表・WAMNET連携出力（確認事項「【帳票・印刷】現行との差分について」。現行の印刷メニューに合わせて追加）
+  ...['消費税区分別集計内訳表', '消費税区分別集計表', '科目別消費税区分別集計表', '消費税区分コード内訳表', '売上仕入税額集計表'].map((name, i): ReportDef => ({ id: 'x' + (i + 1), name, cat: '消費税', detail: D.tax })),
+  ...['内部取引 仕訳一覧表', '内部取引 残高一覧表', '内部取引 予算一覧表'].map((name, i): ReportDef => ({ id: 'i' + (i + 1), name, cat: '内部取引 一覧表', detail: D.internal })),
+  ...['WAMNET連携設定', 'WAMNET連携科目チェック', 'WAMNET連携ファイル出力', 'WAMNET連携注記出力（PDF）', 'WAMNET連携注記出力（Excel）', 'WAMNET連携附属明細書出力（PDF）', 'WAMNET連携附属明細書出力（Excel）'].map((name, i): ReportDef => ({ id: 'w' + (i + 1), name, cat: 'WAMNET連携出力', wamnet: true, note: i < 2 ? '設定・確認' : '出力', detail: [] })),
 ];
-const CATS = ['仕訳日記帳', '元帳', '試算表', '予算', '決算書', '補助簿（明細表）', 'その他', '経営分析'];
+const CATS = ['仕訳日記帳', '元帳', '試算表', '予算', '決算書', '補助簿（明細表）', '消費税', '経営分析', '内部取引 一覧表', 'WAMNET連携出力', 'その他'];
 export const OUTPUTS = ['プリンターから印刷する', '画面へプレビューする', 'エクセル互換ファイル（CSV）へ出力する', 'Excelファイル出力', 'PDFファイル出力'];
 
 /** 画面の帳票名から印刷対象の帳票を探す。一覧にない名前は、その画面専用の帳票として扱う */
@@ -646,9 +662,13 @@ export function PrintCenterPage({ variant, accent }: { variant: 'form' | 'sheet'
   const [selected, setSelected] = useState<Set<string>>(new Set(['j1', 'l1', 't1', 't2', 't3']));
   const [bOutput, setBOutput] = useState(OUTPUTS[1]);
   const [exp, setExp] = useState<ExportSpec | null>(null);
+  const [wamnet, setWamnet] = useState<WamnetItem | null>(null);
   const toast = useToast();
-  const list = REPORTS.filter((r) => cat === 'すべて' || r.cat === cat);
-  const picked = REPORTS.filter((r) => selected.has(r.id));
+  // まとめて印刷では、印刷ではない WAMNET連携出力を出さない
+  const pool = batch ? REPORTS.filter((r) => !r.wamnet) : REPORTS;
+  const cats = batch ? CATS.filter((c) => pool.some((r) => r.cat === c)) : CATS;
+  const list = pool.filter((r) => cat === 'すべて' || r.cat === cat);
+  const picked = pool.filter((r) => selected.has(r.id));
   const batchData = () => ({ header: ['帳票名', '科目', '当月', '累計'], rows: picked.flatMap((r) => sampleReportData(r.name).rows.map((row) => [r.name, ...row])) });
   const setMode = (b: boolean) => { setBatch(b); if (b) setCat('すべて'); };
   const toggle = (id: string) => setSelected((x) => { const n = new Set(x); if (n.has(id)) n.delete(id); else n.add(id); return n; });
@@ -685,8 +705,8 @@ export function PrintCenterPage({ variant, accent }: { variant: 'form' | 'sheet'
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '200px minmax(0,1fr)', minHeight: 420 }}>
         <div style={{ borderRight: '1px solid #eef2f5', padding: 10 }}>
-          {['すべて', ...CATS].map((c) => {
-            const n = c === 'すべて' ? REPORTS.length : REPORTS.filter((r) => r.cat === c).length;
+          {['すべて', ...cats].map((c) => {
+            const n = c === 'すべて' ? pool.length : pool.filter((r) => r.cat === c).length;
             const sel = batch ? (c === 'すべて' ? picked.length : picked.filter((r) => r.cat === c).length) : 0;
             const on = cat === c;
             return <button key={c} type="button" onClick={() => setCat(c)} style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', textAlign: 'left', padding: '9px 12px', border: 'none', borderRadius: 8, background: on ? accent : 'transparent', color: on ? '#fff' : '#22303c', fontSize: 14, fontWeight: on ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer' }}>{c}{sel > 0 && <span style={{ fontSize: 12, fontWeight: 800, padding: '0 6px', borderRadius: 8, background: on ? 'rgba(255,255,255,.25)' : '#e3f1ea', color: on ? '#fff' : accent }}>選択 {sel}</span>}<span style={{ marginLeft: 'auto', fontSize: 12, opacity: 0.7 }}>{n}</span></button>;
@@ -699,13 +719,13 @@ export function PrintCenterPage({ variant, accent }: { variant: 'form' | 'sheet'
             {list.map((r) => {
               const on = selected.has(r.id);
               return (
-                <div key={r.id} data-report={r.id} onClick={() => (batch ? toggle(r.id) : setTarget(r))} style={{ ...card, padding: '12px 14px', cursor: 'pointer', borderColor: batch && on ? accent : '#e2e8ee', background: batch && on ? '#f4f9f6' : '#fff', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <div key={r.id} data-report={r.id} onClick={() => (batch ? toggle(r.id) : r.wamnet ? setWamnet(WAMNET_ITEMS.find((w) => w.name === r.name) ?? null) : setTarget(r))} style={{ ...card, padding: '12px 14px', cursor: 'pointer', borderColor: batch && on ? accent : '#e2e8ee', background: batch && on ? '#f4f9f6' : '#fff', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                   {batch && <input type="checkbox" checked={on} readOnly style={{ marginTop: 3 }} />}
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{r.name}</div>
                     <div style={{ fontSize: 12, color: '#8290a0', marginTop: 2 }}>{r.cat}{r.note ? `　${r.note}` : ''}</div>
                   </div>
-                  {!batch && <span style={{ fontSize: 12, fontWeight: 700, color: accent, whiteSpace: 'nowrap' }}>印刷 →</span>}
+                  {!batch && <span style={{ fontSize: 12, fontWeight: 700, color: accent, whiteSpace: 'nowrap' }}>{r.wamnet ? '開く →' : '印刷 →'}</span>}
                 </div>
               );
             })}
@@ -715,6 +735,7 @@ export function PrintCenterPage({ variant, accent }: { variant: 'form' | 'sheet'
       <PrintDialog open={!!target} onClose={() => setTarget(null)} report={target} accent={accent} keepOpenOnPreview onPreview={(title, opts) => setPreview({ title, opts })} />
       <PreviewModal open={!!preview} onClose={() => setPreview(null)} title={preview?.title ?? ''} opts={preview?.opts} accent={accent} data={preview ? (preview.batch ? batchData() : sampleReportData(preview.title)) : undefined} />
       <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
+      <WamnetDialog item={wamnet} onClose={() => setWamnet(null)} accent={accent} />
     </SettingsShell>
   );
 }
@@ -759,7 +780,7 @@ function ZeroExcludeCard({ accent }: { accent: string }) {
 }
 
 /** 帳票選択の様式（旧 動作環境パネル「帳票選択」）。区分階層により省略が許される様式がある（確認メモ #49） */
-const FORM_GROUPS: { title: string; items: { key: string; name: string; omit?: '事業区分' | '拠点区分' }[] }[] = [
+export const FORM_GROUPS: { title: string; items: { key: string; name: string; omit?: '事業区分' | '拠点区分' }[] }[] = [
   { title: '資金収支計算書（第一号様式）', items: [{ key: 'c1-1', name: '第一号第一様式（法人全体）' }, { key: 'c1-2', name: '第一号第二様式（事業区分別 内訳表）', omit: '事業区分' }, { key: 'c1-3', name: '第一号第三様式（拠点区分別 内訳表）', omit: '拠点区分' }, { key: 'c1-4', name: '第一号第四様式（拠点区分）' }] },
   { title: '事業活動計算書（第二号様式）', items: [{ key: 'c2-1', name: '第二号第一様式（法人全体）' }, { key: 'c2-2', name: '第二号第二様式（事業区分別 内訳表）', omit: '事業区分' }, { key: 'c2-3', name: '第二号第三様式（拠点区分別 内訳表）', omit: '拠点区分' }, { key: 'c2-4', name: '第二号第四様式（拠点区分）' }] },
   { title: '貸借対照表（第三号様式）', items: [{ key: 'c3-1', name: '第三号第一様式（法人全体）' }, { key: 'c3-2', name: '第三号第二様式（事業区分別 内訳表）', omit: '事業区分' }, { key: 'c3-3', name: '第三号第三様式（拠点区分別 内訳表）', omit: '拠点区分' }, { key: 'c3-4', name: '第三号第四様式（拠点区分）' }] },
@@ -783,7 +804,7 @@ function FormSelectCard() {
   const set = (key: string, on: boolean) => setSession({ print: { ...s.print, forms: { ...s.print.forms, [key]: on } } });
   return (
     <div style={card} data-form-select>
-      <div style={cardHead}>帳票選択（決算書・準決算書で使う様式）<span style={{ fontWeight: 500, color: '#7a8794', marginLeft: 8, fontSize: 12 }}>旧 動作環境パネル「帳票選択」</span></div>
+      <div style={cardHead}>様式設定（決算書・準決算書で使う様式）<span style={{ fontWeight: 500, color: '#7a8794', marginLeft: 8, fontSize: 12 }}>現行の印刷メニュー「様式設定」・旧 動作環境パネル「帳票選択」</span></div>
       <div style={{ padding: 14, display: 'grid', gap: 12 }}>
         <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.7 }}>印刷メニューの決算書・準決算書に出す帳票を選びます。区分階層（事業区分・拠点区分の数）によって省略できる様式は、既定で省略しています。<br />現在の区分階層：事業区分 {can.事業区分 ? '1つ（第二様式を省略できます）' : '複数（第二様式が必要）'}／拠点区分 {can.拠点区分 ? '各1つ（第三様式を省略できます）' : '複数の事業区分あり（第三様式が必要）'}</div>
         {FORM_GROUPS.map((g) => (

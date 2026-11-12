@@ -7,7 +7,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { PreviewModal, PrintDialog, REPORTS, sampleReportData, type ReportDef, type TableData } from './PrintCenter';
 import { Chevron, btn } from './ui';
 
-export interface PrintItem { name: string; /** 詳細設定の元にする帳票（REPORTS の名前） */ base: string; note?: string; /** 画面に表示中の表を印刷データに使う */ screenData?: boolean }
+export interface PrintItem { name: string; /** 詳細設定の元にする帳票（REPORTS の名前）。'WAMNET' は WAMNET連携のダイアログで扱う */ base: string; note?: string; /** 画面に表示中の表を印刷データに使う */ screenData?: boolean; /** 決算書の様式（共通の印刷設定「様式設定」で省略にした様式はメニューに出さない） */ form?: string }
 export interface PrintGroup { label?: string; items: PrintItem[]; /** 次のグループとの区切りを点線にする（同じ種類の帳票の中の区切り） */ dashedBelow?: boolean }
 /** 画面独自の印刷処理を呼ぶ項目（出納帳の集計内訳表など）。共通の印刷ダイアログは使わない */
 export interface PrintAction { name: string; onClick: () => void; note?: string }
@@ -16,11 +16,14 @@ export interface PrintActionGroup { label?: string; items: (PrintAction | PrintI
 
 const JOURNAL = (screenData: boolean): PrintItem[] => [{ name: '日記帳', base: '仕訳日記帳', screenData }, { name: '伝票', base: '仕訳伝票（伝票式）' }, { name: '振替伝票', base: '振替伝票（振替式）' }];
 const BUDGET_KINDS = ['前年度', '当初', '補正', '次年度'];
+// 決算書の様式（第一〜第四様式）。第二様式（事業区分別の内訳表）も現行の印刷メニューにある（確認事項「【帳票・印刷】現行との差分について」）
 const CLOSING: PrintItem[] = [
-  { name: '法人単位資金収支計算書', base: '資金収支計算書（第一号様式）', note: '第一号第一様式' }, { name: '社会福祉事業区分 資金収支内訳表', base: '資金収支計算書（第一号様式）', note: '第一号第三様式' }, { name: '拠点区分 資金収支計算書', base: '資金収支計算書（第一号様式）', note: '第一号第四様式' },
-  { name: '法人単位事業活動計算書', base: '事業活動計算書（第二号様式）', note: '第二号第一様式' }, { name: '社会福祉事業区分 事業活動内訳表', base: '事業活動計算書（第二号様式）', note: '第二号第三様式' }, { name: '拠点区分 事業活動計算書', base: '事業活動計算書（第二号様式）', note: '第二号第四様式' },
-  { name: '法人単位貸借対照表', base: '貸借対照表（第三号様式）', note: '第三号第一様式' }, { name: '社会福祉事業区分 貸借対照表内訳表', base: '貸借対照表（第三号様式）', note: '第三号第三様式' }, { name: '拠点区分 貸借対照表', base: '貸借対照表（第三号様式）', note: '第三号第四様式' },
+  { name: '法人単位資金収支計算書', base: '資金収支計算書（第一号様式）', note: '第一号第一様式', form: 'c1-1' }, { name: '資金収支内訳表', base: '資金収支計算書（第一号様式）', note: '第一号第二様式', form: 'c1-2' }, { name: '社会福祉事業区分 資金収支内訳表', base: '資金収支計算書（第一号様式）', note: '第一号第三様式', form: 'c1-3' }, { name: '拠点区分 資金収支計算書', base: '資金収支計算書（第一号様式）', note: '第一号第四様式', form: 'c1-4' },
+  { name: '法人単位事業活動計算書', base: '事業活動計算書（第二号様式）', note: '第二号第一様式', form: 'c2-1' }, { name: '事業活動内訳表', base: '事業活動計算書（第二号様式）', note: '第二号第二様式', form: 'c2-2' }, { name: '社会福祉事業区分 事業活動内訳表', base: '事業活動計算書（第二号様式）', note: '第二号第三様式', form: 'c2-3' }, { name: '拠点区分 事業活動計算書', base: '事業活動計算書（第二号様式）', note: '第二号第四様式', form: 'c2-4' },
+  { name: '法人単位貸借対照表', base: '貸借対照表（第三号様式）', note: '第三号第一様式', form: 'c3-1' }, { name: '貸借対照表内訳表', base: '貸借対照表（第三号様式）', note: '第三号第二様式', form: 'c3-2' }, { name: '社会福祉事業区分 貸借対照表内訳表', base: '貸借対照表（第三号様式）', note: '第三号第三様式', form: 'c3-3' }, { name: '拠点区分 貸借対照表', base: '貸借対照表（第三号様式）', note: '第三号第四様式', form: 'c3-4' },
 ];
+/** WAMNET連携出力（現行の印刷メニューの 7 項目）。選ぶと WAMNET連携のダイアログを開く */
+const WAMNET: PrintItem[] = ['WAMNET連携設定', 'WAMNET連携科目チェック', 'WAMNET連携ファイル出力', 'WAMNET連携注記出力（PDF）', 'WAMNET連携注記出力（Excel）', 'WAMNET連携附属明細書出力（PDF）', 'WAMNET連携附属明細書出力（Excel）'].map((name) => ({ name, base: 'WAMNET' }));
 const PRE_CLOSING: PrintItem[] = [
   { name: '拠点区分 貸借対照表明細書', base: '準決算書（C別紙6〜9／C1-5〜C3-6）' },
   ...['001 本部', '002 チャイルド保育園'].flatMap((d) => ['資金収支計算書', '事業活動計算書', '貸借対照表'].map((r) => ({ name: `${d}サービス区分 ${r}`, base: '準決算書（C別紙6〜9／C1-5〜C3-6）' }))),
@@ -36,10 +39,15 @@ export const SCREEN_PRINTS: Record<string, PrintGroup[]> = {
   業者元帳: [{ label: '元帳', items: [{ name: '取引先元帳', base: '取引先元帳', screenData: true }, { name: '取引先元帳（合算集計）法人全体', base: '取引先元帳' }] }, { label: 'その他', items: [{ name: '取引先内訳表', base: '取引先元帳' }] }],
   業者推移: [{ items: [{ name: '取引先内訳表', base: '取引先元帳' }] }],
   月次試算: [{ label: '試算表', items: [{ name: '資金収支計算書', base: '資金収支計算書（試算表）' }, { name: '事業活動計算書', base: '事業活動計算書（試算表）' }, { name: '貸借対照表', base: '貸借対照表（試算表）', screenData: true }, { name: '資金収支残高試算表', base: '資金収支残高試算表' }, { name: '残高試算表', base: '残高試算表' }] }, { label: '内部取引 一覧表', items: [{ name: '内部取引 残高一覧表', base: '残高試算表' }] }],
-  月次決算: [{ label: '決算書', items: CLOSING }, { label: '準決算書', items: PRE_CLOSING }, { label: 'その他', items: [{ name: '収支分析表', base: '収支分析表' }, { name: '決算書 表紙', base: '資金収支計算書（第一号様式）' }, { name: 'WAMNET連携出力', base: '自動按分出力（CSV）', note: 'CSV' }] }],
+  月次決算: [{ label: '決算書', items: CLOSING }, { label: '準決算書', items: PRE_CLOSING }, { label: 'その他', items: [{ name: '収支分析表', base: '収支分析表' }, { name: '決算書 表紙', base: '資金収支計算書（第一号様式）' }] }, { label: 'WAMNET連携出力', items: WAMNET }],
   予算: [{ label: '資金収支予算書', items: BUDGET_KINDS.map((k) => ({ name: `資金収支${k}予算書`, base: '予算書' })) }, { label: '拠点区分 資金収支予算書', items: BUDGET_KINDS.map((k) => ({ name: `拠点区分 資金収支${k}予算書`, base: '予算書' })) }],
-  予算対比: [{ items: [{ name: '予算管理表（予算対比表）', base: '予算管理表（予算対比表）', screenData: true }, { name: '内部取引 予算一覧表', base: '予算書' }] }],
-  税区分: [{ label: '消費税', items: ['消費税区分別集計内訳表', '消費税区分別集計表', '科目別消費税区分別集計表', '消費税区分コード内訳表'].map((n) => ({ name: n, base: '仕訳日記帳' })) }],
+  // 予算書・予算管理表（月別の推移表を含む）は、予算対比表の「印刷 ▾」からも出す（確認事項「【帳票・印刷】現行との差分について」）
+  予算対比: [
+    { label: '予算管理表', items: [{ name: '資金収支予算管理表（予算対比表）', base: '予算管理表（予算対比表）', screenData: true }, { name: '資金収支月別予算推移表', base: '資金収支月別予算推移表' }, { name: '資金収支月別実績推移表', base: '資金収支月別実績推移表' }, { name: '資金収支月別予算実績推移表', base: '資金収支月別予算実績推移表' }] },
+    { label: '予算書', items: BUDGET_KINDS.map((k) => ({ name: `資金収支${k}予算書`, base: '予算書' })) },
+    { label: '内部取引 一覧表', items: [{ name: '内部取引 予算一覧表', base: '内部取引 予算一覧表' }] },
+  ],
+  税区分: [{ label: '消費税', items: ['消費税区分別集計内訳表', '消費税区分別集計表', '科目別消費税区分別集計表', '消費税区分コード内訳表', '売上仕入税額集計表'].map((n) => ({ name: n, base: n })) }],
   仕訳辞書: [{ items: [{ name: '自動按分出力（CSV）', base: '自動按分出力（CSV）' }] }],
   共通の印刷設定: [{ label: '備考・摘要', items: [{ name: '社会福祉法人 チャイルド保育園 資金収支計算書（備考・摘要）', base: '資金収支計算書（第一号様式）' }, { name: 'チャイルド保育園拠点区分 資金収支計算書（備考・摘要）', base: '資金収支計算書（第一号様式）' }] }],
   経年グラフ: [{ label: '経営分析', items: [{ name: '経年推移グラフ', base: '経年推移表／経月推移表' }, { name: '経月推移グラフ', base: '経年推移表／経月推移表' }, { name: '前年度同月対比表', base: '前年度同月対比表' }, { name: '3期連続資金収支比較表', base: '3期連続資金収支比較表' }] }],

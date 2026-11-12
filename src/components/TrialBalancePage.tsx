@@ -25,7 +25,8 @@ import { Modal } from './Modal';
 import { divisionLabel, flattenDivisions, startKindOf, useSession, type Session } from '../store/session';
 import { LedgerDrawer, useLedgerDrawer } from './LedgerDrawer';
 import { SCREEN_PRINTS, ScreenPrintMenu, type PrintGroup, type PrintItem } from './ScreenPrintMenu';
-import { OUTPUTS, PreviewModal, outputKind, sampleReportData } from './PrintCenter';
+import { OUTPUTS, PreviewModal, formEnabled, outputKind, sampleReportData } from './PrintCenter';
+import { WAMNET_ITEMS, WamnetDialog, type WamnetItem } from './WamnetDialog';
 import { runExport } from './ExportDialog';
 import { ToastView, useToast } from './Toast';
 import { btn } from './ui';
@@ -122,7 +123,8 @@ function closingPrints(s: Session): PrintGroup[] {
   const bases = baseNamesOf(s);
   const groups: PrintGroup[] = [];
   (SCREEN_PRINTS['月次決算'] ?? []).forEach((g) => {
-    const items = g.items.flatMap((it) => (it.name.startsWith(BASE_HEAD) && bases.length ? bases.map((b) => ({ ...it, name: `${b}${BASE_HEAD}${it.name.slice(BASE_HEAD.length)}` })) : [it]));
+    // 共通の印刷設定「様式設定」で省略にした様式は出さない
+    const items = g.items.filter((it) => !it.form || formEnabled(s.print.forms, it.form, s.tree)).flatMap((it) => (it.name.startsWith(BASE_HEAD) && bases.length ? bases.map((b) => ({ ...it, name: `${b}${BASE_HEAD}${it.name.slice(BASE_HEAD.length)}` })) : [it]));
     const chunks = g.label === '決算書' ? chunkBy(items, (it) => it.base) : g.label === '準決算書' ? chunkBy(items, (it) => it.name.split(/(?:拠点|サービス)区分 /)[0]) : [items];
     chunks.forEach((c, i) => {
       if (i > 0) groups[groups.length - 1].dashedBelow = true;
@@ -357,8 +359,13 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
   const prints = isClosing ? closingPrints(s) : null;
   // 月次決算の印刷：メニューで帳票を選ぶと「帳票一括印刷」ダイアログを開く（確認メモ #141）。batch＝選んだ帳票
   const [batch, setBatch] = useState<PrintItem | null>(null);
-  // 帳票を選ぶと「帳票一括印刷」を開く。CSV の出力（WAMNET連携出力）は印刷ではないので、従来の出力ダイアログへ回す
-  const printActions = prints?.map((g) => ({ label: g.label, dashedBelow: g.dashedBelow, items: g.items.map((it) => (it.base.includes('CSV') ? it : { name: it.name, note: it.note, onClick: () => setBatch(it) })) }));
+  // 帳票を選ぶと「帳票一括印刷」を開く。WAMNET連携出力は印刷ではないので、WAMNET連携のダイアログへ回す
+  const [wamnet, setWamnet] = useState<WamnetItem | null>(null);
+  const printActions = prints && [
+    ...prints.map((g) => ({ label: g.label, dashedBelow: g.dashedBelow, items: g.items.map((it) => ({ name: it.name, note: it.note, onClick: () => (it.base === 'WAMNET' ? setWamnet(WAMNET_ITEMS.find((w) => w.name === it.name) ?? null) : setBatch(it)) })) })),
+    // 現行の印刷メニューの「様式設定」：使う様式（省略する様式）は共通の印刷設定で選ぶ
+    { label: '設定', items: [{ name: '様式設定', note: '共通の印刷設定', onClick: () => onNavigate('共通の印刷設定') }] },
+  ];
   /** 帳票一括印刷の月の初期値：画面で選んでいる月（範囲を選んでいるときは、その開始月〜終了月） */
   const batchInit: [string, string] = range ? [range.from.split('/')[0], range.to.split('/')[0]] : [view.month, view.month];
   // 貸借対照表の借方合計・貸方合計（サンプル。不一致の状態では貸方合計を差額の分だけずらす）
@@ -516,6 +523,8 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
 
       {/* 帳票一括印刷（月次決算の印刷メニューで帳票を選ぶと開く。確認メモ #141）。閉じるのは ×・キャンセル・印刷だけ */}
       {isClosing && <BatchPrintDialog item={batch} onClose={() => setBatch(null)} accent={accent} fy={eraYearOf(s.fiscalYear)} init={batchInit} />}
+      {/* WAMNET連携出力（月次決算の印刷メニューから開く）。閉じるのは ×・キャンセルなどのボタンだけ */}
+      {isClosing && <WamnetDialog item={wamnet} onClose={() => setWamnet(null)} accent={accent} />}
     </ReportShell>
     <LedgerDrawer state={drawer} accent={accent} onNavigate={onNavigate} />
     </>
