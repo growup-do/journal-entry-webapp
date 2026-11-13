@@ -77,6 +77,14 @@ const GROUP_ICONS: Record<string, ReactNode> = {
 };
 const DEFAULT_ICON: ReactNode = <><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M8 9h8M8 13h8M8 17h5" /></>;
 
+/** ボタン名を本体と後ろのカッコ書きに分ける。半角のカッコも全角にそろえる（例「固定資産管理台帳(新会計版)」）。
+ *  「移管(元)固定資産一覧表」のように名前の途中のカッコは分けない（カッコのあとが 4 文字までなら後ろのカッコ書きとみなす） */
+export function splitParen(name: string): [string, string] {
+  const m = name.match(/^(.+?)([（(][^（()）]*[）)])(.*)$/);
+  if (!m || m[3].length > 4) return [name, ''];
+  return [m[1], (m[2] + m[3]).replace('(', '（').replace(')', '）')];
+}
+
 /* ---------------- 全機能の一覧（分類ごと） ----------------
  *  分類ごとに、左に大きなアイコンと分類名、右にその分類の機能を文字のリンクで並べる。
  *  先頭の機能と重要度・高の機能（確認メモ #241）は大きな見出しの文字、重要度・中はやや大きい文字にする。 */
@@ -116,11 +124,12 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
                   const pr = PRIORITY[l];
                   const name = nameOf ? nameOf(l) : g.key.startsWith('s-') ? settingsMenuName(l) : displayName(l);
                   const tip = off ? kind + 'で起動中は利用できません' : hit ? 'Enter でこの画面を開きます' : pr ? PRIORITY_LABEL[pr] : undefined;
-                  // 名前のカッコの部分（例「日記帳（仕訳一覧）」の（仕訳一覧））は、文字を小さく細くする
+                  // 名前の後ろのカッコの部分（例「日記帳（仕訳一覧）」の（仕訳一覧））は、改行して下の行に小さく細く出す
+                  const [main, sub] = splitParen(name);
                   return (
                     <button key={l} type="button" className="btn-outline" data-fn-btn data-off={off || undefined} data-hit={hit || undefined} data-danger={g.danger || undefined} data-menu={'機能:' + l} data-priority={pr} onClick={() => onNavigate(l)} title={tip}
                       style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, width: '100%', boxSizing: 'border-box', padding: '6px 8px 6px 12px', border: '1px solid ' + (hit ? '#1f7a52' : off ? '#e3e8ec' : g.danger ? '#f2c9c2' : '#d5dde4'), borderRadius: 8, background: hit ? '#eaf5ef' : off ? '#f7f9fa' : '#fff', boxShadow: hit ? '0 0 0 2px rgba(31,122,82,.22)' : '0 1px 1px rgba(34,48,60,.04)', color: off ? '#b3bcc5' : g.danger ? '#c0392b' : '#22303c', fontSize: 14, fontWeight: 600, lineHeight: 1.4, textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer' }}>
-                      <span style={{ minWidth: 0 }}>{name.includes('（') ? <>{name.slice(0, name.indexOf('（'))}<span data-fn-sub style={{ fontSize: 12, fontWeight: 400, opacity: 0.75 }}>{name.slice(name.indexOf('（'))}</span></> : name}</span>
+                      <span style={{ minWidth: 0 }}>{sub ? <>{main}<span data-fn-sub style={{ display: 'block', fontSize: 12, fontWeight: 400, opacity: 0.75 }}>{sub}</span></> : name}</span>
                       <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flex: 'none', opacity: 0.4 }}><path d="M9 6l6 6-6 6" /></svg>
                     </button>
                   );

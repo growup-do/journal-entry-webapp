@@ -12,6 +12,7 @@ import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
 import { ExportDialog } from './ExportDialog';
+import { DEP_OUTPUTS, DepPrintModal, printMethod, type DepValues } from './DepPrintModal';
 import type { ExportSpec } from './ExportDialog';
 import { Notice, SelectionBar, btn as uiBtn } from './ui';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
@@ -155,7 +156,7 @@ const annualOf = (a: Asset) => (a.life && a.method !== '非償却' ? Math.min(Ma
 const isNewThisYear = (a: Asset) => a.acquired.startsWith('令和8') || !!a.transferIn;
 
 /* ================= 帳票の組み立て（ExportDialog に渡す表データ） ================= */
-interface ReportCtx { assets: Asset[]; equips: Equip[]; disposals: Disposal[]; logs: LogRow[]; single?: Asset }
+interface ReportCtx { assets: Asset[]; equips: Equip[]; disposals: Disposal[]; logs: LogRow[]; single?: Asset; /** 印刷の詳細設定（確認メモ #251） */ opts?: DepValues }
 const H_LEDGER = ['資産コード', '固定資産名称', '科目', '取得年月日', '耐用年数', '償却方法', '取得価額', 'うち国庫補助金等', '期首帳簿価額', '当期減価償却額', '期末帳簿価額', '状態'];
 const ledgerRow = (a: Asset): (string | number)[] => { const d = annualOf(a); return [a.code, a.name, a.account, a.acquired, a.life || '—', a.method, a.cost, a.subsidy, a.opening, d, a.opening - d, a.status]; };
 const H_SUMMARY = ['科目', '期首帳簿価額', '当期増加額', '当期減少額', '当期減価償却額', '期末帳簿価額', '減価償却累計額', '期末取得原価'];
@@ -184,7 +185,24 @@ function scheduleRows(a: Asset): (string | number)[][] {
 }
 const H_DISPOSAL = ['資産コード', '固定資産名称', '科目', '処理', '処分年月日', '取得価額', '期首帳簿価額', 'うち国庫補助金等', '処分額または売却額', '移管先'];
 const disposalRow = (d: Disposal): (string | number)[] => [d.code, d.name, d.account, d.proc, d.date, d.cost, d.opening, d.subsidy, d.amount, d.to ?? ''];
+/** 和暦の年月日 → 並べ替え用の数（読み取れなければ 0） */
+const dateKey = (s: string) => { const m = String(s).match(/(昭和|平成|令和)\s*(元|\d+)\s*年\s*(\d+)\s*月\s*(\d+)?/); return m ? (ERA_BASE[m[1]] + (m[2] === '元' ? 1 : Number(m[2]))) * 10000 + Number(m[3]) * 100 + Number(m[4] ?? 1) : 0; };
+/** 帳票の表に詳細設定を反映する（タイトル・印刷順序・償却方法の印字・集計期間。確認メモ #251） */
 function buildReport(name: string, ctx: ReportCtx): ExportSpec {
+  const spec = buildReportBase(name, ctx);
+  const o = ctx.opts;
+  if (!o) return spec;
+  const h = spec.header ?? [];
+  let rows = spec.rows ?? [];
+  const iCode = h.indexOf('資産コード'), iDate = h.indexOf('取得年月日'), iMethod = h.indexOf('償却方法');
+  if (o.order === '資産コード順' && iCode >= 0) rows = [...rows].sort((a, b) => String(a[iCode]).localeCompare(String(b[iCode])));
+  if (o.order === '取得日付順' && iDate >= 0) rows = [...rows].sort((a, b) => dateKey(String(a[iDate])) - dateKey(String(b[iDate])));
+  if (o.method !== undefined && iMethod >= 0) rows = rows.map((r) => r.map((c, i) => (i === iMethod ? printMethod(String(c), o.method) : c)));
+  const title = String(o.title ?? '').trim();
+  const period = o.periodOn ? '　集計期間 ' + o.periodFrom + '〜' + o.periodTo : '';
+  return { ...spec, title: title || spec.title, rows, meta: (spec.meta ?? '') + period };
+}
+function buildReportBase(name: string, ctx: ReportCtx): ExportSpec {
   const { assets, equips, disposals, logs, single } = ctx;
   const base = { kind: 'print' as const, title: name, meta: 'チャイルド保育園　令和8年度' };
   switch (name) {
@@ -541,7 +559,9 @@ export function DepreciationPage({ variant, accent }: Props) {
   const card: CSSProperties = { background: '#fff', border: '1px solid #dde4ea', borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'hidden' };
 
   const addLog = (kind: LogRow['kind'], code: string, target: string, action: string) => setLogs((ls) => [...ls, { time: stamp(), kind, code, target, action, user: USER }]);
-  const openReport = (name: string, single?: Asset) => setExportSpec(buildReport(name, { assets, equips, disposals, logs, single }));
+  // 帳票の印刷は、まず条件画面（出力先と詳細設定）を開く（確認メモ #251）
+  const [printReq, setPrintReq] = useState<{ name: string; single?: Asset } | null>(null);
+  const openReport = (name: string, single?: Asset) => setPrintReq({ name, single });
   const openLog = (kind: LogRow['kind'], code?: string) => { setLogTab(kind); setLogOpen({ open: true, code, kind }); };
 
   const list = assets.filter((a) => (statusFilter === 'すべて' || a.status === statusFilter) && (!q || a.name.includes(q) || a.code.includes(q) || a.account.includes(q)));
@@ -806,6 +826,7 @@ export function DepreciationPage({ variant, accent }: Props) {
       <ImageModal open={!!imgTarget} title={imgTarget?.title ?? ''} src={imgTarget ? images[imgTarget.key] : undefined} accent={accent} toast={toast.show} onClose={() => setImgTarget(null)} onChange={(src) => { if (!imgTarget) return; setImages((m) => { const n = { ...m }; if (src) n[imgTarget.key] = src; else delete n[imgTarget.key]; return n; }); }} />
 
       {/* 印刷／ファイル出力 */}
+      {printReq && <DepPrintModal key={printReq.name} name={printReq.name} accent={accent} onClose={() => setPrintReq(null)} onRun={(opts, output) => { const spec = buildReport(printReq.name, { assets, equips, disposals, logs, single: printReq.single, opts }); setPrintReq(null); setExportSpec({ ...spec, kind: output === DEP_OUTPUTS[2] ? 'excel' : 'print', meta: (spec.meta ?? '') + (output === DEP_OUTPUTS[1] ? '　（画面へプレビュー）' : '') }); }} />}
       <ExportDialog spec={exportSpec} onClose={() => setExportSpec(null)} accent={accent} />
     </main>
   );

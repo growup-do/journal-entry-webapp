@@ -12,10 +12,18 @@
 //   集計：上から順に、どこまで集計するかを選ぶ（飛び飛びには選べない。#208）。集計済みの期間より前の日付の明細は登録・訂正できない
 //   集計 ― 確認：会計連動へ送るときの伝票日付を指定できる（明細の日付を伝票日付とする／伝票年月日／月末日。確認メモ #164）
 //   消費税を使う設定（消費税の処理方式が「通常モード」以外）のときは、明細に「消費税コード」「税額」の列を出す（#216）
+//   小口の設定／預金の設定（#210）：現行の「ユーザー設定」と同じ項目（ユーザーオプション／印刷設定／色の設定）。CashbookSettings.tsx
+//     画面に反映：出納帳画面デザイン（入金欄の位置・罫線の色）、摘要コード欄・取引先欄・消費税欄、特殊行の文字、年月／入金額欄のスキップ、
+//     勘定科目の警告、前頁繰越行の自動挿入、元年の表記、集計済明細行の色（集計ごと）、伝票の摘要への日付の挿入、入金行を伝票にするか、
+//     印刷する欄・表題・捺印欄・元号の印字、集計伝票形式（仕訳伝票の形）
+//   印刷（#235）：集計内訳表・仕訳伝票は「集計単位で選ぶ／月で選ぶ」、出納帳は「出納帳印刷」（範囲・様式・余白）の条件画面から。CashbookPrint.tsx
 
-import { useMemo, useRef, useState } from 'react';
+import { Fragment, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent } from 'react';
 import { AssistField } from './AssistField';
+import { CashbookSettingsDialog, inRightOf, ledgerTitleOf, loadPrefs, prefsTitle, ruleColors, savePrefs, slipFormOf, type CashbookPrefs, type PrefsTab } from './CashbookSettings';
+import { AggPrintDialog, LedgerPrintDialog, SheetPages, pageLabel, type AggUnit, type LedgerPrintOpts, type PrintRun, type SheetPage } from './CashbookPrint';
+import { PreviewModal } from './PrintCenter';
 import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { FISCAL_MONTHS, inPeriod, lastDayOf, parseMD, periodLabel as periodText, type Period } from '../lib/period';
@@ -26,7 +34,7 @@ import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { useAssist } from '../hooks/useAssist';
 import { addVoucher } from '../store/journalStore';
 import { useSession } from '../store/session';
-import { accountFlat } from '../data';
+import { VENDORS, accountFlat } from '../data';
 import type { MonthFilter } from '../types';
 
 export type CashbookKind = 'petty' | 'bank';
@@ -56,7 +64,15 @@ interface Row {
   ny?: boolean;
   /** 消費税コード（確認メモ #216）。未設定のときは勘定科目から既定を決める */
   tax?: string;
+  /** 摘要コード・取引先（「小口の設定」で欄を設けたときに入力する。確認メモ #210） */
+  tcode?: string;
+  partner?: string;
+  /** 集計した単位（1 回の「集計」ごとの番号）。集計済明細行の色と、集計内訳表・仕訳伝票の「集計単位で選ぶ」に使う（#210／#235） */
+  aggGroup?: number;
 }
+/** 取引先（取引先マスタのサンプル。コードは仮の番号） */
+const PARTNERS = VENDORS.filter((v) => v !== '（なし）');
+const partnerCode = (name?: string) => { const i = name ? PARTNERS.indexOf(name) : -1; return i < 0 ? '' : String(101 + i); };
 const CODE: Record<string, string> = { 手数料: '2340', 修繕費: '2290', '賃借料（事業）': '2520', '普通預金（保育園）': '5013', 福利厚生費: '2210', 消耗器具備品費: '2500', 通信運搬費: '2300', 給食費: '2410', 保育材料費: '2460', '水道光熱費（事業）': '2480', 委託費収益: '6110' };
 let seq = 100;
 const R = (month: string, day: string, tekiyo: string, account: string, inAmt: number, outAmt: number, extra: Partial<Row> = {}): Row => ({ id: seq++, month, day, tekiyo, account, code: CODE[account] ?? '', inAmt, outAmt, ...extra });
@@ -80,14 +96,14 @@ const BANK_SEED: Row[] = [
 const BANK_ACCOUNTS = ['普通預金（本部）', '普通預金（保育園）', '当座預金（保育園）', '定期預金'];
 /** 預金出納：はじめから出納帳のある預金科目（残りは「区分の切替」の「＋出納帳追加」で追加する。確認メモ #215） */
 const BANK_BOOKS_SEED = ['普通預金（保育園）', '普通預金（本部）'];
-/** 小口現金の区分（拠点・担当ごとに出納帳を分ける）。refill 以降は「小口の設定」の項目（確認メモ #210。項目は叩き台） */
-interface PettyBook { name: string; staff: string; place: string; refill: string; fixed: number; warn: number }
+/** 小口現金の区分（拠点・担当ごとに出納帳を分ける） */
+interface PettyBook { name: string; staff: string; place: string }
 const PETTY_PLACES = ['001 本部', '002 保育事業', '003 子育て支援'];
 const PETTY_BOOKS: PettyBook[] = [
-  { name: '小口現金（保育園）', staff: '経理担当', place: '002 保育事業', refill: '普通預金（保育園）', fixed: 50000, warn: 10000 },
-  { name: '小口現金（本部）', staff: '事務長', place: '001 本部', refill: '普通預金（本部）', fixed: 50000, warn: 10000 },
-  { name: '小口現金（給食室）', staff: '栄養士', place: '002 保育事業', refill: '普通預金（保育園）', fixed: 30000, warn: 5000 },
-  { name: '小口現金（子育て支援）', staff: '支援員', place: '003 子育て支援', refill: '普通預金（保育園）', fixed: 30000, warn: 5000 },
+  { name: '小口現金（保育園）', staff: '経理担当', place: '002 保育事業' },
+  { name: '小口現金（本部）', staff: '事務長', place: '001 本部' },
+  { name: '小口現金（給食室）', staff: '栄養士', place: '002 保育事業' },
+  { name: '小口現金（子育て支援）', staff: '支援員', place: '003 子育て支援' },
 ];
 /** 消費税コード（各種設定「税区分」のコードに合わせる。確認メモ #216） */
 const TAX_CODES: { code: string; name: string; rate: number }[] = [
@@ -259,12 +275,21 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
   const [switchPick, setSwitchPick] = useState(book);
   /** 「＋出納帳追加」の入力欄（null＝閉じている）。預金出納では name に預金科目を入れる */
   const [addBook, setAddBook] = useState<{ name: string; staff: string; place: string } | null>(null);
-  /** 小口の設定（確認メモ #210） */
-  const [setting, setSetting] = useState<{ name: string; staff: string; place: string; refill: string; fixed: string; warn: string } | null>(null);
+  /** 小口の設定／預金の設定（確認メモ #210）。設定値と、開いているタブ（null＝閉じている） */
+  const [prefs, setPrefs] = useState<CashbookPrefs>(() => loadPrefs(kind));
+  const [prefsTab, setPrefsTab] = useState<PrefsTab | null>(null);
+  /** 印刷の条件画面（確認メモ #235）：集計内訳表・仕訳伝票（agg）／出納帳印刷（ledger） */
+  const [printDlg, setPrintDlg] = useState<{ type: 'agg'; report: '集計内訳表' | '仕訳伝票' } | { type: 'ledger' } | null>(null);
+  /** 印刷プレビュー（PreviewModal に渡す内容） */
+  const [preview, setPreview] = useState<{ title: string; meta: string; pages: SheetPage[]; stamps: string[] | null; margin?: { left: number; top: number } } | null>(null);
+  /** 「集計データが見つかりませんでした」のお知らせ */
+  const [noAggMsg, setNoAggMsg] = useState(false);
+  /** 集計した単位ごとの、集計した年月（'YYYY/M'）。キーは Row.aggGroup */
+  const [aggAt, setAggAt] = useState<Record<number, string>>({});
   /** 行の挿入・編集（確認メモ #206／#207）。noteOnly＝摘要行（摘要だけ直す） */
-  const [rowForm, setRowForm] = useState<{ mode: 'insert' | 'edit'; targetId: number; noteOnly: boolean; ny: boolean; month: string; day: string; tekiyo: string; account: string; inAmt: string; outAmt: string; tax: string } | null>(null);
-  /** 削除などの確認（「はい」を押したときだけ実行する）。detail＝消す対象の内容（行の削除で表示する。確認メモ #237） */
-  const [confirm, setConfirm] = useState<{ title: string; body: string; ok: string; onOk: () => void; detail?: [label: string, value: string][] } | null>(null);
+  const [rowForm, setRowForm] = useState<{ mode: 'insert' | 'edit'; targetId: number; noteOnly: boolean; ny: boolean; month: string; day: string; tekiyo: string; account: string; inAmt: string; outAmt: string; tax: string; tcode: string; partner: string } | null>(null);
+  /** 削除などの確認（「はい」を押したときだけ実行する）。detail＝消す対象の内容（行の削除で表示する。確認メモ #237）。primary＝削除ではない確認（OK を主ボタンの色にする） */
+  const [confirm, setConfirm] = useState<{ title: string; body: string; ok: string; onOk: () => void; detail?: [label: string, value: string][]; primary?: boolean } | null>(null);
   /** 金銭残高金種別表（確認メモ #212）：日付ごとの枚数、開いている日付、入力中の枚数 */
   const [denomOpen, setDenomOpen] = useState(false);
   const [denomSheets, setDenomSheets] = useState<Record<string, Record<number, number>>>(DENOM_SEED);
@@ -290,7 +315,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
   const [month, setMonth] = useState<MonthFilter>('8');
   /** 集計期間の範囲（月の範囲・日付の範囲。確認メモ #57／#58） */
   const [range, setRange] = useState<Period | null>(null);
-  const [entry, setEntry] = useState({ inAmt: '', month: '8', day: '', tekiyo: '', account: '', outAmt: '', tax: '' });
+  const [entry, setEntry] = useState({ inAmt: '', month: '8', day: '', tekiyo: '', account: '', outAmt: '', tax: '', tcode: '', partner: '' });
   /** 特殊行を挿入する位置（選択した行の id。その行の上に挿入する。確認メモ #209）。null＝閉じている */
   const [specialTarget, setSpecialTarget] = useState<number | null>(null);
   const [specialOpts, setSpecialOpts] = useState({ date: false, balance: false });
@@ -325,6 +350,25 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
   const selectMonth = (m: MonthFilter) => { setMonth(m); if (m && m !== '決') setEntry((en) => ({ ...en, month: m })); };
   const selectNy = (m: string) => { setRange(null); setMonth(`翌${m}`); setEntry((en) => ({ ...en, month: m })); };
 
+  // ---- 小口の設定（預金の設定）の値を画面に反映する（確認メモ #210） ----
+  const inRight = inRightOf(prefs);
+  const rule = ruleColors(prefs);
+  const showTcode = prefs.tekiyoCodeCol;
+  const showPartner = prefs.partnerCol;
+  /** 消費税欄：「消費税欄を設ける」か、消費税の処理方式が通常モード以外のとき（確認メモ #216） */
+  const showTax = taxEntry || prefs.taxCol;
+  /** 和暦の年。「和暦の1年を元年と表記する」のときは 1 年を「元」と書く */
+  const eraText = (n: number) => (n === 1 && prefs.gannen ? '元' : String(n));
+  /** 入力行の Enter の進み順（入金欄の位置・摘要コード欄・取引先欄に合わせる）。年月・入金額欄は設定でスキップする */
+  const entryOrder = [!inRight && 'cb-in', 'cb-month', 'cb-day', showTcode && 'cb-tcode', 'cb-tekiyo', 'cb-acc', showPartner && 'cb-partner', inRight && 'cb-in', 'cb-out'].filter((x): x is string => !!x);
+  const skipped = (id: string) => (id === 'cb-in' && prefs.skipIn) || (id === 'cb-month' && (prefs.skipYm || !!nyMonth));
+  const firstEntry = () => entryOrder.find((id) => !skipped(id)) ?? 'cb-day';
+  const entryNext = (id: string) => { const i = entryOrder.indexOf(id); const n = entryOrder.slice(i + 1).find((x) => !skipped(x)); if (n) focusId(n); else add(); };
+  /** 集計済明細行の色（集計ごとに「色の設定」の色を順に使う） */
+  const aggColor = (r: Row) => prefs.colors[((r.aggGroup ?? 1) - 1) % prefs.colors.length] ?? '#fff8c4';
+  /** 勘定科目の警告：入金なのに費用の科目、出金なのに収益の科目のとき（「勘定科目の警告ダイアログを出さない」で出さない） */
+  const accMismatch = (acc: string, isIn: boolean) => (isIn ? /費/.test(acc) && !/預金|現金/.test(acc) : /収益|収入/.test(acc));
+
   // ---- 集計済みの範囲（確認メモ #206〜#208）：集計済みの行より前には挿入できず、集計済みの期間より前の日付では登録・訂正できない ----
   const lastAggIdx = rows.reduce((a, r, i) => (r.aggregated ? i : a), -1);
   const aggLast = rows.reduce<Row | null>((a, r) => (r.aggregated && (!a || ordOf(r) > ordOf(a)) ? r : a), null);
@@ -344,23 +388,30 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
     if (!entry.account) return toast.show('勘定科目を選択してください');
     if (!inAmt && !outAmt) return toast.show('入金額または出金額を入力してください');
     if (beforeAgg(m, entry.day, !!nyMonth)) return aggLockMsg();
-    setRows((rs) => [...rs, R(m, entry.day, entry.tekiyo, entry.account, inAmt, outAmt, { ...(nyMonth ? { ny: true } : {}), ...(entry.tax ? { tax: entry.tax } : {}) })]);
-    setEntry({ inAmt: '', month: entry.month, day: '', tekiyo: '', account: '', outAmt: '', tax: '' });
-    focusId('cb-in');
-    // 登録欄は一覧の上に固定しているので、一覧の最後に入った明細が見える位置までスクロールする（確認メモ #236）
-    setTimeout(() => { const el = listRef.current; if (el) el.scrollTop = el.scrollHeight; }, 0);
+    const doAdd = () => {
+      setRows((rs) => [...rs, R(m, entry.day, entry.tekiyo, entry.account, inAmt, outAmt, { ...(nyMonth ? { ny: true } : {}), ...(entry.tax ? { tax: entry.tax } : {}), ...(entry.tcode ? { tcode: entry.tcode } : {}), ...(entry.partner ? { partner: entry.partner } : {}) })]);
+      setEntry({ inAmt: '', month: entry.month, day: '', tekiyo: '', account: '', outAmt: '', tax: '', tcode: '', partner: '' });
+      focusId(firstEntry());
+      // 登録欄は一覧の上に固定しているので、一覧の最後に入った明細が見える位置までスクロールする（確認メモ #236）
+      setTimeout(() => { const el = listRef.current; if (el) el.scrollTop = el.scrollHeight; }, 0);
+    };
+    // 勘定科目の警告ダイアログ（小口の設定「勘定科目の警告ダイアログを出さない」で出さない。確認メモ #210）
+    if (!prefs.noAccWarn && accMismatch(entry.account, inAmt > 0)) {
+      return setConfirm({ title: '勘定科目の確認', body: `勘定科目「${entry.account}」で${inAmt > 0 ? '入金' : '出金'}を登録しようとしています。勘定科目に誤りはありませんか？`, ok: '登録する', primary: true, onOk: doAdd });
+    }
+    doAdd();
   };
 
   // ---- 行の挿入・編集・削除、特殊行の挿入（行の右のボタンから。確認メモ #206／#207／#209） ----
   const openInsert = (r: Row) => {
     if (!canInsertAt(r.id)) return insertLockMsg();
-    setRowForm({ mode: 'insert', targetId: r.id, noteOnly: false, ny: !!r.ny, month: r.month, day: r.day, tekiyo: '', account: '', inAmt: '', outAmt: '', tax: '' });
+    setRowForm({ mode: 'insert', targetId: r.id, noteOnly: false, ny: !!r.ny, month: r.month, day: r.day, tekiyo: '', account: '', inAmt: '', outAmt: '', tax: '', tcode: '', partner: '' });
     focusId('re-day');
   };
   const openEdit = (r: Row) => {
     if (r.aggregated) return lockedMsg();
     if (r.special && !canInsertAt(r.id)) return lockedMsg();
-    setRowForm({ mode: 'edit', targetId: r.id, noteOnly: r.special === '摘要行', ny: !!r.ny, month: r.month, day: r.day, tekiyo: r.tekiyo, account: r.account, inAmt: r.inAmt ? String(r.inAmt) : '', outAmt: r.outAmt ? String(r.outAmt) : '', tax: r.tax ?? '' });
+    setRowForm({ mode: 'edit', targetId: r.id, noteOnly: r.special === '摘要行', ny: !!r.ny, month: r.month, day: r.day, tekiyo: r.tekiyo, account: r.account, inAmt: r.inAmt ? String(r.inAmt) : '', outAmt: r.outAmt ? String(r.outAmt) : '', tax: r.tax ?? '', tcode: r.tcode ?? '', partner: r.partner ?? '' });
     focusId(r.special === '摘要行' ? 're-tekiyo' : 're-day');
   };
   const saveRowForm = () => {
@@ -378,11 +429,11 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
     if (!f.account) return toast.show('勘定科目を選択してください');
     if (!inAmt && !outAmt) return toast.show('入金額または出金額を入力してください');
     if (beforeAgg(f.month, f.day, f.ny)) return aggLockMsg();
-    const extra: Partial<Row> = { ...(f.ny ? { ny: true } : {}), ...(f.tax ? { tax: f.tax } : {}) };
+    const extra: Partial<Row> = { ...(f.ny ? { ny: true } : {}), ...(f.tax ? { tax: f.tax } : {}), ...(f.tcode ? { tcode: f.tcode } : {}), ...(f.partner ? { partner: f.partner } : {}) };
     if (f.mode === 'insert') {
       setRows((rs) => { const i = rs.findIndex((x) => x.id === f.targetId); return i < 0 ? rs : [...rs.slice(0, i), R(f.month, f.day, f.tekiyo, f.account, inAmt, outAmt, extra), ...rs.slice(i)]; });
     } else {
-      setRows((rs) => rs.map((x) => (x.id === f.targetId ? { ...x, month: f.month, day: f.day, tekiyo: f.tekiyo, account: f.account, code: CODE[f.account] ?? '', inAmt, outAmt, tax: f.tax || undefined } : x)));
+      setRows((rs) => rs.map((x) => (x.id === f.targetId ? { ...x, month: f.month, day: f.day, tekiyo: f.tekiyo, account: f.account, code: CODE[f.account] ?? '', inAmt, outAmt, tax: f.tax || undefined, tcode: f.tcode || undefined, partner: f.partner || undefined } : x)));
     }
     setRowForm(null);
     toast.show(f.mode === 'insert' ? '行を挿入しました' : '明細を訂正しました');
@@ -415,23 +466,20 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
     const name = addBook.name.trim();
     if (!name) return toast.show(isPetty ? '出納帳の名称を入力してください' : '預金科目を選択してください');
     if ((isPetty ? pettyBooks.map((b) => b.name) : bankBooks).includes(name)) return toast.show('同じ名称の出納帳がすでにあります');
-    if (isPetty) setPettyBooks((bs) => [...bs, { name, staff: addBook.staff.trim() || '未設定', place: addBook.place, refill: '普通預金（保育園）', fixed: 50000, warn: 10000 }]);
+    if (isPetty) setPettyBooks((bs) => [...bs, { name, staff: addBook.staff.trim() || '未設定', place: addBook.place }]);
     else setBankBooks((bs) => [...bs, name]);
     setSwitchPick(name);
     setAddBook(null);
     toast.show(`${name} を追加しました。「OK」でこの出納帳に切り替えます`);
   };
   const curPetty = pettyBooks.find((b) => b.name === book);
-  const openSetting = () => { if (curPetty) setSetting({ name: curPetty.name, staff: curPetty.staff, place: curPetty.place, refill: curPetty.refill, fixed: String(curPetty.fixed), warn: String(curPetty.warn) }); };
-  const saveSetting = () => {
-    if (!setting) return;
-    const name = setting.name.trim();
-    if (!name) return toast.show('出納帳の名称を入力してください');
-    if (name !== book && pettyBooks.some((b) => b.name === name)) return toast.show('同じ名称の出納帳がすでにあります');
-    setPettyBooks((bs) => bs.map((b) => (b.name === book ? { name, staff: setting.staff.trim(), place: setting.place, refill: setting.refill, fixed: num(setting.fixed), warn: num(setting.warn) } : b)));
-    setBook(name);
-    setSetting(null);
-    toast.show('小口の設定を登録しました');
+  /** 小口の設定（預金の設定）を開く。tab＝開くタブ（出納帳印刷の［出納帳設定］からは「印刷設定」） */
+  const openSetting = (tab: PrefsTab = 'ユーザーオプション') => setPrefsTab(tab);
+  const saveSetting = (p: CashbookPrefs) => {
+    setPrefs(p);
+    savePrefs(kind, p);
+    setPrefsTab(null);
+    toast.show(`${prefsTitle(kind)}を登録しました`);
   };
 
   // ---- 金銭残高金種別表（確認メモ #212）：日付ごとに紙幣・硬貨の枚数を登録し、帳簿残高と照らす ----
@@ -496,7 +544,11 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
   const runAggregate = () => {
     if (slipActive && !slipDate) return toast.show('伝票年月日の日を正しく入力してください');
     const sd = slipActive && slipDate ? slipDate : undefined;
-    setRows((rs) => rs.map((r) => (aggSel.has(r.id) ? { ...r, aggregated: true, slipDate: sd } : r)));
+    // 集計した単位の番号（集計ごとに 1 つずつ増やす）と、集計した年月（集計内訳表・仕訳伝票の「月で選ぶ」に使う。確認メモ #235）
+    const gid = rows.reduce((a, r) => Math.max(a, r.aggGroup ?? 0), Math.max(0, ...Object.keys(aggAt).map(Number))) + 1;
+    const now = new Date();
+    setAggAt((m) => ({ ...m, [gid]: `${now.getFullYear()}/${now.getMonth() + 1}` }));
+    setRows((rs) => rs.map((r) => (aggSel.has(r.id) ? { ...r, aggregated: true, slipDate: sd, aggGroup: gid } : r)));
     setAggConfirm(false);
     setAggOpen(false);
     toast.show(`${aggSel.size} 件を集計しました${aggLink ? `（会計連動フォルダへ送信。伝票日付：${sd ? `${sd.replace('/', '月')}日` : '明細の日付'}）` : ''}`);
@@ -518,7 +570,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
   };
   const runUnagg = () => {
     const ids = new Set(unaggRange.map((r) => r.id));
-    setRows((rs) => rs.map((r) => (ids.has(r.id) ? { ...r, aggregated: false, slipDate: undefined } : r)));
+    setRows((rs) => rs.map((r) => (ids.has(r.id) ? { ...r, aggregated: false, slipDate: undefined, aggGroup: undefined } : r)));
     setUnaggOpen(false);
     toast.show(`${ids.size} 件の集計を取り消しました（訂正・削除・行の挿入ができます）`);
   };
@@ -541,11 +593,12 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
 
   // ---- 会計連動：集計済み（未連動）の明細を仕訳伝票にする。翌年度の予備月の明細は、翌年度の伝票になるため対象にしない ----
   const cashAccount = isPetty ? '小口現金' : book; // 出納帳の相手科目
+  /** 「伝票の摘要欄に明細の日付を挿入する」（小口の設定のエクスポートオプション。確認メモ #210）のときは、摘要の頭に明細の日付を付ける */
   const journalOf = (r: Row) => ({
     date: r.slipDate ?? `${r.month}/${r.day}`,
     kari: r.inAmt ? cashAccount : r.account,
     kashi: r.inAmt ? r.account : cashAccount,
-    tekiyo: r.tekiyo,
+    tekiyo: prefs.expDate ? `${r.month}/${r.day} ${r.tekiyo}` : r.tekiyo,
     amount: r.inAmt || r.outAmt,
   });
   const linkTargets = withBal.filter((r) => !r.special && r.aggregated && !r.linked && !r.ny);
@@ -562,9 +615,10 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
     const service = isPetty ? curPetty?.place ?? '002 保育事業' : '002 保育事業';
     // 会計側で作成された伝票を控える（伝票番号と伝票日付が同じ行は、同じ伝票にまとまる）
     const slipMap = new Map<string, LinkSlip>();
-    linkTargets.forEach((r) => {
+    // 「一明細を一伝票としてエクスポートする」（小口の設定。確認メモ #210）のときは、明細ごとに別の伝票番号にする
+    linkTargets.forEach((r, i) => {
       const j = journalOf(r);
-      const v = addVoucher({ kind: '伝票', ...j, service, shohyo: false });
+      const v = addVoucher({ kind: '伝票', ...j, service, shohyo: false, ...(prefs.expOneSlip ? { no: `${j.date.replace('/', '-')}-${i + 1}` } : {}) });
       const key = `${v.date}|${v.no}`;
       const s = slipMap.get(key) ?? { no: v.no, date: v.date, service, lines: [] };
       s.lines.push({ kari: j.kari, kashi: j.kashi, tekiyo: j.tekiyo, amount: j.amount });
@@ -610,36 +664,118 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
   const returnAi = (id: number) => { setRows((rs) => rs.filter((r) => r.id !== id)); toast.show('差戻しました（AI自動仕訳システムへ再判定を依頼）'); };
   const approveAllAi = () => { const n = aiPending.length; setRows((rs) => rs.map((r) => (r.ai === 'pending' ? { ...r, ai: 'approved' } : r))); toast.show(`${n} 件を承認しました`); };
 
-  // ---- 印刷（集計内訳表／仕訳伝票／出納帳） ----
+  // ---- 印刷（確認メモ #235）：集計内訳表・仕訳伝票は印刷する明細（集計単位／月）を選び、出納帳は「出納帳印刷」で範囲・様式・余白を選ぶ。
+  //      印刷・Excel出力は ExportDialog、プレビューは PreviewModal に渡す ----
+  const periodLabel = range ? periodText(range) : month == null ? '令和8年度（全月）' : nyMonth ? `令和9年 ${nyMonth}月（翌年度の予備月）` : month === '決' ? '令和8年度 決算月' : `令和${eraText(eraOf({ month }))}年 ${month}月`;
+  const printMeta = `${book}　${periodLabel}`;
+  /** 集計内訳表・仕訳伝票に載せる明細。「入金行を伝票（集計内訳表）にする」が無いときは入金行を除く（小口の設定。確認メモ #210） */
+  const slipRowOk = (r: Row) => !r.special && !!r.aggregated && (prefs.inRowSlip || !r.inAmt);
+  const shortDate = (r: { month: string; day: string; ny?: boolean }) => `令和${eraText(eraOf(r))}年 ${r.month}月${r.day}日`;
+  /** 集計した単位の一覧（古い順）。「集計単位で選ぶ」の行 */
+  const aggUnits: AggUnit[] = (() => {
+    const map = new Map<number, Row[]>();
+    rows.forEach((r) => { if (slipRowOk(r)) { const g = r.aggGroup ?? 0; map.set(g, [...(map.get(g) ?? []), r]); } });
+    const now = new Date();
+    return [...map.entries()].sort((a, b) => a[0] - b[0]).map(([id, rs]) => {
+      const s = [...rs].sort((a, b) => ordOf(a) - ordOf(b));
+      const f = s[0];
+      const l = s[s.length - 1];
+      const period = ordOf(f) === ordOf(l) ? shortDate(f) : `${shortDate(f)}〜${eraOf(f) === eraOf(l) ? `${l.month}月${l.day}日` : shortDate(l)}`;
+      return { id, period, count: rs.length, at: aggAt[id] ?? `${now.getFullYear()}/${now.getMonth() + 1}` };
+    });
+  })();
   const openPrint = (label: string) => {
-    const period = range ? periodText(range) : month == null ? '令和8年度（全月）' : nyMonth ? `令和9年 ${nyMonth}月（翌年度の予備月）` : month === '決' ? '令和8年度 決算月' : `令和${eraOf({ month })}年 ${month}月`;
-    const meta = `${book}　${period}`;
-    if (label === '集計内訳表') {
-      const agg = view.filter((r) => !r.special && r.aggregated);
-      if (agg.length === 0) return toast.show('集計済みの明細がありません（先に「集計」を実行してください）');
-      const byAcc = new Map<string, { n: number; inAmt: number; outAmt: number }>();
-      agg.forEach((r) => { const c = byAcc.get(r.account) ?? { n: 0, inAmt: 0, outAmt: 0 }; c.n++; c.inAmt += r.inAmt; c.outAmt += r.outAmt; byAcc.set(r.account, c); });
-      const rowsOut: (string | number)[][] = Array.from(byAcc.entries()).map(([acc, c]) => [CODE[acc] ?? '', acc, c.n, c.inAmt, c.outAmt]);
-      rowsOut.push(['', '合計', agg.length, agg.reduce((a, r) => a + r.inAmt, 0), agg.reduce((a, r) => a + r.outAmt, 0)]);
-      setExportSpec({ kind: 'print', title: `集計内訳表（${title}）`, meta, header: ['科目コード', '勘定科目', '件数', '入金額', '出金額'], rows: rowsOut });
-      return;
+    if (label === '集計内訳表' || label === '仕訳伝票') {
+      // 集計済みの明細（印刷の対象）が無いときは、現行と同じお知らせを出す
+      if (aggUnits.length === 0) return setNoAggMsg(true);
+      return setPrintDlg({ type: 'agg', report: label });
     }
-    if (label === '仕訳伝票') {
-      const agg = view.filter((r) => !r.special && r.aggregated);
-      if (agg.length === 0) return toast.show('集計済みの明細がありません（先に「集計」を実行してください）');
-      setExportSpec({ kind: 'print', title: `仕訳伝票（${title}）`, meta, header: ['日付', '借方科目', '貸方科目', '摘要', '金額', '会計連動'], rows: agg.map((r) => { const j = journalOf(r); return [`令和${eraOf({ month: j.date.split('/')[0], ny: r.ny })}年 ${j.date.replace('/', '月')}日`, j.kari, j.kashi, j.tekiyo, j.amount, r.linked ? '連動済' : '未連動']; }) });
-      return;
-    }
-    const body = view.filter((r) => r.special !== '改ページ' && r.special !== '締切線');
-    // 消費税を使う設定のときは、勘定科目の後ろに「消費税コード」「税額」の列を足す（確認メモ #216）
-    const tx = (a: (string | number)[], b: (string | number)[]) => (taxEntry ? [...a.slice(0, 4), ...b, ...a.slice(4)] : a);
-    setExportSpec({ kind: 'print', title, meta: `${meta}　前月繰越 ${yen(opening)}`, header: tx(['入金額', '年月日', '摘要', '勘定科目', '出金額', '残高'], ['消費税コード', '税額']) as string[], rows: [tx([0, '', '前月繰越', '', 0, opening], ['', '']), ...body.map((r): (string | number)[] => (r.special === '小計行' ? tx([monthIn, '', '小計', '', monthOut, r.bal], ['', '']) : tx([r.inAmt, r.special ? '' : dateText(r), r.tekiyo, r.account, r.outAmt, r.special ? '' : r.bal], r.special ? ['', ''] : [`${taxCodeOf(r)} ${taxName(taxCodeOf(r))}`, taxAmtOf(taxCodeOf(r), r.inAmt || r.outAmt)])))] });
+    setPrintDlg({ type: 'ledger' });
   };
-  const dateText = (r: { month: string; day: string; ny?: boolean }) => `令和${eraOf(r)}年 ${r.month}月 ${r.day}日`;
+  /** 印刷・Excel出力・プレビューへ渡す */
+  const sendPrint = (run: PrintRun, o: { title: string; meta: string; pages: SheetPage[]; stamps: string[] | null; margin?: { left: number; top: number }; header: string[] }) => {
+    if (run === 'preview') return setPreview({ title: o.title, meta: o.meta, pages: o.pages, stamps: o.stamps, margin: o.margin });
+    const stampText = o.stamps ? `　捺印欄：${o.stamps.map((x) => x || '□').join(' ')}` : '';
+    setExportSpec({ kind: run === 'excel' ? 'excel' : 'print', title: o.title, meta: `${o.meta}${run === 'print' ? stampText : ''}`, header: o.header, rows: o.pages.flatMap((p) => p.rows) });
+    setPrintDlg(null);
+  };
+  /** 集計内訳表・仕訳伝票（ids＝選んだ集計の単位、cond＝条件の表示） */
+  const runAggPrint = (report: '集計内訳表' | '仕訳伝票', run: PrintRun, ids: number[], cond: string) => {
+    const target = rows.filter((r) => slipRowOk(r) && ids.includes(r.aggGroup ?? 0)).sort((a, b) => (a.aggGroup ?? 0) - (b.aggGroup ?? 0) || ordOf(a) - ordOf(b));
+    const meta = `${book}　${cond}`;
+    if (report === '集計内訳表') {
+      const byAcc = new Map<string, { n: number; inAmt: number; outAmt: number }>();
+      target.forEach((r) => { const c = byAcc.get(r.account) ?? { n: 0, inAmt: 0, outAmt: 0 }; c.n++; c.inAmt += r.inAmt; c.outAmt += r.outAmt; byAcc.set(r.account, c); });
+      const out: (string | number)[][] = Array.from(byAcc.entries()).map(([acc, c]) => [CODE[acc] ?? '', acc, c.n, c.inAmt, c.outAmt]);
+      out.push(['', '合計', target.length, target.reduce((a, r) => a + r.inAmt, 0), target.reduce((a, r) => a + r.outAmt, 0)]);
+      const header = ['科目コード', '勘定科目', '件数', '入金額', '出金額'];
+      return sendPrint(run, { title: `集計内訳表（${title}）`, meta, header, pages: [{ header, rows: out, label: '' }], stamps: null });
+    }
+    // 仕訳伝票：集計伝票形式（小口の設定のユーザーオプション）に合わせる。「摘要をまとめる」は、集計の単位ごとに同じ借方・貸方の明細を 1 行にまとめる
+    const form = slipFormOf(prefs.slipForm);
+    const jDate = (date: string, ny?: boolean) => { const [m, d] = date.split('/'); return `令和${eraText(eraOf({ month: m, ny }))}年 ${m}月${d}日`; };
+    type Line = { date: string; kari: string; kashi: string; tekiyo: string; amount: number; linked: boolean; r: Row; n: number };
+    let lines: Line[] = target.map((r) => ({ ...journalOf(r), linked: !!r.linked, r, n: 1 }));
+    if (form.merge) {
+      const m = new Map<string, Line>();
+      lines.forEach((l) => {
+        const k = `${l.r.aggGroup ?? 0}|${l.kari}|${l.kashi}`;
+        const c = m.get(k);
+        if (c) { c.amount += l.amount; c.n++; c.date = l.date; c.tekiyo = `${c.tekiyo.replace(/ 他\d+件$/, '')} 他${c.n - 1}件`; }
+        else m.set(k, { ...l });
+      });
+      lines = [...m.values()];
+    }
+    const formTitle = form.kind === '単一式' ? '単一式伝票' : form.kind === '振替単一' ? '振替伝票（振替単一）' : form.kind;
+    const header = form.kind === '単一式' ? ['日付', '勘定科目', '摘要', '入金額', '出金額'] : form.kind === '仕訳伝票' ? ['日付', '借方科目', '貸方科目', '摘要', '金額', '会計連動'] : ['日付', '借方科目', '借方金額', '摘要', '貸方科目', '貸方金額'];
+    const out: (string | number)[][] = lines.map((l) => (form.kind === '単一式' ? [jDate(l.date, l.r.ny), l.r.account, l.tekiyo, l.r.inAmt, l.r.outAmt] : form.kind === '仕訳伝票' ? [jDate(l.date, l.r.ny), l.kari, l.kashi, l.tekiyo, l.amount, l.linked ? '連動済' : '未連動'] : [jDate(l.date, l.r.ny), l.kari, l.amount, l.tekiyo, l.kashi, l.amount]));
+    const stamps = prefs.print.slipStamp ? (form.kind === '仕訳伝票' || form.kind === '単一式' ? prefs.print.slipStamps : prefs.print.transferStamps) : null;
+    sendPrint(run, { title: `${formTitle}（${title}）`, meta: `${meta}　（${prefs.slipForm}／${prefs.print.slipPaper}）`, header, pages: [{ header, rows: out, label: '' }], stamps });
+  };
+  /** 出納帳の印刷ページ（表示中の月の明細を「改ページ」の行で区切る）。特殊行は「特殊行の文字」で印刷する */
+  const carryLabel = month == null && !range ? prefs.labels.carry : '前月繰越';
+  const ledgerPages = (): { header: string[]; pages: (string | number)[][][] } => {
+    const p = prefs.print;
+    const era = (r: { month: string; ny?: boolean }) => `${p.era ? '令和' : ''}${eraText(eraOf(r))}年`;
+    const header = ['入金額', '年月日', ...(p.tekiyoCode ? ['摘要コード'] : []), '摘要', ...(p.accCode ? ['科目コード'] : []), '勘定科目', ...(p.partnerCode ? ['取引先コード'] : []), ...(p.partner ? ['取引先名'] : []), ...(p.tax ? ['消費税コード', '税額'] : []), '出金額', '残高'];
+    const line = (o: { inAmt: number | string; date: string; tcode?: string; tekiyo: string; code?: string; account: string; pcode?: string; partner?: string; taxCode?: string; tax?: number | string; outAmt: number | string; bal: number | string }): (string | number)[] => [
+      o.inAmt, o.date, ...(p.tekiyoCode ? [o.tcode ?? ''] : []), o.tekiyo, ...(p.accCode ? [o.code ?? ''] : []), o.account, ...(p.partnerCode ? [o.pcode ?? ''] : []), ...(p.partner ? [o.partner ?? ''] : []), ...(p.tax ? [o.taxCode ?? '', o.tax ?? ''] : []), o.outAmt, o.bal,
+    ];
+    const pages: (string | number)[][][] = [[line({ inAmt: '', date: '', tekiyo: carryLabel, account: '', outAmt: '', bal: opening })]];
+    view.forEach((r) => {
+      const cur = pages[pages.length - 1];
+      if (r.special === '改ページ') {
+        pages.push(prefs.autoPageCarry ? [line({ inAmt: '', date: '', tekiyo: prefs.labels.pageCarry, account: '', outAmt: '', bal: r.bal })] : []);
+        return;
+      }
+      if (r.special === '締切線') { cur.push(line({ inAmt: '', date: '', tekiyo: prefs.labels.close, account: '', outAmt: '', bal: '' })); return; }
+      if (r.special === '小計行') { cur.push(line({ inAmt: monthIn, date: '', tekiyo: prefs.labels.subtotal, account: '', outAmt: monthOut, bal: r.bal })); return; }
+      if (r.special === '摘要行') { cur.push(line({ inAmt: '', date: '', tekiyo: r.tekiyo, account: '', outAmt: '', bal: '' })); return; }
+      const tc = taxCodeOf(r);
+      cur.push(line({ inAmt: r.inAmt || '', date: `${era(r)} ${r.month}月 ${r.day}日`, tcode: r.tcode, tekiyo: r.tekiyo, code: r.code, account: r.account, pcode: partnerCode(r.partner), partner: r.partner, taxCode: `${tc} ${taxName(tc)}`, tax: taxAmtOf(tc, r.inAmt || r.outAmt), outAmt: r.outAmt || '', bal: r.bal }));
+    });
+    return { header, pages };
+  };
+  const ledgerPageCount = 1 + view.filter((r) => r.special === '改ページ').length;
+  const ledgerTitle = ledgerTitleOf(prefs, isPetty ? '小口現金' : book);
+  const runLedgerPrint = (run: PrintRun, o: LedgerPrintOpts) => {
+    const { header, pages } = ledgerPages();
+    const total = pages.length;
+    const picked = pages.slice(o.from - 1, o.to);
+    const sheet: SheetPage[] = picked.map((rs, k) => ({ header, rows: rs, label: pageLabel(o.style, o.from + k, k + 1, picked.length, o.to, total) }));
+    const p = prefs.print;
+    const meta = `${printMeta}　（${p.ledgerPaper}${p.fontAuto ? '・フォントサイズ自動調整' : ''}${o.all ? '' : `・${o.from}〜${o.to}ページ`}${o.left || o.top ? `・余白 左${o.left}ミリ 上${o.top}ミリ` : ''}）`;
+    sendPrint(run, { title: ledgerTitle, meta, header, pages: sheet, stamps: p.ledgerStamp ? p.ledgerStamps : null, margin: { left: o.left, top: o.top } });
+  };
+  const dateText = (r: { month: string; day: string; ny?: boolean }) => `令和${eraText(eraOf(r))}年 ${r.month}月 ${r.day}日`;
 
 
-  const cell: CSSProperties = { ...TD, padding: '6px 10px', borderRight: '1px solid #eef2f5' };
-  const numCell: CSSProperties = { ...NUM, padding: '6px 10px', borderRight: '1px solid #eef2f5' };
+  /** セルの罫線は「出納帳画面デザイン」の色（茶色罫線／２色刷罫線。確認メモ #210） */
+  const cell: CSSProperties = { ...TD, padding: '6px 10px', borderRight: `1px solid ${rule.base}` };
+  const numCell: CSSProperties = { ...NUM, padding: '6px 10px', borderRight: `1px solid ${rule.base}` };
+  /** 入金欄・出金欄（２色刷罫線では入金欄を青、出金欄を赤の罫線で囲む） */
+  const inCol: CSSProperties = { borderLeft: `1px solid ${rule.inLine}`, borderRight: `1px solid ${rule.inLine}` };
+  const outCol: CSSProperties = { borderLeft: `1px solid ${rule.outLine}`, borderRight: `1px solid ${rule.outLine}` };
   /** 入力行（登録欄）のセル：固定表示のとき下の明細が透けないよう背景を塗り、下の線はスクロールしても残るよう影で引く（確認メモ #236） */
   const entryCell: CSSProperties = { background: '#fbfcfd', borderBottom: 'none', boxShadow: `inset 0 -2px 0 ${accent}` };
   const inp: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '6px 8px', border: '1px solid #cfd8e0', borderRadius: 6, fontSize: 14, fontFamily: 'inherit', outline: 'none', background: '#fff' };
@@ -647,9 +783,15 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
   const btn = (primary?: boolean): CSSProperties => ({ padding: '8px 16px', borderRadius: 8, border: primary ? 'none' : '1px solid #cfd8e0', background: primary ? accent : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
   // 旧「オプション」バッジ：標準機能になったため表示しない（確認メモ #56）
   const badge = null;
-  /** 表の列数（消費税を使う設定のときは「消費税コード」「税額」の 2 列が増える） */
-  const cols = 7 + (taxEntry ? 2 : 0);
-  const taxCells = () => (taxEntry ? <><td style={cell} /><td style={cell} /></> : null);
+  /** 設定で増える欄の数（摘要コード・取引先・消費税コードと税額） */
+  const extraCols = (showTcode ? 1 : 0) + (showPartner ? 1 : 0) + (showTax ? 2 : 0);
+  /** 列の幅（設定で欄が増えるほど詰めて、摘要の幅を残す） */
+  const W = extraCols >= 3 ? { date: 136, tcode: 80, acc: 160, partner: 120, tax: 116, taxAmt: 70, amt: 90, bal: 100 } : extraCols > 0 ? { date: 150, tcode: 86, acc: 190, partner: 140, tax: 130, taxAmt: 78, amt: 100, bal: 112 } : { date: 160, tcode: 86, acc: 220, partner: 150, tax: 138, taxAmt: 78, amt: 120, bal: 130 };
+  /** 表の列数 */
+  const cols = 7 + extraCols;
+  /** 空の欄（摘要コード欄の位置／取引先欄と消費税欄の位置） */
+  const tcodeBlank = () => (showTcode ? <td style={cell} /> : null);
+  const afterAccBlank = () => <>{showPartner && <td style={cell} />}{showTax && <><td style={cell} /><td style={cell} /></>}</>;
   /** 入力行の消費税コード（選んでいなければ、勘定科目と入出金から自動で決める） */
   const entryTax = entry.tax || (entry.account ? defaultTax(entry.account, num(entry.inAmt) > 0) : '');
   const rowBtn = (label: string, onClick: () => void, o: { off?: boolean; danger?: boolean; title: string }) => (
@@ -686,7 +828,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       tools={[
         { label: '会計連動', onClick: openLink },
         { label: isPetty ? '小口区分の切替' : '区分の切替', onClick: openSwitch },
-        ...(isPetty ? [{ label: '小口の設定', onClick: openSetting, title: 'この出納帳の名称・担当者・定額・残高の下限などを設定します' }] : []),
+        { label: prefsTitle(kind), onClick: () => openSetting(), title: '出納帳の画面・印刷・集計済明細行の色の設定（現行の「ユーザー設定」）' },
         { label: '集計取消', onClick: openUnagg, title: '集計済みの明細の集計を取り消します（会計連動済みの明細は取り消せません）' },
         { label: '集計', onClick: () => setAggOpen(true), primary: true },
       ]}
@@ -739,44 +881,60 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
         <span>当月入金 <b style={{ color: '#2c5f9e', fontVariantNumeric: 'tabular-nums' }}>{yen(monthIn)}</b></span>
         <span>当月出金 <b style={{ color: '#b0426a', fontVariantNumeric: 'tabular-nums' }}>{yen(monthOut)}</b></span>
         <span>現在残高 <b style={{ color: '#22303c', fontSize: 14, fontVariantNumeric: 'tabular-nums' }}>{yen(lastBal)}</b></span>
-        {isPetty && curPetty && lastBal < curPetty.warn && (
-          <span title="「小口の設定」の「残高の下限」を下回っています" style={{ padding: '2px 10px', borderRadius: 10, background: '#fdeee9', color: '#c0392b', fontWeight: 700 }}>残高が下限（{yen(curPetty.warn)}円）を下回っています。{curPetty.refill} から補充してください</span>
-        )}
         {nyMonth && <span style={{ padding: '2px 10px', borderRadius: 10, background: '#fffaf0', border: '1px dashed #b98a2e', color: '#8a6516', fontWeight: 700 }}>翌年度（令和9年）{nyMonth}月の予備月を表示中</span>}
-        <span style={{ marginLeft: 'auto', color: '#9aa5b1' }}>黄色＝集計済み（訂正不可）／青＝{isPetty ? 'AI取込（承認済）／紫＝AI取込（承認待ち）' : 'CSV取込'}</span>
+        <span style={{ marginLeft: 'auto', color: '#9aa5b1', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ display: 'inline-flex', gap: 1 }}>{prefs.colors.slice(0, 3).map((c, i) => <span key={i} style={{ width: 10, height: 10, borderRadius: 2, background: c, border: '1px solid #e2d9a8' }} />)}</span>
+          ＝集計済み（訂正不可。集計ごとに色分け）／青＝{isPetty ? 'AI取込（承認済）／紫＝AI取込（承認待ち）' : 'CSV取込'}
+        </span>
       </div>
 
       {/* 出納帳 */}
-      {/* 見出しと入力行（登録欄）は一覧の上に固定する（確認メモ #236）。勘定科目の候補を開いている間は、候補が欠けない高さを確保する */}
-      <div ref={listRef} data-cashbook-list style={{ overflow: 'auto', maxHeight: 'calc(100vh - 400px)', minHeight: assist.isOpen('acc') ? 400 : undefined }}>
+      {/* 見出しと入力行（登録欄）は一覧の上に固定する（確認メモ #236）。勘定科目の候補を開いている間は、候補が欠けない高さを確保する。
+          列の並び・罫線の色・摘要コード欄・取引先欄・消費税欄は「小口の設定」に合わせる（確認メモ #210） */}
+      <div ref={listRef} data-cashbook-list data-design={prefs.design} style={{ overflow: 'auto', maxHeight: 'calc(100vh - 400px)', minHeight: assist.isOpen('acc') ? 400 : undefined }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead data-sticky-head style={{ position: 'sticky', top: 0, zIndex: 3 }}>
+            {(() => { const thIn = <th style={{ ...TH, textAlign: 'right', width: W.amt }}>入金額</th>; return (
             <tr>
-              <th style={{ ...TH, textAlign: 'right', width: taxEntry ? 100 : 120 }}>入金額</th>
-              <th style={{ ...TH, width: 160 }}>年月日</th>
-              <th style={TH}>摘要</th>
-              <th style={{ ...TH, width: taxEntry ? 190 : 220 }}>勘定科目</th>
-              {taxEntry && <th style={{ ...TH, width: 138 }}>消費税コード</th>}
-              {taxEntry && <th style={{ ...TH, textAlign: 'right', width: 78 }}>税額</th>}
-              <th style={{ ...TH, textAlign: 'right', width: taxEntry ? 100 : 120 }}>出金額</th>
-              <th style={{ ...TH, textAlign: 'right', width: taxEntry ? 112 : 130 }}>残高</th>
+              {!inRight && thIn}
+              <th style={{ ...TH, width: W.date }}>年月日</th>
+              {showTcode && <th style={{ ...TH, width: W.tcode, whiteSpace: 'nowrap' }}>摘要コード</th>}
+              <th style={{ ...TH, minWidth: 120 }}>摘要</th>
+              <th style={{ ...TH, width: W.acc }}>勘定科目</th>
+              {showPartner && <th style={{ ...TH, width: W.partner }}>取引先</th>}
+              {showTax && <th style={{ ...TH, width: W.tax }}>消費税コード</th>}
+              {showTax && <th style={{ ...TH, textAlign: 'right', width: W.taxAmt }}>税額</th>}
+              {inRight && thIn}
+              <th style={{ ...TH, textAlign: 'right', width: W.amt }}>出金額</th>
+              <th style={{ ...TH, textAlign: 'right', width: W.bal }}>残高</th>
               <th style={{ ...TH, width: isPetty ? 204 : 70 }} />
             </tr>
-            {/* 入力行（登録欄）。見出しのすぐ下に置き、一覧をスクロールしても上に張り付く（確認メモ #236） */}
+            ); })()}
+            {/* 入力行（登録欄）。見出しのすぐ下に置き、一覧をスクロールしても上に張り付く（確認メモ #236）。Enter の進み順は設定（年月・入金額欄のスキップ）に合わせる */}
+            {(() => { const tdIn = <td style={{ ...cell, ...inCol, ...entryCell, padding: '8px 8px' }}><input id="cb-in" className="field-input ring" value={entry.inAmt} onChange={(e) => setEntry({ ...entry, inAmt: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => entryNext('cb-in'))} inputMode="numeric" placeholder="入金" style={{ ...inp, textAlign: 'right' }} /></td>; return (
             <tr data-entry-row style={{ background: '#fbfcfd' }}>
-              <td style={{ ...cell, ...entryCell, padding: '8px 8px' }}><input id="cb-in" className="field-input ring" value={entry.inAmt} onChange={(e) => setEntry({ ...entry, inAmt: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => focusId('cb-day'))} inputMode="numeric" placeholder="入金" style={{ ...inp, textAlign: 'right' }} /></td>
+              {!inRight && tdIn}
               <td style={{ ...cell, ...entryCell, padding: '8px 8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 14, color: nyMonth ? '#8a6516' : '#5b6773', whiteSpace: 'nowrap' }}>
-                  <span title={nyMonth ? '翌年度の予備月（令和9年）の明細として登録します' : undefined}>令和{nyMonth ? 9 : eraOf({ month: entry.month })}</span>
-                  <input className="field-input" aria-label="月" value={nyMonth ?? entry.month} readOnly={!!nyMonth} onChange={(e) => setEntry({ ...entry, month: e.target.value.replace(/[^0-9]/g, '').slice(0, 2) })} inputMode="numeric" title={nyMonth ? '翌年度の予備月を表示中は、月を変えられません（月のボタンで切り替えます）' : undefined} style={{ ...inp, width: 34, padding: '6px 2px', textAlign: 'center', background: nyMonth ? '#fffaf0' : '#fff' }} />
-                  <input id="cb-day" className="field-input" aria-label="日" value={entry.day} onChange={(e) => setEntry({ ...entry, day: e.target.value.replace(/[^0-9]/g, '').slice(0, 2) })} onKeyDown={onEnter(() => focusId('cb-tekiyo'))} inputMode="numeric" placeholder="日" style={{ ...inp, width: 34, padding: '6px 2px', textAlign: 'center' }} />
+                  <span title={nyMonth ? '翌年度の予備月（令和9年）の明細として登録します' : undefined}>令和{eraText(nyMonth ? 9 : eraOf({ month: entry.month }))}</span>
+                  <input id="cb-month" className="field-input" aria-label="月" value={nyMonth ?? entry.month} readOnly={!!nyMonth} onChange={(e) => setEntry({ ...entry, month: e.target.value.replace(/[^0-9]/g, '').slice(0, 2) })} onKeyDown={onEnter(() => entryNext('cb-month'))} inputMode="numeric" title={nyMonth ? '翌年度の予備月を表示中は、月を変えられません（月のボタンで切り替えます）' : undefined} style={{ ...inp, width: 34, padding: '6px 2px', textAlign: 'center', background: nyMonth ? '#fffaf0' : '#fff' }} />
+                  <input id="cb-day" className="field-input" aria-label="日" value={entry.day} onChange={(e) => setEntry({ ...entry, day: e.target.value.replace(/[^0-9]/g, '').slice(0, 2) })} onKeyDown={onEnter(() => entryNext('cb-day'))} inputMode="numeric" placeholder="日" style={{ ...inp, width: 34, padding: '6px 2px', textAlign: 'center' }} />
                 </div>
               </td>
-              <td style={{ ...cell, ...entryCell, padding: '8px 8px' }}><input id="cb-tekiyo" className="field-input ring" value={entry.tekiyo} onChange={(e) => setEntry({ ...entry, tekiyo: e.target.value })} onKeyDown={onEnter(() => focusId('cb-acc'))} placeholder="摘要" autoComplete="off" style={inp} /></td>
+              {showTcode && <td style={{ ...cell, ...entryCell, padding: '8px 6px' }}><input id="cb-tcode" className="field-input ring" aria-label="摘要コード" value={entry.tcode} onChange={(e) => setEntry({ ...entry, tcode: e.target.value.replace(/[^0-9]/g, '').slice(0, 6) })} onKeyDown={onEnter(() => entryNext('cb-tcode'))} inputMode="numeric" placeholder="コード" autoComplete="off" style={{ ...inp, textAlign: 'center' }} /></td>}
+              <td style={{ ...cell, ...entryCell, padding: '8px 8px' }}><input id="cb-tekiyo" className="field-input ring" value={entry.tekiyo} onChange={(e) => setEntry({ ...entry, tekiyo: e.target.value })} onKeyDown={onEnter(() => entryNext('cb-tekiyo'))} placeholder="摘要" autoComplete="off" style={inp} /></td>
               <td style={{ ...cell, ...entryCell, padding: '8px 8px' }}>
-                <AssistField buttonId="cb-acc" value={entry.account} placeholder="勘定科目検索" open={assist.isOpen('acc')} onOpen={() => assist.open('acc', 'account')} accent={accent} accentRgb={accentRgb} buttonStyle={fieldBtn} panelStyle={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, width: 260, zIndex: 60 }} groups={assist.groups} query={assist.query} empty={assist.empty} onInput={assist.setQuery} onPick={(v) => { setEntry((en) => ({ ...en, account: v })); assist.close(); focusId('cb-out'); }} />
+                <AssistField buttonId="cb-acc" value={entry.account} placeholder="勘定科目検索" open={assist.isOpen('acc')} onOpen={() => assist.open('acc', 'account')} accent={accent} accentRgb={accentRgb} buttonStyle={fieldBtn} panelStyle={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, width: 260, zIndex: 60 }} groups={assist.groups} query={assist.query} empty={assist.empty} onInput={assist.setQuery} onPick={(v) => { setEntry((en) => ({ ...en, account: v })); assist.close(); entryNext('cb-acc'); }} />
               </td>
-              {taxEntry && (
+              {showPartner && (
+                <td style={{ ...cell, ...entryCell, padding: '8px 6px' }}>
+                  <select id="cb-partner" aria-label="取引先（入力行）" value={entry.partner} onChange={(e) => setEntry({ ...entry, partner: e.target.value })} onKeyDown={onEnter(() => entryNext('cb-partner'))} style={{ ...inp, padding: '6px 4px' }}>
+                    <option value="">（なし）</option>
+                    {PARTNERS.map((p) => <option key={p} value={p}>{partnerCode(p)} {p}</option>)}
+                  </select>
+                </td>
+              )}
+              {showTax && (
                 <>
                   <td style={{ ...cell, ...entryCell, padding: '8px 6px' }}>
                     <select aria-label="消費税コード（入力行）" value={entryTax} onChange={(e) => setEntry({ ...entry, tax: e.target.value })} title="勘定科目から自動で決まります。変える場合だけ選びます" style={{ ...inp, padding: '6px 4px' }}>
@@ -787,35 +945,52 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
                   <td style={{ ...numCell, ...entryCell, color: '#5b6773' }}>{entryTax ? yen(taxAmtOf(entryTax, num(entry.inAmt) || num(entry.outAmt))) : ''}</td>
                 </>
               )}
-              <td style={{ ...cell, ...entryCell, padding: '8px 8px' }}><input id="cb-out" className="field-input ring" value={entry.outAmt} onChange={(e) => setEntry({ ...entry, outAmt: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(add)} inputMode="numeric" placeholder="出金" style={{ ...inp, textAlign: 'right' }} /></td>
+              {inRight && tdIn}
+              <td style={{ ...cell, ...outCol, ...entryCell, padding: '8px 8px' }}><input id="cb-out" className="field-input ring" value={entry.outAmt} onChange={(e) => setEntry({ ...entry, outAmt: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => entryNext('cb-out'))} inputMode="numeric" placeholder="出金" style={{ ...inp, textAlign: 'right' }} /></td>
               <td style={{ ...numCell, ...entryCell, color: '#9aa5b1', fontSize: 12 }}>自動計算</td>
               <td style={{ ...TD, ...entryCell, padding: '8px 8px', textAlign: 'right' }}><button type="button" className="submit-btn" onClick={add} style={{ ...btn(true), padding: '7px 12px', fontSize: 14 }}>登録</button></td>
             </tr>
+            ); })()}
           </thead>
           <tbody>
+            {(() => { const tdIn = <td style={{ ...cell, ...inCol }} />; return (
             <tr style={{ background: '#f8fafc' }}>
-              <td style={cell} /><td style={cell} /><td style={{ ...cell, color: '#7a8794', fontWeight: 700 }}>前月繰越</td><td style={cell} />{taxCells()}<td style={cell} /><td style={{ ...numCell, fontWeight: 700 }}>{yen(opening)}</td><td style={TD} />
+              {!inRight && tdIn}<td style={cell} />{tcodeBlank()}<td style={{ ...cell, color: '#7a8794', fontWeight: 700 }}>{carryLabel}</td><td style={cell} />{afterAccBlank()}{inRight && tdIn}<td style={{ ...cell, ...outCol }} /><td style={{ ...numCell, fontWeight: 700 }}>{yen(opening)}</td><td style={TD} />
             </tr>
+            ); })()}
             {view.map((r) => {
-              if (r.special === '締切線') return <tr key={r.id}><td colSpan={cols - 1} style={{ padding: 0 }}><div style={{ borderBottom: '3px double #22303c' }} /></td><td style={{ padding: '2px 8px' }}>{rowOps(r)}</td></tr>;
-              if (r.special === '改ページ') return <tr key={r.id}><td colSpan={cols - 1} style={{ padding: '3px 10px', fontSize: 12, color: '#9aa5b1', textAlign: 'center', background: 'repeating-linear-gradient(90deg,#e6ecf1 0 6px,transparent 6px 12px) center/100% 1px no-repeat' }}>— 改ページ —</td><td style={{ padding: '2px 8px' }}>{rowOps(r)}</td></tr>;
-              if (r.special === '小計行') return <tr key={r.id} style={{ background: '#f3f6f9' }}><td style={numCell}>{yen(monthIn)}</td><td style={cell} /><td style={{ ...cell, fontWeight: 700 }}>小計</td><td style={cell} />{taxCells()}<td style={numCell}>{yen(monthOut)}</td><td style={{ ...numCell, fontWeight: 700 }}>{yen(r.bal)}</td><td style={{ ...TD, padding: '4px 8px' }}>{rowOps(r)}</td></tr>;
-              const bg = r.aggregated ? '#fff8c4' : r.ai === 'pending' ? '#f3e8ff' : r.imported ? '#eaf2fb' : 'transparent';
+              // 特殊行は「特殊行の文字」（小口の設定）で表示する
+              if (r.special === '締切線') return <tr key={r.id}><td colSpan={cols - 1} style={{ padding: '0 10px' }}><div style={{ borderBottom: '3px double #22303c', fontSize: 12, fontWeight: 700, color: '#22303c', lineHeight: 1.3 }}>{prefs.labels.close}</div></td><td style={{ padding: '2px 8px' }}>{rowOps(r)}</td></tr>;
+              if (r.special === '改ページ') return (
+                <Fragment key={r.id}>
+                  <tr><td colSpan={cols - 1} style={{ padding: '3px 10px', fontSize: 12, color: '#9aa5b1', textAlign: 'center', background: 'repeating-linear-gradient(90deg,#e6ecf1 0 6px,transparent 6px 12px) center/100% 1px no-repeat' }}>— {prefs.labels.pageBreak} —</td><td style={{ padding: '2px 8px' }}>{rowOps(r)}</td></tr>
+                  {/* 前頁繰越行の自動挿入（小口の設定）：改ページの次に、その時点の残高を繰り越す行を出す */}
+                  {prefs.autoPageCarry && (() => { const tdIn = <td style={{ ...cell, ...inCol }} />; return (
+                    <tr data-page-carry style={{ background: '#f8fafc' }}>{!inRight && tdIn}<td style={cell} />{tcodeBlank()}<td style={{ ...cell, color: '#7a8794', fontWeight: 700 }}>{prefs.labels.pageCarry}</td><td style={cell} />{afterAccBlank()}{inRight && tdIn}<td style={{ ...cell, ...outCol }} /><td style={{ ...numCell, fontWeight: 700 }}>{yen(r.bal)}</td><td style={TD} /></tr>
+                  ); })()}
+                </Fragment>
+              );
+              if (r.special === '小計行') { const tdIn = <td style={{ ...numCell, ...inCol }}>{yen(monthIn)}</td>; return <tr key={r.id} style={{ background: '#f3f6f9' }}>{!inRight && tdIn}<td style={cell} />{tcodeBlank()}<td style={{ ...cell, fontWeight: 700 }}>{prefs.labels.subtotal}</td><td style={cell} />{afterAccBlank()}{inRight && tdIn}<td style={{ ...numCell, ...outCol }}>{yen(monthOut)}</td><td style={{ ...numCell, fontWeight: 700 }}>{yen(r.bal)}</td><td style={{ ...TD, padding: '4px 8px' }}>{rowOps(r)}</td></tr>; }
+              // 集計済明細行は、集計ごとに「色の設定」の色を順に使う（確認メモ #210）
+              const bg = r.aggregated ? aggColor(r) : r.ai === 'pending' ? '#f3e8ff' : r.imported ? '#eaf2fb' : 'transparent';
               const tc = taxCodeOf(r);
+              const tdIn = <td style={{ ...numCell, ...inCol, color: '#2c5f9e' }}>{r.inAmt ? yen(r.inAmt) : ''}</td>;
               return (
-                <tr key={r.id} style={{ background: bg }}>
-                  <td style={{ ...numCell, color: '#2c5f9e' }}>{r.inAmt ? yen(r.inAmt) : ''}</td>
+                <tr key={r.id} data-agg-group={r.aggregated ? r.aggGroup : undefined} style={{ background: bg }}>
+                  {!inRight && tdIn}
                   <td style={{ ...cell, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                     {r.special === '摘要行' ? '' : dateText(r)}
                     {r.ny && !r.special && <span title="翌年度（令和9年度）の予備月の明細" style={{ marginLeft: 6, fontSize: 12, fontWeight: 800, color: '#8a6516', background: '#fdf1d4', borderRadius: 5, padding: '1px 5px' }}>翌年度</span>}
                   </td>
+                  {showTcode && <td style={{ ...cell, textAlign: 'center', fontVariantNumeric: 'tabular-nums', color: '#5b6773' }}>{r.tcode ?? ''}</td>}
                   <td style={cell}>{r.tekiyo}</td>
                   <td style={cell}>
                     {r.code && <span style={{ color: '#9aa5b1', fontSize: 12, marginRight: 6 }}>{r.code}</span>}{r.account}
                     {r.ai === 'pending' && <span title={`AI推定（信頼度 ${r.aiConf ?? '-'}%）承認待ち`} style={{ marginLeft: 6, fontSize: 12, fontWeight: 800, color: '#6b3fb5', background: '#efe6fb', borderRadius: 5, padding: '1px 5px' }}>AI {r.aiConf}%</span>}
                     {r.linked && <span title="会計連動済み（仕訳伝票を作成済み）" style={{ marginLeft: 6, fontSize: 12, fontWeight: 800, color: '#1f7a52', background: '#eaf5ef', borderRadius: 5, padding: '1px 5px' }}>連動済</span>}
                   </td>
-                  {taxEntry && (r.special ? taxCells() : (
+                  {showPartner && <td style={cell}>{r.partner ? <>{<span style={{ color: '#9aa5b1', fontSize: 12, marginRight: 6 }}>{partnerCode(r.partner)}</span>}{r.partner}</> : ''}</td>}
+                  {showTax && (r.special ? <><td style={cell} /><td style={cell} /></> : (
                     <>
                       <td style={{ ...cell, padding: '4px 6px' }}>
                         {r.aggregated
@@ -825,7 +1000,8 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
                       <td style={numCell}>{yen(taxAmtOf(tc, r.inAmt || r.outAmt))}</td>
                     </>
                   ))}
-                  <td style={{ ...numCell, color: '#b0426a' }}>{r.outAmt ? yen(r.outAmt) : ''}</td>
+                  {inRight && tdIn}
+                  <td style={{ ...numCell, ...outCol, color: '#b0426a' }}>{r.outAmt ? yen(r.outAmt) : ''}</td>
                   <td style={{ ...numCell, fontWeight: 700 }}>{r.special ? '' : yen(r.bal)}</td>
                   <td style={{ ...TD, padding: '4px 8px' }}>{rowOps(r)}</td>
                 </tr>
@@ -1278,6 +1454,10 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
                   {f.ny && <span style={{ padding: '1px 7px', borderRadius: 8, fontSize: 12, fontWeight: 700, background: '#fffaf0', color: '#8a6414', border: '1px dashed #b98a2e', whiteSpace: 'nowrap' }}>翌年度の予備月</span>}
                 </div>
               </>}
+              {showTcode && !f.noteOnly && <>
+                <label htmlFor="re-tcode">摘要コード</label>
+                <input id="re-tcode" className="field-input ring" value={f.tcode} onChange={(e) => set({ tcode: e.target.value.replace(/[^0-9]/g, '').slice(0, 6) })} onKeyDown={onEnter(() => focusId('re-tekiyo'))} inputMode="numeric" autoComplete="off" style={{ ...inp, width: 120, textAlign: 'center' }} />
+              </>}
               <label htmlFor="re-tekiyo">摘要</label>
               <input id="re-tekiyo" className="field-input ring" value={f.tekiyo} onChange={(e) => set({ tekiyo: e.target.value })} onKeyDown={onEnter(() => (f.noteOnly ? saveRowForm() : focusId('re-acc')))} autoComplete="off" style={inp} />
               {!f.noteOnly && <>
@@ -1286,11 +1466,18 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
                   <option value="">（選択してください）</option>
                   {(f.account && !CASHBOOK_ACCOUNTS.includes(f.account) ? [f.account, ...CASHBOOK_ACCOUNTS] : CASHBOOK_ACCOUNTS).map((a) => <option key={a} value={a}>{CODE[a] ? `${CODE[a]} ` : ''}{a}</option>)}
                 </select>
+                {showPartner && <>
+                  <label htmlFor="re-partner">取引先</label>
+                  <select id="re-partner" value={f.partner} onChange={(e) => set({ partner: e.target.value })} style={{ ...inp, width: 260 }}>
+                    <option value="">（なし）</option>
+                    {PARTNERS.map((x) => <option key={x} value={x}>{partnerCode(x)} {x}</option>)}
+                  </select>
+                </>}
                 <label htmlFor="re-in">入金額</label>
                 <input id="re-in" className="field-input ring" value={f.inAmt} onChange={(e) => set({ inAmt: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => focusId('re-out'))} inputMode="numeric" autoComplete="off" style={{ ...inp, width: 180, textAlign: 'right' }} />
                 <label htmlFor="re-out">出金額</label>
                 <input id="re-out" className="field-input ring" value={f.outAmt} onChange={(e) => set({ outAmt: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(saveRowForm)} inputMode="numeric" autoComplete="off" style={{ ...inp, width: 180, textAlign: 'right' }} />
-                {taxEntry && <>
+                {showTax && <>
                   <label htmlFor="re-tax">消費税コード</label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <select id="re-tax" value={fTax} onChange={(e) => set({ tax: e.target.value })} style={{ ...inp, width: 220 }}>
@@ -1310,33 +1497,28 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
         ); })()}
       </Modal>
 
-      {/* ---- 小口の設定（確認メモ #210）。項目は叩き台（現行の画面の資料が届いたら合わせる） ---- */}
-      <Modal open={setting != null} onClose={() => setSetting(null)} width={540} title="小口の設定">
-        {setting && (
-          <div data-petty-setting style={{ padding: '14px 22px 18px' }}>
-            <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 12, lineHeight: 1.7 }}>表示中の小口現金出納帳（{book}）の設定です。</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '150px minmax(0, 1fr)', gap: '10px 12px', alignItems: 'center', fontSize: 14 }}>
-              <label htmlFor="ps-name">出納帳の名称</label>
-              <input id="ps-name" className="field-input ring" value={setting.name} onChange={(e) => setSetting({ ...setting, name: e.target.value })} onKeyDown={onEnter(() => focusId('ps-staff'))} autoComplete="off" style={inp} />
-              <label htmlFor="ps-staff">担当者</label>
-              <input id="ps-staff" className="field-input ring" value={setting.staff} onChange={(e) => setSetting({ ...setting, staff: e.target.value })} onKeyDown={onEnter(() => focusId('ps-place'))} autoComplete="off" style={inp} />
-              <label htmlFor="ps-place">区分</label>
-              <select id="ps-place" value={setting.place} onChange={(e) => setSetting({ ...setting, place: e.target.value })} style={inp}>{PETTY_PLACES.map((p) => <option key={p}>{p}</option>)}</select>
-              <label htmlFor="ps-refill">補充元の預金科目</label>
-              <select id="ps-refill" value={setting.refill} onChange={(e) => setSetting({ ...setting, refill: e.target.value })} style={inp}>{BANK_ACCOUNTS.map((a) => <option key={a}>{a}</option>)}</select>
-              <label htmlFor="ps-fixed">定額（補充後の金額）</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><input id="ps-fixed" className="field-input ring" value={setting.fixed} onChange={(e) => setSetting({ ...setting, fixed: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => focusId('ps-warn'))} inputMode="numeric" autoComplete="off" style={{ ...inp, width: 160, textAlign: 'right' }} /><span>円</span></div>
-              <label htmlFor="ps-warn">残高の下限</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><input id="ps-warn" className="field-input ring" value={setting.warn} onChange={(e) => setSetting({ ...setting, warn: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(saveSetting)} inputMode="numeric" autoComplete="off" style={{ ...inp, width: 160, textAlign: 'right' }} /><span>円（下回ると画面に注意を表示）</span></div>
-            </div>
-            <div style={{ marginTop: 12, padding: '8px 12px', background: '#f3f6f9', borderRadius: 10, fontSize: 12, color: '#5b6773', lineHeight: 1.7 }}>※ この画面の項目は仮の案です。現行システムの「小口の設定」の内容を確認のうえ、合わせます。</div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
-              <button type="button" className="submit-btn" onClick={saveSetting} style={btn(true)}>登録</button>
-              <button type="button" onClick={() => setSetting(null)} style={btn()}>キャンセル</button>
-            </div>
+      {/* ---- 印刷の条件画面（確認メモ #235）。設定ダイアログ・印刷ダイアログ・プレビューより先に置き、それらが上に重なるようにする ---- */}
+      <AggPrintDialog open={printDlg?.type === 'agg'} report={printDlg?.type === 'agg' ? printDlg.report : '集計内訳表'} units={aggUnits} accent={accent} onClose={() => setPrintDlg(null)} onRun={(run, ids, cond) => { if (printDlg?.type === 'agg') runAggPrint(printDlg.report, run, ids, cond); }} />
+      <LedgerPrintDialog open={printDlg?.type === 'ledger'} report={title} pageCount={ledgerPageCount} accent={accent} onClose={() => setPrintDlg(null)} onRun={runLedgerPrint} onSettings={() => openSetting('印刷設定')} />
+
+      {/* ---- 集計データが無いとき（集計内訳表・仕訳伝票）。現行と同じ文言（設定の場所は Web 版の表記） ---- */}
+      <Modal open={noAggMsg} onClose={() => setNoAggMsg(false)} width={520} title="印刷">
+        <div data-no-agg style={{ padding: '16px 22px 18px' }}>
+          <div style={{ fontSize: 14, lineHeight: 1.8 }}>集計データが見つかりませんでした。<br />入金行を集計内訳表（伝票）に印刷したい場合には、『{prefsTitle(kind)}』の『ユーザーオプション』を開き、『入金行を伝票（集計内訳表）にする』のチェックを有効にしてください。</div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+            <button type="button" className="btn-outline" onClick={() => { setNoAggMsg(false); openSetting('ユーザーオプション'); }} style={btn()}>{prefsTitle(kind)}を開く</button>
+            <button type="button" className="submit-btn" onClick={() => setNoAggMsg(false)} style={btn(true)}>OK</button>
           </div>
-        )}
+        </div>
       </Modal>
+
+      {/* ---- 小口の設定／預金の設定（確認メモ #210）。現行の「ユーザー設定」（色の設定・印刷設定を含む）と同じ項目 ---- */}
+      <CashbookSettingsDialog open={prefsTab != null} kind={kind} tab={prefsTab ?? 'ユーザーオプション'} prefs={prefs} taxEntry={taxEntry} accent={accent} onSave={saveSetting} onClose={() => setPrefsTab(null)} />
+
+      {/* ---- 印刷プレビュー（集計内訳表・仕訳伝票・出納帳）。PreviewModal の印刷・Excel出力・PDF出力は表示中の内容を出す ---- */}
+      <PreviewModal open={preview != null} onClose={() => setPreview(null)} title={preview?.title ?? ''} pages={1} accent={accent} data={preview ? { header: preview.pages[0]?.header ?? [], rows: preview.pages.flatMap((pg) => pg.rows) } : undefined}>
+        {preview && <SheetPages pages={preview.pages} meta={preview.meta} stamps={preview.stamps} margin={preview.margin} />}
+      </PreviewModal>
 
       {/* ---- 金銭残高金種別表（確認メモ #212）：日付ごとに紙幣・硬貨の枚数を入力し、帳簿残高と照らす ---- */}
       <Modal open={denomOpen} onClose={() => setDenomOpen(false)} width={820} title="金銭残高金種別表">
@@ -1407,7 +1589,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
             </div>
           )}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
-            <button type="button" onClick={() => { const c = confirm; setConfirm(null); c?.onOk(); }} style={{ ...btn(), background: '#c0392b', color: '#fff', border: 'none' }}>{confirm?.ok ?? '削除する'}</button>
+            <button type="button" onClick={() => { const c = confirm; setConfirm(null); c?.onOk(); }} style={confirm?.primary ? btn(true) : { ...btn(), background: '#c0392b', color: '#fff', border: 'none' }}>{confirm?.ok ?? '削除する'}</button>
             <button type="button" onClick={() => setConfirm(null)} style={btn()}>キャンセル</button>
           </div>
         </div>

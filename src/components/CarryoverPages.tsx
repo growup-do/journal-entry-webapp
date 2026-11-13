@@ -4,6 +4,7 @@
 //   どちらも「科目の指定（チェックリスト）＋端数処理・監視の設定」という共通の形。判断の目安をその場で計算して見せる。
 //   繰越判断の基準は、変更したのに保存していないあいだ、変更した項目を入力可能枠と同じ黄色で示し、
 //   「保存されていません。」の表示・タブの印・画面の色で知らせる。ほかの画面へ移ろうとすると確認を出す（確認メモ #225）。
+//   「関連資料（通知文）」は選択中のタブに応じて内容を切り替える（取崩による事前協議のタブにはボタンなし。確認メモ #226）。
 
 import { useState } from 'react';
 import type { ReactNode } from 'react';
@@ -76,16 +77,77 @@ function Guide({ rows }: { rows: { label: string; value: ReactNode; strong?: boo
   );
 }
 
-/* ---------------- 関連資料（通知文） ---------------- */
-const NOTICE_TEXT = `平成29年4月6日　府子本第225号　雇児発0406第2号
-「子ども・子育て支援法附則第6条の規定による私立保育所に対する委託費の経理等について」の一部改正について　より
+/* ---------------- 関連資料（通知文） ----------------
+ * 現行システムと同じく、タブ（旧 各画面）ごとに内容が異なる（確認メモ #226）。
+ * 全文は手元にないため、出典・該当箇所・要旨を示す。本番では現行システムの通知文をそのまま収録する。
+ * 「取崩による事前協議」タブには関連資料がない（ボタンを出さない）。 */
+interface NoticeDoc {
+  /** 通知の日付・番号 */
+  source: string;
+  /** 件名（「〜より」まで） */
+  subject?: string;
+  /** 該当箇所の見出し */
+  section?: string;
+  /** 要旨 */
+  points: ReactNode[];
+  /** 参考となる通知 */
+  refs?: { source: string; text: ReactNode }[];
+}
+const H29_SOURCE = '平成29年4月6日　府子本第225号・雇児発0406第2号';
+const H29_SUBJECT = '「子ども・子育て支援法附則第６条の規定による私立保育所に対する委託費の経理等について」の一部改正について　より';
+const NOTICES: Record<string, NoticeDoc | undefined> = {
+  収支分析表: {
+    source: H29_SOURCE,
+    subject: H29_SUBJECT,
+    section: '５　委託費の経理に係る指導監督　›　（２）④',
+    points: [
+      '設置者から提出された計算書類等が一定の場合に該当するときは、収支分析表の提出を求めることとされています。',
+      <>そのひとつが ④<b>各種積立資産への積立支出と当期資金収支差額の合計が、事業活動収入計（決算額）の５％相当額を上回る場合</b>です。</>,
+    ],
+  },
+  高額繰越: {
+    source: '平成16年6月10日　雇児発第0610001号の1　より',
+    points: [<>「<b>高額繰越による民改費の加算停止</b>」は撤廃されています。</>],
+    refs: [
+      { source: '昭和51年4月16日　厚生省発児第59号の5　第1の3の(3)', text: <>前年度収入決算額の<b>６か月分相当額以上</b>を繰り越した場合（高額繰越）の取り扱い。</> },
+      { source: '平成12年6月8日　児発第582号', text: '上記の規定を読み替えるもの。' },
+    ],
+  },
+  '前期末支払資金残高の取り扱い（委託費）': {
+    source: H29_SOURCE,
+    subject: H29_SUBJECT,
+    section: '３　前期末支払資金残高の取扱いについて　›　（２）',
+    points: [
+      <>前期末支払資金残高は、<b>委託費収入の３０％以下</b>の保有とされています。</>,
+      <>前期末支払資金残高を充当できる経費として、次の区分が示されています。<br />① 法人本部　② 第１種・第２種社会福祉事業、子育て支援事業　③ 公益事業</>,
+    ],
+  },
+};
 
-5　委託費の経理に係る指導監督
-　委託費の経理に係る指導監督については、社会福祉施設に対する指導監督に係る関係通知と併せ、以下の点を徹底されたいこと。
-　　〜 中略 〜
-（2）設置者から提出された計算書類等が以下のいずれかに該当する場合については、別表6の収支分析表の提出を求め、「1　委託費の使途範囲」から「4　委託費の管理・運用」までに示された事項の遵守状況を確認すること。
-　　〜 中略 〜
-　④　委託費に係る当該会計年度の各種積立資産への積立支出及び当期資金収支差額合計が、当該施設に係る拠点区分の事業活動収入計（決算額）の5％相当額を上回る場合`;
+/** 通知文の窓（現行システムと同じく、タイトル「通知文」・本文・［OK］だけ。表示専用なので Esc・外側クリックでも閉じる） */
+function NoticeModal({ doc, open, onClose, accent }: { doc?: NoticeDoc; open: boolean; onClose: () => void; accent: string }) {
+  if (!doc) return null;
+  return (
+    <Modal open={open} onClose={onClose} width={640} title="通知文" dismissible>
+      <div data-notice-body style={{ padding: '16px 22px 18px', display: 'grid', gap: 14, fontSize: 14, lineHeight: 1.8, color: '#22303c' }}>
+        <div style={{ padding: '10px 14px', background: '#f7f9fb', border: '1px solid #e3e9ef', borderRadius: 8 }}>
+          <div style={{ fontWeight: 800 }}>{doc.source}</div>
+          {doc.subject && <div style={{ color: '#3a4855' }}>{doc.subject}</div>}
+        </div>
+        {doc.section && <div style={{ fontWeight: 800, paddingLeft: 10, borderLeft: '4px solid ' + accent, lineHeight: 1.5 }}>{doc.section}</div>}
+        <ul style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 6 }}>{doc.points.map((p, i) => <li key={i}>{p}</li>)}</ul>
+        {doc.refs && (
+          <div style={{ display: 'grid', gap: 6 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: '#5b6773' }}>参考</div>
+            {doc.refs.map((r) => <div key={r.source} style={{ paddingLeft: 12, borderLeft: '2px solid #e3e9ef' }}><div style={{ fontWeight: 700 }}>{r.source}</div><div style={{ color: '#3a4855' }}>{r.text}</div></div>)}
+          </div>
+        )}
+        <div style={{ fontSize: 12, color: '#7a8794' }}>ここでは出典と要旨を示しています。通知文の全文は、本番では現行システムと同じものを収録します。</div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" onClick={onClose} style={{ ...btn(accent, true), minWidth: 96 }}>OK</button></div>
+      </div>
+    </Modal>
+  );
+}
 
 /* ==================================================================
  * 繰越判断の基準
@@ -100,6 +162,8 @@ export function CarryoverJudgmentPage({ variant, accent, onNavigate }: Maintenan
   const toast = useToast();
   const [tab, setTab] = useState(TABS_C[0]);
   const [noticeOpen, setNoticeOpen] = useState(false);
+  /** 選択中のタブの通知文（ないタブではボタンを出さない。確認メモ #226） */
+  const notice = NOTICES[tab];
   // 収支分析表
   const [reserveOut, setReserveOut] = useState<string[]>(codes(EXPENSE_ITEMS, /積立資産積立支出/));
   const [incomeAll, setIncomeAll] = useState<string[]>(codes(INCOME_ITEMS, /委託費|利用料|補助金/));
@@ -144,18 +208,13 @@ export function CarryoverJudgmentPage({ variant, accent, onNavigate }: Maintenan
 
   return (
     <SettingsShell variant={variant} title="繰越判断の基準" badge="マスター設定" draft={false} desc="決算書（月次決算）の「繰越判断」ボタンからも開きます（旧 F10 繰越）。委託費の繰越・積立に関する判断（収支分析表の提出、高額繰越、前期末支払資金残高の取り扱い、取崩しの事前協議）の基準となる科目と端数処理を設定します。設定した内容は、決算チェック・収支分析表の印刷で使います。" unsaved={dirty} actions={<>
-      <button type="button" className="btn-outline" onClick={() => setNoticeOpen(true)} style={btn()}>関連資料（通知文）</button>
+      {notice && <button type="button" className="btn-outline" data-action="関連資料（通知文）" onClick={() => setNoticeOpen(true)} title={`「${tab}」に関係する通知文を表示します`} style={btn()}>関連資料（通知文）</button>}
       {dirty && <span role="status" data-unsaved-msg style={{ fontSize: 15, fontWeight: 800, color: UNSAVED_FG, marginRight: 4 }}>保存されていません。</span>}
       <button type="button" data-action="変更を取り消す" onClick={revert} disabled={!dirty} title={dirty ? '保存する前の内容に戻します（すべてのタブ）' : '変更はありません'} style={{ ...btn(), opacity: dirty ? 1 : 0.5, cursor: dirty ? 'pointer' : 'default' }}>変更を取り消す</button>
       <button type="button" className="submit-btn" data-action="設定を保存" onClick={save} title="すべてのタブの内容をまとめて保存します" style={btn(accent, true)}>設定を保存</button>
     </>}>
       <ToastView msg={toast.msg} />
-      <Modal open={noticeOpen} onClose={() => setNoticeOpen(false)} width={640} title="通知文（関連資料）">
-        <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
-          <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: 14, lineHeight: 1.8, color: '#22303c' }}>{NOTICE_TEXT}</pre>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" onClick={() => setNoticeOpen(false)} style={btn(accent, true)}>OK</button></div>
-        </div>
-      </Modal>
+      <NoticeModal doc={notice} open={noticeOpen} onClose={() => setNoticeOpen(false)} accent={accent} />
       <Tabs items={TABS_C} current={tab} onChange={setTab} accent={accent} marks={dirtyTabs} />
       {otherDirty.length > 0 && (
         <div data-other-unsaved style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 22px', background: '#fff1d6', borderBottom: '1px solid #f0d9a8', fontSize: 14, color: '#8a5a00', flexWrap: 'wrap' }}>
