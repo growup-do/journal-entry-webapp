@@ -117,10 +117,10 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
           const top = !!stacked;
           // ホームの 1 段目：機能を 2 列のタイル（名前を中央、星をタイルの下）で並べる
           const tile = !!tiles && !!fav;
-          // ホームの 2 段目以降：機能を枠なしのテキストリンクで 1 列に並べ、項目の間に点線を入れる
+          // ホームの機能一覧：機能を枠なしのテキストリンクで 1 列に並べ、項目の間に点線を入れる（1 段目は文字を大きく）
           const link = !!links;
-          // ホームの 1 段目：ボタンの列を分類の枠の高さいっぱいに伸ばし、ボタンの高さを均等にそろえる
-          const fill = !!big && !stacked && !tile && !link && !wideCols;
+          // ホームの 1 段目：機能の列を分類の枠の高さいっぱいに伸ばし、各行の高さを均等にそろえる
+          const fill = !!big && !stacked && !tile && !wideCols;
           return (
             <div key={g.key} data-function-group={g.key} style={{ display: 'grid', gridTemplateColumns: top ? 'minmax(0, 1fr)' : big ? '120px minmax(0, 1fr)' : '104px minmax(0, 1fr)', gridColumn: wideCols ? '1 / -1' : undefined, columnGap: 12, rowGap: 12, alignItems: fill ? 'stretch' : 'start', alignContent: fill ? 'stretch' : 'start', padding: top ? '16px 16px 18px' : cards ? '18px 16px 18px 8px' : '18px 14px 18px 6px', ...(cards ? { border: '1px solid #dde4ea', borderRadius: 14, boxShadow: '0 4px 16px rgba(30,50,70,.05)', background: g.danger ? '#fdf7f5' : '#fff' } : { borderTop: LINE, borderLeft: LINE, background: g.danger ? '#fdf7f5' : undefined }) }}>
               <div title={g.note || undefined} style={{ display: 'flex', flexDirection: top ? 'row' : 'column', alignItems: 'center', gap: top ? 10 : 8, textAlign: top ? 'left' : 'center' }}>
@@ -130,7 +130,7 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
                 </div>
               </div>
               {/* 機能はすべて同じ形のボタンで、1 行に 1 つ（横幅いっぱいの分類は、指定の列の数で並べる） */}
-              <div style={wideCols || tile ? { display: 'grid', gridTemplateColumns: `repeat(${wideCols || 2}, minmax(0, 1fr))`, gap: tile ? 8 : 6, minWidth: 0 } : fill ? { display: 'grid', gridAutoRows: '1fr', gap: 6, minWidth: 0 } : { display: 'flex', flexDirection: 'column', gap: link ? 0 : 6, minWidth: 0 }}>
+              <div style={wideCols || tile ? { display: 'grid', gridTemplateColumns: `repeat(${wideCols || 2}, minmax(0, 1fr))`, gap: tile ? 8 : 6, minWidth: 0 } : fill ? { display: 'grid', gridAutoRows: '1fr', gap: link ? 0 : 6, minWidth: 0 } : { display: 'flex', flexDirection: 'column', gap: link ? 0 : 6, minWidth: 0 }}>
                 {g.items.map((l, idx) => {
                   const off = INPUT_ONLY.includes(l) && kind !== '入力区分';
                   const hit = first === l;
@@ -142,17 +142,17 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
                   const on = favs.includes(l);
                   const button = (
                     <button key={l} type="button" className={link ? undefined : 'btn-outline'} data-fn-btn data-link={link || undefined} data-off={off || undefined} data-hit={hit || undefined} data-danger={g.danger || undefined} data-menu={'機能:' + l} data-priority={pr} onClick={() => onNavigate(l)} title={tip}
-                      style={link ? { display: 'block', flex: '0 1 auto', minWidth: 0, padding: '7px 2px', border: 'none', borderRadius: 4, background: hit ? '#eaf5ef' : 'transparent', boxShadow: hit ? '0 0 0 2px rgba(31,122,82,.22)' : 'none', color: off ? '#b3bcc5' : g.danger ? '#c0392b' : '#22303c', fontSize: 14, fontWeight: 500, lineHeight: 1.4, textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer' } : { display: 'flex', flexDirection: tile ? 'column' : 'row', alignItems: 'center', justifyContent: tile ? 'flex-start' : 'space-between', gap: 6, width: '100%', boxSizing: 'border-box', padding: tile ? (big ? '14px 10px 40px' : '10px 8px 32px') : fav ? (big ? '9px 34px 9px 14px' : '6px 30px 6px 12px') : big ? '8px 10px 8px 14px' : '6px 8px 6px 12px', minHeight: tile ? (big ? 92 : 72) : undefined, flex: 1, minWidth: 0, border: '1px solid ' + (hit ? '#1f7a52' : off ? '#e3e8ec' : g.danger ? '#f2c9c2' : '#d5dde4'), borderRadius: tile ? 12 : 8, background: hit ? '#eaf5ef' : off ? '#f7f9fa' : '#fff', boxShadow: hit ? '0 0 0 2px rgba(31,122,82,.22)' : '0 1px 1px rgba(34,48,60,.04)', color: off ? '#b3bcc5' : g.danger ? '#c0392b' : '#22303c', fontSize: big ? 16 : 14, fontWeight: tile ? 500 : 600, lineHeight: 1.4, textAlign: tile ? 'center' : 'left', fontFamily: 'inherit', cursor: 'pointer' }}>
+                      style={link ? { display: 'block', flex: '0 1 auto', minWidth: 0, padding: big ? '9px 2px' : '7px 2px', border: 'none', borderRadius: 4, background: hit ? '#eaf5ef' : 'transparent', boxShadow: hit ? '0 0 0 2px rgba(31,122,82,.22)' : 'none', color: off ? '#b3bcc5' : g.danger ? '#c0392b' : '#22303c', fontSize: big ? 16 : 14, fontWeight: big ? 600 : 500, lineHeight: 1.4, textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer' } : { display: 'flex', flexDirection: tile ? 'column' : 'row', alignItems: 'center', justifyContent: tile ? 'flex-start' : 'space-between', gap: 6, width: '100%', boxSizing: 'border-box', padding: tile ? (big ? '14px 10px 40px' : '10px 8px 32px') : fav ? (big ? '9px 34px 9px 14px' : '6px 30px 6px 12px') : big ? '8px 10px 8px 14px' : '6px 8px 6px 12px', minHeight: tile ? (big ? 92 : 72) : undefined, flex: 1, minWidth: 0, border: '1px solid ' + (hit ? '#1f7a52' : off ? '#e3e8ec' : g.danger ? '#f2c9c2' : '#d5dde4'), borderRadius: tile ? 12 : 8, background: hit ? '#eaf5ef' : off ? '#f7f9fa' : '#fff', boxShadow: hit ? '0 0 0 2px rgba(31,122,82,.22)' : '0 1px 1px rgba(34,48,60,.04)', color: off ? '#b3bcc5' : g.danger ? '#c0392b' : '#22303c', fontSize: big ? 16 : 14, fontWeight: tile ? 500 : 600, lineHeight: 1.4, textAlign: tile ? 'center' : 'left', fontFamily: 'inherit', cursor: 'pointer' }}>
                       <span style={{ minWidth: 0 }}>{sub ? <>{main}<span data-fn-sub style={{ display: 'block', fontSize: 12, fontWeight: 400, opacity: 0.75 }}>{sub}</span></> : name}</span>
                       {!fav && <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flex: 'none', opacity: 0.4 }}><path d="M9 6l6 6-6 6" /></svg>}
                     </button>
                   );
                   if (!fav) return button;
                   return (
-                    <div key={l} data-fn-row style={{ position: 'relative', display: 'flex', alignItems: link ? 'flex-start' : 'stretch', gap: 2, minWidth: 0, borderTop: link && idx > 0 ? '1px dashed #cdd5dc' : undefined }}>
+                    <div key={l} data-fn-row style={{ position: 'relative', display: 'flex', alignItems: link ? (fill ? 'center' : 'flex-start') : 'stretch', gap: 2, minWidth: 0, borderTop: link && idx > 0 ? '1px dashed #cdd5dc' : undefined }}>
                       {button}
                       <button type="button" data-fav-star data-on={on || undefined} onClick={() => toggleFav(l)} aria-pressed={on} aria-label={(on ? 'お気に入りから外す：' : 'お気に入りに追加：') + name} title={on ? 'お気に入りメニューから外します' : 'お気に入りメニューに追加します'}
-                        style={{ ...(link ? { flex: 'none', width: 20, height: 22, marginTop: 6, fontSize: 15 } : tile ? { position: 'absolute', left: '50%', bottom: big ? 8 : 6, transform: 'translateX(-50%)', width: 30, height: big ? 28 : 24, fontSize: big ? 24 : 19 } : { position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', width: 22, height: 22, fontSize: 16 }), padding: 0, border: 'none', borderRadius: 6, background: 'transparent', color: on ? '#d9a520' : '#c5cbd1', lineHeight: 1, cursor: 'pointer', fontFamily: 'inherit', opacity: on || (tile && big) ? 1 : 0, transition: 'opacity .12s, color .12s' }}>★</button>
+                        style={{ ...(link ? { flex: 'none', width: big ? 22 : 20, height: 22, marginTop: fill ? 0 : 6, fontSize: big ? 17 : 15 } : tile ? { position: 'absolute', left: '50%', bottom: big ? 8 : 6, transform: 'translateX(-50%)', width: 30, height: big ? 28 : 24, fontSize: big ? 24 : 19 } : { position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', width: 22, height: 22, fontSize: 16 }), padding: 0, border: 'none', borderRadius: 6, background: 'transparent', color: on ? '#d9a520' : '#c5cbd1', lineHeight: 1, cursor: 'pointer', fontFamily: 'inherit', opacity: on || (tile && big) ? 1 : 0, transition: 'opacity .12s, color .12s' }}>★</button>
                     </div>
                   );
                 })}
@@ -167,8 +167,8 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
 
 /* ---------------- ホームの機能一覧（検索ボックス＋全機能の一覧） ----------------
  *  見出し（ホーム・年度・区分）と小さめの検索ボックスを一覧のカードのすぐ上に、帯や枠を付けずに置く。検索は一覧の絞り込みだけで、「開く」はなくした。
- *  どの分類も、アイコンと分類名を左に縦に置き、右に機能を 1 列で並べる。1 段目は枠付きのボタン（アイコンと文字を大きく）、
- *  2 段目以降は枠なしのテキストリンク（項目の間に点線）。星はボタンの枠の右／リンクの文字のすぐ右。
+ *  どの分類も、アイコンと分類名を左に縦に置き、右に機能を枠なしのテキストリンクで 1 列に並べる（項目の間に点線）。
+ *  1 段目はアイコンと文字を大きくし、行を枠の高さいっぱいに均等に伸ばす。星はリンクの文字のすぐ右。
  *  1 段目に「伝票入力」「日記帳・元帳」「帳票・印刷」をアイコンと文字を大きくして並べ、ほかの 8 分類を 2 段×4 列で並べる。
  *  年度更新は一覧に出さず、上部のバーの「年度更新」から開く。左メニューの「機能から探す」画面はホームと同じため廃止。 */
 const HOME_TOP = ['input', 'ledger', 'print'];
@@ -220,7 +220,7 @@ export function FinderPanel({ accent, onNavigate, onSearch }: { accent: string; 
       <section data-finder-search data-finder-panel style={{ ['--finder-accent' as string]: accent } as CSSProperties}>
       {/* 1 段目：伝票入力・日記帳・元帳・帳票・印刷（大きく）／2・3 段目：ほかの 8 分類（2 段×4 列） */}
       <div style={{ display: 'grid', gap: 14 }}>
-        {top.length > 0 && <FunctionDirectory groups={top} onNavigate={onNavigate} accent={accent} cols={3} big fav cards />}
+        {top.length > 0 && <FunctionDirectory groups={top} onNavigate={onNavigate} accent={accent} cols={3} big links fav cards />}
         {(rest.length > 0 || top.length === 0) && <FunctionDirectory groups={rest} onNavigate={onNavigate} accent={accent} cols={4} links fav cards />}
       </div>
       </section>
