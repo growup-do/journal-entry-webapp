@@ -88,7 +88,7 @@ export function splitParen(name: string): [string, string] {
 /* ---------------- 全機能の一覧（分類ごと） ----------------
  *  分類ごとに、左に大きなアイコンと分類名、右にその分類の機能を文字のリンクで並べる。
  *  先頭の機能と重要度・高の機能（確認メモ #241）は大きな見出しの文字、重要度・中はやや大きい文字にする。 */
-export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, cols, stacked, wide, big, fav, tiles, links, accent, nameOf }: { /** 機能を枠なしのテキストリンクで 1 列に並べ、項目の間に点線を入れる（星は文字のすぐ右） */ links?: boolean; /** 機能を 2 列のタイル型のボタン（名前を中央、星をタイルの下）で並べる。fav と一緒に使う */ tiles?: boolean; /** アイコン・分類名・ボタンの文字を大きくする（ホームの 1 段目） */ big?: boolean; /** お気に入りの星（ボタンの枠の中。押すと登録・解除。登録済みは金の星、未登録は灰色の星。big と一緒に使うと 2 列のタイルにして星を下に常に出す） */ fav?: boolean; groups: Group[]; onNavigate: (label: string) => void; accent: string; /** 検索中：Enter で開く先頭の項目（強調表示） */ first?: string; /** 列の最小幅 */ minCol?: number; /** 列の数を固定するとき（既定は幅に合わせて自動） */ cols?: number; /** 分類のアイコンと名前を上に置き、機能のボタンをその下に横幅いっぱいで並べる（列が狭いとき。横幅いっぱいの分類も同じ見出しの形） */ stacked?: boolean; /** 横幅いっぱいに置く分類と、その機能を並べる列の数（項目の多い分類。例 減価償却の帳票） */ wide?: Record<string, number>; /** ボタンに出す名前（会計以外の画面で使うとき。既定は会計の表示名） */ nameOf?: (label: string) => string }) {
+export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, cols, stacked, wide, big, fav, tiles, links, cards, accent, nameOf }: { /** 分類ごとに独立したボックス（白い枠）にして、間に余白をとって並べる（仕切り線は使わない） */ cards?: boolean; /** 機能を枠なしのテキストリンクで 1 列に並べ、項目の間に点線を入れる（星は文字のすぐ右） */ links?: boolean; /** 機能を 2 列のタイル型のボタン（名前を中央、星をタイルの下）で並べる。fav と一緒に使う */ tiles?: boolean; /** アイコン・分類名・ボタンの文字を大きくする（ホームの 1 段目） */ big?: boolean; /** お気に入りの星（ボタンの枠の中。押すと登録・解除。登録済みは金の星、未登録は灰色の星。big と一緒に使うと 2 列のタイルにして星を下に常に出す） */ fav?: boolean; groups: Group[]; onNavigate: (label: string) => void; accent: string; /** 検索中：Enter で開く先頭の項目（強調表示） */ first?: string; /** 列の最小幅 */ minCol?: number; /** 列の数を固定するとき（既定は幅に合わせて自動） */ cols?: number; /** 分類のアイコンと名前を上に置き、機能のボタンをその下に横幅いっぱいで並べる（列が狭いとき。横幅いっぱいの分類も同じ見出しの形） */ stacked?: boolean; /** 横幅いっぱいに置く分類と、その機能を並べる列の数（項目の多い分類。例 減価償却の帳票） */ wide?: Record<string, number>; /** ボタンに出す名前（会計以外の画面で使うとき。既定は会計の表示名） */ nameOf?: (label: string) => string }) {
   const session = useSession();
   const kind = startKindOf(session);
   const favs = session.favorites;
@@ -104,9 +104,9 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
     + '[data-fav-star]:not([data-on]):hover{color:#9aa5b1!important}';
   return (
     // 仕切り線：各分類の上と左に線を引き、外周の線は外側の枠で隠す（内側の仕切りだけが見える）
-    <div style={{ overflow: 'hidden' }}>
+    <div style={{ overflow: cards ? 'visible' : 'hidden' }}>
       <style>{css}</style>
-      <div data-function-directory style={{ display: 'grid', gridTemplateColumns: cols ? `repeat(${cols}, minmax(0, 1fr))` : `repeat(auto-fill, minmax(${minCol}px, 1fr))`, margin: '-1px 0 0 -1px', ['--fn-accent' as string]: accent, ['--fn-tint' as string]: tint(8) } as CSSProperties}>
+      <div data-function-directory style={{ display: 'grid', gridTemplateColumns: cols ? `repeat(${cols}, minmax(0, 1fr))` : `repeat(auto-fill, minmax(${minCol}px, 1fr))`, margin: cards ? 0 : '-1px 0 0 -1px', gap: cards ? 14 : undefined, ['--fn-accent' as string]: accent, ['--fn-tint' as string]: tint(8) } as CSSProperties}>
         {groups.length === 0 && <div style={{ gridColumn: '1 / -1', padding: 30, textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>該当する機能がありません。別の言葉でお試しください。</div>}
         {groups.map((g) => {
           // 分類のアイコンと分類名は緑（年度更新は赤）で目立たせる
@@ -122,7 +122,7 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
           // ホームの 1 段目：ボタンの列を分類の枠の高さいっぱいに伸ばし、ボタンの高さを均等にそろえる
           const fill = !!big && !stacked && !tile && !link && !wideCols;
           return (
-            <div key={g.key} data-function-group={g.key} style={{ display: 'grid', gridTemplateColumns: top ? 'minmax(0, 1fr)' : big ? '120px minmax(0, 1fr)' : '104px minmax(0, 1fr)', gridColumn: wideCols ? '1 / -1' : undefined, columnGap: 12, rowGap: 12, alignItems: fill ? 'stretch' : 'start', alignContent: fill ? 'stretch' : 'start', padding: top ? '16px 16px 18px' : '18px 14px 18px 6px', borderTop: LINE, borderLeft: LINE, background: g.danger ? '#fdf7f5' : undefined }}>
+            <div key={g.key} data-function-group={g.key} style={{ display: 'grid', gridTemplateColumns: top ? 'minmax(0, 1fr)' : big ? '120px minmax(0, 1fr)' : '104px minmax(0, 1fr)', gridColumn: wideCols ? '1 / -1' : undefined, columnGap: 12, rowGap: 12, alignItems: fill ? 'stretch' : 'start', alignContent: fill ? 'stretch' : 'start', padding: top ? '16px 16px 18px' : cards ? '18px 16px 18px 8px' : '18px 14px 18px 6px', ...(cards ? { border: '1px solid #dde4ea', borderRadius: 14, boxShadow: '0 4px 16px rgba(30,50,70,.05)', background: g.danger ? '#fdf7f5' : '#fff' } : { borderTop: LINE, borderLeft: LINE, background: g.danger ? '#fdf7f5' : undefined }) }}>
               <div title={g.note || undefined} style={{ display: 'flex', flexDirection: top ? 'row' : 'column', alignItems: 'center', gap: top ? 10 : 8, textAlign: top ? 'left' : 'center' }}>
                 <svg width={top ? (big ? 40 : 34) : big ? 64 : 52} height={top ? (big ? 40 : 34) : big ? 64 : 52} viewBox="0 0 24 24" fill="none" stroke={ink} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{GROUP_ICONS[g.key] ?? DEFAULT_ICON}</svg>
                 <div data-group-title style={{ fontSize: top ? (big ? 17 : 15) : big ? 16 : 13, fontWeight: 800, color: ink, lineHeight: 1.35, whiteSpace: 'nowrap' }}>
@@ -216,12 +216,11 @@ export function FinderPanel({ accent, onNavigate }: { accent: string; onNavigate
           {searching && <span role="status" style={{ fontSize: 12, color: '#4d5b68', whiteSpace: 'nowrap' }}><b style={{ color: '#22303c' }}>{total}</b> 件</span>}
         </div>
       </div>
-      <section data-finder-search data-finder-panel style={{ background: '#fff', border: '1px solid #dde4ea', borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'hidden', ['--finder-accent' as string]: accent }}>
+      <section data-finder-search data-finder-panel style={{ ['--finder-accent' as string]: accent } as CSSProperties}>
       {/* 1 段目：伝票入力・日記帳・元帳・帳票・印刷（大きく）／2・3 段目：ほかの 8 分類（2 段×4 列） */}
-      <div style={{ padding: '14px 16px 16px', display: 'grid', gap: 0 }}>
-        {top.length > 0 && <FunctionDirectory groups={top} onNavigate={onNavigate} accent={accent} cols={3} big fav />}
-        {top.length > 0 && rest.length > 0 && <div role="separator" style={{ height: 1, background: '#cfd8e0', margin: '4px 0 0' }} />}
-        {(rest.length > 0 || top.length === 0) && <FunctionDirectory groups={rest} onNavigate={onNavigate} accent={accent} cols={4} links fav />}
+      <div style={{ display: 'grid', gap: 14 }}>
+        {top.length > 0 && <FunctionDirectory groups={top} onNavigate={onNavigate} accent={accent} cols={3} big fav cards />}
+        {(rest.length > 0 || top.length === 0) && <FunctionDirectory groups={rest} onNavigate={onNavigate} accent={accent} cols={4} links fav cards />}
       </div>
       </section>
     </div>
