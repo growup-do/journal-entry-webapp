@@ -1,10 +1,11 @@
 // 参照パネル（現行「ワイド画面」の Web 版。依頼書 5.1.3）
 //   伝票入力の横（または下）に、日記帳（当年／前年を切替）／元帳１／元帳２／残高照合 を切り替えて表示する。
 //   当年／前年の切替と元帳１・２・残高照合は、以前はヘッダーにあったもの（ヘッダーからは外し、このパネルに集約）。
-//   画面サイズによる機能の有無は設けず、常に本文の右に重ねて表示する（本文を押し出さない。1600×768 の画面で収まるようにするため。11/10）。幅が狭いときは初期状態を折りたたみにする（3.3）。
+//   画面の幅が 1600px 以上（1600×768 を想定）のときは、開くと左メニューを自動でたたみ、本文をパネルの幅だけ空けて重ならないようにする（確認メモ #243）。
+//   それより狭いときは本文の右に重ねて表示する（本文を押し出さない。11/10）。幅が狭いときは初期状態を折りたたみにする（3.3）。
 //   選んだ表示・開閉・元帳の科目は localStorage に覚える。行のダブルクリック、または「訂正」ボタンで伝票の訂正を開く。
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { CSSProperties } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { PrevYearJournal } from './PrevYearJournal';
@@ -28,6 +29,29 @@ const WIDE_TABS = ['日記帳', '元帳１', '元帳２', '残高照合'] as con
 /** この幅より狭いときは、パネルを初期状態で折りたたむ（狭くなったときも折りたたむ） */
 export const WIDE_NARROW = 1240;
 export const WIDE_WIDTH = 440;
+/** この幅以上の画面（1600×768 を想定。ウィンドウの枠の分を見込む）では、参照パネルを開くと本文を押し出し、左メニューを自動でたたむ（確認メモ #243） */
+export const WIDE_PUSH_MIN = 1560;
+/** 参照パネルが本文を押し出しているか（左メニューを自動でたたむための合図。FormScreen が読む） */
+let pushing = false;
+const pushSubs = new Set<() => void>();
+const setPushing = (v: boolean) => { if (pushing !== v) { pushing = v; pushSubs.forEach((f) => f()); } };
+export function usePanelPushing(): boolean {
+  return useSyncExternalStore((f) => { pushSubs.add(f); return () => { pushSubs.delete(f); }; }, () => pushing);
+}
+/** 参照パネルを開いたときに本文を押し出すか。旧レイアウトは幅が足りるとき（以前の動き）、新レイアウトは画面の幅が WIDE_PUSH_MIN 以上のとき。
+ *  新レイアウトで押し出すときは、左メニューを自動でたたむよう知らせる */
+export function usePanelPush(state: WidePanelState, classic: boolean): boolean {
+  const [wideScreen, setWideScreen] = useState(() => window.innerWidth >= WIDE_PUSH_MIN);
+  useEffect(() => {
+    const h = () => setWideScreen(window.innerWidth >= WIDE_PUSH_MIN);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
+  const push = !state.collapsed && (classic ? !state.narrow : wideScreen);
+  const fold = push && !classic;
+  useEffect(() => { setPushing(fold); return () => setPushing(false); }, [fold]);
+  return push;
+}
 /** 開閉タブ（幅32px）の分として、本文の右側に空ける余白。本文の右余白の合計がこの値になるようにする（タブ32px＋すき間16px）。パネル本体は本文に重ねるので、この分だけ空ける */
 export const WIDE_TAB_SPACE = 48;
 

@@ -414,15 +414,16 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
 
           {/* 入力行（紙の単一式入力の配置：上に 入力区分、下に 4段の項目） */}
           <div style={{ margin: '14px 0 6px', fontSize: 14, color: PAPER.ink, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>令和 <input id="se-year" className="ef-input pp-input" aria-label="年" title={ENTRY_YEAR_HELP} disabled={ro} value={yr.year} onChange={(e) => yr.edit(e.target.value)} onFocus={(e) => e.currentTarget.select()} onKeyDown={onEnter(() => focusId('se-month'))} inputMode="numeric" autoComplete="off" style={{ ...dateInput, width: 38, padding: '5px 2px', fontWeight: 700 }} /> 年　入力中の伝票</span><EntryMonthNote month={f.month} year={yr.year} /></div>
-          <div style={{ display: 'flex', alignItems: 'stretch', gap: 12, margin: '0 0 8px', width: '100%' }}>
+          {/* 幅が足りないとき（1600px の画面で参照パネルを開いたときなど）は折り返し、右端の取引区分・Seq No の列を次の行に回す（確認メモ #243） */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch', gap: 12, margin: '0 0 8px', width: '100%' }}>
             {/* 入力区分：入力区分で起動中は固定表示、親区分で起動中は配下の入力区分から選ぶ（確認メモ #157／#181／#182）。残りの幅いっぱいに広げる */}
-            <div className="ef-field" style={{ display: 'flex', flex: '1 1 240px', minWidth: 240 }}>
+            <div className="ef-field" style={{ display: 'flex', flex: '1 1 200px', minWidth: 200 }}>
               <PaperBox label="入力区分" grow>
                 <EntryDivisionField ctl={ed} id="se-service" disabled={ro} onCommit={() => focusId('se-month')} />
               </PaperBox>
             </div>
-            {/* 内部取引相手区分（最初から表示。スイッチがオンのときだけ入力できる） */}
-            <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} data-side={side || 'なし'} style={{ display: 'flex', width: 400, flex: 'none' }}>
+            {/* 内部取引相手区分（最初から表示。スイッチがオンのときだけ入力できる）。参照パネルで本文が狭くなったときは 280px まで縮める（確認メモ #243） */}
+            <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} data-side={side || 'なし'} style={{ display: 'flex', flex: '0 1 400px', minWidth: 280 }}>
               <PaperBox label={<span style={{ color: partner ? '#6b3fb5' : '#8895a3' }}>内部取引相手区分{partner ? `（${side}が内部取引）` : ''}</span>} grow muted={!partner}>
                 {/* 2行：上に 内部取引 のスイッチ、下に 相手先の区分 */}
                 <div style={{ display: 'grid', gap: 4, width: '100%', minWidth: 0, padding: '4px 0' }}>
