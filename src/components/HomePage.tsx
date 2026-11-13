@@ -1,4 +1,5 @@
-// ホーム：機能から探す（検索ボックス＋全機能の一覧）／お気に入りメニュー／FAQ／バナースペース
+// ホーム：機能から探す（検索ボックス＋全機能の一覧）／FAQ／バナースペース
+//   お気に入りメニューの枠は、機能一覧の星で登録済みが分かるようになったのでなくした（左のメニュー列の「お気に入りメニュー」は残す）。
 //   「調査・チェック」の枠は、機能一覧ができたのでなくした。仕訳数・日次調査・決算調査はヘッダーの区分名の横のボタンから開く（確認メモ #242）。
 //   表示するメニューと最初に表示する画面は、ヘッダーの「各種設定」›「ダッシュボード表示オプション」で選ぶ（確認メモ #152）。
 //   お知らせはヘッダーのベルへ（#151）、預金残高は「推移・分析」›「預金残高」へ移した（#149）。「伝票入力をはじめる」ボタンは廃止（#150）。
@@ -7,11 +8,9 @@
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { ToastView, useToast } from './Toast';
-import { HOME_FAQ, displayName } from '../data';
+import { HOME_FAQ } from '../data';
 import { FinderPanel } from './FunctionFinder';
-import { FavoritesEditModal } from './FavoritesEditModal';
 import { useSession } from '../store/session';
-import { canOpen } from '../store/access';
 import { SUPPORT_URL } from './SettingsMenu';
 
 interface Props {
@@ -22,9 +21,10 @@ interface Props {
 
 export function HomePage({ variant, accent, onNavigate }: Props) {
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
-  const [favEdit, setFavEdit] = useState(false);
   // 年度更新を促す案内（「あとで」で、この画面を開いている間だけ閉じる）
   const [yearNotice, setYearNotice] = useState(true);
+  // 機能一覧を検索で絞り込んでいる間は、FAQ・バナーを隠して該当する機能だけを見せる
+  const [searching, setSearching] = useState(false);
   const s = useSession();
   const toast = useToast();
   const isSheet = variant === 'sheet';
@@ -57,22 +57,12 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
         )}
 
         {/* 機能一覧：見出し（ホーム・年度・区分）と検索ボックスはこの一覧のタイトル部に置く。分類が多いので、2列の上に横幅いっぱいで置く */}
-        <FinderPanel accent={accent} onNavigate={onNavigate} />
+        <FinderPanel accent={accent} onNavigate={onNavigate} onSearch={setSearching} />
 
-        <div style={{ display: 'grid', gridTemplateColumns: hasRight ? 'minmax(0,1.6fr) minmax(280px,1fr)' : 'minmax(0,1fr)', gap: 20, alignItems: 'start' }}>
+        {!searching && <div style={{ display: 'grid', gridTemplateColumns: hasRight ? 'minmax(0,1.6fr) minmax(280px,1fr)' : 'minmax(0,1fr)', gap: 20, alignItems: 'start' }}>
         {/* 左列 */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
 
-          {/* お気に入りメニュー */}
-          {show.favorites && <section style={card}>
-            <div style={h2}>お気に入りメニュー<button type="button" style={link} onClick={() => setFavEdit(true)}>編集 ›</button></div>
-            <div style={{ display: 'flex', gap: 8, padding: 16, flexWrap: 'wrap' }}>
-              {s.favorites.filter((l) => canOpen(l, s.access)).map((l) => (
-                <button key={l} type="button" className="btn-outline" onClick={() => onNavigate(l)} style={{ padding: '9px 16px', border: '1px solid #cfd8e0', borderRadius: 9, background: '#fff', color: '#22303c', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}> {displayName(l)}</button>
-              ))}
-              {!s.favorites.some((l) => canOpen(l, s.access)) && <span style={{ fontSize: 14, color: '#9aa5b1' }}>「編集」からよく使う画面を登録できます。</span>}
-            </div>
-          </section>}
 
           {/* FAQ */}
           {show.faq && <section style={card}>
@@ -107,10 +97,9 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
             ))}
           </section>}
         </div>}
-        </div>
+        </div>}
       </div>
 
-      <FavoritesEditModal open={favEdit} onClose={() => setFavEdit(false)} accent={accent} />
     </main>
   );
 }

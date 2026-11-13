@@ -197,12 +197,12 @@ const KEY = 'proto-session-v2'; // v2：区分ツリーの見直し（入力区�
 export const HOME_SECTIONS = [
   // 預金残高は「推移・分析」へ（確認メモ #149）、お知らせはヘッダーのベルへ（#151）移したので、ここでは選ばない
   // 調査・チェック（仕訳数／日次調査／決算調査）は、ヘッダーの区分のボタンへ移した（確認メモ #242）
-  { key: 'favorites', label: 'お気に入りメニュー', note: '登録した画面をすぐに開くボタン（メニューバーの「お気に入りメニュー」と共通）' },
+  // お気に入りメニューの枠は、機能一覧の星で登録済みが分かるようになったのでなくした（左のメニュー列の「お気に入りメニュー」は残す）
   { key: 'faq', label: 'よくある質問（FAQ）', note: '操作で迷ったときの質問と回答' },
   { key: 'banners', label: 'バナー', note: 'ご案内の画像' },
 ] as const;
 export type HomeSectionKey = (typeof HOME_SECTIONS)[number]['key'];
-const DEFAULT_HOME_SECTIONS: Record<HomeSectionKey, boolean> = { favorites: true, faq: true, banners: true };
+const DEFAULT_HOME_SECTIONS: Record<HomeSectionKey, boolean> = { faq: true, banners: true };
 
 const DEFAULT: Session = {
   division: '002 保育事業', divisionPath: ['社会福祉法人 チャイルド保育園', '社会福祉事業', 'チャイルド保育園', '保育事業'],

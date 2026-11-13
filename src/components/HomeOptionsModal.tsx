@@ -3,9 +3,7 @@
 //   最初に表示する画面（伝票入力／ホーム）と、ホームに表示するメニューを選ぶ。
 //   変更はその場で保存するので、閉じるのは「閉じる」か × だけ（Esc・外側のクリックでは閉じない）。
 
-import { useState } from 'react';
 import { Modal } from './Modal';
-import { FavoritesEditModal } from './FavoritesEditModal';
 import { HOME_SECTIONS, setSession, useSession } from '../store/session';
 
 interface Props {
@@ -17,7 +15,6 @@ interface Props {
 export function HomeOptionsModal({ open, onClose, accent }: Props) {
   const s = useSession();
   const show = s.homeSections;
-  const [favEdit, setFavEdit] = useState(false);
 
   return (
     <>
@@ -33,7 +30,7 @@ export function HomeOptionsModal({ open, onClose, accent }: Props) {
                 return <button key={key} type="button" role="radio" aria-checked={on} data-start-screen={key} onClick={() => setSession({ startScreen: key })} style={{ position: 'relative', zIndex: 1, padding: '10px 12px', border: 'none', borderRadius: 10, background: 'transparent', color: on ? '#fff' : '#48565f', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', transition: 'color .2s' }}>{label}</button>;
               })}
             </div>
-            <div style={{ fontSize: 12, color: '#5b6773', marginTop: 8 }}>{s.startScreen === 'ホーム' ? 'ホーム画面：機能の一覧やお気に入りメニューから作業を始めます。' : '伝票入力画面：すぐに伝票（仕訳伝票形式）の入力を始めます。'}</div>
+            <div style={{ fontSize: 12, color: '#5b6773', marginTop: 8 }}>{s.startScreen === 'ホーム' ? 'ホーム画面：機能の一覧から作業を始めます。' : '伝票入力画面：すぐに伝票（仕訳伝票形式）の入力を始めます。'}</div>
           </div>
           <div>
             <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>ダッシュボードに表示するメニュー</div>
@@ -44,7 +41,6 @@ export function HomeOptionsModal({ open, onClose, accent }: Props) {
                   <input type="checkbox" checked={show[sec.key]} onChange={(e) => setSession({ homeSections: { ...show, [sec.key]: e.target.checked } })} style={{ width: 17, height: 17, accentColor: accent }} />
                   <b style={{ width: 210, flex: 'none' }}>{sec.label}</b>
                   <span style={{ fontSize: 12, color: '#7a8794', flex: 1 }}>{sec.note}</span>
-                  {sec.key === 'favorites' && <button type="button" onClick={(e) => { e.preventDefault(); setFavEdit(true); }} style={{ flex: 'none', padding: '5px 10px', borderRadius: 7, border: '1px solid ' + accent, background: '#fff', color: accent, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>登録する画面を編集</button>}
                 </label>
               ))}
             </div>
@@ -53,7 +49,6 @@ export function HomeOptionsModal({ open, onClose, accent }: Props) {
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" data-home-options-close onClick={onClose} style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: accent, color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>閉じる</button></div>
         </div>
       </Modal>
-      <FavoritesEditModal open={favEdit} onClose={() => setFavEdit(false)} accent={accent} />
     </>
   );
 }

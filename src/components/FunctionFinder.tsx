@@ -6,7 +6,7 @@
 //   一覧の形：分類ごとに、左に大きなアイコンと分類名、右にその分類の機能を文字のリンクで並べる。
 //   分類のアイコンと分類名は緑で目立たせ、機能はすべて同じ形の枠つきボタンで 1 行に 1 つ並べる。分類の間は仕切り線で区切る。
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import { HOME_CHECKS, MENU_GROUPS, SETTINGS_GROUPS, displayName, settingsMenuName } from '../data';
 import { setSession, startKindOf, useSession } from '../store/session';
@@ -172,13 +172,14 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
  *  1 段目に「伝票入力」「日記帳・元帳」「帳票・印刷」をアイコンと文字を大きくして並べ、ほかの 8 分類を 2 段×4 列で並べる。
  *  年度更新は一覧に出さず、上部のバーの「年度更新」から開く。左メニューの「機能から探す」画面はホームと同じため廃止。 */
 const HOME_TOP = ['input', 'ledger', 'print'];
-export function FinderPanel({ accent, onNavigate }: { accent: string; onNavigate: (label: string) => void }) {
+export function FinderPanel({ accent, onNavigate, onSearch }: { accent: string; onNavigate: (label: string) => void; /** 検索で絞り込んでいるか（ホームは絞り込み中に FAQ・バナーを隠す） */ onSearch?: (searching: boolean) => void }) {
   const [q, setQ] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const s = useSession();
   const groups = useMemo(() => filterGroups(q, s.access).filter((g) => g.key !== 's-update'), [q, s.access]);
   const total = groups.reduce((a, g) => a + g.items.length, 0);
   const searching = !!q.trim();
+  useEffect(() => { onSearch?.(searching); }, [searching, onSearch]);
   const top = groups.filter((g) => HOME_TOP.includes(g.key));
   const rest = groups.filter((g) => !HOME_TOP.includes(g.key));
   const onKey = (e: KeyboardEvent<HTMLInputElement>) => {

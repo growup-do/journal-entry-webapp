@@ -43,7 +43,7 @@ const NODES: Node[] = [
   // ホーム
   N('home', 'ホーム（ダッシュボード）', 'page', 'home', { open: 'ホーム' }),
   N('notices', 'お知らせ（ヘッダーのベル）', 'dialog', 'user', { open: 'ホーム', note: 'ユーザーアイコンの左。未読の件数をバッジで表示。どの画面からも開ける' }),
-  N('favedit', 'お気に入りの設定', 'dialog', 'home', { open: 'ホーム' }),
+  N('favedit', 'お気に入りの設定', 'dialog', 'home', { open: '伝票入力', note: '左のメニュー列の「お気に入りメニュー」から開く。ホームの機能一覧の星でも登録・解除できる' }),
   N('favmenu', 'お気に入りメニュー ▾（メニューバー右端）', 'dialog', 'home', { open: '伝票入力', note: '「機能から探す」の左隣。マウスオーバーで開き、どの画面からも登録した画面を開く' }),
   N('homeedit', 'ダッシュボード表示オプション', 'dialog', 'user', { open: 'ホーム', note: 'ヘッダーの「各種設定」から開く。表示メニュー／最初に表示する画面' }),
   N('support', 'サポートサイト', 'external', 'home', { url: 'https://www.child.co.jp/' }),
@@ -165,7 +165,7 @@ const EDGES: Edge[] = [
   E('journal', 'bulkdel', '一括削除 ▾', true), E('bulkdel', 'vdelete', '削除確認へ', true), E('closing', 's-carry', '繰越判断', true),
   E('login', 'pwreset', 'お忘れですか', true), E('login', 'division', 'ログイン'), E('division', 'merge', '合算追加', true), E('division', 'divinfo', '部門情報の変更', true), E('division', 'yearconfirm', '年度を変えて OK'), E('yearconfirm', 'continuity', '年度を切り替える'), E('division', 'continuity', '起動時の OK', true),
   E('division', 'home', 'OK（初期画面：ホーム）'), E('login', 'home', 'ログイン（区分選択を1か月表示しない設定のとき）', true), E('division', 'e-voucher', 'OK（初期画面：伝票入力）', true),
-  E('home', 'favedit', '編集', true), E('homeedit', 'favedit', '登録する画面を編集', true), E('home', 's-update', '年度更新の案内'), E('home', 'support', 'FAQ すべて見る', true), E('home', 'e-voucher', '伝票入力をはじめる'), E('usersettings', 'pwmail', 'パスワードを変更', true),
+  E('home', 's-update', '年度更新の案内'), E('home', 'support', 'FAQ すべて見る', true), E('home', 'e-voucher', '伝票入力をはじめる'), E('usersettings', 'pwmail', 'パスワードを変更', true),
   E('home', 'count', 'ヘッダーの「仕訳数」'), E('home', 'daily', 'ヘッダーの「日次調査」'), E('home', 'auditm', 'ヘッダーの「決算調査」'), E('bankbal', 'balcheck', '残高照合へ', true), E('widepanel', 'balcheck', '残高照合の画面を開く', true),
   E('home', 'trial', '機能一覧から選ぶ', true),
   E('e-voucher', 'e-single', '形式切替'), E('e-single', 'e-transfer', '形式切替'), E('e-transfer', 'e-tsingle', '形式切替'),
