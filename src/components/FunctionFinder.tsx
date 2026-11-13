@@ -94,9 +94,7 @@ function FunctionDirectory({ groups, onNavigate, first, minCol = 270, accent }: 
           return (
             <div key={g.key} data-function-group={g.key} style={{ display: 'grid', gridTemplateColumns: '104px 1fr', columnGap: 12, alignItems: 'start', padding: '18px 14px 18px 6px', borderTop: LINE, borderLeft: LINE, background: g.danger ? '#fdf7f5' : undefined }}>
               <div title={g.note || undefined} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center' }}>
-                <span style={{ display: 'grid', placeItems: 'center', width: 64, height: 64, borderRadius: 18, background: g.danger ? '#fbe6e1' : tint(11) }}>
-                  <svg width={38} height={38} viewBox="0 0 24 24" fill="none" stroke={ink} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{GROUP_ICONS[g.key] ?? DEFAULT_ICON}</svg>
-                </span>
+                <svg width={52} height={52} viewBox="0 0 24 24" fill="none" stroke={ink} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{GROUP_ICONS[g.key] ?? DEFAULT_ICON}</svg>
                 <div data-group-title style={{ fontSize: 13, fontWeight: 800, color: ink, lineHeight: 1.35, whiteSpace: 'nowrap' }}>
                   {l2 ? <><span style={{ display: 'block', fontSize: 11, fontWeight: 700, color: ink, opacity: 0.7 }}>{l1}</span>{l2}</> : l1}
                 </div>
