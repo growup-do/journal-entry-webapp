@@ -80,7 +80,7 @@ const DEFAULT_ICON: ReactNode = <><rect x="4" y="4" width="16" height="16" rx="2
 /* ---------------- 全機能の一覧（分類ごと） ----------------
  *  分類ごとに、左に大きなアイコンと分類名、右にその分類の機能を文字のリンクで並べる。
  *  先頭の機能と重要度・高の機能（確認メモ #241）は大きな見出しの文字、重要度・中はやや大きい文字にする。 */
-export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, accent, nameOf }: { groups: Group[]; onNavigate: (label: string) => void; accent: string; /** 検索中：Enter で開く先頭の項目（強調表示） */ first?: string; /** 列の最小幅 */ minCol?: number; /** ボタンに出す名前（会計以外の画面で使うとき。既定は会計の表示名） */ nameOf?: (label: string) => string }) {
+export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, cols, stacked, wide, accent, nameOf }: { groups: Group[]; onNavigate: (label: string) => void; accent: string; /** 検索中：Enter で開く先頭の項目（強調表示） */ first?: string; /** 列の最小幅 */ minCol?: number; /** 列の数を固定するとき（既定は幅に合わせて自動） */ cols?: number; /** 分類のアイコンと名前を上に置き、機能のボタンをその下に横幅いっぱいで並べる（列が狭いとき。横幅いっぱいの分類は除く） */ stacked?: boolean; /** 横幅いっぱいに置く分類と、その機能を並べる列の数（項目の多い分類。例 減価償却の帳票） */ wide?: Record<string, number>; /** ボタンに出す名前（会計以外の画面で使うとき。既定は会計の表示名） */ nameOf?: (label: string) => string }) {
   const kind = startKindOf(useSession());
   const tint = (pct: number) => 'color-mix(in srgb, ' + accent + ' ' + pct + '%, #fff)';
   const LINE = '1px solid #e3e9ee';
@@ -91,23 +91,25 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, acc
     // 仕切り線：各分類の上と左に線を引き、外周の線は外側の枠で隠す（内側の仕切りだけが見える）
     <div style={{ overflow: 'hidden' }}>
       <style>{css}</style>
-      <div data-function-directory style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${minCol}px, 1fr))`, margin: '-1px 0 0 -1px', ['--fn-accent' as string]: accent, ['--fn-tint' as string]: tint(8) } as CSSProperties}>
+      <div data-function-directory style={{ display: 'grid', gridTemplateColumns: cols ? `repeat(${cols}, minmax(0, 1fr))` : `repeat(auto-fill, minmax(${minCol}px, 1fr))`, margin: '-1px 0 0 -1px', ['--fn-accent' as string]: accent, ['--fn-tint' as string]: tint(8) } as CSSProperties}>
         {groups.length === 0 && <div style={{ gridColumn: '1 / -1', padding: 30, textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>該当する機能がありません。別の言葉でお試しください。</div>}
         {groups.map((g) => {
           // 分類のアイコンと分類名は緑（年度更新は赤）で目立たせる
           const ink = g.danger ? '#c0392b' : accent;
           // 分類名は「各種設定 › マスター設定」のように長いものを 2 行に分ける
           const [l1, l2] = g.label.includes(' › ') ? g.label.split(' › ') : [g.label, ''];
+          const wideCols = wide?.[g.key];
+          const top = stacked && !wideCols;
           return (
-            <div key={g.key} data-function-group={g.key} style={{ display: 'grid', gridTemplateColumns: '104px 1fr', columnGap: 12, alignItems: 'start', padding: '18px 14px 18px 6px', borderTop: LINE, borderLeft: LINE, background: g.danger ? '#fdf7f5' : undefined }}>
-              <div title={g.note || undefined} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center' }}>
-                <svg width={52} height={52} viewBox="0 0 24 24" fill="none" stroke={ink} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{GROUP_ICONS[g.key] ?? DEFAULT_ICON}</svg>
-                <div data-group-title style={{ fontSize: 13, fontWeight: 800, color: ink, lineHeight: 1.35, whiteSpace: 'nowrap' }}>
+            <div key={g.key} data-function-group={g.key} style={{ display: 'grid', gridTemplateColumns: top ? 'minmax(0, 1fr)' : '104px minmax(0, 1fr)', gridColumn: wideCols ? '1 / -1' : undefined, columnGap: 12, rowGap: 12, alignItems: 'start', alignContent: 'start', padding: top ? '16px 16px 18px' : '18px 14px 18px 6px', borderTop: LINE, borderLeft: LINE, background: g.danger ? '#fdf7f5' : undefined }}>
+              <div title={g.note || undefined} style={{ display: 'flex', flexDirection: top ? 'row' : 'column', alignItems: 'center', gap: top ? 10 : 8, textAlign: top ? 'left' : 'center' }}>
+                <svg width={top ? 34 : 52} height={top ? 34 : 52} viewBox="0 0 24 24" fill="none" stroke={ink} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{GROUP_ICONS[g.key] ?? DEFAULT_ICON}</svg>
+                <div data-group-title style={{ fontSize: top ? 15 : 13, fontWeight: 800, color: ink, lineHeight: 1.35, whiteSpace: 'nowrap' }}>
                   {l2 ? <><span style={{ display: 'block', fontSize: 11, fontWeight: 700, color: ink, opacity: 0.7 }}>{l1}</span>{l2}</> : l1}
                 </div>
               </div>
-              {/* 機能はすべて同じ形のボタンで、1 行に 1 つ */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+              {/* 機能はすべて同じ形のボタンで、1 行に 1 つ（横幅いっぱいの分類は、指定の列の数で並べる） */}
+              <div style={wideCols ? { display: 'grid', gridTemplateColumns: `repeat(${wideCols}, minmax(0, 1fr))`, gap: 6, minWidth: 0 } : { display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
                 {g.items.map((l) => {
                   const off = INPUT_ONLY.includes(l) && kind !== '入力区分';
                   const hit = first === l;

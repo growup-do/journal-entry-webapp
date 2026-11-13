@@ -123,7 +123,7 @@ interface Props {
 
 type Tab = 'home' | 'assets' | 'equips' | 'disposal' | 'closing' | 'transfer';
 const TABS: { key: Tab; label: string; hint: string }[] = [
-  { key: 'home', label: 'ホーム', hint: '機能の一覧と、固定資産の概要' },
+  { key: 'home', label: '機能一覧', hint: '機能の一覧と、固定資産の概要' },
   { key: 'assets', label: '固定資産台帳', hint: '登録・変更・削除、経年の確認' },
   { key: 'equips', label: '備品台帳', hint: '少額備品の登録・一覧' },
   { key: 'disposal', label: '除却・売却・移管', hint: '複数資産をまとめて処理' },
@@ -639,7 +639,8 @@ export function DepreciationPage({ variant, accent }: Props) {
           })}
         </div>
 
-        {/* ===== ホーム：概要と機能の一覧（会計のホームと同じ形。確認メモ #244） ===== */}
+        {/* ===== 機能一覧（旧 ホーム）：概要と機能の一覧（会計のホームと同じ形。確認メモ #244）。
+             処理の 5 分類を 1 段に並べ、項目の多い帳票は下の段に横幅いっぱいで 4 列に並べる ===== */}
         {tab === 'home' && (
           <div data-dep-home style={{ padding: '14px 22px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -653,7 +654,7 @@ export function DepreciationPage({ variant, accent }: Props) {
             <div>
               <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>機能の一覧</div>
               <div style={{ border: '1px solid #e3e9ee', borderRadius: 12, overflow: 'hidden' }}>
-                <FunctionDirectory groups={HOME_GROUPS} accent={accent} onNavigate={runHome} nameOf={(l) => l} />
+                <FunctionDirectory groups={HOME_GROUPS} accent={accent} onNavigate={runHome} nameOf={(l) => l} cols={5} stacked wide={{ print: 4 }} />
               </div>
             </div>
           </div>
