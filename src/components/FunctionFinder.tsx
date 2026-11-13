@@ -88,7 +88,7 @@ export function splitParen(name: string): [string, string] {
 /* ---------------- 全機能の一覧（分類ごと） ----------------
  *  分類ごとに、左に大きなアイコンと分類名、右にその分類の機能を文字のリンクで並べる。
  *  先頭の機能と重要度・高の機能（確認メモ #241）は大きな見出しの文字、重要度・中はやや大きい文字にする。 */
-export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, cols, stacked, wide, big, fav, accent, nameOf }: { /** アイコン・分類名・ボタンの文字を大きくする（ホームの 1 段目） */ big?: boolean; /** お気に入りの星（マウスを載せると空の星が出て、押すと登録・解除。登録済みは金の星） */ fav?: boolean; groups: Group[]; onNavigate: (label: string) => void; accent: string; /** 検索中：Enter で開く先頭の項目（強調表示） */ first?: string; /** 列の最小幅 */ minCol?: number; /** 列の数を固定するとき（既定は幅に合わせて自動） */ cols?: number; /** 分類のアイコンと名前を上に置き、機能のボタンをその下に横幅いっぱいで並べる（列が狭いとき。横幅いっぱいの分類も同じ見出しの形） */ stacked?: boolean; /** 横幅いっぱいに置く分類と、その機能を並べる列の数（項目の多い分類。例 減価償却の帳票） */ wide?: Record<string, number>; /** ボタンに出す名前（会計以外の画面で使うとき。既定は会計の表示名） */ nameOf?: (label: string) => string }) {
+export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, cols, stacked, wide, big, fav, accent, nameOf }: { /** アイコン・分類名・ボタンの文字を大きくする（ホームの 1 段目） */ big?: boolean; /** お気に入りの星（ボタンの枠の中。押すと登録・解除。登録済みは金の星、未登録は灰色の星。big と一緒に使うと 2 列のタイルにして星を下に常に出す） */ fav?: boolean; groups: Group[]; onNavigate: (label: string) => void; accent: string; /** 検索中：Enter で開く先頭の項目（強調表示） */ first?: string; /** 列の最小幅 */ minCol?: number; /** 列の数を固定するとき（既定は幅に合わせて自動） */ cols?: number; /** 分類のアイコンと名前を上に置き、機能のボタンをその下に横幅いっぱいで並べる（列が狭いとき。横幅いっぱいの分類も同じ見出しの形） */ stacked?: boolean; /** 横幅いっぱいに置く分類と、その機能を並べる列の数（項目の多い分類。例 減価償却の帳票） */ wide?: Record<string, number>; /** ボタンに出す名前（会計以外の画面で使うとき。既定は会計の表示名） */ nameOf?: (label: string) => string }) {
   const session = useSession();
   const kind = startKindOf(session);
   const favs = session.favorites;
@@ -96,10 +96,11 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
   const tint = (pct: number) => 'color-mix(in srgb, ' + accent + ' ' + pct + '%, #fff)';
   const LINE = '1px solid #e3e9ee';
   // ボタンと見出しのマウスオーバー（使えない項目・検索で強調中の項目は変えない）
-  const css = '[data-fn-btn]:not([data-off]):not([data-hit]):hover{border-color:var(--fn-accent)!important;color:var(--fn-accent)!important;background:var(--fn-tint)!important}'
-    + '[data-fn-btn][data-danger]:not([data-off]):not([data-hit]):hover{border-color:#c0392b!important;color:#c0392b!important;background:#fdf1ee!important}'
-    // お気に入りの星：登録していない項目は、マウスを載せたとき（キーボードで選んだとき）だけ空の星を出す
-    + '[data-fn-row]:hover [data-fav-star],[data-fav-star]:focus-visible{opacity:1!important}';
+  const css = '[data-fn-btn]:not([data-off]):not([data-hit]):hover,[data-fn-row]:hover [data-fn-btn]:not([data-off]):not([data-hit]){border-color:var(--fn-accent)!important;color:var(--fn-accent)!important;background:var(--fn-tint)!important}'
+    + '[data-fn-btn][data-danger]:not([data-off]):not([data-hit]):hover,[data-fn-row]:hover [data-fn-btn][data-danger]:not([data-off]):not([data-hit]){border-color:#c0392b!important;color:#c0392b!important;background:#fdf1ee!important}'
+    // お気に入りの星（ボタンの枠の中）：一覧の行では、登録していない項目はマウスを載せたとき（キーボードで選んだとき）だけ灰色の星を出す。大きいタイルは常に出す
+    + '[data-fn-row]:hover [data-fav-star],[data-fav-star]:focus-visible{opacity:1!important}'
+    + '[data-fav-star]:not([data-on]):hover{color:#9aa5b1!important}';
   return (
     // 仕切り線：各分類の上と左に線を引き、外周の線は外側の枠で隠す（内側の仕切りだけが見える）
     <div style={{ overflow: 'hidden' }}>
@@ -113,6 +114,8 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
           const [l1, l2] = g.label.includes(' › ') ? g.label.split(' › ') : [g.label, ''];
           const wideCols = wide?.[g.key];
           const top = !!stacked;
+          // ホームの 1 段目：機能を 2 列のタイル（名前を中央、星をタイルの下）で並べる
+          const tile = !!big && !!fav;
           return (
             <div key={g.key} data-function-group={g.key} style={{ display: 'grid', gridTemplateColumns: top ? 'minmax(0, 1fr)' : big ? '120px minmax(0, 1fr)' : '104px minmax(0, 1fr)', gridColumn: wideCols ? '1 / -1' : undefined, columnGap: 12, rowGap: 12, alignItems: 'start', alignContent: 'start', padding: top ? '16px 16px 18px' : '18px 14px 18px 6px', borderTop: LINE, borderLeft: LINE, background: g.danger ? '#fdf7f5' : undefined }}>
               <div title={g.note || undefined} style={{ display: 'flex', flexDirection: top ? 'row' : 'column', alignItems: 'center', gap: top ? 10 : 8, textAlign: top ? 'left' : 'center' }}>
@@ -122,7 +125,7 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
                 </div>
               </div>
               {/* 機能はすべて同じ形のボタンで、1 行に 1 つ（横幅いっぱいの分類は、指定の列の数で並べる） */}
-              <div style={wideCols ? { display: 'grid', gridTemplateColumns: `repeat(${wideCols}, minmax(0, 1fr))`, gap: 6, minWidth: 0 } : { display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+              <div style={wideCols || tile ? { display: 'grid', gridTemplateColumns: `repeat(${wideCols || 2}, minmax(0, 1fr))`, gap: tile ? 8 : 6, minWidth: 0 } : { display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
                 {g.items.map((l) => {
                   const off = INPUT_ONLY.includes(l) && kind !== '入力区分';
                   const hit = first === l;
@@ -134,16 +137,17 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
                   const on = favs.includes(l);
                   const button = (
                     <button key={l} type="button" className="btn-outline" data-fn-btn data-off={off || undefined} data-hit={hit || undefined} data-danger={g.danger || undefined} data-menu={'機能:' + l} data-priority={pr} onClick={() => onNavigate(l)} title={tip}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, width: '100%', boxSizing: 'border-box', padding: big ? '8px 10px 8px 14px' : '6px 8px 6px 12px', flex: 1, minWidth: 0, border: '1px solid ' + (hit ? '#1f7a52' : off ? '#e3e8ec' : g.danger ? '#f2c9c2' : '#d5dde4'), borderRadius: 8, background: hit ? '#eaf5ef' : off ? '#f7f9fa' : '#fff', boxShadow: hit ? '0 0 0 2px rgba(31,122,82,.22)' : '0 1px 1px rgba(34,48,60,.04)', color: off ? '#b3bcc5' : g.danger ? '#c0392b' : '#22303c', fontSize: big ? 16 : 14, fontWeight: 600, lineHeight: 1.4, textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer' }}>
+                      style={{ display: 'flex', flexDirection: tile ? 'column' : 'row', alignItems: 'center', justifyContent: tile ? 'flex-start' : 'space-between', gap: 6, width: '100%', boxSizing: 'border-box', padding: tile ? '14px 10px 40px' : fav ? '6px 8px 6px 30px' : big ? '8px 10px 8px 14px' : '6px 8px 6px 12px', minHeight: tile ? 92 : undefined, flex: 1, minWidth: 0, border: '1px solid ' + (hit ? '#1f7a52' : off ? '#e3e8ec' : g.danger ? '#f2c9c2' : '#d5dde4'), borderRadius: tile ? 12 : 8, background: hit ? '#eaf5ef' : off ? '#f7f9fa' : '#fff', boxShadow: hit ? '0 0 0 2px rgba(31,122,82,.22)' : '0 1px 1px rgba(34,48,60,.04)', color: off ? '#b3bcc5' : g.danger ? '#c0392b' : '#22303c', fontSize: big ? 16 : 14, fontWeight: tile ? 500 : 600, lineHeight: 1.4, textAlign: tile ? 'center' : 'left', fontFamily: 'inherit', cursor: 'pointer' }}>
                       <span style={{ minWidth: 0 }}>{sub ? <>{main}<span data-fn-sub style={{ display: 'block', fontSize: 12, fontWeight: 400, opacity: 0.75 }}>{sub}</span></> : name}</span>
-                      <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flex: 'none', opacity: 0.4 }}><path d="M9 6l6 6-6 6" /></svg>
+                      {!tile && <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flex: 'none', opacity: 0.4 }}><path d="M9 6l6 6-6 6" /></svg>}
                     </button>
                   );
                   if (!fav) return button;
                   return (
-                    <div key={l} data-fn-row style={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0 }}>
-                      <button type="button" data-fav-star data-on={on || undefined} onClick={() => toggleFav(l)} aria-pressed={on} aria-label={(on ? 'お気に入りから外す：' : 'お気に入りに追加：') + name} title={on ? 'お気に入りメニューから外します' : 'お気に入りメニューに追加します'} style={{ flex: 'none', width: 22, height: 22, padding: 0, border: 'none', background: 'transparent', color: on ? '#e0a800' : '#9aa5b1', fontSize: 17, lineHeight: 1, cursor: 'pointer', fontFamily: 'inherit', opacity: on ? 1 : 0, transition: 'opacity .12s' }}>{on ? '★' : '☆'}</button>
+                    <div key={l} data-fn-row style={{ position: 'relative', display: 'flex', minWidth: 0 }}>
                       {button}
+                      <button type="button" data-fav-star data-on={on || undefined} onClick={() => toggleFav(l)} aria-pressed={on} aria-label={(on ? 'お気に入りから外す：' : 'お気に入りに追加：') + name} title={on ? 'お気に入りメニューから外します' : 'お気に入りメニューに追加します'}
+                        style={{ position: 'absolute', ...(tile ? { left: '50%', bottom: 8, transform: 'translateX(-50%)', width: 30, height: 28, fontSize: 24 } : { left: 5, top: '50%', transform: 'translateY(-50%)', width: 22, height: 22, fontSize: 16 }), padding: 0, border: 'none', borderRadius: 6, background: 'transparent', color: on ? '#d9a520' : '#c5cbd1', lineHeight: 1, cursor: 'pointer', fontFamily: 'inherit', opacity: on || tile ? 1 : 0, transition: 'opacity .12s, color .12s' }}>★</button>
                     </div>
                   );
                 })}
