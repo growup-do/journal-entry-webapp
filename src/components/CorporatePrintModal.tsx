@@ -1,13 +1,11 @@
 // 法人印刷（既存「決算書・決算附属明細書 一覧」の再現）
-//   区分 × 帳票のマトリクスで出力する帳票を選び、Excel／PDF／プレビュー／印刷へ。
-//   Excel／PDF／印刷は【名前を付けて保存】／【印刷】ダイアログ（ExportDialog）を経由し、チェックした帳票の一覧を出力する。
+//   流れはほかの帳票と同じ「1. 詳細設定 → 2. 出力先 → 3. 印刷／プレビュー」（PrintOutDialog。確認事項「印刷の画面遷移の統一」）。
+//   詳細設定で区分 × 帳票のマトリクスから出力する帳票を選ぶ。Excel／PDF は個別のボタンを置かず、出力先で選ぶ。
 
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
-import { ExportDialog, type ExportKind, type ExportSpec } from './ExportDialog';
-import { Modal } from './Modal';
-import { PreviewModal, type TableData } from './PrintCenter';
-import { ToastView, useToast } from './Toast';
+import type { TableData } from './PrintCenter';
+import { PrintOutDialog } from './PrintOutDialog';
 import { CLOSING_REPORT_GROUPS, CLOSING_REPORT_ROWS } from '../data';
 import { useSession } from '../store/session';
 
@@ -28,10 +26,7 @@ function reportName(col: string): string {
 
 export function CorporatePrintModal({ open, onClose }: Props) {
   const [checked, setChecked] = useState<Set<string>>(new Set());
-  const [exp, setExp] = useState<ExportSpec | null>(null);
-  const [preview, setPreview] = useState(false);
   const s = useSession();
-  const toast = useToast();
   const key = (r: number, c: string) => `${r}:${c}`;
   const toggle = (k: string) => setChecked((s) => { const n = new Set(s); n.has(k) ? n.delete(k) : n.add(k); return n; });
   const toggleGroup = (which: 'required' | 'optional') => {
@@ -46,18 +41,24 @@ export function CorporatePrintModal({ open, onClose }: Props) {
     header: ['帳票名', '区分', '対象期間', '必須'],
     rows: CLOSING_REPORT_ROWS.flatMap((row, r) => cols.filter((c) => checked.has(key(r, c))).map((c) => [reportName(c), row.name, period, row.required.includes(c) ? '必須' : '省略可'])),
   });
-  const out = (kind: ExportKind) => {
-    if (!checked.size) return toast.show('帳票を選択してください');
-    setExp({ kind, title: `決算書・決算附属明細書（${checked.size}帳票）`, fileName: `決算書一括_${s.fiscalYear}`, meta: `法人印刷　${period}`, ...table() });
-  };
   const btn = (primary?: boolean): CSSProperties => ({ padding: '9px 20px', borderRadius: 8, border: primary ? 'none' : '1px solid #cfd8e0', background: primary ? ACCENT : '#fff', color: primary ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
   const th: CSSProperties = { padding: '6px 4px', fontSize: 12, fontWeight: 700, color: '#8290a0', background: '#f6f8fa', borderBottom: '1px solid #eef2f5', textAlign: 'center', whiteSpace: 'nowrap' };
 
   return (
-    <>
-    <Modal open={open} onClose={onClose} width={1120} title={<>法人印刷 <span style={{ fontSize: 14, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>決算書・決算附属明細書　一覧</span></>}>
-      <ToastView msg={toast.msg} />
-      <div style={{ padding: '14px 22px 20px' }}>
+    <PrintOutDialog
+      open={open}
+      onClose={onClose}
+      name="決算書・決算附属明細書 一覧（法人印刷）"
+      accent={ACCENT}
+      width={1120}
+      data={table}
+      fileName={`決算書一括_${s.fiscalYear}`}
+      meta={`法人印刷　${period}`}
+      detailSummary={`選択 ${checked.size} 帳票`}
+      blocked={checked.size ? undefined : '出力する帳票を選んでください（詳細設定の一覧でチェックします）。'}
+      confirm={[['選択した帳票', `${checked.size} 帳票`], ['対象期間', period]]}
+      previewOpts={{ from: `${s.fiscalYear} 4月1日`, to: '3月31日', output: '画面へプレビューする' }}
+      detail={<div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <button type="button" className="btn-outline" onClick={() => toggleGroup('required')} style={btn()}>✓ 必須帳票のON/OFF</button>
           <button type="button" className="btn-outline" onClick={() => toggleGroup('optional')} style={btn()}>✓ 省略可能帳票のON/OFF</button>
@@ -92,19 +93,8 @@ export function CorporatePrintModal({ open, onClose }: Props) {
           </table>
         </div>
         <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 8 }}>青い背景＝必須帳票、白＝省略可能、灰＝その区分では出力対象外</div>
-        <div style={{ fontSize: 12, color: '#5b6773', marginTop: 6 }}>印刷の流れ：① 帳票を選ぶ → ② 「プレビュー」で内容を確認 → ③ 「印刷」または Excel出力／PDF出力（この画面内で完結します）。金額の書式などは各帳票の印刷（詳細設定）と同じ設定が反映されます。</div>
-        <div style={{ display: 'flex', gap: 8, marginTop: 16, alignItems: 'center' }}>
-          <button type="button" className="btn-outline" onClick={() => out('excel')} style={btn()}>Excel出力</button>
-          <button type="button" className="btn-outline" onClick={() => out('pdf')} style={btn()}>PDF出力</button>
-          <div style={{ flex: 1 }} />
-          <button type="button" className="btn-outline" onClick={() => { if (!checked.size) return toast.show('帳票を選択してください'); setPreview(true); }} style={btn()}>プレビュー</button>
-          <button type="button" className="submit-btn" onClick={() => out('print')} style={btn(true)}>印刷</button>
-          <button type="button" className="btn-outline" onClick={onClose} style={btn()}>キャンセル</button>
-        </div>
-      </div>
-    </Modal>
-    <ExportDialog spec={exp} onClose={() => setExp(null)} accent={ACCENT} />
-    <PreviewModal open={preview} onClose={() => setPreview(false)} title={`決算書・決算附属明細書（${checked.size}帳票）`} opts={{ from: `${s.fiscalYear} 4月1日`, to: '3月31日', output: '画面へプレビューする' }} accent={ACCENT} data={preview ? table() : undefined} />
-    </>
+        <div style={{ fontSize: 12, color: '#5b6773', marginTop: 6 }}>金額の書式などは、各帳票の印刷の詳細設定と共通の印刷設定に従います。</div>
+      </div>}
+    />
   );
 }

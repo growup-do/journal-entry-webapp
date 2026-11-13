@@ -14,6 +14,8 @@ import { Tabs } from './ui';
 import { TAX_MODES, setSession, setTaxMode, taxModeUsesTax, useSession, type TaxMode } from '../store/session';
 import { DivisionTreeEditor } from './DivisionTreeEditor';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
+import { PrintOutButton } from './PrintOutDialog';
+import { ImportExportButton } from './ImportExportDialog';
 import { BudgetPage } from './BudgetPage';
 import { AccountSettingsPage, SummaryAutoCompleteTab } from './AccountSettingsPage';
 import { TemplateJournalPage } from './TemplateJournalPage';
@@ -145,14 +147,11 @@ function MasterPage({ variant, accent, label, tabs, title }: { variant: 'form' |
   const filtered = rows.filter((r) => !q || cfg.fields.some((f) => String(r[f.key] ?? '').includes(q)));
   const list = hasOrder ? [...filtered].sort((a, b) => orderOf(a) - orderOf(b)) : filtered;
   const cell = (r: Row, f: Field) => (f.type === 'number' && f.key !== 'rate' && r[f.key] ? Number(r[f.key]) : r[f.key] ?? '');
-  // CSV出力：表示中（検索後）の一覧。見出しは画面の項目名＋「有効」
-  const exportCsv = () => setExp({ kind: 'csv', title: cfg.title, fileName: `${cfg.title}一覧`, meta: `${list.length} 件${q ? `　検索：${q}` : ''}`, header: [...cfg.fields.map((f) => f.label), '有効'], rows: list.map((r) => [...cfg.fields.map((f) => cell(r, f)), r._on === '1' ? 1 : 0]) });
-  // 印刷：取引先・取引先（合算集計用）のそれぞれに置く（確認メモ #221）。表示中（検索後）の一覧を印刷する
+  // エクスポート（CSV）：表示中（検索後）の一覧。見出しは画面の項目名＋「有効」。取込と同じ列なので、そのまま読み込み直せる
+  const listTable = () => ({ header: [...cfg.fields.map((f) => f.label), '有効'], rows: list.map((r) => [...cfg.fields.map((f) => cell(r, f)), r._on === '1' ? 1 : 0]) });
+  const exportCsv = () => setExp({ kind: 'csv', title: cfg.title, fileName: `${cfg.title}一覧`, meta: `${list.length} 件${q ? `　検索：${q}` : ''}`, ...listTable() });
+  // 印刷：取引先・取引先（合算集計用）のそれぞれに置く（確認メモ #221）。表示中（検索後）の一覧を、印刷画面の出力先（プリンター／PDF／Excel／CSV）で出す
   const isVendor = label === '取引先' || label === '取引先（合算集計用）';
-  const printList = () => {
-    if (list.length === 0) return toast.show('印刷する行がありません');
-    setExp({ kind: 'print', title: `${cfg.title}一覧表`, meta: `${label === '取引先' ? `${sess.division}　` : ''}${list.length} 件${q ? `　検索：${q}` : ''}`, header: [...cfg.fields.map((f) => f.label), '有効'], rows: list.map((r) => [...cfg.fields.map((f) => cell(r, f)), r._on === '1' ? '有効' : '無効']) });
-  };
   // 削除：ブラウザー標準の確認ではなく、影響と注意事項を示す確認画面を出す（確認メモ #219）
   const [del, setDel] = useState<Row | null>(null);
   const [delAck, setDelAck] = useState(false);
@@ -220,11 +219,11 @@ function MasterPage({ variant, accent, label, tabs, title }: { variant: 'form' |
   };
   return (
     <Shell variant={variant} title={title ?? displayName(cfg.title)} desc={cfg.desc} actions={<>
-      {/* CSV取込・出力：部門は簡単に変更できない項目のため不要（チャイルド社回答 2026/10/2）。税区分は検討中のため暫定で表示 */}
+      {/* インポート／エクスポート（CSV）：部門は簡単に変更できない項目のため不要（チャイルド社回答 2026/10/2）。税区分は検討中のため暫定で表示 */}
       {label === '税区分' && <ScreenPrintMenu page="税区分" accent={accent} />}
-      {isVendor && <button type="button" className="btn-outline" data-master-print={label} onClick={printList} title={`${cfg.title}の一覧表を印刷します（表示中の ${list.length} 件）`} style={{ ...btn(), display: 'inline-flex', alignItems: 'center', gap: 6 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9V3h12v6" /><rect x="3" y="9" width="18" height="9" rx="2" /><path d="M7 14h10v7H7z" /></svg>印刷</button>}
-      {label !== '部門' && <button type="button" className="btn-outline" onClick={() => setImp({ open: true, name: '', rows: [], byHeader: false, error: '' })} style={btn()}>CSV取込</button>}
-      {label !== '部門' && <button type="button" className="btn-outline" onClick={exportCsv} style={btn()}>CSV出力</button>}
+      {isVendor && <PrintOutButton name={`${cfg.title}一覧表`} accent={accent} data={listTable} meta={`${label === '取引先' ? `${sess.division}　` : ''}${list.length} 件${q ? `　検索：${q}` : ''}`} disabled={list.length === 0} disabledTip="印刷する行がありません" />}
+      {/* インポート／エクスポート：1 つのボタンから開き、画面でどちらかを選ぶ（確認事項「インポート・エクスポート処理の統一」）。インポートは内容を確かめてから取り込む */}
+      {label !== '部門' && <ImportExportButton name={cfg.title} accent={accent} format="CSV" exportDesc={`表示中の ${list.length} 件を CSV ファイルに書き出します（取込と同じ列）。`} onExport={exportCsv} importDesc="CSV ファイルを選ぶと、取り込む内容の確認画面を開きます。" accept=".csv,text/csv" onImport={readFile} onSample={sampleCsv} />}
       <button type="button" className="submit-btn" onClick={() => setEdit(blank())} style={btn(accent, true)}>＋ {cfg.addLabel}</button>
     </>}>
       <ToastView msg={toast.msg} />

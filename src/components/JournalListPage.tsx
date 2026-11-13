@@ -2,7 +2,7 @@
 //   骨格は ReportShell 共通：集計期間（月）→ 絞り込み → 表示切替 → 一覧。
 //   行の操作（証憑／チェック／付箋・▲▼入換・訂正・削除）は RowActions で全一覧共通（依頼書 5.4.4）。
 //   表示切替＝摘要／取引先・区分色・区分名（区分色・区分名は合算区分・親区分で起動したときに有効）。
-//   CSV出力・検索条件・検索合計・貸借の色付けは画面上のボタン／表示（依頼書 5.4.3）。
+//   検索条件・検索合計・貸借の色付けは画面上のボタン／表示（依頼書 5.4.3）。CSV 出力は「印刷 ▾」の日記帳から出力先で選ぶ（確認事項「印刷の画面遷移の統一」）。
 //   旧 伝票メニューの「インポート伝票一括削除」「自動按分伝票一括削除」は右上の「一括削除 ▾」（依頼書 2.3／6.4）。
 //   一括削除は年度内の全件が対象で、取込・按分の実行単位（GUID）ごとに消す（確認メモ #56）。
 
@@ -23,7 +23,7 @@ import { displayName } from '../data';
 import { useVouchers, type Voucher } from '../store/journalStore';
 import { getSession, setSession, useSession } from '../store/session';
 import type { MonthFilter } from '../types';
-import { inPeriod, periodLabel as periodText, periodShort, type Period } from '../lib/period';
+import { inPeriod, periodLabel as periodText, type Period } from '../lib/period';
 
 interface Props {
   variant: 'form' | 'sheet';
@@ -84,7 +84,6 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
     header: ['Seq', '日付', '伝票No', '種別', '借方科目', '貸方科目', '摘要', '取引先', '金額', '区分'],
     rows: rows.map((r) => [r.seq, `令和8年${r.date.replace('/', '月')}日`, r.no, r.kind, r.kari, r.kashi, r.tekiyo, r.gyosha ?? '', r.amount, r.service]) as (string | number)[][],
   };
-  const periodLabel = range ? periodText(range) : month == null ? '令和8年 全期間' : day != null ? `令和8年 ${m}月${day}日` : `令和8年 ${m}月1日〜${m}月末日`;
   /** 複数行の選択（確認メモ #28）：行頭のチェック、Shift＋クリックで範囲、Ctrl／⌘＋クリックで追加・解除 */
   const [sel, setSel] = useState<number[]>([]);
   const [lastIdx, setLastIdx] = useState<number | null>(null);
@@ -114,7 +113,6 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
       returnTo={boot ? { from: boot.from, onBack: () => onNavigate(boot.from), here: `${boot.month}月${boot.day}日の伝票`, hint: '伝票を訂正したら戻り、「検査継続」で再検査します' } : null}
       tools={[
         { label: '検索条件', onClick: () => setSearchOpen(true), primary: true },
-        { label: 'CSV出力', onClick: () => setExp({ kind: 'csv', title, fileName: range ? `日記帳_令和8年${periodShort(range)}` : `日記帳_令和8年${month ?? '全'}月`, meta: `${periodLabel}　${rows.length} 件${filtered ? '（絞り込み中）' : ''}`, ...table }) },
       ]}
       extraTools={<>{selectable && <BulkDeleteMenu open={bulkOpen} onToggle={() => setBulkOpen((o) => !o)} onPick={bulkPick} />}<ScreenPrintMenu page="仕訳一覧" accent={accent} data={table} /></>}
       period={

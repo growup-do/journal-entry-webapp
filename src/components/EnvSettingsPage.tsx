@@ -4,11 +4,11 @@
 //   確認メモ #170・#172・#173・#174・#180：Web 化などで不要になった設定欄（フリガナ検索の無効化／片側だけの内部取引仕訳の許可／特殊摘要のポップアップ／
 //   バックアップ先／繰入金明細の集計方法）はこの画面から削除した。繰入金明細の集計方法は「決算付属明細書設定」の「科目の合わせ方」で切り替える。
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { ToastView, useToast } from './Toast';
 import { DivisionInfoDialog } from './DivisionInfoDialog';
-import { Modal } from './Modal';
+import { ImportExportDialog } from './ImportExportDialog';
 import { Field, Notice, SettingsShell, Tabs, Toggle, btn, card, cardHead, input } from './ui';
 import { DEFAULT_ENV, setSession, useSession, type EnvSettings } from '../store/session';
 import { displayName } from '../data';
@@ -23,7 +23,6 @@ const colorLbl: CSSProperties = { fontSize: 14, display: 'flex', gap: 6, alignIt
 export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'form' | 'sheet'; accent: string; /** 他画面を開く（印刷の詳細設定） */ onNavigate?: (page: string) => void }) {
   const [infoOpen, setInfoOpen] = useState(false);
   const [fileOpen, setFileOpen] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
   const s = useSession();
   const [v, setV] = useState<EnvSettings>(s.env);
   const [tab, setTab] = useState(DIV_TABS[0]);
@@ -44,7 +43,7 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
   /** この画面から移した項目（補正予算の入力方式・参照パネルの初期表示・繰入金明細の集計方法）は、移動先の画面で保存した値を維持する。
    *  片側だけの内部取引仕訳の許可は設定を廃止した（確認メモ #172）ので、常に「許可しない」で保存する */
   const save = () => { setSession((x) => ({ env: { ...v, supplementMode: x.env.supplementMode, wideInitial: x.env.wideInitial, wideMonth: x.env.wideMonth, ledger1Init: x.env.ledger1Init, ledger2Init: x.env.ledger2Init, order: x.env.order, transferWatch: x.env.transferWatch, oneSideInternal: false } })); toast.show(`${displayName('環境設定')}を保存しました（全区分共通の設定はすべての区分に反映されます）`); };
-  /** 設定の保存：現在の環境条件を JSON でダウンロード（既存の .ini に相当） */
+  /** エクスポート：現在の環境条件を JSON でダウンロード（既存の .ini に相当） */
   const saveFile = () => {
     const d = new Date();
     const name = `環境設定_${s.division.split(' ')[0]}_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.json`;
@@ -52,7 +51,7 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
     const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
     setFileOpen(false); toast.show(`${name} を保存しました`);
   };
-  /** 設定の読込：JSON を解析して未保存の下書きへ反映（OK（保存）で確定） */
+  /** インポート：JSON を解析して未保存の下書きへ反映（OK（保存）で確定） */
   const applyLoaded = (obj: unknown, label: string) => {
     const env = (obj && typeof obj === 'object' && 'env' in (obj as Record<string, unknown>)) ? (obj as { env: unknown }).env : obj;
     if (!env || typeof env !== 'object') { toast.show('環境設定ファイルの形式が正しくありません'); return; }
@@ -66,7 +65,6 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
   const onFile = (f: File | undefined) => {
     if (!f) return;
     f.text().then((t) => { try { applyLoaded(JSON.parse(t), f.name); } catch { toast.show('JSON として読み込めませんでした'); } });
-    if (fileRef.current) fileRef.current.value = '';
   };
   const SAMPLE_ENV: EnvSettings = { ...DEFAULT_ENV, confirmGeneral: false, autoCompleteAdd: false, budgetThreshold: 80, thousandsSep: 'カンマ', negativeSign: '▲', negativeColor: '黒', zeroCut: false, colorReports: false, eraGannen: false, onePageRow: true, hideCorpName: true };
   const T = (k: keyof EnvSettings, label: string) => <Toggle on={!!v[k]} onChange={(x) => set({ [k]: x } as Partial<EnvSettings>)} accent={accent} label={label} />;
@@ -74,7 +72,7 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
   return (
     <SettingsShell variant={variant} title={displayName('環境設定')} desc="システムの動作条件を設定します。「全区分共通」（システム全体）と「区分ごと」（起動中の区分のみ）に分けて表示しています。" actions={<>
       <button type="button" className="btn-outline" onClick={() => setInfoOpen(true)} style={btn()}>部門情報の変更</button>
-      <button type="button" className="btn-outline" onClick={() => setFileOpen(true)} style={btn()}>設定の保存／読込</button>
+      <button type="button" className="btn-outline" data-import-export-btn={displayName('環境設定')} onClick={() => setFileOpen(true)} style={btn()}>インポート／エクスポート</button>
       <LoadDivisionSettings accent={accent} kind="動作設定" onDone={(from) => toast.show(`「${from}」の動作設定を読み込みました（未保存：OK（保存）で確定）`)} />
       {onNavigate && <button type="button" className="btn-outline" onClick={() => onNavigate('共通の印刷設定')} style={btn()} data-open-print-settings>印刷の詳細設定（全帳票共通）</button>}
       <button type="button" className="btn-outline" onClick={() => { setV(DEFAULT_ENV); toast.show('初期値に戻しました（未保存）'); }} style={btn()}>初期値に戻す</button>
@@ -82,18 +80,16 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
     </>}>
       <ToastView msg={toast.msg} />
       <DivisionInfoDialog open={infoOpen} onClose={() => setInfoOpen(false)} accent={accent} />
-      <Modal open={fileOpen} onClose={() => setFileOpen(false)} width={520} title={`${displayName('環境設定')}の保存／読込`}>
-        <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
-          <Notice>区分「{s.division}」の環境条件を設定ファイルとして保存し、別の区分・別の端末で読み込めます（既存の「動作設定ファイル（.ini）」に相当。Web版では JSON 形式）。</Notice>
-          <div style={card}><div style={cardHead}>設定の保存</div><div style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 12, fontSize: 14 }}><span style={{ flex: 1, color: '#5b6773' }}>現在設定中（未保存分を含む）の条件をファイルに書き出します。</span><button type="button" onClick={saveFile} style={btn(accent, true)}>保存（ダウンロード）</button></div></div>
-          <div style={card}><div style={cardHead}>設定の読込</div><div style={{ padding: 14, display: 'grid', gap: 10, fontSize: 14 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><span style={{ flex: 1, color: '#5b6773' }}>保存した設定ファイルを選んで読み込みます。読み込んだ内容は「OK（保存）」で確定します。</span><button type="button" onClick={() => fileRef.current?.click()} style={btn(accent)}>ファイルを選択…</button></div>
-            <input ref={fileRef} type="file" accept=".json,application/json" onChange={(e) => onFile(e.target.files?.[0])} style={{ display: 'none' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><span style={{ flex: 1, color: '#9aa5b1' }}>手元にファイルがない場合は、サンプルの設定を読み込んで動作を確認できます。</span><button type="button" onClick={() => applyLoaded(SAMPLE_ENV, 'サンプル設定')} style={btn()}>サンプルを読み込む</button></div>
-            <Notice tone="warn">一度読み込んだ環境条件は元に戻せません（保存前なら「初期値に戻す」または画面の再表示で破棄できます）。</Notice>
-          </div></div>
-        </div>
-      </Modal>
+      {/* インポート／エクスポート：ほかの画面もこの形にそろえた（確認事項「インポート・エクスポート処理の統一」） */}
+      <ImportExportDialog open={fileOpen} onClose={() => setFileOpen(false)} name={displayName('環境設定')} accent={accent} format="JSON"
+        notice={<>区分「{s.division}」の環境条件を設定ファイルとして書き出し、別の区分・別の端末で読み込めます（既存の「動作設定ファイル（.ini）」に相当。Web版では JSON 形式）。</>}
+        exportDesc="現在設定中（未保存分を含む）の条件をファイルに書き出します。"
+        onExport={saveFile}
+        importDesc="書き出した設定ファイルを選んで読み込みます。読み込んだ内容は「OK（保存）」で確定します。"
+        accept=".json,application/json"
+        onImport={onFile}
+        onSample={() => applyLoaded(SAMPLE_ENV, 'サンプル設定')}
+        importWarn="一度読み込んだ環境条件は元に戻せません（保存前なら「初期値に戻す」または画面の再表示で破棄できます）。" />
       <div style={{ padding: 22, display: 'grid', gap: 18 }}>
         <Notice>設定は影響範囲で2つに分けています。<b>全区分共通</b>＝どの区分で起動しても同じ設定、<b>区分ごと</b>＝いま起動している区分だけの設定です。印刷に関わる設定（0データを表示しない・印刷位置・フォント・捺印欄など）は、各帳票の「印刷」画面の詳細設定に集約しました。</Notice>
 

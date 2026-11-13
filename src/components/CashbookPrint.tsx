@@ -1,15 +1,17 @@
 // 小口現金出納帳／預金出納帳の印刷の条件画面（確認メモ #235）
 //   集計内訳表・仕訳伝票：「集計内訳表を印刷する明細を選んでください」。◉集計単位で選ぶ（期間・明細の一覧）／○月で選ぶ（集計した年月）
-//   出納帳印刷：印刷ページ範囲指定／印刷ページの様式／用紙位置調整。［出納帳設定］［Excel出力］／［印刷］［プレビュー］［キャンセル］
-//   印刷・Excel出力は ExportDialog（runExport）、プレビューは PreviewModal に渡す（CashbookPage 側で組み立てる）。
+//   出納帳印刷：印刷ページ範囲指定／印刷ページの様式／用紙位置調整。［出納帳設定］
+//   どちらも共通の印刷の流れ「1. 詳細設定 → 2. 出力先 → 3. 印刷／プレビュー」（PrintSteps）で、Excel 出力は出力先で選ぶ（確認事項「印刷の画面遷移の統一」）。
+//   印刷・ファイル出力は ExportDialog（runExport）、プレビューは PreviewModal に渡す（CashbookPage 側で組み立てる）。
 //   入力のあるモーダルなので、閉じるのは × と「キャンセル」だけ（Esc・外側のクリックでは閉じない）。
 
 import { useEffect, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { Modal } from './Modal';
 import { TD, TH } from './ReportShell';
+import { PrintSteps, type OutKind } from './PrintSteps';
 
-export type PrintRun = 'print' | 'preview' | 'excel';
+export type PrintRun = OutKind | 'preview';
 
 /** 集計した単位（1 回の「集計」で集計した明細のまとまり） */
 export interface AggUnit {
@@ -42,13 +44,13 @@ export function AggPrintDialog({ open, report, units, accent, onRun, onClose }: 
   onRun: (run: PrintRun, unitIds: number[], cond: string) => void;
   onClose: () => void;
 }) {
-  const btn = mkBtn(accent);
+  const [dest, setDest] = useState<OutKind>('print');
   const [mode, setMode] = useState<'unit' | 'month'>('unit');
   const [sel, setSel] = useState<Set<number>>(new Set());
   const [ym, setYm] = useState(FISCAL_YM[0]);
   useEffect(() => {
     if (!open) return;
-    setMode('unit');
+    setMode('unit'); setDest('print');
     // はじめは、いちばん新しい集計を選んでおく
     setSel(new Set(units.length ? [units[units.length - 1].id] : []));
     setYm(units.length ? units[units.length - 1].at : FISCAL_YM[0]);
@@ -62,12 +64,20 @@ export function AggPrintDialog({ open, report, units, accent, onRun, onClose }: 
   const run = (r: PrintRun) => { if (ok) onRun(r, ids, cond); };
   const yms = Array.from(new Set([...FISCAL_YM, ...units.map((u) => u.at)]));
   return (
-    <Modal open={open} onClose={onClose} width={640} title={report}>
-      <div data-agg-print={report} style={{ padding: '14px 22px 18px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, flex: 1 }}>{report}を印刷する明細を選んでください</div>
-          <button type="button" className="btn-outline" disabled={!ok} onClick={() => run('excel')} style={{ ...btn(false, '#1f7a52'), opacity: ok ? 1 : 0.5 }}>Excel出力</button>
-        </div>
+    <Modal open={open} onClose={onClose} width={720} title={`${report}の印刷`}>
+      <div data-agg-print={report}>
+        <PrintSteps
+          accent={accent}
+          detailSummary={ok ? `明細 ${units.filter((u) => ids.includes(u.id)).reduce((a, u) => a + u.count, 0)} 件` : '明細を選んでください'}
+          dest={dest}
+          onDest={setDest}
+          confirm={[['帳票', report], ['印刷する明細', cond]]}
+          blocked={ok ? undefined : '印刷する明細を選んでください。'}
+          onPreview={() => run('preview')}
+          onRun={() => run(dest)}
+          onClose={onClose}
+          detail={<div>
+        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 10 }}>{report}を印刷する明細を選んでください</div>
         <div style={{ ...box, marginBottom: 10 }}>
           <label style={row}><input type="radio" name="agg-print-mode" checked={mode === 'unit'} onChange={() => setMode('unit')} />集計単位で選ぶ</label>
           <div style={{ marginTop: 6, maxHeight: 220, overflow: 'auto', border: '1px solid #e2e8ee', borderRadius: 8, opacity: mode === 'unit' ? 1 : 0.5 }}>
@@ -97,11 +107,8 @@ export function AggPrintDialog({ open, report, units, accent, onRun, onClose }: 
           {mode === 'month' && monthUnits.length === 0 && <div style={{ marginTop: 6, fontSize: 12, color: '#c0392b' }}>{ymText(ym)}に集計した明細はありません。</div>}
           {mode === 'month' && monthUnits.length > 0 && <div style={{ marginTop: 6, fontSize: 12, color: '#5b6773' }}>対象：{monthUnits.length} 回の集計（明細 {monthUnits.reduce((a, u) => a + u.count, 0)} 件）</div>}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
-          <span data-tip={ok ? undefined : '印刷する明細を選ぶと押せます'} style={{ display: 'inline-flex' }}><button type="button" className="submit-btn" disabled={!ok} onClick={() => run('print')} style={{ ...btn(true), opacity: ok ? 1 : 0.5 }}>印刷</button></span>
-          <button type="button" className="btn-outline" disabled={!ok} onClick={() => run('preview')} style={{ ...btn(), opacity: ok ? 1 : 0.5 }}>プレビュー</button>
-          <button type="button" onClick={onClose} style={btn()}>キャンセル</button>
-        </div>
+          </div>}
+        />
       </div>
     </Modal>
   );
@@ -134,13 +141,14 @@ export function LedgerPrintDialog({ open, report, pageCount, accent, onRun, onSe
   onClose: () => void;
 }) {
   const btn = mkBtn(accent);
+  const [dest, setDest] = useState<OutKind>('print');
   const [all, setAll] = useState(true);
   const [from, setFrom] = useState('1');
   const [to, setTo] = useState('1');
   const [style, setStyle] = useState<PageStyle>(PAGE_STYLES[0]);
   const [left, setLeft] = useState('0');
   const [top, setTop] = useState('0');
-  useEffect(() => { if (open) { setAll(true); setFrom('1'); setTo(String(pageCount)); } }, [open, pageCount]);
+  useEffect(() => { if (open) { setAll(true); setFrom('1'); setTo(String(pageCount)); setDest('print'); } }, [open, pageCount]);
   const f = parseInt(from, 10) || 0;
   const t = parseInt(to, 10) || 0;
   const err = all ? '' : f < 1 || t < 1 ? 'ページを入力してください' : f > t ? '開始のページは、終わりのページ以下にしてください' : t > pageCount ? `ページは 1〜${pageCount} の範囲で指定してください` : '';
@@ -150,12 +158,22 @@ export function LedgerPrintDialog({ open, report, pageCount, accent, onRun, onSe
   );
   const Sec = ({ title, children }: { title: string; children: ReactNode }) => <div style={box}><div style={boxHead}>{title}</div>{children}</div>;
   return (
-    <Modal open={open} onClose={onClose} width={840} title="出納帳印刷">
-      <div data-ledger-print style={{ padding: '14px 22px 18px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+    <Modal open={open} onClose={onClose} width={860} title="出納帳印刷">
+      <div data-ledger-print>
+        <PrintSteps
+          accent={accent}
+          detailSummary={err ? err : all ? `すべて（${pageCount} ページ）` : `${f}〜${t} ページ`}
+          dest={dest}
+          onDest={setDest}
+          confirm={[['帳票', report], ['印刷するページ', all ? `すべて（${pageCount} ページ）` : `${f}〜${t} ページ`], ['印刷ページの様式', style], ['用紙位置調整', `左余白 ${parseFloat(left) || 0} ミリ／上余白 ${parseFloat(top) || 0} ミリ`]]}
+          blocked={err || undefined}
+          onPreview={() => run('preview')}
+          onRun={() => run(dest)}
+          onClose={onClose}
+          detail={<div style={{ display: 'grid', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ fontSize: 14, fontWeight: 700, flex: 1 }}>{report}<span style={{ fontSize: 12, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>総ページ数 {pageCount}（「改ページ」の行でページを区切ります）</span></div>
           <button type="button" className="btn-outline" onClick={onSettings} title="印刷する欄・表題・捺印欄などの設定（小口の設定の「印刷設定」）" style={btn()}>出納帳設定</button>
-          <button type="button" className="btn-outline" disabled={!!err} onClick={() => run('excel')} style={{ ...btn(false, '#1f7a52'), opacity: err ? 0.5 : 1 }}>Excel出力</button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 12, alignItems: 'start' }}>
           <div style={{ display: 'grid', gap: 12 }}>
@@ -181,11 +199,8 @@ export function LedgerPrintDialog({ open, report, pageCount, accent, onRun, onSe
             <>{PAGE_STYLES.map((s) => <label key={s} style={row}><input type="radio" name="ledger-style" checked={style === s} onChange={() => setStyle(s)} />{s}</label>)}</>
           ) })}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
-          <button type="button" className="submit-btn" disabled={!!err} onClick={() => run('print')} style={{ ...btn(true), opacity: err ? 0.5 : 1 }}>印刷</button>
-          <button type="button" className="btn-outline" disabled={!!err} onClick={() => run('preview')} style={{ ...btn(), opacity: err ? 0.5 : 1 }}>プレビュー</button>
-          <button type="button" onClick={onClose} style={btn()}>キャンセル</button>
-        </div>
+          </div>}
+        />
       </div>
     </Modal>
   );

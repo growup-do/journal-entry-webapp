@@ -665,7 +665,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
   const approveAllAi = () => { const n = aiPending.length; setRows((rs) => rs.map((r) => (r.ai === 'pending' ? { ...r, ai: 'approved' } : r))); toast.show(`${n} 件を承認しました`); };
 
   // ---- 印刷（確認メモ #235）：集計内訳表・仕訳伝票は印刷する明細（集計単位／月）を選び、出納帳は「出納帳印刷」で範囲・様式・余白を選ぶ。
-  //      印刷・Excel出力は ExportDialog、プレビューは PreviewModal に渡す ----
+  //      印刷・ファイル出力（出力先で選んだ PDF／Excel／CSV）は ExportDialog、プレビューは PreviewModal に渡す ----
   const periodLabel = range ? periodText(range) : month == null ? '令和8年度（全月）' : nyMonth ? `令和9年 ${nyMonth}月（翌年度の予備月）` : month === '決' ? '令和8年度 決算月' : `令和${eraText(eraOf({ month }))}年 ${month}月`;
   const printMeta = `${book}　${periodLabel}`;
   /** 集計内訳表・仕訳伝票に載せる明細。「入金行を伝票（集計内訳表）にする」が無いときは入金行を除く（小口の設定。確認メモ #210） */
@@ -692,11 +692,11 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
     }
     setPrintDlg({ type: 'ledger' });
   };
-  /** 印刷・Excel出力・プレビューへ渡す */
+  /** 印刷・ファイル出力・プレビューへ渡す */
   const sendPrint = (run: PrintRun, o: { title: string; meta: string; pages: SheetPage[]; stamps: string[] | null; margin?: { left: number; top: number }; header: string[] }) => {
     if (run === 'preview') return setPreview({ title: o.title, meta: o.meta, pages: o.pages, stamps: o.stamps, margin: o.margin });
     const stampText = o.stamps ? `　捺印欄：${o.stamps.map((x) => x || '□').join(' ')}` : '';
-    setExportSpec({ kind: run === 'excel' ? 'excel' : 'print', title: o.title, meta: `${o.meta}${run === 'print' ? stampText : ''}`, header: o.header, rows: o.pages.flatMap((p) => p.rows) });
+    setExportSpec({ kind: run, title: o.title, meta: `${o.meta}${run === 'print' ? stampText : ''}`, header: o.header, rows: o.pages.flatMap((p) => p.rows) });
     setPrintDlg(null);
   };
   /** 集計内訳表・仕訳伝票（ids＝選んだ集計の単位、cond＝条件の表示） */

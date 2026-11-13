@@ -19,7 +19,7 @@ import { displayName } from '../data';
 import { useVouchers } from '../store/journalStore';
 import { fusenLabel, getSession, setSession, useSession } from '../store/session';
 import type { MonthFilter } from '../types';
-import { inPeriod, periodLabel as periodText, periodShort, type Period } from '../lib/period';
+import { inPeriod, periodLabel as periodText, type Period } from '../lib/period';
 
 export type LedgerKind = 'account' | 'fund' | 'vendor';
 /** 画面キー（ルーティング・確認メモで使用。表示名は displayName で現行の用語に合わせる） */
@@ -91,10 +91,6 @@ export function LedgerPage({ kind, variant, accent, onNavigate }: Props) {
       : [['', '', '繰越金額', '', '', ...pad, '', '', CARRY], ...lines.map((l) => [l.r.date, l.r.seq, l.other, l.r.tekiyo, l.r.gyosha ?? '', ...(taxCols ? [l.tax, l.taxAmt || ''] : []), l.debit || '', l.credit || '', l.bal]), ['月計', '', '', '', '', ...(taxCols ? ['', sumTax] : []), sumD, sumC, bal]];
     return { header, rows: body };
   };
-  const openExport = (out: 'print' | 'excel') => {
-    const { header, rows: body } = exportTable();
-    setExp({ kind: out, title: `${title}　${target}`, fileName: range ? `${title}_${target}_令和8年${periodShort(range)}` : `${title}_${target}_令和8年${m}月`, meta: `${s.fiscalYear}　${s.division}　${periodStr}`, header, rows: body });
-  };
 
   const stats: { label: string; value: ReactNode; hi?: boolean }[] = kind === 'account'
     ? [{ label: '実績', value: money(sumD - sumC) }]
@@ -111,7 +107,7 @@ export function LedgerPage({ kind, variant, accent, onNavigate }: Props) {
       subtitle={isVendor ? '指定した取引先の取引を日付順に表示します。行の右端の「訂正」「削除」、または行のダブルクリックで伝票を訂正できます。' : '指定した科目の仕訳を日付順に表示し、残高を計算します。行の右端の「訂正」「削除」、または行のダブルクリックで伝票を訂正できます。'}
       returnTo={from ? { from, onBack: () => onNavigate(from), here: `${target}　${m}月` } : null}
       extraTools={<ScreenPrintMenu page={kind === 'vendor' ? '業者元帳' : kind === 'fund' ? '資金元帳' : '勘定元帳'} accent={accent} data={exportTable()} />}
-      tools={[{ label: isVendor ? '取引先検索' : '科目検索', onClick: () => openTargetCombo(TARGET_ID), primary: true }, { label: 'Excel', onClick: () => openExport('excel') }, { label: '再計算', onClick: () => toast.show(`再計算しました（${lines.length} 件　残高 ${moneyText(bal, s.env)}）`) }]}
+      tools={[{ label: isVendor ? '取引先検索' : '科目検索', onClick: () => openTargetCombo(TARGET_ID), primary: true }, { label: '再計算', onClick: () => toast.show(`再計算しました（${lines.length} 件　残高 ${moneyText(bal, s.env)}）`) }]}
       period={
         <>
           <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} range={range} onRange={setRange} />

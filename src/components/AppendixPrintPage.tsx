@@ -2,14 +2,15 @@
 //   印刷メニュー「別紙」の画面。左で別紙を選び、右でその別紙の「設定・編集」と「印刷」を行う。
 //   保守メニューにあった「財産目録設定」「計算書類に対する注記（法人全体用／拠点区分用）」は重複のため、この画面に一本化した。
 //   附属明細書の明細入力・内訳表の合算テーブルも、印刷の準備としてここに置く（科目設定・監視は「決算附属明細書設定」）。
-//   印刷は画面内で完結：基本条件 → 詳細設定 → 出力先 → 印刷／プレビュー（PrintCenter の PrintFlow を利用）。
+//   印刷は画面内で完結：詳細設定 → 出力先 → 印刷／プレビュー（PrintCenter の PrintFlow を利用）。
 //   確認メモ #163：画面上部に「キャンセル」を置く。保存していない変更（注記・明細・財産目録の行設定・合算テーブル）を破棄し、最後に保存した内容へ戻す。
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { runExport } from './ExportDialog';
 import { Modal } from './Modal';
 import { PreviewModal, PrintFlow, type ReportDef, type TableData } from './PrintCenter';
+import { ImportExportButton, ImportExportDialog } from './ImportExportDialog';
 import { NUM, TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
 import { Field, Notice, SettingsShell, Tabs, Toggle, btn, card, cardHead, input, numInput, toInt, yen } from './ui';
@@ -135,8 +136,6 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
   const [load, setLoad] = useState<'inv' | 'note' | null>(null);
   const [ask, setAsk] = useState<{ msg: string; ok: string; run: () => void } | null>(null);
   const [preview, setPreview] = useState<{ title: string; opts: { from: string; to: string; output: string; hideZero?: boolean } } | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const tableRef = useRef<HTMLInputElement>(null);
   /** 最後に保存した内容。「保存」で更新し、「キャンセル」でここへ戻す */
   const draft: Draft = { rows, notes, inv, merge, perPage };
   const [saved, setSaved] = useState<Draft>(() => cloneDraft(draft));
@@ -198,7 +197,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
     }
     setLoad(null);
   };
-  const onFile = (f: File | undefined) => { if (!f) return; f.text().then((t) => { try { applyLoaded(JSON.parse(t), f.name); } catch { toast.show('JSON として読み込めませんでした'); } }); if (fileRef.current) fileRef.current.value = ''; };
+  const onFile = (f: File | undefined) => { if (!f) return; f.text().then((t) => { try { applyLoaded(JSON.parse(t), f.name); } catch { toast.show('JSON として読み込めませんでした'); } }); };
   const loadSample = () => {
     if (load === 'inv') applyLoaded({ rows: { ...INVENTORY_DEFAULT, 流動資産: [...INVENTORY_DEFAULT.流動資産, ['立替金', '職員立替分', '12,000']], 固定負債: [['設備資金借入金', '○○銀行（園舎改修）', '3,000,000']] } }, 'サンプル');
     else applyLoaded({ note: (sheet.id === 'note-base' ? NOTE_BASE_DEFAULT : NOTE_DEFAULT) + '\n7. 担保に供している資産\n　該当なし。\n8. 満期保有目的の債券の内訳並びに帳簿価額、時価及び評価損益\n　該当なし。' }, 'サンプル');
@@ -211,12 +210,11 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
       const lines = t.replace(/^﻿/, '').split(/\r?\n/).filter((l) => l.trim());
       const cells = (l: string) => { const out: string[] = []; let c0 = ''; let q = false; for (let i = 0; i < l.length; i++) { const c = l[i]; if (q) { if (c === '"' && l[i + 1] === '"') { c0 += '"'; i++; } else if (c === '"') q = false; else c0 += c; } else if (c === '"') q = true; else if (c === ',') { out.push(c0); c0 = ''; } else c0 += c; } out.push(c0); return out; };
       const body = lines.map(cells).filter((r) => r[1] && r[0] !== 'No.');
-      if (!body.length) return toast.show('合算テーブルの行が見つかりませんでした（テーブル書出の CSV を選んでください）');
+      if (!body.length) return toast.show('合算テーブルの行が見つかりませんでした（エクスポートした CSV を選んでください）');
       setMerge(body.map((r) => ({ code: r[1], name: r[2] ?? '', formula: r[3] ?? '' })));
       const pp = parseInt(body[0][4] ?? '', 10); if (pp >= 3 && pp <= 10) setPerPage(pp);
       toast.show(`${f.name} から合算テーブルを読み込みました（${body.length} 行）`);
     });
-    if (tableRef.current) tableRef.current.value = '';
   };
   const moveInv = (dir: -1 | 1) => { if (invSel == null) return; const j = invSel + dir; if (j < 0 || j >= invRows.length) return; const n = [...invRows]; [n[invSel], n[j]] = [n[j], n[invSel]]; setInv({ ...inv, [invTab]: n }); setInvSel(j); };
   const setCell = (ri: number, ci: number, v: string) => setRows((d) => ({ ...d, [sheet.id]: (d[sheet.id] ?? []).map((r, i) => (i === ri ? r.map((c, k) => (k === ci ? v : c)) : r)) }));
@@ -267,7 +265,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
           {mode === '印刷' && canPrint ? (
             <div style={{ padding: '14px 22px 22px' }}>
               <div style={{ ...card, overflow: 'visible' }}>
-                <PrintFlow key={sheet.id} report={reportOf(sheet)} accent={accent} data={tableOf(sheet)} lockReport onPreview={(title, opts) => setPreview({ title, opts })} />
+                <PrintFlow key={sheet.id} report={reportOf(sheet)} accent={accent} data={tableOf(sheet)} onPreview={(title, opts) => setPreview({ title, opts })} />
               </div>
             </div>
           ) : (
@@ -283,8 +281,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
                     <button type="button" onClick={() => setTableOpen(true)} style={btn(accent)}>表挿入</button>
                     <button type="button" onClick={() => setTableOpen(true)} style={btn()}>表編集</button>
                     <button type="button" onClick={() => setAsk({ msg: `${sheet.name} の本文と表を既定の内容に戻しますか？`, ok: '既定に戻す', run: () => setNotes((n) => ({ ...n, [sheet.id]: sheet.id === 'note-base' ? NOTE_BASE_DEFAULT : NOTE_DEFAULT })) })} style={btn()}>既定の設定に戻す</button>
-                    <button type="button" onClick={() => setLoad('note')} style={btn()}>設定ファイル読込</button>
-                    <button type="button" onClick={() => saveFile('note')} style={btn()}>設定ファイル保存</button>
+                    <button type="button" data-import-export-btn="注記" onClick={() => setLoad('note')} style={btn()}>インポート／エクスポート</button>
                     <button type="button" onClick={() => setMode('印刷')} style={{ ...btn(accent, true), marginTop: 8 }}>印刷へ進む</button>
                   </div>
                 </div>
@@ -340,7 +337,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
                       <button type="button" onClick={() => { if (invSel != null) { setInv({ ...inv, [invTab]: invRows.filter((_, i) => i !== invSel) }); setInvSel(null); } else toast.show('削除する行を選んでください'); }} style={btn('#c0392b')}>行削除</button>
                       <button type="button" onClick={() => setAsk({ msg: `「${invTab}」の全行を削除しますか？`, ok: '全行削除', run: () => { setInv((v) => ({ ...v, [invTab]: [] })); setInvSel(null); } })} style={btn('#c0392b')}>全行削除</button>
                       <button type="button" onClick={() => setAsk({ msg: '財産目録の行設定を、貸借対照表の科目から作成した既定の内容に戻しますか？', ok: '既定に戻す', run: () => { setInv(cloneInv()); setInvSel(null); } })} style={btn()}>既定に戻す</button>
-                      <button type="button" onClick={() => setLoad('inv')} style={btn()}>設定ファイル読込</button><button type="button" onClick={() => saveFile('inv')} style={btn()}>設定ファイル保存</button>
+                      <button type="button" data-import-export-btn="財産目録の行設定" onClick={() => setLoad('inv')} style={btn()}>インポート／エクスポート</button>
                       <button type="button" onClick={() => setMode('印刷')} style={{ ...btn(accent, true), marginTop: 8 }}>印刷へ進む</button>
                     </div>
                   </div>
@@ -358,7 +355,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
                   <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 14, fontWeight: 700, color: '#8290a0' }}>1ページ中の項目数</span>
                     <button type="button" aria-label="項目数を減らす" onClick={() => setPerPage((p) => Math.max(3, p - 1))} style={btn('#5b6773', false, true)}>▼</button><b style={{ fontVariantNumeric: 'tabular-nums' }}>{perPage}</b><button type="button" aria-label="項目数を増やす" onClick={() => setPerPage((p) => Math.min(10, p + 1))} style={btn('#5b6773', false, true)}>▲</button>
-                    <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}><button type="button" onClick={exportTable} style={btn()}>テーブル書出</button><button type="button" onClick={() => tableRef.current?.click()} style={btn()}>テーブル読込</button><input ref={tableRef} type="file" accept=".csv,text/csv" onChange={(e) => onTableFile(e.target.files?.[0])} style={{ display: 'none' }} /><button type="button" onClick={() => setFmtOpen(true)} style={btn()}>印刷書式</button></span>
+                    <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}><ImportExportButton name="合算テーブル" accent={accent} format="CSV" exportDesc="区分・小計・合計の行と計算式を CSV ファイルに書き出します。" onExport={exportTable} importDesc="書き出した CSV ファイルを選んで、合算テーブルを置き換えます。" accept=".csv,text/csv" onImport={(f) => onTableFile(f)} importWarn="読み込むと、いまの合算テーブルの行は置き換わります。" /><button type="button" onClick={() => setFmtOpen(true)} style={btn()}>印刷書式</button></span>
                   </div>
                   <div style={card}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -389,17 +386,15 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setTableOpen(false)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { setTableOpen(false); toast.show('表を注記に挿入しました'); }} style={btn(accent, true)}>OK</button></div>
         </div>
       </Modal>
-      {/* 設定ファイル読込（財産目録の行設定／注記） */}
-      <Modal open={!!load} onClose={() => setLoad(null)} width={480} title={load === 'inv' ? '設定ファイル読込 ― 財産目録の行設定' : `設定ファイル読込 ― ${sheet.name}`}>
-        <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
-          <Notice>「設定ファイル保存」で書き出した設定ファイル（JSON）を読み込み、現在の内容を置き換えます。読み込んだ内容は画面上部の「保存」で確定します（保存する前なら、画面上部の「キャンセル」で最後に保存した内容に戻せます）。</Notice>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14 }}><span style={{ flex: 1, color: '#5b6773' }}>保存した設定ファイルを選択します。</span><button type="button" onClick={() => fileRef.current?.click()} style={btn(accent)}>ファイルを選択…</button></div>
-          <input ref={fileRef} type="file" accept=".json,application/json" onChange={(e) => onFile(e.target.files?.[0])} style={{ display: 'none' }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14 }}><span style={{ flex: 1, color: '#9aa5b1' }}>手元にファイルがない場合は、サンプルを読み込んで動作を確認できます。</span><button type="button" onClick={loadSample} style={btn()}>サンプルを読み込む</button></div>
-          <Notice tone="warn">「保存」で確定したあとは、読み込む前の内容に戻せません（「既定に戻す」で初期状態には戻せます）。</Notice>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" onClick={() => setLoad(null)} style={btn()}>キャンセル</button></div>
-        </div>
-      </Modal>
+      {/* 財産目録の行設定／注記のインポート／エクスポート（確認事項「インポート・エクスポート処理の統一」） */}
+      <ImportExportDialog open={!!load} onClose={() => setLoad(null)} name={load === 'inv' ? '財産目録の行設定' : sheet.name} accent={accent} format="JSON"
+        exportDesc="いまの内容を設定ファイルに書き出します。"
+        onExport={() => { if (load) saveFile(load); }}
+        importDesc="書き出した設定ファイルを選んで、いまの内容を置き換えます。読み込んだ内容は画面上部の「保存」で確定します。"
+        accept=".json,application/json"
+        onImport={(f) => onFile(f)}
+        onSample={loadSample}
+        importWarn="「保存」で確定したあとは、読み込む前の内容に戻せません（「既定に戻す」で初期状態には戻せます）。" />
       {/* 合算テーブルの印刷書式 */}
       <Modal open={fmtOpen} onClose={() => setFmtOpen(false)} width={520} title="合算テーブル（内訳表）の印刷書式">
         <div style={{ padding: '14px 22px 18px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

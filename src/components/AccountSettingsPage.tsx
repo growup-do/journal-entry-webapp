@@ -7,12 +7,13 @@
 import { Fragment, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { ExplainModal } from './ExplainModal';
-import { ExportDialog, type ExportKind, type ExportSpec } from './ExportDialog';
+import { ExportDialog, type ExportSpec } from './ExportDialog';
+import { PrintOutButton } from './PrintOutDialog';
+import { ImportExportButton } from './ImportExportDialog';
 import { Modal } from './Modal';
-import { NUM, TD, TH } from './ReportShell';
+import { TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
 import { Field, Notice, SelectionBar, SettingsShell, Tabs, Toggle, btn, card, cardHead, input, lbl } from './ui';
-import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { ACCOUNT_META, accountMatches, toKatakana, type AccountMeta } from '../lib/accounts';
 import { ACCOUNTS, SERVICES, SUMMARIES, displayName } from '../data';
 import { useSession } from '../store/session';
@@ -217,7 +218,6 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
   const [clsF, setClsF] = useState<Cls | null>(null);
   const [useF, setUseF] = useState<'使用' | '非使用' | null>(null);
   const [collapsed, setCollapsed] = useState<string[]>([]);
-  const [preview, setPreview] = useState(false);
   const [exp, setExp] = useState<ExportSpec | null>(null);
   const [recalc, setRecalc] = useState<null | number>(null);
   const [use, setUse] = useState<Record<string, boolean>>(() => Object.fromEntries(initRows().flatMap((m) => SERVICES.map((s) => [m.name + '|' + s, !(s.startsWith('005') && m.cls !== '現預金') && m.name !== '立替金' && m.name !== 'その他手当']))));
@@ -394,23 +394,22 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
   };
   const small: CSSProperties = { ...input, padding: '6px 8px', fontSize: 14 };
   const ro: CSSProperties = { ...small, background: '#f5f7f9', color: '#48565f', fontVariantNumeric: 'tabular-nums' };
-  // Excel／ファイル（CSV）／印刷：表示中のタブ（勘定科目／資金科目）の一覧を出力（既存の「貸借科目 Excel 出力」「事業科目 Excel 出力」「ファイル」に相当）
-  const exportList = (kind: ExportKind) => {
-    const cond = [q.trim() && `検索：${q.trim()}`, clsF && `区分：${clsF}`, useF && `${useF}のみ`].filter(Boolean).join('　');
-    setExp({
-      kind, title: fundTab ? '資金科目一覧' : '勘定科目一覧', meta: `${visible.length} 件${cond ? `　${cond}` : ''}`,
-      header: ['項目', '表示コード', '費目', '区分コード', fundTab ? '資金科目' : '科目名', '印刷用科目名称', 'フリガナ', 'A', 'B', 'C', 'D', 'E', 'F', '内部取引', fundTab ? '勘定科目' : '資金科目', 'キー'],
-      rows: visible.map((r) => [r.group, r.code, fundTab ? r.fundHimoku : r.himoku, fundTab ? r.fundKubun : r.kubun, fundTab ? r.fund : r.dispName, r.printName, r.kana, r.a, r.b.split('：')[0], r.c, r.d, r.e.split('：')[0], r.f, r.internal.split('：')[0], fundTab ? r.dispName : r.fund, r.key]),
-    });
-  };
-  // 使用科目設定のファイル出力（CSV）：科目 × 区分の使用可否（1＝使用）
-  const exportUse = (which: 'fund' | 'bs') => {
-    const metas = rows.filter((m) => (which === 'fund' ? m.fund !== '—' && m.fund !== '（支払資金）' : true));
-    setExp({
-      kind: 'csv', title: which === 'fund' ? '資金科目（使用科目設定）' : '貸借・事業科目（使用科目設定）', meta: `${metas.length} 科目 × ${SERVICES.length} 区分`,
+  // 表示中のタブ（勘定科目／資金科目）の一覧。「印刷」から出力先（プリンター／PDF／Excel／CSV）を選んで出す
+  //   （既存の「貸借科目 Excel 出力」「事業科目 Excel 出力」「ファイル」に相当。確認事項「印刷の画面遷移の統一」）
+  const listCond = [q.trim() && `検索：${q.trim()}`, clsF && `区分：${clsF}`, useF && `${useF}のみ`].filter(Boolean).join('　');
+  const listMeta = `${visible.length} 件${listCond ? `　${listCond}` : ''}`;
+  const listData = () => ({
+    header: ['項目', '表示コード', '費目', '区分コード', fundTab ? '資金科目' : '科目名', '印刷用科目名称', 'フリガナ', 'A', 'B', 'C', 'D', 'E', 'F', '内部取引', fundTab ? '勘定科目' : '資金科目', 'キー'],
+    rows: visible.map((r) => [r.group, r.code, fundTab ? r.fundHimoku : r.himoku, fundTab ? r.fundKubun : r.kubun, fundTab ? r.fund : r.dispName, r.printName, r.kana, r.a, r.b.split('：')[0], r.c, r.d, r.e.split('：')[0], r.f, r.internal.split('：')[0], fundTab ? r.dispName : r.fund, r.key]),
+  });
+  // 使用科目設定の出力：科目 × 区分の使用可否（1＝使用）。「印刷」から出力先を選ぶ（既定は CSV）
+  const useMetas = (which: 'fund' | 'bs') => rows.filter((m) => (which === 'fund' ? m.fund !== '—' && m.fund !== '（支払資金）' : true));
+  const useData = (which: 'fund' | 'bs') => {
+    const metas = useMetas(which);
+    return {
       header: ['科目', which === 'fund' ? '資金科目' : '区分', ...SERVICES],
       rows: metas.map((m) => [m.name, which === 'fund' ? m.fund : m.cls, ...SERVICES.map((sv) => (use[m.name + '|' + sv] ? 1 : 0))]),
-    });
+    };
   };
 
   const listTab = tab === '勘定科目' || fundTab;
@@ -423,8 +422,8 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
 
   return (
     <SettingsShell variant={variant} title={displayName('勘定科目')} desc="科目の一覧（項目＝集計上の見出し／科目＝伝票に入力する科目）を縦に大きく表示し、行を選ぶと右側に詳細を表示します。項目か科目かは追加するときに選び（「＋ 項目を追加」「＋ 科目を追加」）、追加した後は変更できません。科目の追加は標準科目にチェックを入れるだけで、コードは自動設定されます。既存の【科目設定】【費目入力】【使用科目設定】に相当します。" actions={<>
-      {/* プレビュー／Excel出力／ファイル（CSV）は「印刷」を押してから選ぶ（確認メモ #84） */}
-      <ScreenPrintMenu accent={accent} actions={[{ label: fundTab ? '資金科目一覧' : '勘定科目一覧', items: [{ name: '印刷', onClick: () => exportList('print') }, { name: 'プレビュー', onClick: () => setPreview(true) }, { name: 'Excel出力', onClick: () => exportList('excel') }, { name: 'ファイル（CSV）', onClick: () => exportList('csv') }] }]} />
+      {/* 出力の形式（プリンター／PDF／Excel／CSV）は「印刷」を押してから「出力先」で選ぶ（確認メモ #84、確認事項「印刷の画面遷移の統一」） */}
+      <PrintOutButton name={fundTab ? '資金科目一覧' : '勘定科目一覧'} accent={accent} data={listData} meta={listMeta} />
       <button type="button" className="btn-outline" onClick={() => setCautionOpen(true)} style={btn()}>注意事項</button>
       <button type="button" className="btn-outline" onClick={() => { if (confirm('仕訳更新を開始します。1年分の全伝票を対象に、勘定科目と資金科目の連動を整理・更新します。途中で中断はできません。よろしいですか？')) runRecalc(); }} style={btn('#b7791f')}>仕訳の再集計</button>
       {listTab && !fundTab && <button type="button" className="btn-outline" onClick={openGroupAdd} style={btn(accent)} data-group-add>＋ 項目を追加</button>}
@@ -692,7 +691,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
               ])}</tbody>
             </table>
           </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}><button type="button" onClick={() => exportUse('fund')} style={btn()}>資金科目ファイル出力</button><button type="button" onClick={() => exportUse('bs')} style={btn()}>貸借・事業科目ファイル出力</button><button type="button" className="submit-btn" onClick={() => toast.show('使用科目設定を保存しました')} style={{ ...btn(accent, true), marginLeft: 'auto' }}>OK</button></div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}><PrintOutButton label="印刷（資金科目）" name="資金科目（使用科目設定）" accent={accent} data={() => useData('fund')} meta={`${useMetas('fund').length} 科目 × ${SERVICES.length} 区分`} defaultDest="csv" /><PrintOutButton label="印刷（貸借・事業科目）" name="貸借・事業科目（使用科目設定）" accent={accent} data={() => useData('bs')} meta={`${useMetas('bs').length} 科目 × ${SERVICES.length} 区分`} defaultDest="csv" /><button type="button" className="submit-btn" onClick={() => toast.show('使用科目設定を保存しました')} style={{ ...btn(accent, true), marginLeft: 'auto' }}>OK</button></div>
         </div>
       )}
 
@@ -899,11 +898,6 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
         )}
       </Modal>
 
-      <Modal open={preview} onClose={() => setPreview(false)} width={760} title="プレビュー（登録されている科目の一覧）">
-        <div style={{ padding: '10px 22px 18px', maxHeight: '70vh', overflow: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}><thead><tr><th style={TH}>コード</th><th style={TH}>科目名</th><th style={TH}>項目</th><th style={TH}>区分</th><th style={TH}>資金科目</th><th style={{ ...TH, textAlign: 'right' }}>キー</th></tr></thead><tbody>{rows.map((r) => <tr key={r.key}><td style={{ ...TD, fontVariantNumeric: 'tabular-nums' }}>{r.code}</td><td style={TD}>{r.dispName}</td><td style={TD}>{r.group}</td><td style={TD}>{r.kind}・{r.cls}</td><td style={TD}>{r.fund}</td><td style={NUM}>{r.key}</td></tr>)}</tbody></table>
-        </div>
-      </Modal>
       <ExplainModal open={cautionOpen} onClose={() => setCautionOpen(false)} accent={accent} title="勘定科目設定の注意事項" source="マニュアル 2.3.4 勘定科目・資金科目の設定／2.2 キーコード" sections={[
         { h: '変更前に必ずご相談ください', body: <>設定されている科目を変更する前に、担当者またはカスタマーセンター（Tel:050-3786-5432）までご相談ください。科目を変更・修正した結果の影響（帳票の計算結果・印刷順・過去伝票の表示）については補償の対象外です。</>},
         { h: '項目と科目', body: <>「項目」は集計上の見出しで、伝票には入力しません。「科目」は伝票に入力する科目で、必ずいずれかの項目に属します。一覧では項目を濃いラベルと太字、科目を字下げして表示しています。</>},
@@ -976,11 +970,7 @@ export function SummaryAutoCompleteTab({ accent }: { accent: string }) {
       <div style={{ display: 'flex', gap: 8 }}>
         <button type="button" onClick={() => { if (!checked.size) return toast.show('削除する候補をチェックしてください'); if (confirm(`${checked.size} 件の候補を削除しますか？`)) { setCands(cands.filter((c) => !checked.has(c))); setChecked(new Set()); } }} style={btn('#c0392b')}>削除</button>
         {/* 旧「前年度のデータをコピー」は廃止し、CSV の取込・出力に置き換え（確認メモ #93） */}
-        <label style={{ ...btn(), display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }} title="CSV（1列目が摘要）またはテキスト（1行1件）を読み込んで候補に追加します" data-summary-import>
-          インポート（CSV）
-          <input type="file" accept=".csv,.txt,text/csv,text/plain" onChange={(e) => { const f = e.target.files?.[0]; if (f) importFile(f); e.target.value = ''; }} style={{ display: 'none' }} />
-        </label>
-        <button type="button" onClick={() => setExp({ kind: 'csv', title: '摘要自動補完候補', fileName: '摘要自動補完候補', meta: `${cands.length} 件`, header: ['摘要'], rows: cands.map((c) => [c]) })} style={btn()} data-summary-export>エクスポート（CSV）</button>
+        <ImportExportButton name="摘要自動補完候補" accent={accent} format="CSV" exportDesc={`候補 ${cands.length} 件を CSV ファイルに書き出します（1列目が摘要）。`} onExport={() => setExp({ kind: 'csv', title: '摘要自動補完候補', fileName: '摘要自動補完候補', meta: `${cands.length} 件`, header: ['摘要'], rows: cands.map((c) => [c]) })} importDesc="CSV（1列目が摘要）またはテキスト（1行1件）を読み込んで、候補に追加します。" accept=".csv,.txt,text/csv,text/plain" onImport={importFile} />
         <button type="button" className="submit-btn" onClick={() => toast.show('追加修正を保存しました')} style={{ ...btn(accent, true), marginLeft: 'auto' }}>追加修正を保存して閉じる</button>
       </div>
       <ToastView msg={toast.msg} />

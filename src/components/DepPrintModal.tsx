@@ -1,15 +1,17 @@
 // 減価償却：帳票印刷の条件画面と詳細設定（確認メモ #251）
 //   現行「減価償却オプションシステム」の印刷条件画面（出力先）と［詳細設定］の内容を、1 つのダイアログにまとめる。
-//   左：その帳票の詳細設定（帳票ごとに項目が違う）／右：出力先と、全帳票に共通のフォント・罫線・印刷位置調整。
+//   流れはほかの帳票と同じ「1. 詳細設定 → 2. 出力先 → 3. 印刷／プレビュー」（PrintSteps。確認事項「印刷の画面遷移の統一」）。
+//   詳細設定の左：その帳票の設定（帳票ごとに項目が違う）／右：全帳票に共通のフォント・罫線・印刷位置調整。
 //   「償却方法の印字設定」は現行のアップデートで追加された項目（固定資産管理台帳（新会計版）と固定資産管理台帳のみ）。
 //   設定は帳票ごとに覚え、次に開いたときも引き継ぐ（実行したときに保存。キャンセルでは保存しない）。
 
 import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { Modal } from './Modal';
+import { PrintSteps, type OutKind } from './PrintSteps';
 
-export const DEP_OUTPUTS = ['プリンターから印刷する', '画面へプレビューする', 'Excelファイル出力'] as const;
-export type DepOutput = (typeof DEP_OUTPUTS)[number];
+/** 実行の種類：出力先（プリンター／PDF／Excel／CSV）またはプレビュー */
+export type DepOutput = OutKind | 'preview';
 export type DepValues = Record<string, string | boolean>;
 
 /** 償却方法の印字設定（確認メモ #251） */
@@ -89,7 +91,7 @@ function defaultsOf(name: string): DepValues {
   return v;
 }
 /** 帳票ごとの設定（開き直しても前回の設定を引き継ぐ） */
-const SAVED = new Map<string, { values: DepValues; output: DepOutput }>();
+const SAVED = new Map<string, { values: DepValues; output: OutKind }>();
 
 const LBL: CSSProperties = { fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 6, display: 'block' };
 const BOX: CSSProperties = { border: '1px solid #e2e8ee', borderRadius: 10, padding: '10px 12px', background: '#fff', minWidth: 0 };
@@ -99,11 +101,10 @@ const ROW: CSSProperties = { display: 'flex', alignItems: 'flex-start', gap: 7, 
 export function DepPrintModal({ name, accent, onRun, onClose }: { name: string; accent: string; onRun: (values: DepValues, output: DepOutput) => void; onClose: () => void }) {
   const saved = SAVED.get(name);
   const [v, setV] = useState<DepValues>(() => ({ ...defaultsOf(name), ...(saved?.values ?? {}) }));
-  const [output, setOutput] = useState<DepOutput>(saved?.output ?? DEP_OUTPUTS[0]);
+  const [output, setOutput] = useState<OutKind>(saved?.output ?? 'print');
   const set = (k: string, x: string | boolean) => setV((s) => ({ ...s, [k]: x }));
   const sections = sectionsOf(name);
-  const run = () => { SAVED.set(name, { values: v, output }); onRun(v, output); };
-  const runLabel = output === DEP_OUTPUTS[1] ? 'プレビュー' : output === DEP_OUTPUTS[2] ? 'Excel出力' : '印刷';
+  const run = (o: DepOutput) => { SAVED.set(name, { values: v, output }); onRun(v, o); };
   const btn = (solid = false): CSSProperties => ({ padding: '8px 16px', borderRadius: 8, border: '1px solid ' + (solid ? accent : '#cfd8e0'), background: solid ? accent : '#fff', color: solid ? '#fff' : '#22303c', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
 
   const box = (key: string, label: string, body: ReactNode, wide?: boolean) => <div key={key} style={{ ...BOX, gridColumn: wide ? '1 / -1' : undefined }}><span style={LBL}>{label}</span>{body}</div>;
@@ -163,15 +164,25 @@ export function DepPrintModal({ name, accent, onRun, onClose }: { name: string; 
 
   return (
     <Modal open onClose={onClose} width={1180} title={`印刷：${name.replace(/\(/g, '（').replace(/\)/g, '）')}`} style={{ maxHeight: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <div data-dep-print style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 14, padding: '12px 22px', overflow: 'hidden' }}>
+      <div data-dep-print style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+        <PrintSteps
+          accent={accent}
+          detailSummary="この帳票だけの設定と、全帳票共通のフォント・罫線・印刷位置"
+          dest={output}
+          onDest={setOutput}
+          confirm={[['帳票', name.replace(/\(/g, '（').replace(/\)/g, '）')], ['タイトル', String(v.title ?? '')], ['フォント・罫線', `各名称 ${v.fName}／項目名 ${v.fItem}／金額 ${v.fAmt}・罫線 ${v.lIn}`], ['印刷位置調整', `上 ${v.offUp} mm／右 ${v.offRight} mm`]].filter(([, x]) => x) as [string, string][]}
+          onPreview={() => run('preview')}
+          onRun={() => run(output)}
+          onClose={onClose}
+          detail={<div style={{ display: 'grid', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 14 }}>
         {/* 左：この帳票の詳細設定 */}
         <div style={{ minHeight: 0, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ fontSize: 14, fontWeight: 700 }}>詳細設定<span style={{ marginLeft: 8, fontSize: 12, fontWeight: 400, color: '#7a8794' }}>この帳票だけの設定です。次に開いたときも引き継ぎます。</span></div>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>この帳票の設定<span style={{ marginLeft: 8, fontSize: 12, fontWeight: 400, color: '#7a8794' }}>この帳票だけの設定です。次に開いたときも引き継ぎます。</span></div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, alignItems: 'start' }}>{sections.map(field)}</div>
         </div>
-        {/* 右：出力先と、全帳票共通のフォント・罫線・印刷位置 */}
+        {/* 右：全帳票共通のフォント・罫線・印刷位置 */}
         <div style={{ minHeight: 0, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {box('out', '出力先', <div style={{ display: 'grid', gap: 5 }}>{DEP_OUTPUTS.map((o) => <label key={o} style={ROW}><input type="radio" name="dep-out" checked={output === o} onChange={() => setOutput(o)} style={{ marginTop: 3 }} />{o}</label>)}</div>)}
           {box('font', 'フォント（ＭＳ ゴシック）', <div style={{ display: 'grid', gap: 6 }}>{sel('fName', SIZES, '各名称')}{sel('fItem', SIZES, '項目名')}{sel('fAmt', SIZES, '金額')}</div>)}
           {box('line', '罫線', <div style={{ display: 'grid', gap: 6 }}>{sel('lIn', LINES, '内部')}{sel('lBranch', LINES, '分岐')}{sel('lOuter', LINES, '外周')}</div>)}
           {box('pos', '印刷位置調整（mm）', (
@@ -183,13 +194,12 @@ export function DepPrintModal({ name, accent, onRun, onClose }: { name: string; 
           ))}
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 22px 16px', borderTop: '1px solid #eef2f5' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <button type="button" className="btn-outline" data-dep-print-reset onClick={() => setV(defaultsOf(name))} style={btn()}>リセット</button>
         <span style={{ fontSize: 12, color: '#7a8794' }}>標準値がセットされます。</span>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          <button type="button" className="btn-outline" onClick={onClose} style={btn()}>キャンセル</button>
-          <button type="button" className="submit-btn" data-dep-print-run onClick={run} style={btn(true)}>{runLabel}</button>
-        </div>
+      </div>
+          </div>}
+        />
       </div>
     </Modal>
   );

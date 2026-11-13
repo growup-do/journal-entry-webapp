@@ -25,11 +25,11 @@ import { Modal } from './Modal';
 import { divisionLabel, flattenDivisions, startKindOf, useSession, type Session } from '../store/session';
 import { LedgerDrawer, useLedgerDrawer } from './LedgerDrawer';
 import { SCREEN_PRINTS, ScreenPrintMenu, type PrintGroup, type PrintItem } from './ScreenPrintMenu';
-import { OUTPUTS, PreviewModal, formEnabled, outputKind, sampleReportData } from './PrintCenter';
+import { PreviewModal, formEnabled, sampleReportData } from './PrintCenter';
+import { PrintSteps, type OutKind } from './PrintSteps';
 import { WAMNET_ITEMS, WamnetDialog, type WamnetItem } from './WamnetDialog';
 import { runExport } from './ExportDialog';
 import { ToastView, useToast } from './Toast';
-import { btn } from './ui';
 
 const PARTS = ['資産の部', '負債の部', '事業活動', '資金の部'];
 /** 表示階層（「就労授産」は不要のため廃止。確認メモ #133） */
@@ -136,12 +136,11 @@ function closingPrints(s: Session): PrintGroup[] {
 /** サンプル：貸借対照表が不一致のときの差額（確認メモ #130。プロトタイプ確認用の値） */
 const BS_GAP = 12_600;
 
-/* ---------------- 帳票一括印刷（月次決算の印刷。現行のダイアログに合わせる。確認メモ #141） ---------------- */
-/** 出力先（現行と同じ 3 つ）：プリンターから印刷する（既定）／画面へプレビューする／Excelファイル出力 */
-const BATCH_OUTPUTS = [OUTPUTS[0], OUTPUTS[1], OUTPUTS[3]];
+/* ---------------- 帳票一括印刷（月次決算の印刷。確認メモ #141） ----------------
+ *  流れはほかの帳票と同じ「1. 詳細設定（年月指定）→ 2. 出力先 → 3. 印刷／プレビュー」（PrintSteps。確認事項「印刷の画面遷移の統一」） */
 /** 年月（令和 y 年 m 月）。m は 1〜12、または「決」（決算月） */
 interface YM { y: string; m: string }
-interface BatchOpts { from: string; to: string; output: string }
+interface BatchOpts { from: string; to: string; out: OutKind | 'preview' }
 /** 会計年度（例：'令和8年度' → 8） */
 const eraYearOf = (fiscalYear: string) => parseInt(fiscalYear.replace(/[^0-9]/g, ''), 10) || 8;
 /** 月ボタン（4〜3・決）→ 年月。1〜3月と「決」は翌年 */
@@ -152,6 +151,8 @@ function ymOrder(v: YM): number | null {
   const m = v.m === '決' ? 3.5 : /^\d+$/.test(v.m) ? parseInt(v.m, 10) : NaN;
   return y >= 1 && m >= 1 && m <= 12 ? y * 12 + m : null;
 }
+/** 年月の短い表記（確認表・要約用） */
+const ymText = (v: YM) => `令和${v.y || '?'}年${v.m === '決' ? '決算月' : `${v.m || '?'}月`}`;
 /** 期間の表記（開始は月初、終了は月末。「決」は 3月） */
 function ymDay(v: YM, end: boolean): string {
   const m = v.m === '決' ? '3' : String(parseInt(v.m, 10));
@@ -180,36 +181,42 @@ function BatchPrintForm({ item, fy, init, accent, onCancel, onRun }: { item: Pri
   const [to, setTo] = useState<YM>(() => ymOf(fy, init[1]));
   /** 月ボタンを次に押したときに決まるほう（1回目＝開始、2回目＝終了） */
   const [next, setNext] = useState<'開始' | '終了'>('開始');
-  const [output, setOutput] = useState(BATCH_OUTPUTS[0]);
-  const [err, setErr] = useState('');
+  const [dest, setDest] = useState<OutKind>('print');
   const fo = ymOrder(from), too = ymOrder(to);
+  const err = fo == null || too == null ? `${fo == null ? '開始年月' : '終了年月'}を正しく入力してください（年は数字、月は 1〜12 または「決」）` : fo > too ? '終了年月は、開始年月と同じか後の年月にしてください' : '';
   const pick = (m: string) => {
     const v = ymOf(fy, m);
-    setErr('');
     // 1回目：開始（終了も同じ月にして単月の指定にする）
     if (next === '開始') { setFrom(v); setTo(v); setNext('終了'); return; }
     // 2回目：終了。開始より前の月を押したときは、開始と終了を入れ替える
     if (fo != null && (ymOrder(v) ?? 0) < fo) { setTo(from); setFrom(v); } else setTo(v);
     setNext('開始');
   };
-  const run = () => {
-    if (fo == null || too == null) { setErr(`${fo == null ? '開始年月' : '終了年月'}を正しく入力してください（年は数字、月は 1〜12 または「決」）`); return; }
-    if (fo > too) { setErr('終了年月は、開始年月と同じか後の年月にしてください'); return; }
-    onRun({ from: ymDay(from, false), to: ymDay(to, true), output });
-  };
+  const run = (out: OutKind | 'preview') => { if (!err) onRun({ from: ymDay(from, false), to: ymDay(to, true), out }); };
   const head: CSSProperties = { fontSize: 14, fontWeight: 700, color: '#48565f' };
   const ymRow = (label: string, key: 'from' | 'to', v: YM, set: (x: YM) => void) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14 }}>
       <span style={{ width: 76, fontWeight: 700, color: '#48565f' }}>{label}</span>
       <span>令和</span>
-      <YmInput value={v.y} onChange={(y) => { setErr(''); set({ ...v, y }); }} label={`${label}の年`} name={`${key}-y`} />
+      <YmInput value={v.y} onChange={(y) => { set({ ...v, y }); }} label={`${label}の年`} name={`${key}-y`} />
       <span>年</span>
-      <YmInput value={v.m} onChange={(m) => { setErr(''); set({ ...v, m }); }} month label={`${label}の月`} name={`${key}-m`} />
+      <YmInput value={v.m} onChange={(m) => { set({ ...v, m }); }} month label={`${label}の月`} name={`${key}-m`} />
       <span>月</span>
     </div>
   );
   return (
-    <div data-batch-print style={{ padding: '14px 22px 18px', display: 'grid', gap: 14 }}>
+    <div data-batch-print>
+      <PrintSteps
+        accent={accent}
+        detailSummary={err ? '年月を確かめてください' : `${ymText(from)}〜${ymText(to)}`}
+        dest={dest}
+        onDest={setDest}
+        confirm={[['帳票', item.name], ['年月', `${ymText(from)} 〜 ${ymText(to)}`]]}
+        blocked={err || undefined}
+        onPreview={() => run('preview')}
+        onRun={() => run(dest)}
+        onClose={onCancel}
+        detail={<div style={{ display: 'grid', gap: 14 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '8px 12px', borderRadius: 8, background: '#f6f8fa', border: '1px solid #e2e8ee', fontSize: 14 }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', flex: 'none' }}>印刷する帳票</span>
         <span data-batch-report style={{ fontWeight: 700 }}>{item.name}</span>
@@ -230,19 +237,9 @@ function BatchPrintForm({ item, fy, init, accent, onCancel, onRun }: { item: Pri
         {ymRow('終了年月', 'to', to, setTo)}
         <div data-batch-next={next} style={{ fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>月のボタンは、1回目に押した月が開始年月、2回目に押した月が終了年月になります（次に押す月：<b style={{ color: accent }}>{next}年月</b>）。入力欄でも直せます。</div>
       </div>
-      <fieldset data-batch-output style={{ margin: 0, padding: '8px 14px 12px', border: '1px solid #cfd8e0', borderRadius: 8, display: 'grid', gap: 8, justifyItems: 'start' }}>
-        <legend style={{ ...head, padding: '0 6px' }}>出力先（印刷）の指定</legend>
-        {BATCH_OUTPUTS.map((o) => (
-          <label key={o} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, cursor: 'pointer' }}>
-            <input type="radio" name="batch-output" checked={output === o} onChange={() => setOutput(o)} />{o}
-          </label>
-        ))}
-      </fieldset>
       {err && <div data-batch-error role="alert" style={{ fontSize: 14, fontWeight: 700, color: '#c0392b' }}>{err}</div>}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-        <button type="button" data-action="キャンセル" onClick={onCancel} style={btn('#5b6773')}>キャンセル</button>
-        <button type="button" data-action="印刷" onClick={run} style={{ ...btn(accent, true), minWidth: 96 }}>印刷</button>
-      </div>
+        </div>}
+      />
     </div>
   );
 }
@@ -253,20 +250,19 @@ function BatchPrintDialog({ item, onClose, accent, fy, init }: { item: PrintItem
   const [preview, setPreview] = useState<{ title: string; opts: BatchOpts } | null>(null);
   const run = (opts: BatchOpts) => {
     if (!item) return;
-    const kind = outputKind(opts.output);
-    // 画面へプレビューする：ダイアログは開いたまま、手前にプレビューを重ねる（ほかの画面の印刷と同じ）
-    if (!kind) { setPreview({ title: item.name, opts }); return; }
-    // プリンターから印刷する／Excelファイル出力：出力して閉じる（帳票の中身はサンプル表）
-    toast.show(runExport({ kind, title: item.name, meta: `（自）${opts.from}　（至）${opts.to}`, ...sampleReportData(item.name) }));
+    // プレビュー：ダイアログは開いたまま、手前にプレビューを重ねる（ほかの画面の印刷と同じ）
+    if (opts.out === 'preview') { setPreview({ title: item.name, opts }); return; }
+    // プリンター／PDF／Excel／CSV：出力して閉じる（帳票の中身はサンプル表）
+    toast.show(runExport({ kind: opts.out, title: item.name, meta: `（自）${opts.from}　（至）${opts.to}`, ...sampleReportData(item.name) }));
     onClose();
   };
   return (
     <>
       <ToastView msg={toast.msg} />
-      <Modal open={!!item} onClose={onClose} width={560} title="帳票一括印刷">
+      <Modal open={!!item} onClose={onClose} width={720} title="帳票一括印刷">
         {item && <BatchPrintForm item={item} fy={fy} init={init} accent={accent} onCancel={onClose} onRun={run} />}
       </Modal>
-      <PreviewModal open={!!preview} onClose={() => setPreview(null)} title={preview?.title ?? ''} opts={preview?.opts} accent={accent} data={preview ? sampleReportData(preview.title) : undefined} />
+      <PreviewModal open={!!preview} onClose={() => setPreview(null)} title={preview?.title ?? ''} opts={preview ? { from: preview.opts.from, to: preview.opts.to, output: '画面へプレビューする' } : undefined} accent={accent} data={preview ? sampleReportData(preview.title) : undefined} />
     </>
   );
 }

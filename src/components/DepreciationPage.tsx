@@ -12,7 +12,9 @@ import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
 import { ExportDialog } from './ExportDialog';
-import { DEP_OUTPUTS, DepPrintModal, printMethod, type DepValues } from './DepPrintModal';
+import { PrintOutButton } from './PrintOutDialog';
+import { DepPrintModal, printMethod, type DepValues } from './DepPrintModal';
+import { PreviewModal } from './PrintCenter';
 import type { ExportSpec } from './ExportDialog';
 import { Notice, SelectionBar, btn as uiBtn } from './ui';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
@@ -561,6 +563,7 @@ export function DepreciationPage({ variant, accent }: Props) {
   const addLog = (kind: LogRow['kind'], code: string, target: string, action: string) => setLogs((ls) => [...ls, { time: stamp(), kind, code, target, action, user: USER }]);
   // 帳票の印刷は、まず条件画面（出力先と詳細設定）を開く（確認メモ #251）
   const [printReq, setPrintReq] = useState<{ name: string; single?: Asset } | null>(null);
+  const [depPreview, setDepPreview] = useState<{ title: string; meta?: string; header: string[]; rows: (string | number)[][] } | null>(null);
   const openReport = (name: string, single?: Asset) => setPrintReq({ name, single });
   const openLog = (kind: LogRow['kind'], code?: string) => { setLogTab(kind); setLogOpen({ open: true, code, kind }); };
 
@@ -785,7 +788,7 @@ export function DepreciationPage({ variant, accent }: Props) {
               </table>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 10, justifyContent: 'flex-end' }}>
-              <button type="button" className="btn-outline" onClick={() => setExportSpec({ kind: 'csv', title: `操作ログ_${logTab}`, header: ['日時', '種別', 'コード', '対象', '操作', '担当者'], rows: logRows.map((l) => [l.time, l.kind, l.code, l.target, l.action, l.user]) })} style={btn()}>CSV出力</button>
+              <PrintOutButton name={`操作ログ_${logTab}`} accent={accent} defaultDest="csv" data={() => ({ header: ['日時', '種別', 'コード', '対象', '操作', '担当者'], rows: logRows.map((l) => [l.time, l.kind, l.code, l.target, l.action, l.user]) })} />
               <button type="button" onClick={() => setLogOpen({ open: false })} style={btn()}>閉じる</button>
             </div>
           </div>
@@ -826,7 +829,9 @@ export function DepreciationPage({ variant, accent }: Props) {
       <ImageModal open={!!imgTarget} title={imgTarget?.title ?? ''} src={imgTarget ? images[imgTarget.key] : undefined} accent={accent} toast={toast.show} onClose={() => setImgTarget(null)} onChange={(src) => { if (!imgTarget) return; setImages((m) => { const n = { ...m }; if (src) n[imgTarget.key] = src; else delete n[imgTarget.key]; return n; }); }} />
 
       {/* 印刷／ファイル出力 */}
-      {printReq && <DepPrintModal key={printReq.name} name={printReq.name} accent={accent} onClose={() => setPrintReq(null)} onRun={(opts, output) => { const spec = buildReport(printReq.name, { assets, equips, disposals, logs, single: printReq.single, opts }); setPrintReq(null); setExportSpec({ ...spec, kind: output === DEP_OUTPUTS[2] ? 'excel' : 'print', meta: (spec.meta ?? '') + (output === DEP_OUTPUTS[1] ? '　（画面へプレビュー）' : '') }); }} />}
+      {printReq && <DepPrintModal key={printReq.name} name={printReq.name} accent={accent} onClose={() => setPrintReq(null)} onRun={(opts, output) => { const spec = buildReport(printReq.name, { assets, equips, disposals, logs, single: printReq.single, opts }); if (output === 'preview') { setDepPreview({ title: spec.title, meta: spec.meta, header: spec.header ?? [], rows: spec.rows ?? [] }); return; } setPrintReq(null); setExportSpec({ ...spec, kind: output }); }} />}
+      {/* 印刷のプレビュー（印刷画面は閉じずに上に重ねる） */}
+      <PreviewModal open={!!depPreview} onClose={() => setDepPreview(null)} title={depPreview?.title ?? ''} accent={accent} pages={1} data={depPreview ? { header: depPreview.header, rows: depPreview.rows } : undefined} />
       <ExportDialog spec={exportSpec} onClose={() => setExportSpec(null)} accent={accent} />
     </main>
   );

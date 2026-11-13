@@ -1,5 +1,6 @@
 // 帳票の印刷（提案C／依頼書 5.1.1・5.5.1・6.3・6.5）
-//   印刷の流れ「帳票選択 → 基本条件（期間・区分）→ 詳細設定 → 出力先 → 印刷／プレビュー」を、1つのダイアログ（または画面内パネル）で完結させる。
+//   印刷の流れは「1. 詳細設定 → 2. 出力先 → 3. 印刷／プレビュー」に統一（確認事項「印刷の画面遷移の統一」。枠は PrintSteps と共通）。
+//   帳票選択は印刷画面に入れない。帳票は印刷画面を開く前（各画面の「印刷 ▾」、帳票の印刷の一覧）で決める。期間・区分は詳細設定の先頭に置く。
 //   詳細設定は影響範囲で 3 つに分けて表示する：
 //     ① この帳票のみの設定（帳票個別）　② 全帳票共通の設定（共通の印刷設定。その場で変更可）　③ 動作環境から引き継ぐ設定（全区分共通／区分ごと。確認のみ）
 //   各帳票画面には PrintButton を置き、画面内から同じ流れを開く（5.1.1）。
@@ -14,6 +15,8 @@ import { ToastView, useToast } from './Toast';
 import { Field, Notice, SettingsShell, Toggle, btn, card, cardHead, input, lbl, numInput } from './ui';
 import { ExportDialog, runExport, type ExportKind, type ExportSpec } from './ExportDialog';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
+import { PrintSteps, type OutKind } from './PrintSteps';
+import { PrintOutDialog } from './PrintOutDialog';
 import { LoadDivisionSettings } from './DivisionSettingsLoad';
 import { WAMNET_ITEMS, WamnetDialog, type WamnetItem } from './WamnetDialog';
 import { ACCOUNT_META } from '../lib/accounts';
@@ -96,8 +99,6 @@ export function ScopeBlock({ kind, title, desc, right, children, toggle }: { kin
       ) : (
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', background: c.bg, flexWrap: 'wrap' }}>
         {head}
-        <b style={{ fontSize: 14 }}>{title}</b>
-        {desc && <span style={{ fontSize: 12, color: '#5b6773' }}>{desc}</span>}
       </div>
       )}
       <div style={{ padding: 12 }}>{children}</div>
@@ -179,13 +180,9 @@ export function findReport(name: string): ReportDef {
 }
 
 /* ---------------- 印刷の流れ（1つのパネルで完結） ---------------- */
-const FLOW_STEPS = ['帳票選択', '基本条件', '詳細設定', '出力先', '印刷／プレビュー'];
-const DESTS: { out: string; label: string; desc: string; action: string }[] = [
-  { out: OUTPUTS[0], label: 'プリンター', desc: '用紙に印刷します', action: '印刷' },
-  { out: OUTPUTS[4], label: 'PDF', desc: 'PDF ファイルとして保存します', action: 'PDFで保存' },
-  { out: OUTPUTS[3], label: 'Excel', desc: 'Excel ファイルとして保存します', action: 'Excelで保存' },
-  { out: OUTPUTS[2], label: 'CSV', desc: 'エクセル互換（カンマ区切り）で保存します', action: 'CSVで保存' },
-];
+/** 出力先（PrintSteps）と、帳票ごとに覚えておく出力の文言（OUTPUTS）の対応 */
+const OUT_OF: Record<OutKind, string> = { print: OUTPUTS[0], pdf: OUTPUTS[4], excel: OUTPUTS[3], csv: OUTPUTS[2] };
+const kindOfOut = (o: string): OutKind => (o === OUTPUTS[4] ? 'pdf' : o === OUTPUTS[3] ? 'excel' : o === OUTPUTS[2] ? 'csv' : 'print');
 const DEPTHS = ['大区分まで印刷', '中区分まで印刷', '小区分まで印刷', '細区分まで印刷', '細々区分まで印刷', '就労授産まで印刷'];
 const FONTS = ['Noto Sans JP 9pt', 'Noto Sans JP 10pt', 'Noto Sans JP 11pt', 'Noto Serif JP 10pt', 'ＭＳ 明朝 10pt', 'ＭＳ ゴシック 10pt'];
 /** 備考・摘要設定を保持する単位（依頼書 3.2：1つには統合しない） */
@@ -225,16 +222,12 @@ export interface PrintFlowProps {
   onPreview: (title: string, opts: { from: string; to: string; output: string; hideZero?: boolean }) => void;
   /** キャンセル／出力完了で閉じる（画面内パネルでは省略可） */
   onClose?: () => void;
-  /** 帳票を固定する（別紙など、画面で帳票が決まっている場合） */
-  lockReport?: boolean;
-  onReportChange?: (r: ReportDef) => void;
 }
 
-export function PrintFlow({ report, accent, data, onPreview, onClose, lockReport, onReportChange }: PrintFlowProps) {
+export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlowProps) {
   const s = useSession();
   const toast = useToast();
   const fy = eraYear(s.fiscalYear);
-  const [step, setStep] = useState(1);
   const [p, setP] = useState<FlowPrefs>(() => PREFS.get(report.id) ?? defaultPrefs(report, fy, s.print));
   const [exp, setExp] = useState<ExportSpec | null>(null);
   const [commonOpen, setCommonOpen] = useState(false);
@@ -247,7 +240,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose, lockReport
   const changed = (Object.keys(pr) as (keyof PrintCommon)[]).filter((k) => k !== 'unitRemarks' && JSON.stringify(pr[k]) !== JSON.stringify(snap[k])).length;
   const kind = startKindOf(s);
   const myUnit = remarkUnitOf(s);
-  const dest = DESTS.find((d) => d.out === p.output) ?? DESTS[0];
+  const destKind = kindOfOut(p.output);
   const detailItems = report.detail.filter((d) => !/0データ|印刷位置|行の間隔|ページ番号|捺印欄|共通の印刷設定/.test(d));
   const onCount = detailItems.filter((d) => p.detail[d]).length;
 
@@ -269,59 +262,28 @@ export function PrintFlow({ report, accent, data, onPreview, onClose, lockReport
 
   const chip = (on: boolean): CSSProperties => ({ minWidth: 30, height: 26, padding: '0 8px', borderRadius: 6, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', border: '1px solid ' + (on ? accent : '#d3dbe3') });
   const radio = (on: boolean): CSSProperties => ({ display: 'flex', gap: 6, alignItems: 'center', padding: '5px 8px', borderRadius: 8, background: on ? '#eef2f6' : 'transparent', fontSize: 14, cursor: 'pointer' });
-  const summary = [
-    `${report.name}`,
-    `${p.from}〜${p.to}`,
-    `この帳票のみ ${onCount + (p.zeroHide ? 1 : 0)} 項目${changed ? `／共通 ${changed} 項目を変更` : ''}`,
-    dest.label,
-    '',
-  ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       <ToastView msg={toast.msg} />
-      {/* 手順の表示（クリックで移動できる） */}
-      <div style={{ display: 'flex', gap: 0, padding: '12px 18px 0', flexWrap: 'wrap' }}>
-        {FLOW_STEPS.map((label, i) => {
-          const on = i === step, done = i < step;
-          return (
-            <button key={label} type="button" onClick={() => setStep(i)} aria-current={on ? 'step' : undefined} style={{ flex: '1 1 120px', minWidth: 0, textAlign: 'left', padding: '8px 10px 9px', border: 'none', borderBottom: '3px solid ' + (on ? accent : done ? '#b9c6d2' : '#e2e8ee'), background: on ? '#f6f8fa' : 'transparent', cursor: 'pointer', fontFamily: 'inherit' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 20, height: 20, borderRadius: '50%', background: on ? accent : done ? '#8a97a5' : '#e2e8ee', color: on || done ? '#fff' : '#8290a0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, flex: 'none' }}>{i + 1}</span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: on ? '#22303c' : '#5b6773', whiteSpace: 'nowrap' }}>{label}</span>
-              </span>
-              <span style={{ display: 'block', fontSize: 12, color: '#8290a0', marginTop: 3, paddingLeft: 26, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minHeight: 15 }}>{summary[i]}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      <div style={{ padding: '16px 18px 4px', display: 'grid', gap: 14 }}>
-        {step === 0 && (
-          lockReport || !onReportChange ? (
-            <div style={{ display: 'grid', gap: 10 }}>
-              <div style={{ ...card, padding: '12px 14px', borderColor: accent, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ minWidth: 0, flex: 1 }}><div style={{ fontSize: 14, fontWeight: 700 }}>{report.name}</div><div style={{ fontSize: 12, color: '#8290a0', marginTop: 2 }}>{report.cat}</div></div>
-                <span style={{ fontSize: 12, fontWeight: 700, color: accent }}>印刷する帳票</span>
-              </div>
-              <Notice>表示中の画面の帳票を印刷します。ほかの帳票は、それぞれの帳票の画面にある「印刷」から印刷します。</Notice>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gap: 8 }}>
-              <span style={lbl}>印刷する帳票（{report.cat}）</span>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 6 }}>
-                {(REPORTS.some((r) => r.cat === report.cat) ? REPORTS.filter((r) => r.cat === report.cat) : [report]).map((r) => {
-                  const on = r.id === report.id;
-                  return <label key={r.id} style={{ ...card, padding: '9px 12px', display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer', borderColor: on ? accent : '#e2e8ee', background: on ? '#f6f9fc' : '#fff' }}><input type="radio" checked={on} onChange={() => onReportChange(r)} style={{ marginTop: 3 }} /><span style={{ minWidth: 0 }}><span style={{ display: 'block', fontSize: 14, fontWeight: 700 }}>{r.name}</span>{r.note && <span style={{ display: 'block', fontSize: 12, color: '#8290a0' }}>{r.note}</span>}</span></label>;
-                })}
-              </div>
-              <div style={{ fontSize: 12, color: '#8290a0' }}>ほかの分類の帳票は「{displayName('印刷センター')}」の一覧、または各帳票の画面から選びます。</div>
-            </div>
-          )
-        )}
-
-        {step === 1 && (
-          <>
+      <PrintSteps
+        accent={accent}
+        detailSummary={`${p.from}〜${p.to}／この帳票のみ ${onCount + (p.zeroHide ? 1 : 0)} 項目${changed ? `／共通 ${changed} 項目を変更` : ''}`}
+        dest={destKind}
+        onDest={(k) => set({ output: OUT_OF[k] })}
+        onPreview={preview}
+        onRun={run}
+        onClose={onClose}
+        confirm={[
+          ['帳票', report.name],
+          ['期間', `${p.from} 〜 ${p.to}${usesDepth(report) ? `（${p.range}）` : ''}`],
+          ['区分', `${s.division}${kind !== '入力区分' ? `（${p.target === '起動中の区分' ? '合計で印刷' : '構成する区分ごとに印刷'}）` : ''}`],
+          ['この帳票のみの設定', `0データ：${p.zeroHide ? '表示しない' : '表示する'}／印刷項目 ${onCount} 件を有効${usesDepth(report) ? `／印刷範囲：${p.depthOwn ? p.depth : '共通の設定に従う'}` : ''}${usesRemark(report) ? `／備考：${myUnit}${pr.unitRemarks[myUnit] ? '' : '（未入力）'}` : ''}`],
+          ['全帳票共通の設定', `${pr.depth}・${pr.lineGap}・${pr.fontName}${changed ? `（今回 ${changed} 項目を変更）` : ''}`],
+        ]}
+        detail={<>
+          <ScopeBlock title="基本条件" desc="印刷する期間と区分です。">
+            <div data-print-basic style={{ display: 'grid', gap: 14 }}>
             <div>
               <span style={lbl}>{report.annual ? '期間（年次の帳票のため、会計年度の期首〜期末）' : '期間（月のボタンでも指定できます。複数選ぶと最初の月〜最後の月）'}</span>
               {!report.annual && <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>{FISCAL_MONTHS.map((m) => <button key={m} type="button" onClick={() => toggleMonth(m)} style={chip(p.months.includes(m))}>{m}</button>)}</div>}
@@ -356,11 +318,8 @@ export function PrintFlow({ report, accent, data, onPreview, onClose, lockReport
             {usesDepth(report) && (
               <div><span style={lbl}>範囲指定の種類</span><div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>{['範囲指定の合計を印刷', '範囲指定の月を連続で印刷'].map((o) => <label key={o} style={radio(p.range === o)}><input type="radio" checked={p.range === o} onChange={() => set({ range: o })} />{o}</label>)}</div></div>
             )}
-          </>
-        )}
-
-        {step === 2 && (
-          <>
+            </div>
+          </ScopeBlock>
             <ScopeBlock kind="帳票個別" title="この帳票のみの設定" desc={`「${report.name}」の印刷だけに反映されます。ほかの帳票には影響しません。`}>
               <div style={{ display: 'grid', gap: 12 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
@@ -451,52 +410,8 @@ export function PrintFlow({ report, accent, data, onPreview, onClose, lockReport
             <ScopeBlock title="動作環境から引き継ぐ設定" desc="画面表示と印刷の両方に関わるため動作環境に残した設定です（ここでは確認のみ。区分ごと／全区分共通の別を表示）。">
               <EnvPrintSummary env={s.env} division={s.division} />
             </ScopeBlock>
-          </>
-        )}
-
-        {step === 3 && (
-          <div style={{ display: 'grid', gap: 10 }}>
-            <span style={lbl}>出力先</span>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
-              {DESTS.map((d) => {
-                const on = p.output === d.out;
-                return <label key={d.out} style={{ ...card, padding: '12px 14px', cursor: 'pointer', borderColor: on ? accent : '#e2e8ee', background: on ? '#f6f9fc' : '#fff', display: 'flex', gap: 8, alignItems: 'flex-start' }}><input type="radio" name="print-dest" checked={on} onChange={() => set({ output: d.out })} style={{ marginTop: 3 }} /><span><span style={{ display: 'block', fontSize: 14, fontWeight: 700 }}>{d.label}</span><span style={{ display: 'block', fontSize: 12, color: '#8290a0', marginTop: 2 }}>{d.desc}</span></span></label>;
-              })}
-            </div>
-            <div style={{ fontSize: 12, color: '#8290a0' }}>印刷前に内容を確かめるときは、右下の「プレビュー」を使います（どの手順からでも開けます）。</div>
-          </div>
-        )}
-
-        {step === 4 && (
-          <div style={{ display: 'grid', gap: 10 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <tbody>
-                {([
-                  ['帳票', report.name, 0],
-                  ['期間', `${p.from} 〜 ${p.to}${usesDepth(report) ? `（${p.range}）` : ''}`, 1],
-                  ['区分', `${s.division}${kind !== '入力区分' ? `（${p.target === '起動中の区分' ? '合計で印刷' : '構成する区分ごとに印刷'}）` : ''}`, 1],
-                  ['この帳票のみの設定', `0データ：${p.zeroHide ? '表示しない' : '表示する'}／印刷項目 ${onCount} 件を有効${usesDepth(report) ? `／印刷範囲：${p.depthOwn ? p.depth : '共通の設定に従う'}` : ''}${usesRemark(report) ? `／備考：${myUnit}${pr.unitRemarks[myUnit] ? '' : '（未入力）'}` : ''}`, 2],
-                  ['全帳票共通の設定', `${pr.depth}・${pr.lineGap}・${pr.fontName}${changed ? `（今回 ${changed} 項目を変更）` : ''}`, 2],
-                  ['出力先', dest.label, 3],
-                ] as [string, string, number][]).map(([k, v, to]) => (
-                  <tr key={k}><td style={{ ...TD, width: 170, fontSize: 14, fontWeight: 700, color: '#5b6773' }}>{k}</td><td style={TD}>{v}</td><td style={{ ...TD, width: 60, textAlign: 'right' }}><button type="button" onClick={() => setStep(to)} style={{ border: 'none', background: 'transparent', color: accent, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>変更</button></td></tr>
-                ))}
-              </tbody>
-            </table>
-            <Notice>内容を確認して「{dest.action}」を押します。先に「プレビュー」で仕上がりを確かめることもできます。</Notice>
-          </div>
-        )}
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 18px 16px', flexWrap: 'wrap' }}>
-        {onClose && <button type="button" onClick={onClose} style={btn()}>キャンセル</button>}
-        <button type="button" onClick={() => setStep((x) => Math.max(0, x - 1))} disabled={step === 0} style={{ ...btn(), opacity: step === 0 ? 0.45 : 1 }}>戻る</button>
-        {step < FLOW_STEPS.length - 1 && <button type="button" onClick={() => setStep((x) => Math.min(FLOW_STEPS.length - 1, x + 1))} style={btn(accent)}>次へ：{FLOW_STEPS[step + 1]}</button>}
-        <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          <button type="button" className="btn-outline" onClick={preview} style={btn(accent)}>プレビュー</button>
-          <button type="button" className="submit-btn" onClick={run} style={btn(accent, true)}>{dest.action}</button>
-        </span>
-      </div>
+        </>}
+      />
       {/* 【名前を付けて保存】は印刷の流れの上に重ねる（DOM 上で後に置く） */}
       <ExportDialog spec={exp} onClose={() => { setExp(null); onClose?.(); }} accent={accent} />
     </div>
@@ -544,14 +459,13 @@ export function EnvPrintSummary({ env, division }: { env: EnvSettings; division:
 }
 
 /* ---------------- 帳票ごとの印刷ダイアログ ---------------- */
-export function PrintDialog({ open, onClose, report, accent, onPreview, data, keepOpenOnPreview, lockReport }: { open: boolean; onClose: () => void; report: ReportDef | null; accent: string; onPreview: (title: string, opts: { from: string; to: string; output: string; hideZero?: boolean }) => void; /** 画面の実データ（省略時は帳票ごとのサンプル表） */ data?: TableData; /** プレビューを開いてもダイアログを閉じない（プレビューを後ろに重ねて描画する呼び出し側向け） */ keepOpenOnPreview?: boolean; lockReport?: boolean }) {
-  const [picked, setPicked] = useState<ReportDef | null>(null);
-  useEffect(() => { setPicked(null); }, [report?.id, open]);
-  const cur = picked ?? report;
+export function PrintDialog({ open, onClose, report, accent, onPreview, data, keepOpenOnPreview }: { open: boolean; onClose: () => void; report: ReportDef | null; accent: string; onPreview: (title: string, opts: { from: string; to: string; output: string; hideZero?: boolean }) => void; /** 画面の実データ（省略時は帳票ごとのサンプル表） */ data?: TableData; /** プレビューを開いてもダイアログを閉じない（プレビューを後ろに重ねて描画する呼び出し側向け） */ keepOpenOnPreview?: boolean }) {
+  // 帳票は開く前に決まっている（印刷画面の中で帳票を選び直さない）
+  const cur = report;
   if (!cur) return null;
   return (
     <Modal open={open} onClose={onClose} width={880} title={<>{cur.name} の印刷 <span style={{ fontSize: 12, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>{cur.cat}</span></>}>
-      <PrintFlow key={cur.id} report={cur} accent={accent} data={cur.id === report?.id ? data : undefined} onClose={onClose} lockReport={lockReport} onReportChange={setPicked} onPreview={(title, opts) => { onPreview(title, opts); if (!keepOpenOnPreview) onClose(); }} />
+      <PrintFlow key={cur.id} report={cur} accent={accent} data={data} onClose={onClose} onPreview={(title, opts) => { onPreview(title, opts); if (!keepOpenOnPreview) onClose(); }} />
     </Modal>
   );
 }
@@ -587,25 +501,17 @@ export function PreviewModal({ open, onClose, title, opts, pages = 3, accent, ch
   const pageCount = data && !children ? 1 : pages;
   const line = s.env.colorReports ? s.env.lineColor : '#9aa5b1';
   const shadeBg = s.print.items.shade ? (s.env.colorReports ? s.env.shadeColor : '#eef2f6') : '#fff';
-  const out = (kind: ExportKind) => {
-    const all: TableData = data ?? { header: SAMPLE_HEADER, rows: Array.from({ length: pages }, (_, i) => samplePageRows(i + 1)).flat() };
-    const table = zero ? dropZeroRows(all).data : all;
-    toast.show(runExport({ kind, title, meta: opts ? `（自）${opts.from}　（至）${opts.to}` : undefined, ...table }));
-  };
   return (
     <Modal open={open} onClose={onClose} width={900} title={<>印刷プレビュー <span style={{ fontSize: 14, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>{title}</span></>}>
       <ToastView msg={toast.msg} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderBottom: '1px solid #eef2f5', background: '#f8fafc', flexWrap: 'wrap' }}>
-        <button type="button" onClick={() => out('print')} style={btn(accent, true, true)}>印刷</button>
         <button type="button" onClick={() => setPage((x) => Math.max(1, x - 1))} style={btn('#5b6773', false, true)}>前ページ</button>
         <span style={{ fontSize: 14, fontVariantNumeric: 'tabular-nums' }}>{Math.min(page, pageCount)} / {pageCount}</span>
         <button type="button" onClick={() => setPage((x) => Math.min(pageCount, x + 1))} style={btn('#5b6773', false, true)}>次ページ</button>
         <button type="button" onClick={() => setZoom((z) => Math.min(1.6, z + 0.2))} style={btn('#5b6773', false, true)}>拡大</button>
         <button type="button" onClick={() => setZoom((z) => Math.max(0.6, z - 0.2))} style={btn('#5b6773', false, true)}>縮小</button>
         <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
-          <button type="button" onClick={() => out('excel')} style={btn('#1f7a52', false, true)}>Excel出力</button>
-          <button type="button" onClick={() => out('pdf')} style={btn('#c0392b', false, true)}>PDF出力</button>
-          <button type="button" onClick={onClose} style={btn('#5b6773', false, true)}>閉じる</button>
+          <button type="button" onClick={onClose} style={btn(accent, false, true)}>閉じる</button>
         </span>
       </div>
       <div style={{ background: '#5f6b77', padding: 20, maxHeight: '70vh', overflow: 'auto' }}>
@@ -623,7 +529,7 @@ export function PreviewModal({ open, onClose, title, opts, pages = 3, accent, ch
       </div>
       <div style={{ padding: '8px 16px', fontSize: 12, color: '#9aa5b1', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         {!children && <span style={{ color: '#5b6773' }}>金額の書式：桁区切り {s.env.thousandsSep}・負数 {formatAmount(-1234, s.env)}（{s.env.negativeColor}）　／　0円の行：{zero ? `表示しない${dropped ? `（${dropped} 行を省略）` : ''}` : '表示する'}</span>}
-        <span>レイアウトはサンプルです。</span>
+        <span>レイアウトはサンプルです。プレビューは確認用で、出力は印刷画面の「出力先」で選んで行います。</span>
       </div>
     </Modal>
   );
@@ -660,8 +566,7 @@ export function PrintCenterPage({ variant, accent }: { variant: 'form' | 'sheet'
   const [target, setTarget] = useState<ReportDef | null>(null);
   const [preview, setPreview] = useState<{ title: string; batch?: boolean; opts: { from: string; to: string; output: string; hideZero?: boolean } } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set(['j1', 'l1', 't1', 't2', 't3']));
-  const [bOutput, setBOutput] = useState(OUTPUTS[1]);
-  const [exp, setExp] = useState<ExportSpec | null>(null);
+  const [batchOpen, setBatchOpen] = useState(false);
   const [wamnet, setWamnet] = useState<WamnetItem | null>(null);
   const toast = useToast();
   // まとめて印刷では、印刷ではない WAMNET連携出力を出さない
@@ -675,15 +580,9 @@ export function PrintCenterPage({ variant, accent }: { variant: 'form' | 'sheet'
   const allOn = list.length > 0 && list.every((r) => selected.has(r.id));
   const toggleAll = () => setSelected((x) => { const n = new Set(x); list.forEach((r) => { if (allOn) n.delete(r.id); else n.add(r.id); }); return n; });
   // まとめて印刷：選んだ帳票を1つの出力にまとめる（帳票名列を付けて連結。本番では帳票ごとに改ページ）
-  const runBatch = () => {
-    if (!picked.length) return toast.show('まとめて印刷する帳票を選んでください');
-    const title = `まとめて印刷（${picked.length}帳票）`;
-    if (bOutput === OUTPUTS[1]) { setPreview({ title, batch: true, opts: { from: '令和8年8月1日', to: '令和8年8月31日', output: bOutput } }); return; }
-    setExp({ kind: outputKind(bOutput) ?? 'print', title, fileName: `まとめて印刷_令和8年8月`, meta: `令和8年8月1日〜8月31日　対象：${picked.map((r) => r.name).join('、')}`, ...batchData() });
-  };
   const seg = (on: boolean): CSSProperties => ({ position: 'relative', zIndex: 1, padding: '8px 18px', border: 'none', borderRadius: 8, background: on ? accent : 'transparent', color: on ? '#fff' : '#3d4a56', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
   return (
-    <SettingsShell variant={variant} title={displayName('印刷センター')} badge="印刷" draft={false} desc="帳票の一覧です。帳票を選ぶと「基本条件 → 詳細設定 → 出力先 → 印刷／プレビュー」を1つのダイアログで指定できます。複数の帳票は「まとめて印刷」に切り替えると、一度に出力できます。">
+    <SettingsShell variant={variant} title={displayName('印刷センター')} badge="印刷" draft={false} desc="帳票の一覧です。帳票を選ぶと「1. 詳細設定 → 2. 出力先 → 3. 印刷／プレビュー」の印刷画面が開きます。複数の帳票は「まとめて印刷」に切り替えると、一度に出力できます。">
       <ToastView msg={toast.msg} />
       {/* 印刷のしかたの切替：1帳票ずつ／まとめて印刷（旧「一括印刷」） */}
       <div data-print-mode={batch ? 'batch' : 'single'} style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '12px 16px', borderBottom: '1px solid #eef2f5', background: batch ? '#f4f9f6' : '#fafbfc' }}>
@@ -696,9 +595,7 @@ export function PrintCenterPage({ variant, accent }: { variant: 'form' | 'sheet'
             <span style={{ fontSize: 14, color: '#3d4a56' }}>選択中 <b style={{ fontSize: 16, color: accent, fontVariantNumeric: 'tabular-nums' }}>{picked.length}</b> 帳票</span>
             <button type="button" className="btn-outline" onClick={toggleAll} style={btn('#5b6773', false, true)}>{allOn ? '表示中の選択を解除' : '表示中をすべて選択'}</button>
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 14, color: '#5b6773' }}>出力先</span>
-              <select value={bOutput} onChange={(e) => setBOutput(e.target.value)} style={{ ...input, width: 220 }}>{OUTPUTS.map((o) => <option key={o}>{o}</option>)}</select>
-              <button type="button" className="submit-btn" data-print-batch-run disabled={!picked.length} onClick={runBatch} style={{ ...btn(accent, true), opacity: picked.length ? 1 : 0.5, cursor: picked.length ? 'pointer' : 'not-allowed' }}>選んだ {picked.length} 帳票を印刷</button>
+              <button type="button" className="submit-btn" data-print-batch-run disabled={!picked.length} onClick={() => setBatchOpen(true)} style={{ ...btn(accent, true), opacity: picked.length ? 1 : 0.5, cursor: picked.length ? 'pointer' : 'not-allowed' }}>選んだ {picked.length} 帳票を印刷</button>
             </div>
           </>
         ) : <span style={{ fontSize: 14, color: '#7a8794' }}>帳票を押すと、その帳票の印刷条件を指定できます。</span>}
@@ -733,8 +630,15 @@ export function PrintCenterPage({ variant, accent }: { variant: 'form' | 'sheet'
         </div>
       </div>
       <PrintDialog open={!!target} onClose={() => setTarget(null)} report={target} accent={accent} keepOpenOnPreview onPreview={(title, opts) => setPreview({ title, opts })} />
-      <PreviewModal open={!!preview} onClose={() => setPreview(null)} title={preview?.title ?? ''} opts={preview?.opts} accent={accent} data={preview ? (preview.batch ? batchData() : sampleReportData(preview.title)) : undefined} />
-      <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
+      <PreviewModal open={!!preview} onClose={() => setPreview(null)} title={preview?.title ?? ''} opts={preview?.opts} accent={accent} data={preview ? sampleReportData(preview.title) : undefined} />
+      {/* まとめて印刷：帳票は一覧で選んでから開く。出力の形式は「2. 出力先」で選ぶ */}
+      <PrintOutDialog open={batchOpen} onClose={() => setBatchOpen(false)} name={`まとめて印刷（${picked.length}帳票）`} accent={accent} data={batchData} fileName="まとめて印刷_令和8年8月" meta={`令和8年8月1日〜8月31日　対象：${picked.map((r) => r.name).join('、')}`}
+        previewOpts={{ from: '令和8年8月1日', to: '令和8年8月31日', output: OUTPUTS[1] }} detailSummary={`${picked.length} 帳票`} confirm={[['選んだ帳票', picked.map((r) => r.name).join('、')], ['期間', '令和8年8月1日〜8月31日']]}
+        detail={<div style={{ display: 'grid', gap: 10 }}>
+          <span style={lbl}>まとめて印刷する帳票（{picked.length}）</span>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{picked.map((r) => <span key={r.id} style={{ padding: '4px 10px', borderRadius: 8, background: '#eef2f6', fontSize: 14 }}>{r.name}</span>)}</div>
+          <div style={{ fontSize: 12, color: '#8290a0' }}>期間：令和8年8月1日〜8月31日。帳票ごとの詳細設定は、1帳票ずつ印刷するときに決めた内容を使います。帳票を変えるときは、この画面を閉じて一覧で選び直します。</div>
+        </div>} />
       <WamnetDialog item={wamnet} onClose={() => setWamnet(null)} accent={accent} />
     </SettingsShell>
   );
