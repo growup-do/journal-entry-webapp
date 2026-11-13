@@ -80,7 +80,7 @@ const DEFAULT_ICON: ReactNode = <><rect x="4" y="4" width="16" height="16" rx="2
 /* ---------------- 全機能の一覧（分類ごと） ----------------
  *  分類ごとに、左に大きなアイコンと分類名、右にその分類の機能を文字のリンクで並べる。
  *  先頭の機能と重要度・高の機能（確認メモ #241）は大きな見出しの文字、重要度・中はやや大きい文字にする。 */
-export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, cols, stacked, wide, accent, nameOf }: { groups: Group[]; onNavigate: (label: string) => void; accent: string; /** 検索中：Enter で開く先頭の項目（強調表示） */ first?: string; /** 列の最小幅 */ minCol?: number; /** 列の数を固定するとき（既定は幅に合わせて自動） */ cols?: number; /** 分類のアイコンと名前を上に置き、機能のボタンをその下に横幅いっぱいで並べる（列が狭いとき。横幅いっぱいの分類は除く） */ stacked?: boolean; /** 横幅いっぱいに置く分類と、その機能を並べる列の数（項目の多い分類。例 減価償却の帳票） */ wide?: Record<string, number>; /** ボタンに出す名前（会計以外の画面で使うとき。既定は会計の表示名） */ nameOf?: (label: string) => string }) {
+export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, cols, stacked, wide, accent, nameOf }: { groups: Group[]; onNavigate: (label: string) => void; accent: string; /** 検索中：Enter で開く先頭の項目（強調表示） */ first?: string; /** 列の最小幅 */ minCol?: number; /** 列の数を固定するとき（既定は幅に合わせて自動） */ cols?: number; /** 分類のアイコンと名前を上に置き、機能のボタンをその下に横幅いっぱいで並べる（列が狭いとき。横幅いっぱいの分類も同じ見出しの形） */ stacked?: boolean; /** 横幅いっぱいに置く分類と、その機能を並べる列の数（項目の多い分類。例 減価償却の帳票） */ wide?: Record<string, number>; /** ボタンに出す名前（会計以外の画面で使うとき。既定は会計の表示名） */ nameOf?: (label: string) => string }) {
   const kind = startKindOf(useSession());
   const tint = (pct: number) => 'color-mix(in srgb, ' + accent + ' ' + pct + '%, #fff)';
   const LINE = '1px solid #e3e9ee';
@@ -99,7 +99,7 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
           // 分類名は「各種設定 › マスター設定」のように長いものを 2 行に分ける
           const [l1, l2] = g.label.includes(' › ') ? g.label.split(' › ') : [g.label, ''];
           const wideCols = wide?.[g.key];
-          const top = stacked && !wideCols;
+          const top = !!stacked;
           return (
             <div key={g.key} data-function-group={g.key} style={{ display: 'grid', gridTemplateColumns: top ? 'minmax(0, 1fr)' : '104px minmax(0, 1fr)', gridColumn: wideCols ? '1 / -1' : undefined, columnGap: 12, rowGap: 12, alignItems: 'start', alignContent: 'start', padding: top ? '16px 16px 18px' : '18px 14px 18px 6px', borderTop: LINE, borderLeft: LINE, background: g.danger ? '#fdf7f5' : undefined }}>
               <div title={g.note || undefined} style={{ display: 'flex', flexDirection: top ? 'row' : 'column', alignItems: 'center', gap: top ? 10 : 8, textAlign: top ? 'left' : 'center' }}>

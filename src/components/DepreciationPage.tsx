@@ -640,7 +640,7 @@ export function DepreciationPage({ variant, accent }: Props) {
         </div>
 
         {/* ===== 機能一覧（旧 ホーム）：概要と機能の一覧（会計のホームと同じ形。確認メモ #244）。
-             処理の 5 分類を 1 段に並べ、項目の多い帳票は下の段に横幅いっぱいで 4 列に並べる ===== */}
+             処理の 5 分類を 1 段に並べ、項目の多い帳票は下の段に横幅いっぱいで 5 列に並べる（見出しの形はほかの分類と同じ） ===== */}
         {tab === 'home' && (
           <div data-dep-home style={{ padding: '14px 22px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -654,7 +654,7 @@ export function DepreciationPage({ variant, accent }: Props) {
             <div>
               <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>機能の一覧</div>
               <div style={{ border: '1px solid #e3e9ee', borderRadius: 12, overflow: 'hidden' }}>
-                <FunctionDirectory groups={HOME_GROUPS} accent={accent} onNavigate={runHome} nameOf={(l) => l} cols={5} stacked wide={{ print: 4 }} />
+                <FunctionDirectory groups={HOME_GROUPS} accent={accent} onNavigate={runHome} nameOf={(l) => l} cols={5} stacked wide={{ print: 5 }} />
               </div>
             </div>
           </div>
