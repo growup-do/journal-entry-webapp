@@ -152,7 +152,7 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
                     <div key={l} data-fn-row style={{ position: 'relative', display: 'flex', alignItems: link ? (fill ? 'center' : 'flex-start') : 'stretch', gap: 2, minWidth: 0, borderTop: link && idx > 0 ? '1px dashed #cdd5dc' : undefined }}>
                       {button}
                       <button type="button" data-fav-star data-on={on || undefined} onClick={() => toggleFav(l)} aria-pressed={on} aria-label={(on ? 'お気に入りから外す：' : 'お気に入りに追加：') + name} title={on ? 'お気に入りメニューから外します' : 'お気に入りメニューに追加します'}
-                        style={{ ...(link ? { flex: 'none', width: big ? 22 : 20, height: 22, marginTop: fill ? 0 : 6, fontSize: big ? 17 : 15 } : tile ? { position: 'absolute', left: '50%', bottom: big ? 8 : 6, transform: 'translateX(-50%)', width: 30, height: big ? 28 : 24, fontSize: big ? 24 : 19 } : { position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', width: 22, height: 22, fontSize: 16 }), padding: 0, border: 'none', borderRadius: 6, background: 'transparent', color: on ? '#d9a520' : '#c5cbd1', lineHeight: 1, cursor: 'pointer', fontFamily: 'inherit', opacity: on || (tile && big) ? 1 : 0, transition: 'opacity .12s, color .12s' }}>★</button>
+                        style={{ ...(link ? { flex: 'none', marginLeft: 'auto', width: big ? 22 : 20, height: 22, marginTop: fill ? 0 : 6, fontSize: big ? 17 : 15 } : tile ? { position: 'absolute', left: '50%', bottom: big ? 8 : 6, transform: 'translateX(-50%)', width: 30, height: big ? 28 : 24, fontSize: big ? 24 : 19 } : { position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', width: 22, height: 22, fontSize: 16 }), padding: 0, border: 'none', borderRadius: 6, background: 'transparent', color: on ? '#d9a520' : '#c5cbd1', lineHeight: 1, cursor: 'pointer', fontFamily: 'inherit', opacity: on || (tile && big) ? 1 : 0, transition: 'opacity .12s, color .12s' }}>★</button>
                     </div>
                   );
                 })}
@@ -168,7 +168,7 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
 /* ---------------- ホームの機能一覧（検索ボックス＋全機能の一覧） ----------------
  *  見出し（ホーム・年度・区分）と小さめの検索ボックスを一覧のカードのすぐ上に、帯や枠を付けずに置く。検索は一覧の絞り込みだけで、「開く」はなくした。
  *  どの分類も、アイコンと分類名を左に縦に置き、右に機能を枠なしのテキストリンクで 1 列に並べる（項目の間に点線）。
- *  1 段目はアイコンと文字を大きくし、行を枠の高さいっぱいに均等に伸ばす。星はリンクの文字のすぐ右。
+ *  1 段目はアイコンと文字を大きくし、行を枠の高さいっぱいに均等に伸ばす。星は行の右端にそろえる。
  *  1 段目に「伝票入力」「日記帳・元帳」「帳票・印刷」をアイコンと文字を大きくして並べ、ほかの 8 分類を 2 段×4 列で並べる。
  *  年度更新は一覧に出さず、上部のバーの「年度更新」から開く。左メニューの「機能から探す」画面はホームと同じため廃止。 */
 const HOME_TOP = ['input', 'ledger', 'print'];
