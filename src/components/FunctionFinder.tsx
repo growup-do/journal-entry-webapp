@@ -140,7 +140,7 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
                   const on = favs.includes(l);
                   const button = (
                     <button key={l} type="button" className={link ? undefined : 'btn-outline'} data-fn-btn data-link={link || undefined} data-off={off || undefined} data-hit={hit || undefined} data-danger={g.danger || undefined} data-menu={'機能:' + l} data-priority={pr} onClick={() => onNavigate(l)} title={tip}
-                      style={link ? { display: 'block', flex: '0 1 auto', minWidth: 0, padding: '7px 2px', border: 'none', borderRadius: 4, background: hit ? '#eaf5ef' : 'transparent', boxShadow: hit ? '0 0 0 2px rgba(31,122,82,.22)' : 'none', color: off ? '#b3bcc5' : g.danger ? '#c0392b' : '#22303c', fontSize: 14, fontWeight: 500, lineHeight: 1.4, textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer' } : { display: 'flex', flexDirection: tile ? 'column' : 'row', alignItems: 'center', justifyContent: tile ? 'flex-start' : 'space-between', gap: 6, width: '100%', boxSizing: 'border-box', padding: tile ? (big ? '14px 10px 40px' : '10px 8px 32px') : fav ? '6px 30px 6px 12px' : big ? '8px 10px 8px 14px' : '6px 8px 6px 12px', minHeight: tile ? (big ? 92 : 72) : undefined, flex: 1, minWidth: 0, border: '1px solid ' + (hit ? '#1f7a52' : off ? '#e3e8ec' : g.danger ? '#f2c9c2' : '#d5dde4'), borderRadius: tile ? 12 : 8, background: hit ? '#eaf5ef' : off ? '#f7f9fa' : '#fff', boxShadow: hit ? '0 0 0 2px rgba(31,122,82,.22)' : '0 1px 1px rgba(34,48,60,.04)', color: off ? '#b3bcc5' : g.danger ? '#c0392b' : '#22303c', fontSize: big ? 16 : 14, fontWeight: tile ? 500 : 600, lineHeight: 1.4, textAlign: tile ? 'center' : 'left', fontFamily: 'inherit', cursor: 'pointer' }}>
+                      style={link ? { display: 'block', flex: '0 1 auto', minWidth: 0, padding: '7px 2px', border: 'none', borderRadius: 4, background: hit ? '#eaf5ef' : 'transparent', boxShadow: hit ? '0 0 0 2px rgba(31,122,82,.22)' : 'none', color: off ? '#b3bcc5' : g.danger ? '#c0392b' : '#22303c', fontSize: 14, fontWeight: 500, lineHeight: 1.4, textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer' } : { display: 'flex', flexDirection: tile ? 'column' : 'row', alignItems: 'center', justifyContent: tile ? 'flex-start' : 'space-between', gap: 6, width: '100%', boxSizing: 'border-box', padding: tile ? (big ? '14px 10px 40px' : '10px 8px 32px') : fav ? (big ? '9px 34px 9px 14px' : '6px 30px 6px 12px') : big ? '8px 10px 8px 14px' : '6px 8px 6px 12px', minHeight: tile ? (big ? 92 : 72) : undefined, flex: 1, minWidth: 0, border: '1px solid ' + (hit ? '#1f7a52' : off ? '#e3e8ec' : g.danger ? '#f2c9c2' : '#d5dde4'), borderRadius: tile ? 12 : 8, background: hit ? '#eaf5ef' : off ? '#f7f9fa' : '#fff', boxShadow: hit ? '0 0 0 2px rgba(31,122,82,.22)' : '0 1px 1px rgba(34,48,60,.04)', color: off ? '#b3bcc5' : g.danger ? '#c0392b' : '#22303c', fontSize: big ? 16 : 14, fontWeight: tile ? 500 : 600, lineHeight: 1.4, textAlign: tile ? 'center' : 'left', fontFamily: 'inherit', cursor: 'pointer' }}>
                       <span style={{ minWidth: 0 }}>{sub ? <>{main}<span data-fn-sub style={{ display: 'block', fontSize: 12, fontWeight: 400, opacity: 0.75 }}>{sub}</span></> : name}</span>
                       {!fav && <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flex: 'none', opacity: 0.4 }}><path d="M9 6l6 6-6 6" /></svg>}
                     </button>
@@ -165,8 +165,8 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
 
 /* ---------------- ホームの機能一覧（検索ボックス＋全機能の一覧） ----------------
  *  見出し（ホーム・年度・区分）と小さめの検索ボックスを一覧のカードのすぐ上に、帯や枠を付けずに置く。検索は一覧の絞り込みだけで、「開く」はなくした。
- *  1 段目は分類のアイコンと名前を上に横並び（減価償却のホームと同じ形）。1 段目の機能は 2 列のタイル型のボタン。
- *  2 段目以降はアイコンと分類名を左に縦に置き、右に枠なしのテキストリンクを 1 列（項目の間に点線）。
+ *  どの分類も、アイコンと分類名を左に縦に置き、右に機能を 1 列で並べる。1 段目は枠付きのボタン（アイコンと文字を大きく）、
+ *  2 段目以降は枠なしのテキストリンク（項目の間に点線）。星はボタンの枠の右／リンクの文字のすぐ右。
  *  1 段目に「伝票入力」「日記帳・元帳」「帳票・印刷」をアイコンと文字を大きくして並べ、ほかの 8 分類を 2 段×4 列で並べる。
  *  年度更新は一覧に出さず、上部のバーの「年度更新」から開く。左メニューの「機能から探す」画面はホームと同じため廃止。 */
 const HOME_TOP = ['input', 'ledger', 'print'];
@@ -217,7 +217,7 @@ export function FinderPanel({ accent, onNavigate }: { accent: string; onNavigate
       <section data-finder-search data-finder-panel style={{ background: '#fff', border: '1px solid #dde4ea', borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'hidden', ['--finder-accent' as string]: accent }}>
       {/* 1 段目：伝票入力・日記帳・元帳・帳票・印刷（大きく）／2・3 段目：ほかの 8 分類（2 段×4 列） */}
       <div style={{ padding: '14px 16px 16px', display: 'grid', gap: 0 }}>
-        {top.length > 0 && <FunctionDirectory groups={top} onNavigate={onNavigate} accent={accent} cols={3} stacked tiles big fav />}
+        {top.length > 0 && <FunctionDirectory groups={top} onNavigate={onNavigate} accent={accent} cols={3} big fav />}
         {top.length > 0 && rest.length > 0 && <div role="separator" style={{ height: 1, background: '#cfd8e0', margin: '4px 0 0' }} />}
         {(rest.length > 0 || top.length === 0) && <FunctionDirectory groups={rest} onNavigate={onNavigate} accent={accent} cols={4} links fav />}
       </div>
