@@ -12,7 +12,8 @@ import { HOME_CHECKS, MENU_GROUPS, SETTINGS_GROUPS, displayName, settingsMenuNam
 import { startKindOf, useSession } from '../store/session';
 import { canOpen, type Access } from '../store/access';
 
-interface Group { key: string; label: string; note: string; danger: boolean; items: string[] }
+export interface FunctionGroup { key: string; label: string; note: string; danger: boolean; items: string[] }
+type Group = FunctionGroup;
 /** 検索対象：メインメニュー＋各種設定（Web版の追加案は除く）＋ホーム・機能一覧 */
 function allGroups(a: Access): Group[] {
   // アカウントで使えない機能は出さない
@@ -66,6 +67,12 @@ const GROUP_ICONS: Record<string, ReactNode> = {
   's-config': <><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1" /><circle cx="15" cy="6" r="2" /><circle cx="9" cy="12" r="2" /><circle cx="17" cy="18" r="2" /></>,
   's-register': <><rect x="8" y="3" width="12" height="14" rx="1.5" /><path d="M16 17v2.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 4 19.5v-11A1.5 1.5 0 0 1 5.5 7H8" /><path d="M11 8h6M11 12h6" /></>,
   's-maint': <><path d="M14.7 6.3a4 4 0 0 0 5 5L21 13l-8 8-3-3 6.7-6.7a4 4 0 0 1-5-5L10 4.6 4.6 10" /><path d="M3 21l6-6" /></>,
+  // 減価償却のホーム（確認メモ #244）
+  'd-asset': <><path d="M4 21V8.5L12 3l8 5.5V21" /><path d="M9.5 21v-6h5v6" /><path d="M3 21h18" /></>,
+  'd-equip': <><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z" /><path d="M3 7.5 12 12l9-4.5M12 12v9" /></>,
+  'd-move': <><path d="M4 8h14" /><path d="M14 4l4 4-4 4" /><path d="M20 16H6" /><path d="M10 12l-4 4 4 4" /></>,
+  'd-closing': <><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M8.5 7h7" /><path d="M8.5 11h.01M12 11h.01M15.5 11h.01M8.5 14.5h.01M12 14.5h.01M15.5 14.5h.01M8.5 18h.01M12 18h.01M15.5 18h.01" /></>,
+  'd-setting': <><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1" /><circle cx="15" cy="6" r="2" /><circle cx="9" cy="12" r="2" /><circle cx="17" cy="18" r="2" /></>,
   's-update': <><rect x="3.5" y="5" width="17" height="15" rx="1.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /><path d="M15 14.5a3 3 0 1 1-1-2.2" /><path d="M14.5 11.5v1.5H13" /></>,
 };
 const DEFAULT_ICON: ReactNode = <><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M8 9h8M8 13h8M8 17h5" /></>;
@@ -73,7 +80,7 @@ const DEFAULT_ICON: ReactNode = <><rect x="4" y="4" width="16" height="16" rx="2
 /* ---------------- 全機能の一覧（分類ごと） ----------------
  *  分類ごとに、左に大きなアイコンと分類名、右にその分類の機能を文字のリンクで並べる。
  *  先頭の機能と重要度・高の機能（確認メモ #241）は大きな見出しの文字、重要度・中はやや大きい文字にする。 */
-function FunctionDirectory({ groups, onNavigate, first, minCol = 270, accent }: { groups: Group[]; onNavigate: (label: string) => void; accent: string; /** 検索中：Enter で開く先頭の項目（強調表示） */ first?: string; /** 列の最小幅 */ minCol?: number }) {
+export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, accent, nameOf }: { groups: Group[]; onNavigate: (label: string) => void; accent: string; /** 検索中：Enter で開く先頭の項目（強調表示） */ first?: string; /** 列の最小幅 */ minCol?: number; /** ボタンに出す名前（会計以外の画面で使うとき。既定は会計の表示名） */ nameOf?: (label: string) => string }) {
   const kind = startKindOf(useSession());
   const tint = (pct: number) => 'color-mix(in srgb, ' + accent + ' ' + pct + '%, #fff)';
   const LINE = '1px solid #e3e9ee';
@@ -105,7 +112,7 @@ function FunctionDirectory({ groups, onNavigate, first, minCol = 270, accent }: 
                   const off = INPUT_ONLY.includes(l) && kind !== '入力区分';
                   const hit = first === l;
                   const pr = PRIORITY[l];
-                  const name = g.key.startsWith('s-') ? settingsMenuName(l) : displayName(l);
+                  const name = nameOf ? nameOf(l) : g.key.startsWith('s-') ? settingsMenuName(l) : displayName(l);
                   const tip = off ? kind + 'で起動中は利用できません' : hit ? 'Enter でこの画面を開きます' : pr ? PRIORITY_LABEL[pr] : undefined;
                   // 名前のカッコの部分（例「日記帳（仕訳一覧）」の（仕訳一覧））は、文字を小さく細くする
                   return (
