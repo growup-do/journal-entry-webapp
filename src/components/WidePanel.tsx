@@ -29,8 +29,9 @@ const WIDE_TABS = ['日記帳', '元帳１', '元帳２', '残高照合'] as con
 /** この幅より狭いときは、パネルを初期状態で折りたたむ（狭くなったときも折りたたむ） */
 export const WIDE_NARROW = 1240;
 export const WIDE_WIDTH = 440;
-/** この幅以上の画面（1600×768 を想定。ウィンドウの枠の分を見込む）では、参照パネルを開くと本文を押し出し、左メニューを自動でたたむ（確認メモ #243） */
-export const WIDE_PUSH_MIN = 1560;
+/** この幅以上の画面では、参照パネルを開くと本文を押し出し、左メニューを自動でたたむ（確認メモ #243）。
+ *  以前は 1560px 以上だけだったが、1240px 以上 1560px 未満でも同じ動きにした（パネルを最初から開く幅と同じ） */
+export const WIDE_PUSH_MIN = WIDE_NARROW;
 /** 参照パネルが本文を押し出しているか（左メニューを自動でたたむための合図。FormScreen が読む） */
 let pushing = false;
 const pushSubs = new Set<() => void>();

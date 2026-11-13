@@ -1,15 +1,15 @@
 // 機能から探す（依頼書 5.2.2「機能一覧型」／1.2 課題1「どこに何の機能があるか分かりにくい」）
-//   FunctionDirectory  … 全機能を分類ごとに並べた一覧（検索語で絞り込む）。ホームと「機能から探す」画面で共用。
-//   FinderPanel        … ホーム（ダッシュボード）に置く「機能から探す」：検索ボックス＋全機能の一覧。
-//                        別画面には飛ばさず、検索ボックスに入力するとその場で一覧を絞り込む（確認メモ #147／#148）。
-//   FunctionFinderPage … 左メニューの「機能から探す」から開く画面（中身はホームと同じ一覧）。
+//   FunctionDirectory  … 全機能を分類ごとに並べた一覧（検索語で絞り込む）。ホームと減価償却の機能一覧で共用。
+//   FinderPanel        … ホームの機能一覧：タイトル部に見出しと検索ボックス、その下に全機能の一覧。
+//                        検索ボックスに入力するとその場で一覧を絞り込む（確認メモ #147／#148）。
+//   左メニューの「機能から探す」画面は、ホームと同じ一覧のため廃止した。
 //   一覧の形：分類ごとに、左に大きなアイコンと分類名、右にその分類の機能を文字のリンクで並べる。
 //   分類のアイコンと分類名は緑で目立たせ、機能はすべて同じ形の枠つきボタンで 1 行に 1 つ並べる。分類の間は仕切り線で区切る。
 
 import { useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import { HOME_CHECKS, MENU_GROUPS, SETTINGS_GROUPS, displayName, settingsMenuName } from '../data';
-import { startKindOf, useSession } from '../store/session';
+import { setSession, startKindOf, useSession } from '../store/session';
 import { canOpen, type Access } from '../store/access';
 
 export interface FunctionGroup { key: string; label: string; note: string; danger: boolean; items: string[] }
@@ -88,13 +88,18 @@ export function splitParen(name: string): [string, string] {
 /* ---------------- 全機能の一覧（分類ごと） ----------------
  *  分類ごとに、左に大きなアイコンと分類名、右にその分類の機能を文字のリンクで並べる。
  *  先頭の機能と重要度・高の機能（確認メモ #241）は大きな見出しの文字、重要度・中はやや大きい文字にする。 */
-export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, cols, stacked, wide, accent, nameOf }: { groups: Group[]; onNavigate: (label: string) => void; accent: string; /** 検索中：Enter で開く先頭の項目（強調表示） */ first?: string; /** 列の最小幅 */ minCol?: number; /** 列の数を固定するとき（既定は幅に合わせて自動） */ cols?: number; /** 分類のアイコンと名前を上に置き、機能のボタンをその下に横幅いっぱいで並べる（列が狭いとき。横幅いっぱいの分類も同じ見出しの形） */ stacked?: boolean; /** 横幅いっぱいに置く分類と、その機能を並べる列の数（項目の多い分類。例 減価償却の帳票） */ wide?: Record<string, number>; /** ボタンに出す名前（会計以外の画面で使うとき。既定は会計の表示名） */ nameOf?: (label: string) => string }) {
-  const kind = startKindOf(useSession());
+export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, cols, stacked, wide, big, fav, accent, nameOf }: { /** アイコン・分類名・ボタンの文字を大きくする（ホームの 1 段目） */ big?: boolean; /** お気に入りの星（マウスを載せると空の星が出て、押すと登録・解除。登録済みは金の星） */ fav?: boolean; groups: Group[]; onNavigate: (label: string) => void; accent: string; /** 検索中：Enter で開く先頭の項目（強調表示） */ first?: string; /** 列の最小幅 */ minCol?: number; /** 列の数を固定するとき（既定は幅に合わせて自動） */ cols?: number; /** 分類のアイコンと名前を上に置き、機能のボタンをその下に横幅いっぱいで並べる（列が狭いとき。横幅いっぱいの分類も同じ見出しの形） */ stacked?: boolean; /** 横幅いっぱいに置く分類と、その機能を並べる列の数（項目の多い分類。例 減価償却の帳票） */ wide?: Record<string, number>; /** ボタンに出す名前（会計以外の画面で使うとき。既定は会計の表示名） */ nameOf?: (label: string) => string }) {
+  const session = useSession();
+  const kind = startKindOf(session);
+  const favs = session.favorites;
+  const toggleFav = (l: string) => setSession({ favorites: favs.includes(l) ? favs.filter((x) => x !== l) : [...favs, l] });
   const tint = (pct: number) => 'color-mix(in srgb, ' + accent + ' ' + pct + '%, #fff)';
   const LINE = '1px solid #e3e9ee';
   // ボタンと見出しのマウスオーバー（使えない項目・検索で強調中の項目は変えない）
   const css = '[data-fn-btn]:not([data-off]):not([data-hit]):hover{border-color:var(--fn-accent)!important;color:var(--fn-accent)!important;background:var(--fn-tint)!important}'
-    + '[data-fn-btn][data-danger]:not([data-off]):not([data-hit]):hover{border-color:#c0392b!important;color:#c0392b!important;background:#fdf1ee!important}';
+    + '[data-fn-btn][data-danger]:not([data-off]):not([data-hit]):hover{border-color:#c0392b!important;color:#c0392b!important;background:#fdf1ee!important}'
+    // お気に入りの星：登録していない項目は、マウスを載せたとき（キーボードで選んだとき）だけ空の星を出す
+    + '[data-fn-row]:hover [data-fav-star],[data-fav-star]:focus-visible{opacity:1!important}';
   return (
     // 仕切り線：各分類の上と左に線を引き、外周の線は外側の枠で隠す（内側の仕切りだけが見える）
     <div style={{ overflow: 'hidden' }}>
@@ -109,10 +114,10 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
           const wideCols = wide?.[g.key];
           const top = !!stacked;
           return (
-            <div key={g.key} data-function-group={g.key} style={{ display: 'grid', gridTemplateColumns: top ? 'minmax(0, 1fr)' : '104px minmax(0, 1fr)', gridColumn: wideCols ? '1 / -1' : undefined, columnGap: 12, rowGap: 12, alignItems: 'start', alignContent: 'start', padding: top ? '16px 16px 18px' : '18px 14px 18px 6px', borderTop: LINE, borderLeft: LINE, background: g.danger ? '#fdf7f5' : undefined }}>
+            <div key={g.key} data-function-group={g.key} style={{ display: 'grid', gridTemplateColumns: top ? 'minmax(0, 1fr)' : big ? '120px minmax(0, 1fr)' : '104px minmax(0, 1fr)', gridColumn: wideCols ? '1 / -1' : undefined, columnGap: 12, rowGap: 12, alignItems: 'start', alignContent: 'start', padding: top ? '16px 16px 18px' : '18px 14px 18px 6px', borderTop: LINE, borderLeft: LINE, background: g.danger ? '#fdf7f5' : undefined }}>
               <div title={g.note || undefined} style={{ display: 'flex', flexDirection: top ? 'row' : 'column', alignItems: 'center', gap: top ? 10 : 8, textAlign: top ? 'left' : 'center' }}>
-                <svg width={top ? 34 : 52} height={top ? 34 : 52} viewBox="0 0 24 24" fill="none" stroke={ink} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{GROUP_ICONS[g.key] ?? DEFAULT_ICON}</svg>
-                <div data-group-title style={{ fontSize: top ? 15 : 13, fontWeight: 800, color: ink, lineHeight: 1.35, whiteSpace: 'nowrap' }}>
+                <svg width={top ? 34 : big ? 64 : 52} height={top ? 34 : big ? 64 : 52} viewBox="0 0 24 24" fill="none" stroke={ink} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{GROUP_ICONS[g.key] ?? DEFAULT_ICON}</svg>
+                <div data-group-title style={{ fontSize: top ? 15 : big ? 16 : 13, fontWeight: 800, color: ink, lineHeight: 1.35, whiteSpace: 'nowrap' }}>
                   {l2 ? <><span style={{ display: 'block', fontSize: 11, fontWeight: 700, color: ink, opacity: 0.7 }}>{l1}</span>{l2}</> : l1}
                 </div>
               </div>
@@ -126,12 +131,20 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
                   const tip = off ? kind + 'で起動中は利用できません' : hit ? 'Enter でこの画面を開きます' : pr ? PRIORITY_LABEL[pr] : undefined;
                   // 名前の後ろのカッコの部分（例「日記帳（仕訳一覧）」の（仕訳一覧））は、改行して下の行に小さく細く出す
                   const [main, sub] = splitParen(name);
-                  return (
+                  const on = favs.includes(l);
+                  const button = (
                     <button key={l} type="button" className="btn-outline" data-fn-btn data-off={off || undefined} data-hit={hit || undefined} data-danger={g.danger || undefined} data-menu={'機能:' + l} data-priority={pr} onClick={() => onNavigate(l)} title={tip}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, width: '100%', boxSizing: 'border-box', padding: '6px 8px 6px 12px', border: '1px solid ' + (hit ? '#1f7a52' : off ? '#e3e8ec' : g.danger ? '#f2c9c2' : '#d5dde4'), borderRadius: 8, background: hit ? '#eaf5ef' : off ? '#f7f9fa' : '#fff', boxShadow: hit ? '0 0 0 2px rgba(31,122,82,.22)' : '0 1px 1px rgba(34,48,60,.04)', color: off ? '#b3bcc5' : g.danger ? '#c0392b' : '#22303c', fontSize: 14, fontWeight: 600, lineHeight: 1.4, textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer' }}>
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, width: '100%', boxSizing: 'border-box', padding: big ? '8px 10px 8px 14px' : '6px 8px 6px 12px', flex: 1, minWidth: 0, border: '1px solid ' + (hit ? '#1f7a52' : off ? '#e3e8ec' : g.danger ? '#f2c9c2' : '#d5dde4'), borderRadius: 8, background: hit ? '#eaf5ef' : off ? '#f7f9fa' : '#fff', boxShadow: hit ? '0 0 0 2px rgba(31,122,82,.22)' : '0 1px 1px rgba(34,48,60,.04)', color: off ? '#b3bcc5' : g.danger ? '#c0392b' : '#22303c', fontSize: big ? 16 : 14, fontWeight: 600, lineHeight: 1.4, textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer' }}>
                       <span style={{ minWidth: 0 }}>{sub ? <>{main}<span data-fn-sub style={{ display: 'block', fontSize: 12, fontWeight: 400, opacity: 0.75 }}>{sub}</span></> : name}</span>
                       <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flex: 'none', opacity: 0.4 }}><path d="M9 6l6 6-6 6" /></svg>
                     </button>
+                  );
+                  if (!fav) return button;
+                  return (
+                    <div key={l} data-fn-row style={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0 }}>
+                      <button type="button" data-fav-star data-on={on || undefined} onClick={() => toggleFav(l)} aria-pressed={on} aria-label={(on ? 'お気に入りから外す：' : 'お気に入りに追加：') + name} title={on ? 'お気に入りメニューから外します' : 'お気に入りメニューに追加します'} style={{ flex: 'none', width: 22, height: 22, padding: 0, border: 'none', background: 'transparent', color: on ? '#e0a800' : '#9aa5b1', fontSize: 17, lineHeight: 1, cursor: 'pointer', fontFamily: 'inherit', opacity: on ? 1 : 0, transition: 'opacity .12s' }}>{on ? '★' : '☆'}</button>
+                      {button}
+                    </div>
                   );
                 })}
               </div>
@@ -143,93 +156,61 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
   );
 }
 
-/* ---------------- 画面（左メニューの「機能から探す」） ---------------- */
-export function FunctionFinderPage({ accent, onNavigate, initialQuery = '' }: { accent: string; onNavigate: (label: string) => void; initialQuery?: string }) {
-  const [q, setQ] = useState(initialQuery);
-  const access = useSession().access;
-  const groups = useMemo(() => filterGroups(q, access), [q, access]);
-  const total = groups.reduce((a, g) => a + g.items.length, 0);
-  const card: CSSProperties = { background: '#fff', border: '1px solid #dde4ea', borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'hidden' };
-  return (
-    <main style={{ flex: 1, minWidth: 0, padding: 28, display: 'flex', justifyContent: 'center' }}>
-      <div style={{ width: '100%', maxWidth: 1280 }}>
-        <section style={card}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '18px 22px 14px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
-            <div>
-              <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 21 }}>機能から探す</div>
-              <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>すべての機能を分類ごとに並べています。画面名・旧メニュー名・キーワードで絞り込めます。ホーム（ダッシュボード）にも同じ一覧があります。</div>
-            </div>
-            <input autoFocus className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="例：試算表、年度更新、科目、元帳" autoComplete="off" style={{ marginLeft: 'auto', width: 320, padding: '9px 12px', border: '1px solid #cfd8e0', borderRadius: 9, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
-            <span style={{ fontSize: 14, color: '#7a8794' }}><b style={{ color: '#22303c' }}>{total}</b> 件</span>
-          </div>
-          <div style={{ padding: '14px 18px 18px' }}>
-            <FunctionDirectory groups={groups} onNavigate={onNavigate} accent={accent} />
-          </div>
-        </section>
-      </div>
-    </main>
-  );
-}
-
-/* ---------------- ホーム（ダッシュボード）の「機能から探す」 ---------------- */
-/** ホームの検索ボックスに出す入力例（押すとその言葉で絞り込む） */
-const FINDER_EXAMPLES = ['試算表', '元帳', '科目', '年度更新', 'バックアップ', '印刷'];
+/* ---------------- ホームの機能一覧（検索ボックス＋全機能の一覧） ----------------
+ *  見出し（ホーム・年度・区分）と小さめの検索ボックスを一覧のタイトル部に置く。検索は一覧の絞り込みだけで、「開く」はなくした。
+ *  1 段目に「伝票入力」「日記帳・元帳」「帳票・印刷」をアイコンと文字を大きくして並べ、ほかの 8 分類を 2 段×4 列で並べる。
+ *  年度更新は一覧に出さず、上部のバーの「年度更新」から開く。左メニューの「機能から探す」画面はホームと同じため廃止。 */
+const HOME_TOP = ['input', 'ledger', 'print'];
 export function FinderPanel({ accent, onNavigate }: { accent: string; onNavigate: (label: string) => void }) {
   const [q, setQ] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
-  const access = useSession().access;
-  const groups = useMemo(() => filterGroups(q, access), [q, access]);
+  const s = useSession();
+  const groups = useMemo(() => filterGroups(q, s.access).filter((g) => g.key !== 's-update'), [q, s.access]);
   const total = groups.reduce((a, g) => a + g.items.length, 0);
-  const all = useMemo(() => allGroups(access).reduce((a, g) => a + g.items.length, 0), [access]);
   const searching = !!q.trim();
-  const first = searching ? groups[0]?.items[0] : undefined;
-  const go = (key: string) => { setQ(''); onNavigate(key); };
+  const top = groups.filter((g) => HOME_TOP.includes(g.key));
+  const rest = groups.filter((g) => !HOME_TOP.includes(g.key));
   const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
-    // 日本語の変換確定の Enter は無視する
+    // 日本語の変換確定の Enter は無視する。Esc で入力を消す
     if (e.nativeEvent.isComposing || (e.nativeEvent as unknown as { keyCode: number }).keyCode === 229) return;
-    if (e.key === 'Enter') { e.preventDefault(); if (first) go(first); }
-    else if (e.key === 'Escape' && q) { e.preventDefault(); setQ(''); }
+    if (e.key === 'Escape' && q) { e.preventDefault(); setQ(''); }
   };
   const tint = (pct: number) => `color-mix(in srgb, ${accent} ${pct}%, #fff)`;
-  const tryWord = (w: string) => { setQ(w); inputRef.current?.focus(); };
   return (
     <section data-finder-search data-finder-panel style={{ background: '#fff', border: '1px solid #dde4ea', borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'hidden', ['--finder-accent' as string]: accent }}>
-      {/* 検索ボックス（色つきの帯と丸い入力欄で他のカードと区別。確認メモ #148：残す） */}
-      <div style={{ padding: '16px 20px 14px', background: tint(10), borderBottom: '1px solid ' + tint(30) }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <span aria-hidden style={{ flex: 'none', width: 30, height: 30, borderRadius: '50%', background: accent, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
+      {/* タイトル部：ホーム・年度・区分（左）と、機能から探す（右） */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '14px 20px', background: tint(10), borderBottom: '1px solid ' + tint(30) }}>
+        <h1 style={{ margin: 0, fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 21, color: '#1c2a36' }}>ホーム</h1>
+        <span style={{ fontSize: 14, color: '#5b6875' }}>{s.fiscalYear}　{s.division}</span>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span aria-hidden style={{ flex: 'none', width: 26, height: 26, borderRadius: '50%', background: accent, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
           </span>
-          <label htmlFor="finder-input" style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16, color: '#1c2a36' }}>機能から探す</label>
-          <span style={{ fontSize: 14, color: '#4d5b68' }}>すべての機能を分類ごとに並べています。画面の名前ややりたいことを入力すると、下の一覧を絞り込みます</span>
-        </div>
-        <div className="finder-bar" style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12, padding: '5px 5px 5px 18px', border: '2px solid ' + accent, borderRadius: 999, background: '#fff' }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flex: 'none' }}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
-          <input
-            id="finder-input"
-            ref={inputRef}
-            className="search-input no-ring"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={onKey}
-            placeholder="ここに入力して探す（例：試算表、年度更新、科目）"
-            autoComplete="off"
-            style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', fontSize: 16, fontFamily: 'inherit', background: 'transparent', color: '#22303c', padding: '8px 0' }}
-          />
-          {q && <button type="button" aria-label="入力を消す" onClick={() => { setQ(''); inputRef.current?.focus(); }} style={{ flex: 'none', width: 26, height: 26, borderRadius: '50%', border: 'none', background: '#e6ecf0', color: '#5b6875', fontSize: 14, lineHeight: 1, cursor: 'pointer', fontFamily: 'inherit' }}>×</button>}
-          <button type="button" data-finder-go disabled={!first} onClick={() => { if (first) go(first); }} title={first ? `「${displayName(first)}」を開きます（Enter）` : '入力すると、一致した先頭の画面を開けます'} style={{ flex: 'none', padding: '9px 24px', borderRadius: 999, border: 'none', background: accent, color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: first ? 'pointer' : 'default', opacity: first ? 1 : 0.55, whiteSpace: 'nowrap' }}>開く</button>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
-          <span style={{ fontSize: 12, color: '#4d5b68', marginRight: 2 }}>入力の例：</span>
-          {FINDER_EXAMPLES.map((w) => (
-            <button key={w} type="button" data-finder-example={w} onClick={() => tryWord(w)} style={{ padding: '4px 12px', borderRadius: 999, border: '1px solid ' + tint(34), background: q === w ? '#fff' : 'rgba(255,255,255,.75)', color: '#22303c', fontSize: 14, fontWeight: q === w ? 800 : 600, fontFamily: 'inherit', cursor: 'pointer' }}>{w}</button>
-          ))}
-          <span role="status" style={{ marginLeft: 'auto', fontSize: 12, color: '#4d5b68' }}>{searching ? <><b style={{ color: '#22303c' }}>{total}</b> 件が一致（全 {all} 件）{first && <>　Enter で「{displayName(first)}」を開きます</>}</> : <>全 <b style={{ color: '#22303c' }}>{all}</b> 件</>}</span>
+          <label htmlFor="finder-input" style={{ fontWeight: 700, fontSize: 14, color: '#1c2a36', whiteSpace: 'nowrap' }}>機能から探す</label>
+          <div className="finder-bar" style={{ display: 'flex', alignItems: 'center', gap: 8, width: 300, padding: '3px 6px 3px 14px', border: '2px solid ' + accent, borderRadius: 999, background: '#fff' }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flex: 'none' }}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
+            <input
+              id="finder-input"
+              ref={inputRef}
+              className="search-input no-ring"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={onKey}
+              placeholder="ここに入力して探す"
+              title="画面の名前や、やりたいこと（例：試算表、科目、バックアップ）を入力すると、下の一覧を絞り込みます"
+              autoComplete="off"
+              style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', fontSize: 14, fontFamily: 'inherit', background: 'transparent', color: '#22303c', padding: '6px 0' }}
+            />
+            {q && <button type="button" aria-label="入力を消す" onClick={() => { setQ(''); inputRef.current?.focus(); }} style={{ flex: 'none', width: 22, height: 22, borderRadius: '50%', border: 'none', background: '#e6ecf0', color: '#5b6875', fontSize: 12, lineHeight: 1, cursor: 'pointer', fontFamily: 'inherit' }}>×</button>}
+          </div>
+          {searching && <span role="status" style={{ fontSize: 12, color: '#4d5b68', whiteSpace: 'nowrap' }}><b style={{ color: '#22303c' }}>{total}</b> 件</span>}
         </div>
       </div>
-      {/* 全機能の一覧（確認メモ #147：別画面に飛ばさず、最初からダッシュボードに表示） */}
-      <div style={{ padding: '14px 16px 16px' }}>
-        <FunctionDirectory groups={groups} onNavigate={go} first={first} accent={accent} />
+      {/* 1 段目：伝票入力・日記帳・元帳・帳票・印刷（大きく）／2・3 段目：ほかの 8 分類（2 段×4 列） */}
+      <div style={{ padding: '14px 16px 16px', display: 'grid', gap: 0 }}>
+        {top.length > 0 && <FunctionDirectory groups={top} onNavigate={onNavigate} accent={accent} cols={3} big fav />}
+        {top.length > 0 && rest.length > 0 && <div role="separator" style={{ height: 1, background: '#cfd8e0', margin: '4px 0 0' }} />}
+        {(rest.length > 0 || top.length === 0) && <FunctionDirectory groups={rest} onNavigate={onNavigate} accent={accent} cols={4} fav />}
       </div>
     </section>
   );

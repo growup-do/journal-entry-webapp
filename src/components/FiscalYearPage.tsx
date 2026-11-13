@@ -1,7 +1,7 @@
 // 年度更新（依頼書 5.5.2・6.4、マニュアル 4.6）
 //   参照する年度の切替は、ヘッダーの「会計期間」（区分・年度の切替）で行う。各種設定の「年度の切替」画面は廃止。
 //   年度更新　：次年度へ繰り越す（取り消しできない）。バックアップの確認 → 翌年度データの確認 →（親区分・合算区分）構成区分の確認 → 最終確認 → 実行 → 完了。
-//   年度更新（減価のみ）：同じ流れの簡易版。
+//   年度更新（減価のみ）：同じ流れの簡易版。上部のバーの「年度更新」から開き、最初に「更新する内容」で選ぶ。
 
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -18,15 +18,6 @@ const YEARS = ['令和6年度', '令和7年度', '令和8年度', '令和9年度
 
 function WarnIcon({ size = 20, color = DANGER }: { size?: number; color?: string }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flex: 'none' }}><path d="M12 3 2 20h20L12 3z" /><path d="M12 10v5" /><path d="M12 17.5v.5" /></svg>;
-}
-/** 最下部に置く、もう一方の操作への控えめなリンク */
-function OtherLinks({ items }: { items: { label: string; note: string; onClick: () => void }[] }) {
-  return (
-    <div style={{ borderTop: '1px solid #eef2f5', padding: '12px 22px 16px', display: 'flex', gap: '6px 22px', flexWrap: 'wrap', fontSize: 14, color: '#8290a0' }}>
-      <span>別の操作：</span>
-      {items.map((it) => <span key={it.label}><button type="button" onClick={it.onClick} style={{ border: 'none', background: 'transparent', padding: 0, color: '#5b6773', textDecoration: 'underline', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' }}>{it.label}</button>（{it.note}）</span>)}
-    </div>
-  );
 }
 
 export function FiscalYearPage({ variant, initial = 'update', onNavigate }: { variant: 'form' | 'sheet'; accent: string; /** 開く操作：年度更新／年度更新（減価のみ） */ initial?: FiscalOp; /** メニュー項目名で別画面へ移動（省略時はこの画面内で表示を切り替える） */ onNavigate?: (label: string) => void }) {
@@ -109,6 +100,19 @@ function UpdateView({ variant, depOnly, go, onNavigate }: { variant: 'form' | 's
           <b style={{ fontSize: 14, color: DANGER }}>{title}は、実行すると取り消しできません。</b><br />
           実行の前に必ずバックアップを取ります。参照する年度を変えるだけの場合は、この操作ではなく、画面上部の「会計期間」から切り替えます。
         </div>
+      </div>
+      {/* 更新する内容：会計と減価償却をまとめて／減価償却のみ（上部のバーの「年度更新」から開いて選ぶ） */}
+      <div data-fiscal-kind style={{ margin: '14px 22px 0', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 14, fontWeight: 700 }}>更新する内容</span>
+        {([['update', '会計と減価償却', '伝票・残高・予算と減価償却のデータを次年度へ繰り越す'], ['dep', '減価償却のみ', '減価償却のデータだけを次年度へ繰り越す']] as const).map(([k, label, note]) => {
+          const on = (k === 'dep') === depOnly;
+          const lock = at !== 'backup' || running;
+          return (
+            <label key={k} title={lock && !on ? '最初の手順（バックアップの確認）でだけ切り替えられます' : note} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, border: '1px solid ' + (on ? DANGER : '#d5dde4'), background: on ? '#fdf3f2' : '#fff', fontSize: 14, fontWeight: on ? 700 : 500, cursor: lock ? 'default' : 'pointer', opacity: lock && !on ? 0.5 : 1 }}>
+              <input type="radio" name="fiscal-kind" checked={on} disabled={lock} onChange={() => go(k)} />{label}<span style={{ fontSize: 12, fontWeight: 400, color: '#7a8794' }}>{note}</span>
+            </label>
+          );
+        })}
       </div>
       <Steps steps={keys.map((k) => LABEL[k])} current={idx} accent={DANGER} />
 
@@ -245,9 +249,6 @@ function UpdateView({ variant, depOnly, go, onNavigate }: { variant: 'form' | 's
             <label style={{ display: 'flex', gap: 4, alignItems: 'center', cursor: 'pointer' }}><input type="checkbox" checked={hasNext} onChange={(e) => { setHasNext(e.target.checked); setAgreeNext(false); }} disabled={at === 'done'} />翌年度データがある場合（再実行）の表示</label>
             {kind === '入力区分' && <label style={{ display: 'flex', gap: 4, alignItems: 'center', cursor: 'pointer' }}><input type="checkbox" checked={demoMulti} onChange={(e) => { setDemoMulti(e.target.checked); setAt('backup'); }} disabled={at === 'done'} />合算区分・親区分で起動した場合の表示</label>}
           </div>
-          <OtherLinks items={[
-            depOnly ? { label: '年度更新', note: '伝票・残高・予算を含めて次年度へ繰り越す', onClick: () => go('update') } : { label: '年度更新（減価のみ）', note: '減価償却のデータだけを繰り越す', onClick: () => go('dep') },
-          ]} />
         </>
       )}
     </SettingsShell>

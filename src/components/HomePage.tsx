@@ -39,12 +39,6 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
     <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
       <ToastView msg={toast.msg} />
       <div style={{ width: '100%', maxWidth: isSheet ? 'none' : 1280, display: 'flex', flexDirection: 'column', gap: 18 }}>
-        {/* 見出し行 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 21 }}>ホーム</div>
-          <span style={{ fontSize: 14, color: '#7a8794' }}>{s.fiscalYear}　{s.division}</span>
-        </div>
-
         {/* 年度更新を促す案内 */}
         {yearNotice && (
           <div data-year-notice role="status" style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px', border: '1px solid #f0c98a', borderRadius: 14, background: '#fff8ea', flexWrap: 'wrap' }}>
@@ -62,8 +56,7 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
           </div>
         )}
 
-        {/* 機能から探す：検索ボックス＋全機能の一覧。別画面に飛ばさず、最初からダッシュボードに表示する（確認メモ #147／#148）。
-            分類が多いので、2列の上に横幅いっぱいで置く */}
+        {/* 機能一覧：見出し（ホーム・年度・区分）と検索ボックスはこの一覧のタイトル部に置く。分類が多いので、2列の上に横幅いっぱいで置く */}
         <FinderPanel accent={accent} onNavigate={onNavigate} />
 
         <div style={{ display: 'grid', gridTemplateColumns: hasRight ? 'minmax(0,1.6fr) minmax(280px,1fr)' : 'minmax(0,1fr)', gap: 20, alignItems: 'start' }}>

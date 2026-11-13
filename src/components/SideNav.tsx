@@ -1,11 +1,10 @@
 // 左側のメニュー列（サイドバー）。1600×768 の画面で使う人が多いため、上部のメニューバーをやめてここに置いた（11/10）。
 //   上：ロゴ（ホームへ）＋システム名＋バージョン
-//   中：大メニュー（ホーム＋6分類）／お気に入りメニュー／機能から探す
+//   中：ホーム／お気に入りメニュー（ホームのすぐ下）／大メニュー（6分類）。「機能から探す」はホームと同じ一覧のため廃止
 //   下：折りたたみボタン。折りたたむとアイコンだけの細い列になり、分類にマウスを載せると項目が右に出る。開閉の状態はブラウザに覚える。
 // 画面の高さに合わせて固定（スクロールしない）。本文の右に出る参照パネル・元帳パネルは本文に重ねて表示する（本文を押し出さない）。
 
 import { useEffect, useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
 import { Flyout, SideMenu, SubItem, iconBtn } from './Menu';
 import { FavoritesEditModal } from './FavoritesEditModal';
 import { VersionBadge } from './VersionBadge';
@@ -35,7 +34,7 @@ interface Props {
 
 export function SideNav({ accent, active, onSelect, collapsed, onToggle }: Props) {
   const width = collapsed ? SIDENAV_COMPACT : SIDENAV_WIDTH;
-  // 会計本体を使えないアカウント：ホーム・お気に入り・機能から探すは出さない（使える機能だけのメニューにする）
+  // 会計本体を使えないアカウント：ホーム・お気に入りは出さない（使える機能だけのメニューにする）
   const access = useSession().access;
   const core = access.core;
   const home = core ? 'ホーム' : firstAllowed(access);
@@ -57,12 +56,7 @@ export function SideNav({ accent, active, onSelect, collapsed, onToggle }: Props
 
       {/* メニュー本体。展開時は縦にスクロール、折りたたみ時はフライアウトが切れないよう overflow を解放 */}
       <div style={{ flex: 1, minHeight: 0, overflowY: collapsed ? 'visible' : 'auto', overflowX: 'visible', padding: collapsed ? '8px 0' : '8px 8px 8px' }}>
-        <SideMenu accent={accent} active={active} onSelect={onSelect} compact={collapsed} />
-        {core && <>
-          <div role="separator" style={{ height: 1, background: '#eef2f5', margin: collapsed ? '8px 10px' : '8px 6px' }} />
-          <Favorites accent={accent} active={active} onNavigate={onSelect} compact={collapsed} />
-          <FinderButton accent={accent} active={active === '機能から探す'} onClick={() => onSelect('機能から探す')} compact={collapsed} />
-        </>}
+        <SideMenu accent={accent} active={active} onSelect={onSelect} compact={collapsed} afterHome={core ? <Favorites accent={accent} active={active} onNavigate={onSelect} compact={collapsed} /> : undefined} />
       </div>
 
       {/* 折りたたみ */}
@@ -114,15 +108,3 @@ function Favorites({ accent, active, onNavigate, compact }: { accent: string; ac
   );
 }
 
-/* ---------------- 機能から探す ---------------- */
-function FinderButton({ accent, active, onClick, compact }: { accent: string; active: boolean; onClick: () => void; compact: boolean }) {
-  const color = active ? accent : '#3d4a56';
-  const icon = <svg width={compact ? 20 : 16} height={compact ? 20 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none' }}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>;
-  const base: CSSProperties = compact ? { ...iconBtn, background: active ? '#eef2f6' : 'transparent', color } : { display: 'flex', alignItems: 'center', gap: 9, width: '100%', textAlign: 'left', padding: '8px 10px', fontSize: 14, fontWeight: active ? 700 : 600, fontFamily: 'inherit', cursor: 'pointer', background: active ? '#eef2f6' : 'transparent', border: 'none', borderRadius: 8, color, whiteSpace: 'nowrap' };
-  return (
-    <button type="button" className="menu-item-v" data-menu="機能から探す" onClick={onClick} aria-label="機能から探す" title="すべての機能を分類ごとに見る・キーワードで探す" style={base}>
-      {icon}
-      {!compact && <span>機能から探す</span>}
-    </button>
-  );
-}

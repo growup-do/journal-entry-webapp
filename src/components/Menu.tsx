@@ -65,14 +65,16 @@ interface Props {
   onSelect: (label: string) => void;
   /** 折りたたみ（アイコンだけ） */
   compact?: boolean;
+  /** ホームのすぐ下に置くもの（お気に入りメニュー） */
+  afterHome?: ReactNode;
 }
 
-export function SideMenu({ accent, active, onSelect, compact }: Props) {
-  return compact ? <CompactMenu accent={accent} active={active} onSelect={onSelect} /> : <FullMenu accent={accent} active={active} onSelect={onSelect} />;
+export function SideMenu({ accent, active, onSelect, compact, afterHome }: Props) {
+  return compact ? <CompactMenu accent={accent} active={active} onSelect={onSelect} afterHome={afterHome} /> : <FullMenu accent={accent} active={active} onSelect={onSelect} afterHome={afterHome} />;
 }
 
 /* ---------------- 展開：アコーディオン ---------------- */
-function FullMenu({ accent, active, onSelect }: Omit<Props, 'compact'>) {
+function FullMenu({ accent, active, onSelect, afterHome }: Omit<Props, 'compact'>) {
   const session = useSession();
   const activeGroup = groupOf(active)?.key;
   const [opened, setOpened] = useState<Set<string>>(() => new Set(activeGroup ? [activeGroup] : []));
@@ -86,6 +88,7 @@ function FullMenu({ accent, active, onSelect }: Omit<Props, 'compact'>) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
       {core && <HomeButton active={active === 'ホーム'} accent={accent} onClick={() => onSelect('ホーム')} />}
+      {afterHome}
       {visibleGroups(session.access).map((g) => {
         const on = activeGroup === g.key;
         // 会計本体を使えないアカウントは項目が少ないので、開いたままにする
@@ -120,7 +123,7 @@ function FullMenu({ accent, active, onSelect }: Omit<Props, 'compact'>) {
 }
 
 /* ---------------- 折りたたみ：アイコン＋フライアウト ---------------- */
-function CompactMenu({ accent, active, onSelect }: Omit<Props, 'compact'>) {
+function CompactMenu({ accent, active, onSelect, afterHome }: Omit<Props, 'compact'>) {
   const session = useSession();
   const { open, pinned, enter, leave, click, close, root } = useMenuOpen();
   const activeGroup = groupOf(active)?.key;
@@ -128,6 +131,7 @@ function CompactMenu({ accent, active, onSelect }: Omit<Props, 'compact'>) {
   return (
     <div ref={root} style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'stretch' }}>
       {session.access.core && <HomeButton active={active === 'ホーム'} accent={accent} onClick={() => onSelect('ホーム')} compact />}
+      {afterHome}
       {visibleGroups(session.access).map((g) => {
         const on = activeGroup === g.key;
         const isOpen = open === g.key;

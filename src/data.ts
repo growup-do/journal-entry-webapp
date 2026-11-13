@@ -638,7 +638,7 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
   { key: 'config', label: '各種設定', note: '残高・予算・決算・連動・ダッシュボードの設定', items: ['開始残高', '予算', '決算附属明細書', '財務分析設定', '繰越判断', '減価償却連動'] },
   { key: 'register', label: '登録機能', note: '定型仕訳・自動按分のひな形', items: ['仕訳辞書'] },
   { key: 'maint', label: '保守・運用', note: 'チェック・動作環境・バックアップ', items: ['整合性チェック', '決算チェック設定', '環境設定', '仕訳更新', 'データのバックアップ'] },
-  { key: 'update', label: '年度更新', note: '次年度へ繰り越す（取り消しできません）', danger: true, items: ['年度更新', '年度更新（減価のみ）'] },
+  { key: 'update', label: '年度更新', note: '次年度へ繰り越す（取り消しできません）', danger: true, items: ['年度更新'] },
 ];
 export const SETTINGS_MENU = SETTINGS_GROUPS.flatMap((g) => g.items);
 

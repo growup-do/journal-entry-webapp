@@ -107,20 +107,9 @@ function HMenu({ accent, active, onSelect }: Omit<Props, 'orientation'>) {
         );
       })}
       </div>
-      {/* 右端：お気に入り ▾（登録した画面をどの画面からも開く）＋ 機能から探す（全機能の一覧と検索）。幅が足りないときは次の行の右端へ */}
+      {/* 右端：お気に入り ▾（登録した画面をどの画面からも開く）。「機能から探す」はホームと同じ一覧のため廃止。幅が足りないときは次の行の右端へ */}
       <div style={{ marginLeft: 'auto', flex: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
       <FavoritesMenu accent={accent} active={active} onNavigate={onSelect} />
-      <button
-        type="button"
-        className="menu-item-h"
-        data-menu="機能から探す"
-        onClick={() => onSelect('機能から探す')}
-        title="すべての機能を分類ごとに見る・キーワードで探す"
-        style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 15px', fontSize: 14, fontWeight: active === '機能から探す' ? 700 : 600, fontFamily: 'inherit', cursor: 'pointer', background: 'transparent', border: 'none', borderRadius: 8, borderBottom: '2px solid ' + (active === '機能から探す' ? accent : 'transparent'), color: active === '機能から探す' ? accent : '#3d4a56', whiteSpace: 'nowrap' }}
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none' }}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
-        機能から探す
-      </button>
       </div>
     </div>
   );

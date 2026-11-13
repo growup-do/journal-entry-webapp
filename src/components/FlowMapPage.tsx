@@ -42,7 +42,6 @@ const NODES: Node[] = [
   N('divinfo', '法人名の変更、及び区分の追加、変更', 'dialog', 'start', { open: 'ホーム', note: '集計区分／法人情報／伝票入力区分' }),
   // ホーム
   N('home', 'ホーム（ダッシュボード）', 'page', 'home', { open: 'ホーム' }),
-  N('finder', '機能から探す', 'page', 'home', { open: '機能から探す' }),
   N('notices', 'お知らせ（ヘッダーのベル）', 'dialog', 'user', { open: 'ホーム', note: 'ユーザーアイコンの左。未読の件数をバッジで表示。どの画面からも開ける' }),
   N('favedit', 'お気に入りの設定', 'dialog', 'home', { open: 'ホーム' }),
   N('favmenu', 'お気に入りメニュー ▾（メニューバー右端）', 'dialog', 'home', { open: '伝票入力', note: '「機能から探す」の左隣。マウスオーバーで開き、どの画面からも登録した画面を開く' }),
@@ -147,7 +146,7 @@ const NODES: Node[] = [
   N('s-env', '動作環境', 'page', 'settings', { open: '環境設定' }),
   N('s-refresh', '仕訳更新', 'page', 'settings', { open: '仕訳更新' }),
   N('s-backup', 'データのバックアップ', 'page', 'settings', { open: 'データのバックアップ' }),
-  N('s-update', '年度更新／年度更新（減価のみ）', 'page', 'settings', { open: '年度更新', note: '取り消し不可・ステップ形式' }),
+  N('s-update', '年度更新／年度更新（減価のみ）', 'page', 'settings', { open: '年度更新', note: '上部のバーの「年度更新」から開く。最初に会計と減価償却／減価償却のみを選ぶ。取り消し不可・ステップ形式' }),
   // ユーザー・共通
   N('usersettings', 'ユーザー設定', 'page', 'user', { open: 'ユーザー設定', note: 'アカウントごとの利用できる機能（会計本体／小口現金／預金出納／減価償却）を設定' }),
   N('accessdenied', '利用できない機能の案内', 'modal', 'user', { open: 'ユーザー設定', note: 'アカウントの「利用できる機能」にない画面を開こうとしたとき' }),
@@ -166,9 +165,9 @@ const EDGES: Edge[] = [
   E('journal', 'bulkdel', '一括削除 ▾', true), E('bulkdel', 'vdelete', '削除確認へ', true), E('closing', 's-carry', '繰越判断', true),
   E('login', 'pwreset', 'お忘れですか', true), E('login', 'division', 'ログイン'), E('division', 'merge', '合算追加', true), E('division', 'divinfo', '部門情報の変更', true), E('division', 'yearconfirm', '年度を変えて OK'), E('yearconfirm', 'continuity', '年度を切り替える'), E('division', 'continuity', '起動時の OK', true),
   E('division', 'home', 'OK（初期画面：ホーム）'), E('login', 'home', 'ログイン（区分選択を1か月表示しない設定のとき）', true), E('division', 'e-voucher', 'OK（初期画面：伝票入力）', true),
-  E('home', 'finder', '検索窓・一覧で見る'), E('home', 'favedit', '編集', true), E('homeedit', 'favedit', '登録する画面を編集', true), E('home', 's-update', '年度更新の案内'), E('home', 'support', 'FAQ すべて見る', true), E('home', 'e-voucher', '伝票入力をはじめる'), E('usersettings', 'pwmail', 'パスワードを変更', true),
+  E('home', 'favedit', '編集', true), E('homeedit', 'favedit', '登録する画面を編集', true), E('home', 's-update', '年度更新の案内'), E('home', 'support', 'FAQ すべて見る', true), E('home', 'e-voucher', '伝票入力をはじめる'), E('usersettings', 'pwmail', 'パスワードを変更', true),
   E('home', 'count', 'ヘッダーの「仕訳数」'), E('home', 'daily', 'ヘッダーの「日次調査」'), E('home', 'auditm', 'ヘッダーの「決算調査」'), E('bankbal', 'balcheck', '残高照合へ', true), E('widepanel', 'balcheck', '残高照合の画面を開く', true),
-  E('finder', 'trial', '機能を選ぶ', true),
+  E('home', 'trial', '機能一覧から選ぶ', true),
   E('e-voucher', 'e-single', '形式切替'), E('e-single', 'e-transfer', '形式切替'), E('e-transfer', 'e-tsingle', '形式切替'),
   E('e-voucher', 'widepanel', '右側に常設'), E('widepanel', 'vedit', '行の訂正', true),
   E('e-voucher', 'template', '連続定型', true), E('e-voucher', 'alloc', '自動按分', true), E('e-voucher', 'confirm', '伝票登録', true), E('e-voucher', 'inputset', '入力の変更', true), E('e-voucher', 'keys', 'キーボード操作一覧', true),
