@@ -119,8 +119,10 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
           const tile = !!tiles && !!fav;
           // ホームの 2 段目以降：機能を枠なしのテキストリンクで 1 列に並べ、項目の間に点線を入れる
           const link = !!links;
+          // ホームの 1 段目：ボタンの列を分類の枠の高さいっぱいに伸ばし、ボタンの高さを均等にそろえる
+          const fill = !!big && !stacked && !tile && !link && !wideCols;
           return (
-            <div key={g.key} data-function-group={g.key} style={{ display: 'grid', gridTemplateColumns: top ? 'minmax(0, 1fr)' : big ? '120px minmax(0, 1fr)' : '104px minmax(0, 1fr)', gridColumn: wideCols ? '1 / -1' : undefined, columnGap: 12, rowGap: 12, alignItems: 'start', alignContent: 'start', padding: top ? '16px 16px 18px' : '18px 14px 18px 6px', borderTop: LINE, borderLeft: LINE, background: g.danger ? '#fdf7f5' : undefined }}>
+            <div key={g.key} data-function-group={g.key} style={{ display: 'grid', gridTemplateColumns: top ? 'minmax(0, 1fr)' : big ? '120px minmax(0, 1fr)' : '104px minmax(0, 1fr)', gridColumn: wideCols ? '1 / -1' : undefined, columnGap: 12, rowGap: 12, alignItems: fill ? 'stretch' : 'start', alignContent: fill ? 'stretch' : 'start', padding: top ? '16px 16px 18px' : '18px 14px 18px 6px', borderTop: LINE, borderLeft: LINE, background: g.danger ? '#fdf7f5' : undefined }}>
               <div title={g.note || undefined} style={{ display: 'flex', flexDirection: top ? 'row' : 'column', alignItems: 'center', gap: top ? 10 : 8, textAlign: top ? 'left' : 'center' }}>
                 <svg width={top ? (big ? 40 : 34) : big ? 64 : 52} height={top ? (big ? 40 : 34) : big ? 64 : 52} viewBox="0 0 24 24" fill="none" stroke={ink} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{GROUP_ICONS[g.key] ?? DEFAULT_ICON}</svg>
                 <div data-group-title style={{ fontSize: top ? (big ? 17 : 15) : big ? 16 : 13, fontWeight: 800, color: ink, lineHeight: 1.35, whiteSpace: 'nowrap' }}>
@@ -128,7 +130,7 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
                 </div>
               </div>
               {/* 機能はすべて同じ形のボタンで、1 行に 1 つ（横幅いっぱいの分類は、指定の列の数で並べる） */}
-              <div style={wideCols || tile ? { display: 'grid', gridTemplateColumns: `repeat(${wideCols || 2}, minmax(0, 1fr))`, gap: tile ? 8 : 6, minWidth: 0 } : { display: 'flex', flexDirection: 'column', gap: link ? 0 : 6, minWidth: 0 }}>
+              <div style={wideCols || tile ? { display: 'grid', gridTemplateColumns: `repeat(${wideCols || 2}, minmax(0, 1fr))`, gap: tile ? 8 : 6, minWidth: 0 } : fill ? { display: 'grid', gridAutoRows: '1fr', gap: 6, minWidth: 0 } : { display: 'flex', flexDirection: 'column', gap: link ? 0 : 6, minWidth: 0 }}>
                 {g.items.map((l, idx) => {
                   const off = INPUT_ONLY.includes(l) && kind !== '入力区分';
                   const hit = first === l;
@@ -147,7 +149,7 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
                   );
                   if (!fav) return button;
                   return (
-                    <div key={l} data-fn-row style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', gap: 2, minWidth: 0, borderTop: link && idx > 0 ? '1px dashed #cdd5dc' : undefined }}>
+                    <div key={l} data-fn-row style={{ position: 'relative', display: 'flex', alignItems: link ? 'flex-start' : 'stretch', gap: 2, minWidth: 0, borderTop: link && idx > 0 ? '1px dashed #cdd5dc' : undefined }}>
                       {button}
                       <button type="button" data-fav-star data-on={on || undefined} onClick={() => toggleFav(l)} aria-pressed={on} aria-label={(on ? 'お気に入りから外す：' : 'お気に入りに追加：') + name} title={on ? 'お気に入りメニューから外します' : 'お気に入りメニューに追加します'}
                         style={{ ...(link ? { flex: 'none', width: 20, height: 22, marginTop: 6, fontSize: 15 } : tile ? { position: 'absolute', left: '50%', bottom: big ? 8 : 6, transform: 'translateX(-50%)', width: 30, height: big ? 28 : 24, fontSize: big ? 24 : 19 } : { position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', width: 22, height: 22, fontSize: 16 }), padding: 0, border: 'none', borderRadius: 6, background: 'transparent', color: on ? '#d9a520' : '#c5cbd1', lineHeight: 1, cursor: 'pointer', fontFamily: 'inherit', opacity: on || (tile && big) ? 1 : 0, transition: 'opacity .12s, color .12s' }}>★</button>
