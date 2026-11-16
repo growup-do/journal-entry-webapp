@@ -13,9 +13,6 @@ import { FiscalYearBanner } from './FiscalYearPage';
 import { AttachedStatementModal, BudgetGraphModal, BudgetHintLive, EntryConfirmModal, EntryDivisionField, SpecialAmountModal, TorihikiBadge, useEntryTools } from './EntryExtras';
 import { ComboField, ENTRY_MONTH_HELP, EntryMonthNote, EntryStyles, isIme, FieldLabel, FundAccountLine, PAPER, PaperBox, PaperDate, PaperStyles, PaperTitle, parseEntryDate, useEntryYear, ENTRY_DATE_RANGE, ENTRY_YEAR_HELP, INTERNAL_SIDES, autoInternalSide, isSpecialParent, specialChildrenOf, type InternalSide, fieldMessage, fieldState, fmtNum, focusId, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, watchedStatement, type FundMode, type FusenColor, FusenTab, VoucherMarks } from './EntryCommon';
 import { WIDE_TAB_SPACE, WIDE_WIDTH, WidePanel, usePanelPush, usePanelPushing, useWidePanel } from './WidePanel';
-import { Menu as ClassicMenu } from './classic/ClassicMenu';
-import { VersionBadge } from './VersionBadge';
-import { useLayoutMode } from '../store/layout';
 import { ToastView, useToast } from './Toast';
 import { judgeTorihiki, metaOf } from '../lib/accounts';
 import { TAX_OPTS, taxAmountOf, taxDefaultOf } from '../lib/transferTax';
@@ -57,7 +54,6 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
   const [topOffset, setTopOffset] = useState(52);
   const headerRef = useRef<HTMLDivElement>(null);
   const nav = useSideNav();
-  const classic = useLayoutMode() === 'classic';
   // 参照パネルが本文を押し出している間は、左メニューを自動でたたむ（確認メモ #243）。その間にメニューのボタンで広げることもできる（保存した開閉の状態は変えない）
   const pushing = usePanelPushing();
   const [navOverride, setNavOverride] = useState<boolean | null>(null);
@@ -80,7 +76,7 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
       clearTimeout(t2);
       window.removeEventListener('resize', measure);
     };
-  }, [classic]);
+  }, []);
 
   const body = page === '伝票入力' ? (
     <VoucherEntry onNavigate={onNavigate} topOffset={topOffset} />
@@ -89,41 +85,6 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
   ) : (
     renderPage(page, 'form', GREEN, GREEN_RGB, onNavigate, onLogout)
   );
-
-  // 旧レイアウト（プロトタイプ確認用。11/10 より前の構成）：上部にアプリバー＋年度帯＋メニューバー。確認メモの位置を確かめるために残している
-  if (classic) {
-    return (
-      <div style={{ minHeight: 'calc(100vh / var(--app-zoom, 1))', display: 'flex', flexDirection: 'column' }}>
-        <div ref={headerRef} data-app-top style={{ position: 'sticky', top: 0, zIndex: 100 }}>
-          <header style={{ background: '#fff', borderBottom: '1px solid #dde4ea', minHeight: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', rowGap: 6, columnGap: 12, padding: '8px 26px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: '1 1 auto', maxWidth: '100%' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 'none' }}>
-                <button type="button" data-menu="ホーム（ロゴ）" onClick={() => onNavigate('ホーム')} title="ホームへ" style={{ display: 'flex', alignItems: 'center', gap: 9, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: 'inherit', color: 'inherit' }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, background: GREEN, color: '#fff', borderRadius: 8, fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 15 }}>会</span>
-                  <span style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16, whiteSpace: 'nowrap' }}>会計基準システム</span>
-                </button>
-                <VersionBadge accent={GREEN} />
-              </div>
-              <span style={{ color: '#c3ccd4' }}>｜</span>
-              <DivisionPicker accent={GREEN} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: '#68757f', flex: 'none', marginLeft: 'auto' }}>
-              <HeaderTools accent={GREEN} page={page} onNavigate={onNavigate} />
-              <SettingsMenu accent={GREEN} active={page} onNavigate={onNavigate} />
-              <NoticeBell accent={GREEN} />
-              <UserMenu accent={GREEN} soft="#eef4f0" onNavigate={onNavigate} />
-            </div>
-          </header>
-          <FiscalYearBanner />
-          <nav style={{ background: '#fff', borderBottom: '1px solid #eef2f5', padding: '3px 20px', display: 'flex', flexWrap: 'wrap', overflow: 'visible', alignItems: 'stretch', position: 'relative', zIndex: 99 }}>
-            <ClassicMenu orientation="h" accent={GREEN} active={page} onSelect={onNavigate} />
-          </nav>
-        </div>
-        {body}
-        <Footer />
-      </div>
-    );
-  }
 
   return (
     <div style={{ minHeight: 'calc(100vh / var(--app-zoom, 1))', display: 'flex', alignItems: 'stretch' }}>
@@ -408,8 +369,8 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
     enterOrder: ENTER_ORDER,
   });
 
-  // 参照パネルを開くと本文を左に押し出す：旧レイアウト（以前の動き）と、新レイアウトで画面の幅が 1600px 以上のとき（確認メモ #243）
-  const pushOut = usePanelPush(wide, useLayoutMode() === 'classic');
+  // 参照パネルを開くと本文を左に押し出す：画面の幅が 1600px 以上のとき（確認メモ #243）
+  const pushOut = usePanelPush(wide);
   const smallInput: CSSProperties = { padding: '4px 8px', border: '1px solid #cfd8e0', borderRadius: 7, fontSize: 14, fontFamily: 'inherit' };
   /** 明細の列：コード（行番号）｜摘要・取引先｜（入力予備１）｜（入力予備２）｜（消費税コード）｜金額｜行の操作（挿入・削除）。入力予備は入力の変更で有効にしたときだけ（行ごとに持つ。確認メモ #188）、消費税コードは特殊摘要伝票のときだけ（確認メモ #190） */
   const sp1 = inp.spare1, sp2 = inp.spare2;
@@ -700,7 +661,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
  *  パネルの状態（表示内容・開閉）は4形式で共有（storageKey 'form-entry'）。パネルは本文に重ねて出す（開閉タブの分だけ右を空ける） */
 function EntryWithPanel({ page, topOffset, onNavigate, children }: { page: string; topOffset: number; onNavigate: (label: string) => void; children: ReactNode }) {
   const wide = useWidePanel('form-entry');
-  const pushOut = usePanelPush(wide, useLayoutMode() === 'classic');
+  const pushOut = usePanelPush(wide);
   return (
     <>
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', paddingRight: (pushOut ? WIDE_WIDTH : 0) + (WIDE_TAB_SPACE - 28), transition: 'padding-right .28s ease' }}>{children}</div>

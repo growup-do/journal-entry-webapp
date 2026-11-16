@@ -19,7 +19,6 @@ import { BALANCE_DEFAULT_MONTH, balanceAsOf, systemBalances, useBookBalances } f
 import { FUSEN_COLORS, useVouchers, type Voucher } from '../store/journalStore';
 import { useSession } from '../store/session';
 import { canEnterVoucher } from '../lib/entryDivision';
-import { getLayoutMode } from '../store/layout';
 import type { MonthFilter } from '../types';
 
 export const WIDE_VIEWS = ['日記帳', '前年度日記帳', '元帳１', '元帳２', '残高照合'] as const;
@@ -39,18 +38,17 @@ const setPushing = (v: boolean) => { if (pushing !== v) { pushing = v; pushSubs.
 export function usePanelPushing(): boolean {
   return useSyncExternalStore((f) => { pushSubs.add(f); return () => { pushSubs.delete(f); }; }, () => pushing);
 }
-/** 参照パネルを開いたときに本文を押し出すか。旧レイアウトは幅が足りるとき（以前の動き）、新レイアウトは画面の幅が WIDE_PUSH_MIN 以上のとき。
- *  新レイアウトで押し出すときは、左メニューを自動でたたむよう知らせる */
-export function usePanelPush(state: WidePanelState, classic: boolean): boolean {
+/** 参照パネルを開いたときに本文を押し出すか。画面の幅が WIDE_PUSH_MIN 以上のとき。
+ *  押し出すときは、左メニューを自動でたたむよう知らせる */
+export function usePanelPush(state: WidePanelState): boolean {
   const [wideScreen, setWideScreen] = useState(() => window.innerWidth >= WIDE_PUSH_MIN);
   useEffect(() => {
     const h = () => setWideScreen(window.innerWidth >= WIDE_PUSH_MIN);
     window.addEventListener('resize', h);
     return () => window.removeEventListener('resize', h);
   }, []);
-  const push = !state.collapsed && (classic ? !state.narrow : wideScreen);
-  const fold = push && !classic;
-  useEffect(() => { setPushing(fold); return () => setPushing(false); }, [fold]);
+  const push = !state.collapsed && wideScreen;
+  useEffect(() => { setPushing(push); return () => setPushing(false); }, [push]);
   return push;
 }
 /** 開閉タブ（幅32px）の分として、本文の右側に空ける余白。本文の右余白の合計がこの値になるようにする（タブ32px＋すき間16px）。パネル本体は本文に重ねるので、この分だけ空ける */
@@ -70,8 +68,8 @@ export interface WidePanelState {
   setView: (v: WideView) => void;
   narrow: boolean;
 }
-/** パネルの開閉状態。初期状態は折りたたみ（本文に重ねて出すため、見たいときに開く。旧レイアウトでは以前どおり開いた状態）。一度開閉すればその状態を覚える */
-export function useWidePanel(storageKey: string, defaultCollapsed = getLayoutMode() !== 'classic'): WidePanelState {
+/** パネルの開閉状態。初期状態は折りたたみ（本文に重ねて出すため、見たいときに開く）。一度開閉すればその状態を覚える */
+export function useWidePanel(storageKey: string, defaultCollapsed = true): WidePanelState {
   const sess = useSession();
   const [narrow, setNarrow] = useState(() => window.innerWidth < WIDE_NARROW);
   const [collapsed, setC] = useState(() => {

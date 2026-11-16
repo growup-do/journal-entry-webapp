@@ -19,7 +19,6 @@ import { FeatureListPage } from './components/FeatureListPage';
 import { LegalPage } from './components/LegalPage';
 import { FlowMapPage } from './components/FlowMapPage';
 import { IssueBoardPage } from './components/IssueBoardPage';
-import { setLayoutMode, useLayoutMode } from './store/layout';
 import { clearUnsaved, unsavedLabel } from './store/unsaved';
 import { ACCESS_DENIED, FULL_ACCESS, canOpen, firstAllowed } from './store/access';
 import { Modal } from './components/Modal';
@@ -231,7 +230,6 @@ export default function App() {
  *  参照のみ権限のときの見え方（訂正・削除・入換の無効表示）を確認するための仕掛けで、本番の画面要素ではない */
 function RoleSwitchBar({ review, guard }: { /** 確認用アカウント：確認事項・やりとりへの入口を出さない */ review: boolean; /** 未保存の変更があれば確認してから実行する */ guard: (go: () => void) => void }) {
   const s = useSession();
-  const layout = useLayoutMode();
   const ROLES: { key: typeof s.role; label: string; hint: string; accent: string }[] = [
     { key: '入力可', label: '入力権限', hint: '伝票の入力・訂正・削除ができる', accent: '#1f7a52' },
     { key: '参照のみ', label: '参照のみ権限', hint: '閲覧のみ（訂正・削除・入換は無効表示）', accent: '#b7791f' },
@@ -248,17 +246,6 @@ function RoleSwitchBar({ review, guard }: { /** 確認用アカウント：確�
           </button>
         );
       })}
-      <span style={{ width: 1, alignSelf: 'stretch', background: '#e2e8ee', margin: '4px 4px' }} />
-      {/* レイアウトの切替：旧レイアウト（11/10 より前の上部メニューバー）は、それ以前に置かれた確認メモの位置を確かめるためのもの */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '2px 4px' }}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', letterSpacing: '.03em', padding: '0 6px' }}>レイアウト</span>
-        <div role="group" aria-label="レイアウトの切替" style={{ display: 'flex', gap: 2 }}>
-          {([['new', '新', '左メニュー（1600×768 向け。11/10〜）'], ['classic', '旧', '上部メニューバー（11/10 より前）。それ以前に置かれた確認メモの位置の確認用']] as const).map(([key, label, hint]) => {
-            const on = layout === key;
-            return <button key={key} type="button" data-layout={key} aria-pressed={on} onClick={() => setLayoutMode(key)} title={hint} style={{ padding: '4px 10px', border: 'none', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', background: on ? (key === 'classic' ? '#b7791f' : '#3d4a56') : 'transparent', color: on ? '#fff' : '#3d4a56', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>{label}</button>;
-          })}
-        </div>
-      </div>
       <span style={{ width: 1, alignSelf: 'stretch', background: '#e2e8ee', margin: '4px 4px' }} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '2px 6px 2px 4px' }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', letterSpacing: '.03em', padding: '0 6px' }}>プロトタイプ確認用</span>
