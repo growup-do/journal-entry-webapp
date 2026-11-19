@@ -78,7 +78,7 @@ export function PrintCenterPage({ variant, accent, onNavigate, initialCat }: { v
                   {items.map((r) => {
                     const on = r.id === cur?.id;
                     const fine = ok(r);
-                    const st = !fine ? { label: '条件外', bg: '#f1f4f6', fg: '#9aa5b1' } : r.common ? { label: '共通設定', bg: '#f1eafb', fg: '#6b3fa0' } : r.wamnet ? { label: r.note ?? '設定', bg: '#eef2f6', fg: '#3d4a56' } : null;
+                    const st = !fine ? { label: '条件外', bg: '#f1f4f6', fg: '#9aa5b1' } : r.wamnet ? { label: r.note ?? '設定', bg: '#eef2f6', fg: '#3d4a56' } : null;
                     return (
                       <button key={r.id} type="button" data-report={r.id} onClick={() => setCurOf((m) => ({ ...m, [cat]: r.id }))} aria-current={on ? 'true' : undefined} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, width: '100%', textAlign: 'left', padding: '7px 8px', border: 'none', borderRadius: 8, background: on ? accent : 'transparent', color: on ? '#fff' : fine ? '#22303c' : '#9aa5b1', fontFamily: 'inherit', cursor: 'pointer', marginBottom: 1 }}>
                         <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: on ? 700 : 500, lineHeight: 1.45 }}>{r.name}{r.note && !r.wamnet && <span style={{ display: 'block', fontSize: 12, fontWeight: 500, opacity: 0.8 }}>{r.note}</span>}</span>
@@ -100,7 +100,6 @@ export function PrintCenterPage({ variant, accent, onNavigate, initialCat }: { v
                 <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16, minWidth: 0 }}>{cur.name}</div>
                 {tag(cur.sub && cur.sub !== cat ? `${cat}／${cur.sub}` : cat, '#eef2f6', '#3d4a56')}
                 {cur.note && !cur.wamnet && tag(cur.note, '#eef2f6', '#3d4a56')}
-                {cur.common && tag('共通印刷設定：有', '#f1eafb', '#6b3fa0', '詳細設定に「共通の印刷設定を反映」があります')}
                 {cur.cond && tag(ok(cur) ? '表示条件あり' : '表示条件を満たしていません', ok(cur) ? '#eef2f6' : '#fdecea', ok(cur) ? '#3d4a56' : '#b03a2e')}
                 <span style={{ marginLeft: 'auto', fontSize: 12, color: '#8290a0' }}>{s.fiscalYear}　{s.division}</span>
               </div>

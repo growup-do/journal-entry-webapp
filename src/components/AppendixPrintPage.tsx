@@ -283,7 +283,6 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16, minWidth: 0 }}>{sheet.group === '附属明細書' ? `${sheet.no} ` : ''}{sheet.name}</div>
             {sheet.group === '附属明細書' && tag(`別紙3（${sheet.no}）`, '#eef2f6', '#3d4a56')}
             {sheet.unit && tag(`${sheet.unit}で作成`, sheet.unit === '法人全体' ? '#e4f1f0' : '#fff3dc', sheet.unit === '法人全体' ? '#1f6f6b' : '#8a5a00')}
-            {sheet.common && tag('共通印刷設定：有', '#f1eafb', '#6b3fa0')}
             {condText(sheet) && tag(sheetOk(sheet, s) ? '表示条件あり' : '表示条件を満たしていません', sheetOk(sheet, s) ? '#eef2f6' : '#fdecea', sheetOk(sheet, s) ? '#3d4a56' : '#b03a2e')}
             <span style={{ marginLeft: 'auto', fontSize: 12, color: '#8290a0' }}>{s.fiscalYear}　{s.division}</span>
           </div>

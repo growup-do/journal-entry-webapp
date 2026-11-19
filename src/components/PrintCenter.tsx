@@ -600,7 +600,6 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
       <ToastView msg={toast.msg} />
       <div style={{ padding: '16px 22px 0', display: 'grid', gap: 10 }}>
         <Notice>仕訳日記帳・元帳・試算表・予算書など、決算書以外の帳票は、それぞれの詳細設定だけで印刷の内容を決めます。決算書の帳票も、帳票ごとに変えたい項目は詳細設定で変更できます。金額の書式などは「{displayName('環境設定')}」の設定が印刷に反映されます。</Notice>
-        <div data-common-targets style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', fontSize: 14 }}><span style={{ fontSize: 12, fontWeight: 800, color: '#8290a0', marginRight: 4 }}>この設定を使う帳票</span>{[...REPORTS.filter((r) => r.common && r.cat === '決算書').map((r) => r.name), '別紙3（⑩）拠点区分資金収支明細書', '別紙3（⑪）拠点区分事業活動明細書', ...REPORTS.filter((r) => r.common && r.cat === '準決算書').map((r) => r.name)].map((n) => <span key={n} style={{ fontSize: 12, padding: '2px 8px', borderRadius: 8, background: '#f1eafb', color: '#6b3fa0', border: '1px solid #dccdf0', whiteSpace: 'nowrap' }}>{n}</span>)}</div>
       </div>
       <div style={{ padding: 22, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 18, alignItems: 'start' }}>
         <div style={{ display: 'grid', gap: 18 }}>
