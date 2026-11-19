@@ -205,7 +205,14 @@ function findByKey(key: string): HTMLElement | null {
   const b = m?.[1] ?? key;
   const n = Number(m?.[2] ?? 0);
   const same = candidates().filter((c) => baseKey(c) === b);
-  return (same[n] as HTMLElement | undefined) ?? null;
+  const hit = (same[n] as HTMLElement | undefined) ?? null;
+  if (hit) return hit;
+  // 行の「訂正」「表示」ボタンは廃止して行のクリックに変えた。古いメモの記録は n 番目の伝票の行で再現する
+  if (b === 'text=訂正' || b === 'text=表示') {
+    const rows = Array.from(document.querySelectorAll<HTMLElement>('tr[data-voucher]')).filter((r) => visible(r) && !inMemoLayer(r));
+    return rows[n] ?? null;
+  }
+  return null;
 }
 
 function check() {

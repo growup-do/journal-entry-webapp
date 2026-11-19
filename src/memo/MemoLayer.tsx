@@ -69,8 +69,6 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
   const { memos, loaded, error, add, update, remove } = useMemos();
   const [panelOpen, setPanelOpen] = useState(false);
   const [placing, setPlacing] = useState(false);
-  /** ピンを置き直すメモ（古いメモの位置を、いまの画面の要素に結び付け直す） */
-  const [moving, setMoving] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [draftText, setDraftText] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
@@ -87,8 +85,8 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
   const [ctxNow, setCtxNow] = useState<UiCtx>(() => readCtx());
   /** レイアウトが変わった回数（モーダル内のピンの位置を計算し直すため） */
   const [, setTick] = useState(0);
-  /** 一覧から選んだメモの状態を再現できなかったときの案内 */
-  const [hint, setHint] = useState('');
+  /** 一覧から選んだメモ。状態を再現しきれなくても、この画面では必ずピンとメモを出す */
+  const [forceId, setForceId] = useState<string | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -102,7 +100,7 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
   // Esc は「メモを置く」操作の中止だけ。入力中の下書きや開いているメモは閉じない（入力途中の内容を消さない）
   useEffect(() => {
     const h = (e: globalThis.KeyboardEvent) => {
-      if (e.key === 'Escape') { setPlacing(false); setMoving(null); }
+      if (e.key === 'Escape') setPlacing(false);
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
@@ -134,18 +132,19 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
     };
   }, []);
 
-  // 案内は数秒で消す
+  // 一覧から選んだメモを閉じたら、普段の表示（状態が合うピンだけ）に戻す
   useEffect(() => {
-    if (!hint) return;
-    const t = setTimeout(() => setHint(''), 12000);
-    return () => clearTimeout(t);
-  }, [hint]);
+    if (forceId && openId !== forceId) setForceId(null);
+  }, [openId, forceId]);
+  useEffect(() => {
+    setForceId(null);
+  }, [screenKey]);
 
   const numbered: Numbered[] = useMemo(() => memos.map((m, i) => ({ ...m, no: i + 1 })), [memos]);
   const openCount = memos.filter((m) => m.status === 'open').length;
-  const pinsHere = numbered.filter((m) => m.screen === screenKey && (showResolved || m.status === 'open') && ctxMatches(m.ctx, ctxNow));
+  const pinsHere = numbered.filter((m) => m.screen === screenKey && (m.id === forceId || ((showResolved || m.status === 'open') && ctxMatches(m.ctx, ctxNow))));
   const openMemo = numbered.find((m) => m.id === openId) ?? null;
-  const openPos = openMemo && pinsHere.includes(openMemo) ? posOf(openMemo.x, openMemo.y, openMemo.anchor) : null;
+  const openPos = openMemo && pinsHere.includes(openMemo) ? pinPos(openMemo) : null;
   const listed = numbered.filter((m) => showResolved || m.status === 'open');
 
   // ポップオーバーを開いたとき、回答欄に既存の回答を読み込む
@@ -155,21 +154,29 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openId]);
 
-  /** メモの状態を再現してから開く。再現できなければ案内を出す */
-  const restore = async (m: Numbered) => {
+  /** メモの状態を再現してから開く。
+   *  再現できないとき（画面がほかの状態になっている等）は、その画面を開き直して最初から再現する。
+   *  それでも再現できなければ、置いた位置にピンとメモを出す（どこからでもメモを置いた画面が開く） */
+  const restore = async (m: Numbered, hard = false) => {
     const ok = await restoreCtx(m.ctx, m.path);
     setCtxNow(readCtx());
-    if (!ok) {
-      const d = describeCtx(m.ctx);
-      // 記録した操作（ボタンの名前）を順に案内する
-      const steps = (m.path ?? []).map((k) => k.replace(/^[a-zA-Z]+=/, '').replace(/#\d+$/, '')).filter(Boolean);
-      setHint(`メモ #${m.no} は${d ? d + '状態' : '別の状態'}で置かれています。${steps.length ? `この画面で「${steps.join('」＞「')}」の順に押すと番号が表示されます。` : 'その画面を開くと番号が表示されます。'}`);
-      return;
+    if (!ok && !hard && m.screen.includes(':')) {
+      try {
+        sessionStorage.setItem(RESTORE_KEY, JSON.stringify({ id: m.id, at: Date.now(), hard: true }));
+        const [mode, pg] = m.screen.split(':');
+        window.location.href = `${window.location.pathname}?open=${encodeURIComponent(pg ?? '')}&mode=${mode}`;
+        return;
+      } catch {
+        /* 開き直せない環境では、このまま表示する */
+      }
     }
+    setForceId(m.id);
     setOpenId(m.id);
-    if (!m.anchor) setTimeout(() => window.scrollTo({ top: Math.max(0, m.y - 220), behavior: 'smooth' }), 60);
-    // 画面の要素に結び付けたメモは、その要素の位置へスクロールする
-    else if (m.anchor.name === 'el') { const a = m.anchor; setTimeout(() => { const p = anchorPos(a); if (p) window.scrollTo({ top: Math.max(0, p.top - 220), behavior: 'smooth' }); }, 60); }
+    setTimeout(() => {
+      const p = pinPos(m);
+      const top = p ? p.top : m.y;
+      window.scrollTo({ top: Math.max(0, top - 220), behavior: 'smooth' });
+    }, 60);
   };
 
   // 別の画面から番号を選んで来たとき：この画面になったら状態を再現して開く
@@ -182,21 +189,24 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
       /* ignore */
     }
     if (!raw) return;
-    const { id, at } = JSON.parse(raw) as { id: string; at: number };
+    const { id, at, hard } = JSON.parse(raw) as { id: string; at: number; hard?: boolean };
     const m = numbered.find((x) => x.id === id);
     if (!m || m.screen !== screenKey) {
       if (Date.now() - at > 20000) sessionStorage.removeItem(RESTORE_KEY);
       return;
     }
     sessionStorage.removeItem(RESTORE_KEY);
-    const t = setTimeout(() => void restore(m), 200);
+    const t = setTimeout(() => void restore(m, !!hard), hard ? 500 : 200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, screenKey, numbered.length]);
 
+  /** ピンの位置。一覧から選んだメモは、結び付けた要素が見つからなくても置いた位置に出す */
+  function pinPos(m: Numbered): Pos | null {
+    return posOf(m.x, m.y, m.anchor) ?? (m.id === forceId ? { left: `${Math.min(96, Math.max(4, m.x))}%`, top: m.y } : null);
+  }
   const startPlacing = () => {
     setPlacing(true);
-    setMoving(null);
     setDraft(null);
     setOpenId(null);
     setPanelOpen(false);
@@ -205,13 +215,6 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
     const x = (e.pageX / document.documentElement.scrollWidth) * 100;
     // クリックした位置の要素（モーダル・パネルの中ならその要素）からの相対位置を覚える。オーバーレイを透かして下の要素を見る
     const anchor = anchorAt(e.clientX, e.clientY, overlayRef.current);
-    if (moving) {
-      void update(moving, { x: Math.min(98, Math.max(2, x)), y: e.pageY, anchor: anchor ?? undefined, ctx: readCtx(), path: currentPath() });
-      setOpenId(moving);
-      setMoving(null);
-      setPlacing(false);
-      return;
-    }
     setDraft({ x: Math.min(98, Math.max(2, x)), y: e.pageY, anchor, ctx: readCtx(), path: currentPath() });
     setDraftText('');
     setPlacing(false);
@@ -266,7 +269,7 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
       {/* ピン（ページ座標に絶対配置） */}
       <div data-memo-layer style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: 0, zIndex: 280, pointerEvents: 'none' }}>
         {pinsHere.map((m) => {
-          const p = posOf(m.x, m.y, m.anchor);
+          const p = pinPos(m);
           if (!p) return null;
           const resolved = m.status === 'resolved';
           const active = m.id === openId;
@@ -334,9 +337,6 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
                     未解決に戻す
                   </button>
                 )}
-                <button type="button" data-memo-move onClick={() => { setMoving(openMemo.id); setOpenId(null); setDraft(null); setPanelOpen(false); setPlacing(true); }} title="ピンの位置を置き直します。置いた場所のボタンや表のセルに結び付くので、ウィンドウの大きさが変わっても位置がずれません" style={btn('#5b6773')}>
-                  位置を置き直す
-                </button>
                 <button type="button" onClick={() => del(openMemo)} style={{ ...btn('#c0392b'), marginLeft: 'auto' }}>
                   削除
                 </button>
@@ -390,7 +390,7 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
       {placing && (
         <div ref={overlayRef} data-memo-layer onClick={onPlaceClick} style={{ position: 'fixed', inset: 0, zIndex: 290, cursor: 'crosshair', background: 'rgba(217,119,6,.06)' }}>
           <div style={{ position: 'fixed', top: 14, left: '50%', transform: 'translateX(-50%)', background: '#22303c', color: '#fff', padding: '8px 16px', borderRadius: 10, fontSize: 14, fontWeight: 600, boxShadow: '0 6px 20px rgba(0,0,0,.25)' }}>
-            {moving ? 'このメモを置き直す場所をクリック（Esc で中止）' : 'メモを貼りたい場所をクリック（Esc で中止）'}
+            メモを貼りたい場所をクリック（Esc で中止）
           </div>
         </div>
       )}
@@ -441,16 +441,9 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
         </div>
       )}
 
-      {/* 状態を再現できなかったときの案内 */}
-      {hint && (
-        <div data-memo-layer role="status" style={{ position: 'fixed', right: 18, bottom: 120, zIndex: 302, background: '#22303c', color: '#fff', padding: '10px 14px', borderRadius: 10, fontSize: 14, lineHeight: 1.6, maxWidth: 350, boxShadow: '0 6px 20px rgba(0,0,0,.25)' }}>
-          {hint}
-        </div>
-      )}
-
       {/* ツールバー（右下固定。フッターに被らないよう1段上に置く） */}
       <div data-memo-layer style={{ position: 'fixed', right: 18, bottom: 68, zIndex: 300, display: 'flex', gap: 8 }}>
-        <button type="button" onClick={placing ? () => { setPlacing(false); setMoving(null); } : startPlacing} style={{ ...toolBtn, background: placing ? '#22303c' : '#fff', color: placing ? '#fff' : AMBER, border: `1px solid ${placing ? '#22303c' : '#f3d9b0'}` }}>
+        <button type="button" onClick={placing ? () => setPlacing(false) : startPlacing} style={{ ...toolBtn, background: placing ? '#22303c' : '#fff', color: placing ? '#fff' : AMBER, border: `1px solid ${placing ? '#22303c' : '#f3d9b0'}` }}>
           {placing ? '配置を中止' : '＋ メモを置く'}
         </button>
         <button type="button" onClick={() => setPanelOpen((o) => !o)} style={{ ...toolBtn, background: panelOpen ? AMBER : '#fff', color: panelOpen ? '#fff' : '#22303c', border: `1px solid ${panelOpen ? AMBER : '#dde4ea'}` }}>

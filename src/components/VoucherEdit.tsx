@@ -477,10 +477,9 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <span style={{ padding: '4px 10px', borderRadius: 8, background: c.bg, color: c.fg, fontSize: 14, fontWeight: 800 }}>{j.kind}{j.reason ? `（${j.reason}）` : ''}</span>
             <span style={{ fontSize: 14, color: '#7a8794' }}>{st.multi ? `この伝票の ${st.rows.length} 行をまとめて編集します。` : '1伝票1行の形式です。'}</span>
-            <span data-voucher-nav style={{ marginLeft: 'auto', display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-              <button type="button" className="ef-act" data-nav="prev" disabled={!prevG} title={prevG ? `前の伝票（${prevG.head.date}　伝票No ${prevG.head.no}）を開きます` : '前の伝票はありません'} onClick={() => prevG && goNav(prevG.head.id)} style={btn('#5b6773', false, true)}>‹ 前の伝票</button>
-              <span style={{ fontSize: 12, color: '#8290a0', fontWeight: 700, fontVariantNumeric: 'tabular-nums', minWidth: 64, textAlign: 'center' }}>{gi + 1} ／ {groups.length}</span>
-              <button type="button" className="ef-act" data-nav="next" disabled={!nextG} title={nextG ? `次の伝票（${nextG.head.date}　伝票No ${nextG.head.no}）を開きます` : '次の伝票はありません'} onClick={() => nextG && goNav(nextG.head.id)} style={btn('#5b6773', false, true)}>次の伝票 ›</button>
+            <span data-voucher-nav style={{ marginLeft: 'auto', display: 'inline-flex', gap: 4, alignItems: 'center' }}>
+              <button type="button" className="ef-act" data-nav="prev" disabled={!prevG} title={prevG ? `前の伝票（${prevG.head.date}　伝票No ${prevG.head.no}）を開きます` : '前の伝票はありません'} aria-label="前の伝票" onClick={() => prevG && goNav(prevG.head.id)} style={{ ...btn('#5b6773', false, true), width: 34, padding: '4px 0', fontSize: 18, lineHeight: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
+              <button type="button" className="ef-act" data-nav="next" disabled={!nextG} title={nextG ? `次の伝票（${nextG.head.date}　伝票No ${nextG.head.no}）を開きます` : '次の伝票はありません'} aria-label="次の伝票" onClick={() => nextG && goNav(nextG.head.id)} style={{ ...btn('#5b6773', false, true), width: 34, padding: '4px 0', fontSize: 18, lineHeight: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
             </span>
           </div>
 
