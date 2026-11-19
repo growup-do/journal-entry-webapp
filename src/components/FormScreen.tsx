@@ -441,7 +441,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                 <PaperBox label="入力区分" grow>
                   <EntryDivisionField ctl={ed} id="fe-division" disabled={!editable} onCommit={() => focusId('fe-month')} />
                 </PaperBox>
-                <div className="ef-field" style={{ display: 'flex', alignItems: 'center' }}>
+                <div className="ef-field" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <PaperDate
                     label="伝票日付"
                     yearInput={<input id="fe-year" className="ef-input pp-input" aria-label="年" title={ENTRY_YEAR_HELP} disabled={!editable} value={yr.year} onChange={(e) => yr.edit(e.target.value)} onFocus={(e) => e.currentTarget.select()} onKeyDown={onEnter(() => focusId('fe-month'))} inputMode="numeric" autoComplete="off" style={paperDate} />}
@@ -449,6 +449,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                     month={<input id="fe-month" className="ef-input pp-input" aria-label="月" title={ENTRY_MONTH_HELP} disabled={!editable} value={month} onChange={(e) => setNum2((v) => { setMonthV(v); yr.onMonth(v); })(e.target.value)} onFocus={(e) => e.currentTarget.select()} onKeyDown={onEnter(() => { if (parseEntryDate(yr.year, month).term === '決算' && !day) setDayV('31'); focusId('fe-day'); })} inputMode="numeric" autoComplete="off" style={paperDate} />}
                     day={<input id="fe-day" className="ef-input pp-input" aria-label="日" disabled={!editable} value={day} onChange={(e) => setNum2(setDayV)(e.target.value)} onFocus={(e) => e.currentTarget.select()} onKeyDown={onEnter(() => focusId(manual ? 'fe-no' : 'fe-kari'))} inputMode="numeric" autoComplete="off" style={paperDate} />}
                   />
+                  {tools.calendarButton}
                 </div>
                 <div className="ef-field" style={{ display: 'flex' }}>
                   <PaperBox label={<span>伝票<span className="pp-sub">No</span></span>} width={manual ? 190 : undefined}>

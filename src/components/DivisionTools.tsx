@@ -10,7 +10,7 @@ import { LABEL, SwitchPill } from './ReportShell';
 import { btn } from './ui';
 import { FUSEN_COLORS, type Voucher } from '../store/journalStore';
 import { flattenDivisions, setSession, startKindOf, useSession, type DivisionNode } from '../store/session';
-import { COLORS, mapTree } from './DivisionTreeEditor';
+import { DivisionColorPicker, mapTree } from './DivisionTreeEditor';
 
 /** 伝票の区分コード（先頭3桁） */
 export const codeOf = (r: Voucher) => r.service.slice(0, 3);
@@ -69,8 +69,7 @@ export function useDivisionTools(all: Voucher[], accent: string) {
               <span style={{ fontVariantNumeric: 'tabular-nums', color: '#8290a0', width: 32 }}>{d.code}</span>
               <span style={{ fontWeight: 600, width: 120 }}>{d.name}</span>
               <span style={{ display: 'flex', gap: 4, marginLeft: 'auto' }}>
-                {COLORS.map((c) => <span key={c} onClick={() => setColor(d.id, c)} title={c} style={{ width: 18, height: 18, borderRadius: 4, background: c, border: '2px solid ' + (d.color === c ? accent : '#e2e8ee'), cursor: 'pointer' }} />)}
-                <input type="color" value={d.color ?? '#f1f4f6'} onChange={(e) => setColor(d.id, e.target.value)} title="任意の色" style={{ width: 26, height: 22, padding: 0, border: '1px solid #cfd8e0', borderRadius: 4, background: '#fff', cursor: 'pointer' }} />
+                <DivisionColorPicker compact value={d.color} onChange={(c) => setColor(d.id, c)} />
               </span>
             </div>
           ))}

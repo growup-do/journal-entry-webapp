@@ -32,9 +32,34 @@ export const DEFAULT_TREE: DivisionNode = {
         { id: 'chiiki', code: '005', name: '地域支援', kind: 'サービス区分', entry: true, use: false, color: '#f1f4f6', category: '地域支援', startYear: '令和8年度' },
       ] },
     ] },
-    { id: 'koeki', code: '', name: '公益事業', kind: '事業区分', children: [] },
+    // 公益事業・収益事業の配下はダミー（確認メモ #162：事業区分を3つ横に並べ、その下に拠点区分・サービス区分を並べた見た目の確認用。伝票のサンプルはない）
+    { id: 'koeki', code: '', name: '公益事業', kind: '事業区分', children: [
+      { id: 'd-kosodate-c', code: '', name: '子育て支援センター（ダミー）', kind: '拠点区分', children: [
+        { id: 'd-soudan', code: '006', name: '子育て相談（ダミー）', kind: 'サービス区分', entry: true, use: true, color: '#fdeef3', category: 'その他', startYear: '令和8年度' },
+        { id: 'd-hiroba', code: '007', name: '親子ひろば（ダミー）', kind: 'サービス区分', entry: true, use: true, color: '#efe6fb', category: 'その他', startYear: '令和8年度' },
+      ] },
+    ] },
+    { id: 'shueki', code: '', name: '収益事業', kind: '事業区分', children: [
+      { id: 'd-shueki-k', code: '', name: '収益事業拠点（ダミー）', kind: '拠点区分', children: [
+        { id: 'd-parking', code: '008', name: '駐車場賃貸（ダミー）', kind: 'サービス区分', entry: true, use: true, color: '#fbe9d0', category: 'その他', startYear: '令和8年度' },
+        { id: 'd-vending', code: '009', name: '自動販売機（ダミー）', kind: 'サービス区分', entry: true, use: true, color: '#e0f4f7', category: 'その他', startYear: '令和8年度' },
+      ] },
+    ] },
   ],
 };
+/** 区分ツリーの見本の版。上げると、以前の保存データにも見本の区分を足す（利用者が直した区分はそのまま） */
+export const TREE_REV = 2;
+/** 以前の保存データに、ダミーの事業区分・拠点区分・サービス区分を足す（確認メモ #162）。同じ id の区分がすでにあれば足さない */
+function addSampleDivisions(tree: DivisionNode): DivisionNode {
+  const has = new Set(flattenDivisions(tree).map((x) => x.node.id));
+  const children = [...(tree.children ?? [])].map((c) => {
+    const def = DEFAULT_TREE.children?.find((d) => d.id === c.id);
+    const add = (def?.children ?? []).filter((d) => !has.has(d.id));
+    return add.length ? { ...c, children: [...(c.children ?? []), ...add] } : c;
+  });
+  (DEFAULT_TREE.children ?? []).forEach((d) => { if (!has.has(d.id)) children.push(d); });
+  return { ...tree, children };
+}
 
 /* ---------- 設定 ---------- */
 export interface EnvSettings {
@@ -149,6 +174,8 @@ export interface Session {
   fiscalYear: string;      // 例 '令和8年度'
   currentYear: string;     // 本来の当年度
   tree: DivisionNode;
+  /** 区分ツリーの見本の版（TREE_REV） */
+  treeRev?: number;
   merges: { name: string; members: string[] }[];
   favorites: string[];
   env: EnvSettings;
@@ -206,7 +233,7 @@ const DEFAULT_HOME_SECTIONS: Record<HomeSectionKey, boolean> = { faq: true, bann
 
 const DEFAULT: Session = {
   division: '002 保育事業', divisionPath: ['社会福祉法人 チャイルド保育園', '社会福祉事業', 'チャイルド保育園', '保育事業'],
-  fiscalYear: '令和8年度', currentYear: '令和8年度', tree: DEFAULT_TREE, merges: [{ name: '合算_001（保育園＋子育て支援）', members: ['002 保育事業', '003 子育て支援'] }],
+  fiscalYear: '令和8年度', currentYear: '令和8年度', tree: DEFAULT_TREE, treeRev: TREE_REV, merges: [{ name: '合算_001（保育園＋子育て支援）', members: ['002 保育事業', '003 子育て支援'] }],
   favorites: ['単一入力', '伝票入力', '仕訳一覧', '勘定元帳', '月次試算', '日次調査'],
   env: DEFAULT_ENV, input: DEFAULT_INPUT, print: DEFAULT_PRINT, templates: DEFAULT_TEMPLATES, allocations: DEFAULT_ALLOCATIONS, specialRates: DEFAULT_SPECIAL_RATES,
   ledgerTarget: null, journalTarget: null, auditEnabled: {}, auditCorpEnabled: { 21: false, 22: false }, corpStartDate: '20240401', corpTax: '非課税',
@@ -220,7 +247,7 @@ let state: Session = (() => {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULT;
     const saved = JSON.parse(raw) as Partial<Session>;
-    return { ...DEFAULT, ...saved, tree: normalizeTree(saved.tree ?? DEFAULT.tree), env: { ...DEFAULT_ENV, ...(saved.env ?? {}) }, input: { ...DEFAULT_INPUT, ...(saved.input ?? {}) }, print: { ...DEFAULT_PRINT, ...(saved.print ?? {}) }, homeSections: { ...DEFAULT_HOME_SECTIONS, ...(saved.homeSections ?? {}) }, access: { ...FULL_ACCESS, ...(saved.access ?? {}) }, memberAccess: { ...DEFAULT_MEMBER_ACCESS, me: { ...FULL_ACCESS, ...(saved.access ?? {}) }, ...(saved.memberAccess ?? {}) }, ledgerTarget: null, journalTarget: null,
+    return { ...DEFAULT, ...saved, tree: normalizeTree((saved.treeRev ?? 1) < TREE_REV && saved.tree ? addSampleDivisions(saved.tree) : saved.tree ?? DEFAULT.tree), treeRev: TREE_REV, env: { ...DEFAULT_ENV, ...(saved.env ?? {}) }, input: { ...DEFAULT_INPUT, ...(saved.input ?? {}) }, print: { ...DEFAULT_PRINT, ...(saved.print ?? {}) }, homeSections: { ...DEFAULT_HOME_SECTIONS, ...(saved.homeSections ?? {}) }, access: { ...FULL_ACCESS, ...(saved.access ?? {}) }, memberAccess: { ...DEFAULT_MEMBER_ACCESS, me: { ...FULL_ACCESS, ...(saved.access ?? {}) }, ...(saved.memberAccess ?? {}) }, ledgerTarget: null, journalTarget: null,
       // 以前の保存データ（消費税対応の On／Off だけ）には方式がないので、On は「簡易課税方式」として引き継ぐ（確認メモ #175）
       taxMode: saved.taxMode ?? (saved.taxEntry ? '簡易課税方式' : DEFAULT.taxMode),
       // 以前の保存データには仕訳伝票形式の定型がないので、サンプルを足す（確認メモ #202）

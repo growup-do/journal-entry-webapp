@@ -468,13 +468,14 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                     <EntryDivisionField ctl={ed} id={`${pre}-service`} disabled={ro} onCommit={() => focusId(`${pre}-month`)} />
                   </PaperBox>
                 </div>
-                <div className="ef-field" style={{ display: 'flex', alignItems: 'center' }}>
+                <div className="ef-field" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <PaperDate
                     yearInput={<input id={`${pre}-year`} className="ef-input pp-input" aria-label="年" title={ENTRY_YEAR_HELP} disabled={ro} value={yr.year} onChange={(e) => yr.edit(e.target.value)} onFocus={(e) => e.currentTarget.select()} onKeyDown={onEnter(() => focusId(`${pre}-month`))} inputMode="numeric" autoComplete="off" style={{ ...input, width: 44, padding: '8px 2px', textAlign: 'center', fontSize: 14 }} />}
                     note={<EntryMonthNote month={month} year={yr.year} />}
                     month={<input id={`${pre}-month`} className="ef-input pp-input" aria-label="月" title={ENTRY_MONTH_HELP} disabled={ro} value={month} onChange={(e) => { const m = e.target.value.replace(/[^0-9]/g, '').slice(0, 2); setMonth(m); yr.onMonth(m); }} onKeyDown={onEnter(() => { if (parseEntryDate(yr.year, month).term === '決算' && !day) setDay('31'); focusId(`${pre}-day`); })} inputMode="numeric" style={{ ...input, width: 44, padding: '8px 2px', textAlign: 'center', fontSize: 14 }} />}
                     day={<input id={`${pre}-day`} className="ef-input pp-input" aria-label="日" disabled={ro} value={day} onChange={(e) => setDay(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))} onKeyDown={onEnter(afterDate)} inputMode="numeric" style={{ ...input, width: 44, padding: '8px 2px', textAlign: 'center', fontSize: 14 }} />}
                   />
+                  {tools.calendarButton}
                 </div>
                 <PaperBox label={<span>伝票<span className="pp-sub">No</span></span>}>
                   <span className="pp-ro" style={{ whiteSpace: 'nowrap' }}>自動採番<small>自動</small></span>

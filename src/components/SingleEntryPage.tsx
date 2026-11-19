@@ -458,6 +458,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
                   <span style={{ color: '#9aa5b1' }}>/</span>
                   <input id="se-day" className="ef-input pp-input" aria-label="日" disabled={ro} value={f.day} onChange={(e) => v.setField('day', e.target.value)} onKeyDown={onEnter(() => focusId('se-kari'))} inputMode="numeric" style={dateInput} />
                   <span title="曜日は日付から自動で表示します" style={{ fontSize: 14, color: wd ? '#48565f' : '#a3adb8', minWidth: 30, textAlign: 'center' }}>（{wd || '－'}）</span>
+                  {tools.calendarButton}
                 </div>
                 <div className="pp-cell ef-field" style={valCell}>
                   <ComboField id="se-kari" kind="account" value={f.kariKamoku} onChange={(x) => v.setField('kariKamoku', x)} onCommit={() => focusId('se-kashi')} placeholder="コード・名称・フリガナ" dropUp listWidth={400} disabled={ro} invalid={fieldState(issues, 'kari', 'pair')} message={fieldMessage(issues, 'kari')} />

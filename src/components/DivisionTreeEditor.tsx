@@ -15,7 +15,35 @@ import { divisionLabel, flattenDivisions, setSession, useSession, type DivisionN
 
 const CHILD_KIND: Partial<Record<DivisionNode['kind'], DivisionNode['kind']>> = { 法人: '事業区分', 事業区分: '拠点区分', 拠点区分: 'サービス区分', サービス区分: '小サービス区分' };
 export const CATEGORIES = ['法人本部', '保育事業', '子育て支援', '一時預かり', '地域支援', 'その他'];
+/** 区分を追加したときに自動で付ける色（あとから区分のカラー欄で自由に変えられる） */
 export const COLORS = ['#e8f0fb', '#eaf5ef', '#fff7e6', '#fdeef3', '#f1f4f6', '#efe6fb', '#fbe9d0', '#e0f4f7'];
+
+/** 色の明るさ（0〜1）。濃い色は一覧の文字が読みにくくなるので注意を出す */
+const lightness = (hex: string) => {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return 1;
+  const n = parseInt(m[1], 16);
+  return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+};
+/** 区分のカラー：カラーピッカーで自由に選ぶ（確認メモ #73。決まったパレットからは選ばない）。色コード（#RRGGBB）の直接入力もできる */
+export function DivisionColorPicker({ value, onChange, compact }: { value?: string; onChange: (c: string) => void; /** 区分色の設定の一覧など、1行に収めるとき */ compact?: boolean }) {
+  const cur = value && /^#[0-9a-f]{6}$/i.test(value) ? value.toLowerCase() : '#f1f4f6';
+  const [text, setText] = useState(cur);
+  useLayoutEffect(() => { setText(cur); }, [cur]);
+  const commit = (t: string) => {
+    const v = t.trim().replace(/^([0-9a-f]{6})$/i, '#$1');
+    if (/^#[0-9a-f]{6}$/i.test(v)) onChange(v.toLowerCase()); else setText(cur);
+  };
+  const dark = lightness(cur) < 0.72;
+  return (
+    <span data-division-color style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <input type="color" value={cur} onChange={(e) => onChange(e.target.value.toLowerCase())} aria-label="カラーを選ぶ" title="クリックすると色を自由に選べます" style={{ width: compact ? 34 : 44, height: compact ? 26 : 34, padding: 2, border: '1px solid #cfd8e0', borderRadius: 7, background: '#fff', cursor: 'pointer' }} />
+      <input className="field-input" value={text} onChange={(e) => setText(e.target.value)} onBlur={(e) => commit(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) commit(e.currentTarget.value); }} aria-label="色コード" title="色コード（#RRGGBB）でも指定できます" spellCheck={false} style={{ ...input, width: 96, padding: compact ? '3px 8px' : '6px 8px', fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 14 }} />
+      {!compact && <span style={{ padding: '5px 12px', borderRadius: 7, background: cur, border: '1px solid #e2e8ee', fontSize: 14, color: '#22303c', whiteSpace: 'nowrap' }}>一覧での見え方</span>}
+      {dark && <span style={{ fontSize: 12, color: '#b7791f' }}>濃い色は一覧の文字が読みにくくなります</span>}
+    </span>
+  );
+}
 /** 事業区分はこの3つだけ。並び順もこの順に固定（社会福祉事業は必ず存在し、削除できない） */
 export const BUSINESS_KINDS = ['社会福祉事業', '公益事業', '収益事業'];
 const bizOrder = (n: DivisionNode) => { const i = BUSINESS_KINDS.indexOf(n.name); return i < 0 ? 99 : i; };
@@ -170,7 +198,7 @@ export function DivisionTreeEditor({ accent, compact }: { accent: string; compac
           <Field label="内部コード"><div style={{ ...input, background: '#f5f7f9', color: '#9aa5b1' }}>{sel.id}（自動）</div></Field>
           <Field label="集計区分"><select value={parentNameOf(sel.id)} onChange={() => toast.show('集計区分の変更：本番では階層の移動として実装')} style={input}>{parents.map((p) => <option key={p}>{p}</option>)}</select></Field>
           <Field label="事業種別"><select value={sel.category ?? ''} onChange={(e) => update(sel.id, { category: e.target.value })} style={input}>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select></Field>
-          <Field label="カラー（一覧・元帳の背景色）" span={2}><div style={{ display: 'flex', gap: 6 }}>{COLORS.map((c) => <span key={c} onClick={() => update(sel.id, { color: c })} style={{ width: 24, height: 24, borderRadius: 6, background: c, border: '2px solid ' + (sel.color === c ? accent : '#e2e8ee'), cursor: 'pointer' }} />)}</div></Field>
+          <Field label="カラー（一覧・元帳の背景色）" span={2}><DivisionColorPicker value={sel.color} onChange={(c) => update(sel.id, { color: c })} /></Field>
           <Field label="開始年度"><div style={ro}>{sel.startYear}</div></Field>
           <label style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 14, lineHeight: 1.6 }}><input type="checkbox" checked={sel.use !== false} onChange={() => update(sel.id, { use: sel.use === false })} style={{ marginTop: 4 }} /><span>使用する（区分選択画面に表示。廃園などで使わなくなった場合はチェックを外す）</span></label>
           <div style={{ gridColumn: 'span 2', fontSize: 12, color: '#9aa5b1' }}>年度更新待ち：<b style={{ color: '#1f7a52' }}>なし</b>（{s.currentYear} まで更新済み）</div>

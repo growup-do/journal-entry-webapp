@@ -2,6 +2,7 @@
 //   閉じるのは ×・キャンセル・登録などの明示的なボタンだけ。表示専用で Esc／背景クリックで閉じたいときだけ dismissible を指定する。
 
 import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { CSSProperties, ReactNode } from 'react';
 
 interface Props {
@@ -34,7 +35,8 @@ export function Modal({ open, onClose, width = 720, title, children, dismissible
     return () => window.removeEventListener('keydown', h);
   }, [open, onClose, closable, dismissible]);
   if (!open) return null;
-  return (
+  // body の直下に描く。ヘッダーの中から開いても、左のメニュー列（重なり順が上）の下に隠れない
+  return createPortal(
     <div
       ref={rootRef}
       data-modal-root
@@ -71,6 +73,7 @@ export function Modal({ open, onClose, width = 720, title, children, dismissible
         )}
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

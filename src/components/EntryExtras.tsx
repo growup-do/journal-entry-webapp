@@ -528,12 +528,18 @@ export function useEntryTools(o: EntryToolsOptions) {
   );
   /** 内部取引スイッチ（相手区分の入力欄の中に置く） */
   const internalSwitch: ReactNode = viewOnly ? null : o.onInternalSide ? <InternalSideSwitch side={o.internalSide ?? ''} onChange={o.onInternalSide} disabled={ro} locked={o.internalLocked} title={ro ? reason : undefined} id={o.internalId} onNext={o.onInternalNext} /> : <InternalSwitch on={o.internal} onToggle={o.onInternal} disabled={ro} locked={o.internalLocked} title={ro ? reason : undefined} id={o.internalId} onNext={o.onInternalNext} />;
+  /** 伝票日付の横に置くカレンダーのアイコン（確認メモ #165：入力補助から日付の近くへ移した）。Enter 送りの順序には入れない（K キーでも開ける） */
+  const calendarButton: ReactNode = viewOnly ? null : (
+    <button type="button" tabIndex={-1} data-calendar-btn disabled={ro} onClick={() => setDlg('カレンダー')} aria-label="カレンダーから日付を選ぶ" title={ro ? reason : 'カレンダーから日付を選びます（K）'}
+      style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, padding: 0, border: '1px solid #cfd8e0', borderRadius: 8, background: '#fff', color: ro ? '#a3adb8' : o.accent, cursor: ro ? 'not-allowed' : 'pointer' }}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="4.5" width="18" height="16.5" rx="2.5" /><path d="M3 9.5h18M8 2.5v4M16 2.5v4" /><path d="M7.5 13.5h2M11 13.5h2M14.5 13.5h2M7.5 17h2M11 17h2" /></svg>
+    </button>
+  );
   const actionBar: ReactNode = (
     <div data-entry-actions style={{ display: 'grid', gridTemplateColumns: viewOnly ? '1fr' : 'minmax(0, 3fr) minmax(0, 1.25fr) minmax(0, 1.15fr)', gap: 8 }}>
       {!viewOnly && <ActionGroup caption="入力補助">
         <ActButton label="連続定型" k="R" accent={o.accent} disabled={ro} title={why('定型の伝票を一覧で開き、有効にしたものをまとめて登録します（内容の入力と有効／無効の切替もここで行います）')} onClick={() => setDlg('連続')} />
         <ActButton label="自動按分" k="A" accent={o.accent} disabled={ro} title={why('按分テンプレートで、複数の区分・科目に金額を配分します')} onClick={() => setDlg('按分')} />
-        <ActButton label="カレンダー" k="K" accent={o.accent} disabled={ro} title={why('カレンダーから日付を選びます')} onClick={() => setDlg('カレンダー')} />
         {settingButtons}
       </ActionGroup>}
       <ActionGroup caption="参照">
@@ -602,5 +608,5 @@ export function useEntryTools(o: EntryToolsOptions) {
     </>
   );
 
-  return { topBar, banner, actionBar, submitButton, templateButton, fundSwitch, internalSwitch, dialogs, editable, reason, viewOnly, askRegister, openEdit: (v: Voucher) => setEdit(v), openDelete: (rows: Voucher[]) => { setBulk(false); setDel(rows); } };
+  return { topBar, banner, actionBar, calendarButton, submitButton, templateButton, fundSwitch, internalSwitch, dialogs, editable, reason, viewOnly, askRegister, openEdit: (v: Voucher) => setEdit(v), openDelete: (rows: Voucher[]) => { setBulk(false); setDel(rows); } };
 }

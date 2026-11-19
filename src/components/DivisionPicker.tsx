@@ -124,7 +124,7 @@ export function DivisionDialog({ open, onClose, accent, startup, onApplied }: { 
   const skipDate = skipUntil ? new Date(skipUntil) : null;
 
   return (
-    <Modal open={open} onClose={onClose} width={1000} title="伝票入力区分の選択">
+    <Modal open={open} onClose={onClose} width={1280} title="伝票入力区分の選択">
       <ToastView msg={toast.msg} />
       <div style={{ padding: '12px 22px 18px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
