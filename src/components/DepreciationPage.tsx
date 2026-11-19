@@ -51,7 +51,7 @@ const ASSETS: Asset[] = [
   { code: '00039', name: '防犯用　街灯設置', account: '構築物', acquired: '平成20年 3月31日', life: 10, cost: 247800, status: '償却終了', opening: 4956, subsidy: 0, method: '定額法', qty: 1 },
   { code: '00040', name: 'ミニパトカー', account: '器具及び備品', acquired: '平成22年 3月 5日', life: 8, cost: 350000, status: '償却終了', opening: 7000, subsidy: 0, method: '定額法', qty: 1 },
   { code: '10001', name: '砂場', account: '構築物', acquired: '昭和54年 2月 1日', life: 10, cost: 200000, status: '償却終了', opening: 1, subsidy: 0, method: '定額法', qty: 1 },
-  { code: '10004', name: '土地', account: '土地　－基本財産－', acquired: '昭和54年 4月 1日', life: 0, cost: 5803427, status: '対象外', opening: 5803427, subsidy: 0, method: '非償却', qty: 1 },
+  { code: '10004', name: '土地', account: '土地　－基本財産－', acquired: '昭和54年 4月 1日', life: 0, cost: 5803427, status: '対象外', opening: 5803427, subsidy: 0, method: '減価償却対象外', qty: 1 },
   { code: '20002', name: 'ピアノ', account: '器具及び備品', acquired: '昭和55年 2月 1日', life: 5, cost: 383000, status: '償却終了', opening: 1, subsidy: 0, method: '定額法', qty: 1 },
 ];
 interface Equip { code: string; name: string; acquired: string; cost: number; account?: string; qty?: number; subsidy?: number }
@@ -201,13 +201,21 @@ const fiscalYearOf = (s: string) => { const m = s.match(/(昭和|平成|令和)\
 const fyLabel = (y: number) => { const [era, base] = y >= 2019 ? ['令和', 2018] as const : y >= 1989 ? ['平成', 1988] as const : ['昭和', 1925] as const; return `${era}${y - base === 1 ? '元' : y - base}年度`; };
 /** 償却を開始する年度（償却開始年月日があればその年度、なければ取得した年度。確認メモ #248） */
 const depStartFy = (a: Asset) => (a.depStart ? fiscalYearOf(a.depStart) : null) ?? fiscalYearOf(a.acquired) ?? THIS_FY;
+/** 取得した年度。償却開始年月日を使うときも、経年表示は取得した年度から並べる（確認メモ #259） */
+const acqFy = (a: Asset) => fiscalYearOf(a.acquired) ?? THIS_FY;
+/** 取得した年度から償却を開始する年度までの年数。この間は当期増加額だけが入り、当期減価償却額は 0 円（確認メモ #259） */
+const depLag = (a: Asset) => Math.max(0, depStartFy(a) - acqFy(a));
+/** 償却方法（確認メモ #258） */
+const METHODS = ['定額法', '旧定額法', '旧定額法（備忘）', 'リース定額法', '減価償却対象外'];
+/** 償却計算表で直接編集できる金額（取得価額の行の A〜D と、国庫補助金等の行の A〜D） */
+type CalcKey = 'A' | 'B' | 'C' | 'D' | 'sA' | 'sB' | 'sC' | 'sD';
 const blankRows = (): MRow[] => Array.from({ length: MAX_YEARS }, () => ({ a: 0, b: 0, c: 0, d: 0 }));
 /** 期末帳簿価額（償還補助金は期末未入金額） */
 const endOf = (r: MRow, redeemTab: boolean) => (redeemTab ? r.a - r.b : r.a + r.b - r.c - r.d);
 // 見出しは2行に分けて表示する（列の幅を金額に合わせるため）
 const YR_HEAD_BOOK = ['年度', '期首\n帳簿価額', '当期\n増加額', '当期\n減価償却額', '当期\n減少額', '期末\n帳簿価額', '減価償却\n累計額', '期末\n取得原価'];
 const YR_HEAD_REDEEM = ['年度', '期首\n未入金額', '当期\n入金額', '期末\n未入金額'];
-const annualOf = (a: Asset) => (a.life && a.method !== '非償却' ? Math.min(Math.floor((a.cost - 1) / a.life), Math.max(0, a.opening - 1)) : 0);
+const annualOf = (a: Asset) => (a.life && a.method !== '減価償却対象外' ? Math.min(Math.floor((a.cost - 1) / a.life), Math.max(0, a.opening - 1)) : 0);
 const isNewThisYear = (a: Asset) => a.acquired.startsWith('令和8') || !!a.transferIn;
 
 /* ================= 帳票の組み立て（ExportDialog に渡す表データ） ================= */
@@ -232,10 +240,12 @@ function accountSummary(assets: Asset[], disposals: Disposal[]): (string | numbe
 const H_SCHEDULE = ['年度', '期首帳簿価額', '当期減価償却額', '期末帳簿価額', '減価償却累計額'];
 function scheduleRows(a: Asset): (string | number)[][] {
   const rows: (string | number)[][] = [];
-  if (!a.life || a.method === '非償却') return rows;
+  if (!a.life || a.method === '減価償却対象外') return rows;
   let bal = a.cost;
-  const fy0 = depStartFy(a);
-  for (let y = 1; y <= Math.min(a.life, 60); y++) { const d = Math.min(Math.floor((a.cost - 1) / a.life), Math.max(0, bal - 1)); rows.push([fyLabel(fy0 + y - 1), bal, d, bal - d, a.cost - (bal - d)]); bal -= d; }
+  const fy0 = Math.min(acqFy(a), depStartFy(a));
+  const lag = depLag(a);
+  for (let y = 0; y < lag; y++) rows.push([fyLabel(fy0 + y), bal, 0, bal, 0]);
+  for (let y = 1; y <= Math.min(a.life, 60); y++) { const d = Math.min(Math.floor((a.cost - 1) / a.life), Math.max(0, bal - 1)); rows.push([fyLabel(fy0 + lag + y - 1), bal, d, bal - d, a.cost - (bal - d)]); bal -= d; }
   return rows;
 }
 const H_DISPOSAL = ['資産コード', '固定資産名称', '科目', '処理', '処分年月日', '取得価額', '期首帳簿価額', 'うち国庫補助金等', '処分額または売却額', '移管先'];
@@ -456,33 +466,49 @@ function SubsidyModal({ rows, cost, onClose, onSave, accent, toast }: { rows: Su
   );
 }
 
-interface PartialDisposal { proc: string; qty: number; date: string; amount: number }
-/** 一部 除却／売却／移管(元)（数量の一部を処分する） */
-function PartialModal({ qty, cost, book, value, onClose, onApply, accent, toast }: { qty: number; cost: number; book: number; value: PartialDisposal | null; onClose: () => void; onApply: (p: PartialDisposal | null) => void; accent: string; toast: (m: string) => void }) {
+interface PartialDisposal { proc: string; qty: number; date: string; amount: number; /** 処分額（当期減少額）。未指定は帳簿価額を数量で按分した額 */ decrease?: number }
+/** 一部 除却／売却／移管(元)（数量の一部を処分する）。処分額（当期減少額）を入れると、処分後の金額をプレビューで確かめられる（確認メモ #256） */
+function PartialModal({ qty, cost, vals, value, onClose, onApply, accent, toast }: { qty: number; cost: number; vals: { A: number; B: number; C: number }; value: PartialDisposal | null; onClose: () => void; onApply: (p: PartialDisposal | null) => void; accent: string; toast: (m: string) => void }) {
   const [p, setP] = useState<PartialDisposal>(value ?? { proc: '除却', qty: qty > 1 ? 1 : qty, date: waToday(), amount: 0 });
   const ratio = qty ? p.qty / qty : 0;
+  const book = vals.A + vals.B - vals.C;
   const partCost = Math.floor(cost * ratio);
   const partBook = Math.floor(book * ratio);
+  const dec = p.decrease ?? partBook;
+  const sale = p.proc === '売却';
+  // 処分後の金額（期末取得原価は処分した数量の取得原価を除く）
+  const E = book - dec;
+  const G = cost - partCost;
+  const F = G - E;
+  const head = ['期首帳簿価額', '当期増加額', '当期減価償却額', '当期減少額', '期末帳簿価額', '減価償却累計額', '期末取得原価'];
+  const vs = [vals.A, vals.B, vals.C, dec, E, F, G];
   return (
-    <Modal open onClose={onClose} width={560} title="一部 除却／売却／移管(元)">
+    <Modal open onClose={onClose} width={880} title="一部 除却／売却／移管(元)">
       <div style={{ padding: '12px 22px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${sale ? 5 : 4}, minmax(0,1fr))`, gap: 10 }}>
           <div><span style={LBL}>処理</span><select value={p.proc} onChange={(e) => setP({ ...p, proc: e.target.value })} style={IN}>{['除却', '売却', '移管(元)'].map((o) => <option key={o}>{o}</option>)}</select></div>
           <div><span style={LBL}>処分年月日</span><input className="field-input" value={p.date} onChange={(e) => setP({ ...p, date: e.target.value })} style={IN} /></div>
           <div><span style={LBL}>処分数量（登録数量 {qty}）</span><input className="field-input" value={p.qty || ''} onChange={(e) => setP({ ...p, qty: Math.min(qty, numOf(e.target.value)) })} inputMode="numeric" style={IN_NUM} /></div>
-          <div><span style={LBL}>{p.proc === '売却' ? '売却額' : '処分額'}</span><input className="field-input" value={p.amount ? yen(p.amount) : ''} onChange={(e) => setP({ ...p, amount: numOf(e.target.value) })} inputMode="numeric" placeholder="0" style={IN_NUM} /></div>
+          <div><span style={LBL}>処分額（当期減少額）</span><input className="field-input" data-partial-decrease value={yen(dec)} onChange={(e) => setP({ ...p, decrease: numOf(e.target.value) })} onFocus={(e) => e.target.select()} inputMode="numeric" title="入力した金額が当期減少額になります。最初は帳簿価額を処分数量で按分した額が入っています" style={{ ...IN_NUM, background: p.decrease != null ? '#fffbea' : '#fff' }} /></div>
+          {sale && <div><span style={LBL}>売却額</span><input className="field-input" value={p.amount ? yen(p.amount) : ''} onChange={(e) => setP({ ...p, amount: numOf(e.target.value) })} inputMode="numeric" placeholder="0" style={IN_NUM} /></div>}
         </div>
-        <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: 12, fontSize: 14, display: 'grid', gridTemplateColumns: '1fr auto', rowGap: 4 }}>
-          <span style={{ color: '#7a8794' }}>処分割合</span><b>{(ratio * 100).toFixed(1)}%</b>
-          <span style={{ color: '#7a8794' }}>処分する取得価額</span><b>{yen(partCost)}</b>
-          <span style={{ color: '#7a8794' }}>当期減少額（帳簿価額ベース）</span><b>{yen(partBook)}</b>
-          {p.proc === '売却' && <><span style={{ color: '#7a8794' }}>売却損益</span><b style={{ color: p.amount - partBook >= 0 ? '#1f7a52' : '#c0392b' }}>{yen(p.amount - partBook)}</b></>}
+        <div data-partial-preview style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ padding: '6px 10px', fontSize: 12, fontWeight: 700, color: '#5b6773', background: '#fafbfc', borderBottom: '1px solid #e2e8ee' }}>処分後の金額（プレビュー）　処分割合 {(ratio * 100).toFixed(1)}%・処分する取得価額 {yen(partCost)}</div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+            <thead><tr>{head.map((h) => <th key={h} style={{ ...TH, padding: '6px 6px', fontSize: 12, textAlign: 'right', whiteSpace: 'nowrap' }}>{h}</th>)}</tr></thead>
+            <tbody><tr>{vs.map((v, i) => <td key={i} style={{ ...NUM, padding: '7px 6px', fontSize: 14, fontWeight: i === 3 || i === 4 ? 700 : 400, background: i === 3 ? '#fffbea' : undefined, color: v < 0 ? '#c0392b' : undefined }}>{yen(v)}</td>)}</tr></tbody>
+          </table>
         </div>
-        <Notice>処分数量に応じて取得価額・帳簿価額を按分し、当期減少額（D）に反映します。残りの数量は引き続き償却します。</Notice>
+        {dec !== partBook && <div data-partial-diff style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 12, padding: '6px 10px', borderRadius: 8, background: F < 0 ? '#fdeee9' : '#fff7e6', color: F < 0 ? '#b03a2e' : '#8a5a00' }}>
+          <span>帳簿価額を処分数量で按分した額は {yen(partBook)} です。{F < 0 ? '処分額がこれより少ないため、減価償却累計額がマイナスになります。' : ''}</span>
+          <button type="button" onClick={() => setP({ ...p, decrease: undefined })} style={{ ...BTN(), padding: '3px 10px', fontSize: 12, marginLeft: 'auto' }}>按分した額に戻す</button>
+        </div>}
+        {sale && <div style={{ fontSize: 14 }}>売却損益 <b style={{ color: p.amount - dec >= 0 ? '#1f7a52' : '#c0392b' }}>{yen(p.amount - dec)}</b>（売却額 − 処分額）</div>}
+        <div style={{ fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>処分額を入れると当期減少額に入り、期末帳簿価額・減価償却累計額・期末取得原価を計算し直します。残りの数量は引き続き償却します。</div>
         <div style={FOOT}>
           {value && <button type="button" className="btn-outline" onClick={() => { onApply(null); onClose(); }} style={{ ...BTN('#c0392b'), marginRight: 'auto' }}>一部処分を取消</button>}
           <button type="button" onClick={onClose} style={BTN()}>キャンセル</button>
-          <button type="button" className="submit-btn" onClick={() => { if (!p.qty) return toast('処分数量を入力してください'); if (p.qty >= qty) return toast('全数量の処分は「資産処分等」で設定してください'); onApply({ ...p, amount: p.proc === '売却' ? p.amount : partBook }); onClose(); }} style={BTN(accent, true)}>確定</button>
+          <button type="button" className="submit-btn" onClick={() => { if (!p.qty) return toast('処分数量を入力してください'); if (p.qty >= qty) return toast('全数量の処分は「資産処分等」で設定してください'); if (dec > book) return toast('処分額が処分前の帳簿価額を超えています'); onApply({ ...p, decrease: dec, amount: sale ? p.amount : dec }); onClose(); }} style={BTN(accent, true)}>確定</button>
         </div>
       </div>
     </Modal>
@@ -500,7 +526,7 @@ function CalcChangeModal({ current, onClose, onApply, accent, toast }: { current
           <div><span style={LBL}>変更事由</span><select value={c.reason} onChange={(e) => setC({ ...c, reason: e.target.value })} style={IN}>{['耐用年数の変更', '償却方法の変更', '取得価額の訂正', '償却開始年月日の変更'].map((o) => <option key={o}>{o}</option>)}</select></div>
           <div><span style={LBL}>変更年月日（適用開始）</span><input className="field-input" value={c.date} onChange={(e) => setC({ ...c, date: e.target.value })} style={IN} /></div>
           <div><span style={LBL}>耐用年数（現在 {current.life || '—'} 年）</span><input className="field-input" value={c.life || ''} onChange={(e) => setC({ ...c, life: numOf(e.target.value) })} inputMode="numeric" disabled={c.reason !== '耐用年数の変更'} style={{ ...IN_NUM, background: c.reason === '耐用年数の変更' ? '#fff' : '#f5f7f9' }} /></div>
-          <div><span style={LBL}>償却方法（現在 {current.method}）</span><select value={c.method} onChange={(e) => setC({ ...c, method: e.target.value })} disabled={c.reason !== '償却方法の変更'} style={{ ...IN, background: c.reason === '償却方法の変更' ? '#fff' : '#f5f7f9' }}>{['定額法', '旧定額法', 'リース定額法', '非償却'].map((o) => <option key={o}>{o}</option>)}</select></div>
+          <div><span style={LBL}>償却方法（現在 {current.method}）</span><select value={c.method} onChange={(e) => setC({ ...c, method: e.target.value })} disabled={c.reason !== '償却方法の変更'} style={{ ...IN, background: c.reason === '償却方法の変更' ? '#fff' : '#f5f7f9' }}>{METHODS.map((o) => <option key={o}>{o}</option>)}</select></div>
           <div><span style={LBL}>単価（現在 {yen(current.unit)}）</span><input className="field-input" value={c.unit ? yen(c.unit) : ''} onChange={(e) => setC({ ...c, unit: numOf(e.target.value) })} inputMode="numeric" disabled={c.reason !== '取得価額の訂正'} style={{ ...IN_NUM, background: c.reason === '取得価額の訂正' ? '#fff' : '#f5f7f9' }} /></div>
           <div style={{ gridColumn: 'span 2' }}><span style={LBL}>備考</span><input className="field-input" value={c.note} onChange={(e) => setC({ ...c, note: e.target.value })} placeholder="例：監査指摘により耐用年数を訂正" style={IN} /></div>
         </div>
@@ -906,9 +932,10 @@ function AssetDetail({ accent, asset, imageSrc, onClose, onEdit, onManual, onPri
   const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '7px 12px', borderRadius: 7, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
   const row = (l: string, v: string) => <div key={l} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '6px 0', borderBottom: '1px solid #f1f4f6', fontSize: 14 }}><span style={{ color: '#7a8794' }}>{l}</span><span style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>{v}</span></div>;
   const years: { y: number; open: number; dep: number }[] = [];
-  const fy0 = depStartFy(asset);
+  const fy0 = Math.min(acqFy(asset), depStartFy(asset));
   let bal = asset.cost;
-  for (let y = 1; y <= Math.min(asset.life || 0, 10); y++) { const d = Math.min(Math.floor((asset.cost - 1) / asset.life), Math.max(0, bal - 1)); years.push({ y, open: bal, dep: d }); bal -= d; }
+  if (asset.life && asset.method !== '減価償却対象外') for (let y = 0; y < depLag(asset) && years.length < 10; y++) years.push({ y: years.length + 1, open: bal, dep: 0 });
+  for (let y = 1; y <= Math.min(asset.life || 0, 10) && years.length < 10; y++) { const d = Math.min(Math.floor((asset.cost - 1) / asset.life), Math.max(0, bal - 1)); years.push({ y: years.length + 1, open: bal, dep: d }); bal -= d; }
   return (
     <aside style={{ borderLeft: '1px solid #eef2f5', padding: 18, display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
@@ -938,8 +965,8 @@ function AssetDetail({ accent, asset, imageSrc, onClose, onEdit, onManual, onPri
         {asset.place && row('場所・物量等', asset.place)}
       </div>
       <div>
-        <div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 6 }}>経年表示（償却を開始する年度からの推移・定額法）</div>
-        {years.length === 0 ? <div style={{ fontSize: 14, color: '#9aa5b1' }}>非償却資産のため推移はありません。</div> : (
+        <div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 6 }}>経年表示（取得した年度からの推移・定額法）</div>
+        {years.length === 0 ? <div style={{ fontSize: 14, color: '#9aa5b1' }}>減価償却対象外の資産のため推移はありません。</div> : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead><tr><th style={TH}>年度</th><th style={{ ...TH, textAlign: 'right' }}>期首</th><th style={{ ...TH, textAlign: 'right' }}>償却額</th><th style={{ ...TH, textAlign: 'right' }}>期末</th></tr></thead>
             <tbody>{years.map((r) => <tr key={r.y} style={{ background: fy0 + r.y - 1 === THIS_FY ? '#fff7dc' : undefined }}><td style={{ ...TD, padding: '5px 10px', whiteSpace: 'nowrap' }}>{fyLabel(fy0 + r.y - 1)}</td><td style={{ ...NUM, padding: '5px 10px' }}>{yen(r.open)}</td><td style={{ ...NUM, padding: '5px 10px' }}>{yen(r.dep)}</td><td style={{ ...NUM, padding: '5px 10px', fontWeight: 700 }}>{yen(r.open - r.dep)}</td></tr>)}</tbody>
@@ -994,7 +1021,7 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
   const capexSum = capex.reduce((s, r) => s + r.amount, 0);
   const life = num(f.life);
   const rate = life ? Math.round((1 / life) * (rounding.digits === '4桁' ? 10000 : 1000)) / (rounding.digits === '4桁' ? 10000 : 1000) : 0;
-  const annual = life && f.method !== '非償却' ? roundBy((cost + capexSum - num(f.residual) - num(f.memo)) / life, rounding.dep) : 0;
+  const annual = life && f.method !== '減価償却対象外' ? roundBy((cost + capexSum - num(f.residual) - num(f.memo)) / life, rounding.dep) : 0;
   const opening = asset ? asset.opening : 0;
   const c = Math.min(annual, Math.max(0, opening + capexSum - num(f.memo)));
   const sub = num(f.subsidy);
@@ -1003,7 +1030,12 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
   const subOf = (v: number) => (totalCost ? roundBy((v * sub) / totalCost, rounding.sub) : 0);
   const redeemOf = (v: number) => (totalCost ? roundBy((v * redeem) / totalCost, rounding.sub) : 0);
   /* 経年表示と全項目手入力は、償却を開始する年度から年度ごとに並べる（確認メモ #62／#248）。償却開始年月日を使うときはその年度、使わないときは取得した年度 */
-  const fy0 = (f.useStart ? fiscalYearOf(f.startDate) : null) ?? fiscalYearOf(f.acquired) ?? THIS_FY;
+  //   償却開始年月日を使うときは、取得した年度に当期増加額が入り、当期減価償却額は 0 円で、開始する年度から償却する（確認メモ #259）
+  const fyAcq = fiscalYearOf(f.acquired) ?? THIS_FY;
+  const fyStart = (f.useStart ? fiscalYearOf(f.startDate) : null) ?? fyAcq;
+  const fy0 = Math.min(fyAcq, fyStart);
+  /** 取得した年度から償却を開始する年度までの年数（この間は償却しない） */
+  const lag = Math.max(0, fyStart - fyAcq);
   /** 当期にあたる行（償却を開始する年度を先頭の行として数える） */
   const curIdx = Math.min(MAX_YEARS - 1, Math.max(0, THIS_FY - fy0));
   const [mRows, setMRows] = useState<Record<YrTab, MRow[]>>(() => {
@@ -1014,39 +1046,46 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
   });
   /** 「＋ 1年追加」で足した年数 */
   const [extraYears, setExtraYears] = useState(0);
-  const mCount = Math.min(MAX_YEARS, Math.max(life, curIdx + 1, 1) + extraYears);
+  const mCount = Math.min(MAX_YEARS, Math.max(life + lag, curIdx + 1, 1) + extraYears);
   const setCell = (tab: YrTab, y: number, k: keyof MRow, v: number) => setMRows((s) => ({ ...s, [tab]: s[tab].map((r, i) => (i === y ? { ...r, [k]: v } : r)) }));
   const accTo = (tab: YrTab, y: number) => mRows[tab].slice(0, y + 1).reduce((s, r) => s + r.c, 0);
   const cur = mRows['数量／減価償却'][curIdx];
-  const A = manual ? cur.a : opening;
-  const B = manual ? cur.b : (asset ? 0 : cost) + capexSum;
-  const C = manual ? cur.c : asset ? c : 0;
+  /* 償却計算表は「編集」で金額を直接書き換えられる。キャンセルで編集前に戻し、リセットで自動計算に戻す（確認メモ #257） */
+  const [calcOv, setCalcOv] = useState<Partial<Record<CalcKey, number>>>({});
+  const [calcEdit, setCalcEdit] = useState<{ before: Partial<Record<CalcKey, number>> } | null>(null);
+  const pick = (k: CalcKey, auto: number) => (!manual && calcOv[k] != null ? (calcOv[k] as number) : auto);
+  const A = pick('A', manual ? cur.a : opening);
+  const B = pick('B', manual ? cur.b : (asset ? 0 : cost) + capexSum);
+  const C = pick('C', manual ? cur.c : asset && THIS_FY >= fyStart ? c : 0);
   const dispQty = partial ? partial.qty : f.disposal !== '設定なし' ? qty : 0;
-  const D = manual ? cur.d : dispQty && qty ? Math.floor(((A + B - C) * dispQty) / qty) : 0;
+  // 一部処分は、ダイアログで入力した処分額（当期減少額）を使う（確認メモ #256）
+  const D = pick('D', manual ? cur.d : partial?.decrease != null ? partial.decrease : dispQty && qty ? Math.floor(((A + B - C) * dispQty) / qty) : 0);
   const E = A + B - C - D;
-  const F = manual ? accTo('数量／減価償却', curIdx) : cost + capexSum - E;
+  /** 一部処分で減る取得原価（数量で按分） */
+  const removedCost = !manual && partial && qty ? Math.floor((totalCost * partial.qty) / qty) : 0;
+  const F = manual ? accTo('数量／減価償却', curIdx) : totalCost - removedCost - E;
   const G = E + F;
   /** 経年表示の行（償却を開始する年度から、耐用年数の年度まで） */
   const yrHead = yrTab === '償還補助金' ? YR_HEAD_REDEEM : YR_HEAD_BOOK;
   /** 自動計算の年度ごとの値（償却を開始する年度から、耐用年数の年度まで） */
-  const autoYears = Math.min(life, MAX_YEARS);
+  const autoYears = Math.min(life + lag, MAX_YEARS);
   const autoBook = (isSub: boolean): MRow[] => {
     let book = 0; let bal = 0;
     return Array.from({ length: autoYears }, (_, y) => {
       // 固定資産そのものの当期減価償却額（国庫補助金は、これに比例して取り崩す）
       const assetOpen = book + (y === 0 ? totalCost : 0);
-      const assetDep = Math.max(0, Math.min(annual, assetOpen - num(f.memo)));
+      const assetDep = y < lag ? 0 : Math.max(0, Math.min(annual, assetOpen - num(f.memo)));
       book = assetOpen - assetDep;
       const row: MRow = { a: bal, b: y === 0 ? (isSub ? sub : totalCost) : 0, c: isSub ? subOf(assetDep) : assetDep, d: 0 };
       bal = row.a + row.b - row.c;
       return row;
     });
   };
-  const autoRedeem = (): MRow[] => { const per = Math.floor(redeem / autoYears); let rest = redeem; return Array.from({ length: autoYears }, (_, y) => { const b = y === autoYears - 1 ? rest : per; const a = rest; rest -= b; return { a, b, c: 0, d: 0 }; }); };
+  const autoRedeem = (): MRow[] => { const n = Math.max(1, autoYears - lag); const per = Math.floor(redeem / n); let rest = redeem; return Array.from({ length: autoYears }, (_, y) => { const k = y - lag; const b = k < 0 ? 0 : k === n - 1 ? rest : per; const a = rest; rest -= b; return { a, b, c: 0, d: 0 }; }); };
   const yrCell = (v: number, bold = false, bg?: string) => <td style={{ ...NUM, padding: '6px 6px', fontSize: 13, fontWeight: bold ? 700 : 400, whiteSpace: 'nowrap', overflow: 'hidden', color: v < 0 ? '#c0392b' : undefined, background: bg }}>{yen(v)}</td>;
   const yrRows = () => {
     const empty = (msg: string) => <tr><td colSpan={yrHead.length} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 24 }}>{msg}</td></tr>;
-    if (!cost || !life || f.method === '非償却') return empty('取得価額と耐用年数を入力すると年度ごとの推移を表示します。');
+    if (!cost || !life || f.method === '減価償却対象外') return empty('取得価額と耐用年数を入力すると年度ごとの推移を表示します。');
     // 年度は「〇年目」ではなく、償却を開始する年度からの年度で表示する。当期の行は色を付ける（確認メモ #248）
     const curBg = (y: number) => (fy0 + y === THIS_FY ? '#fff7dc' : undefined);
     const yearTd = (y: number) => <td title={fy0 + y === THIS_FY ? '当期' : undefined} style={{ ...TD, padding: '6px 6px', fontSize: 13, whiteSpace: 'nowrap', background: curBg(y), color: fy0 + y === THIS_FY ? '#8a6d00' : undefined, fontWeight: fy0 + y === THIS_FY ? 700 : 400 }}>{fyLabel(fy0 + y)}</td>;
@@ -1062,7 +1101,7 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
   /* ---- 全項目手入力の表（確認メモ #62） ---- */
   /** 選択中の表に、自動計算の値を入れる（耐用年数ぶん。それより後の年度は入力したまま残す） */
   const fillAuto = () => {
-    if (!cost || !life || f.method === '非償却') return toast('取得価額と耐用年数を入力すると、自動計算の値を入れられます');
+    if (!cost || !life || f.method === '減価償却対象外') return toast('取得価額と耐用年数を入力すると、自動計算の値を入れられます');
     if (yrTab === '償還補助金' && !redeem) return toast('償還補助金が設定されていません（「補助金設定」で入力します）');
     if (yrTab === '国庫補助金' && !sub) return toast('国庫補助金等が設定されていません（「補助金設定」で入力します）');
     const src = yrTab === '償還補助金' ? autoRedeem() : autoBook(yrTab === '国庫補助金');
@@ -1101,11 +1140,11 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
   const box: CSSProperties = { border: '1px solid #f0c8cc', background: '#fff5f6', borderRadius: 10, padding: 10 };
   const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '7px 12px', borderRadius: 7, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
   const tag = (t: string) => <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 6, background: '#e8f0fb', color: '#2c5f9e', whiteSpace: 'nowrap' }}>{t}</span>;
-  const current = (): Asset => ({ code: f.code, name: f.name.trim() || '（未入力）', account: f.account, acquired: f.acquired, life, cost: totalCost, status: f.method === '非償却' || !life ? '対象外' : E <= num(f.memo) ? '償却終了' : '償却中', opening: E, subsidy: sub, method: f.method, qty, place: f.place, purpose: f.purpose, transferIn: asset?.transferIn || f.transferNew, depStart: f.useStart && f.startDate.trim() ? f.startDate.trim() : undefined, manualRows: manual ? mRows : asset?.manualRows });
+  const current = (): Asset => ({ code: f.code, name: f.name.trim() || '（未入力）', account: f.account, acquired: f.acquired, life, cost: totalCost, status: f.method === '減価償却対象外' || !life ? '対象外' : E <= num(f.memo) ? '償却終了' : '償却中', opening: E, subsidy: sub, method: f.method, qty, place: f.place, purpose: f.purpose, transferIn: asset?.transferIn || f.transferNew, depStart: f.useStart && f.startDate.trim() ? f.startDate.trim() : undefined, manualRows: manual ? mRows : asset?.manualRows });
   const save = (next?: boolean) => {
     if (!f.name.trim()) return toast('資産名称を入力してください');
     if (!cost) return toast('取得価額（数量×単価）を入力してください');
-    if (f.method !== '非償却' && !life) return toast('耐用年数を入力してください');
+    if (f.method !== '減価償却対象外' && !life) return toast('耐用年数を入力してください');
     if (f.disposal !== '設定なし' && !f.disposalDate) return toast('処分年月日を入力してください');
     if (f.useStart && !f.startDate.trim()) return toast('償却開始年月日を入力してください');
     const notes = [calcChange && `計算変更：${calcChange.reason}`, capex.length && `資本的支出 ${yen(capexSum)}`, partial && `一部${partial.proc} ${partial.qty}/${qty}`, f.disposal !== '設定なし' && `${f.disposal} ${f.disposalDate}`].filter(Boolean).join('、');
@@ -1139,7 +1178,14 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
   const scE = endOf(sc, false);
   const scF = accTo('国庫補助金', curIdx);
   const redeemPart = (v: number) => (sub ? roundBy((v * redeem) / sub, rounding.sub) : 0);
-  const subRow = manual ? [sc.a, sc.b, sc.c, sc.d, scE, scF, scE + scF] : [subOf(A), subOf(B), subOf(C), subOf(D), subOf(E), subOf(F), sub];
+  const sv = [pick('sA', subOf(A)), pick('sB', subOf(B)), pick('sC', subOf(C)), pick('sD', subOf(D))];
+  const subEdited = (['sA', 'sB', 'sC', 'sD'] as const).some((k) => calcOv[k] != null);
+  const sE = subEdited ? sv[0] + sv[1] - sv[2] - sv[3] : subOf(E);
+  const subRow = manual ? [sc.a, sc.b, sc.c, sc.d, scE, scF, scE + scF] : [...sv, sE, subEdited ? sub - sE : subOf(F), sub];
+  const calcEditing = !manual && !!calcEdit;
+  const setOv = (k: CalcKey, v: number) => setCalcOv((o) => ({ ...o, [k]: v }));
+  const calcInput = (k: CalcKey, v: number) => <input className="field-input" data-calc-edit={k} value={yen(v)} onChange={(e) => setOv(k, num(e.target.value))} onFocus={(e) => e.target.select()} inputMode="numeric" style={{ ...numIn, padding: '3px 5px', fontSize: 13, background: calcOv[k] != null ? '#fffbea' : '#fff' }} />;
+  const calcEdited = Object.keys(calcOv).length > 0;
   const redeemRow = manual ? [sc.a, sc.b, sc.c, sc.d, scE].map(redeemPart) : [A, B, C, D, E].map(redeemOf);
 
   // 償却計算表の見出しは 2 行に分ける（列の幅を金額に合わせ、横にはみ出さないように）
@@ -1147,6 +1193,7 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
   const calcTd: CSSProperties = { ...NUM, padding: '6px 8px', fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden' };
   const calcLbl: CSSProperties = { ...TD, padding: '6px 8px', fontSize: 13, whiteSpace: 'nowrap' };
   const fbtn: CSSProperties = { ...btn(), padding: '6px 11px' };
+  const calcBtn = (color = '#5b6773'): CSSProperties => ({ padding: '2px 7px', borderRadius: 6, border: '1px solid ' + (color === '#5b6773' ? '#cfd8e0' : color), background: '#fff', color, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
 
   return (
     // 1600×768 で、画面全体が縦にも横にもスクロールしない配置にする。縦にスクロールするのは右の経年表示の表だけ（確認メモ #249／#250）
@@ -1168,7 +1215,7 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
                 : <div style={{ ...input, background: '#f5f7f9', color: '#9aa5b1', whiteSpace: 'nowrap', overflow: 'hidden' }}>取得年月日と同じ</div>}
             </div>
             <div><span style={lbl}>耐用年数</span><div style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input className="field-input" value={f.life} onChange={(e) => set('life', e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" style={{ ...numIn, minWidth: 0, flex: 1 }} /><span style={{ fontSize: 14 }}>年</span><button type="button" className="btn-outline" onClick={() => setDlg('life')} style={{ ...btn(), padding: '5px 10px' }}>辞書</button></div></div>
-            <div><span style={lbl}>償却方法</span><select value={f.method} onChange={(e) => set('method', e.target.value)} style={input}>{['定額法', '旧定額法', 'リース定額法', '非償却'].map((o) => <option key={o}>{o}</option>)}</select></div>
+            <div><span style={lbl}>償却方法</span><select value={f.method} onChange={(e) => set('method', e.target.value)} style={input}>{METHODS.map((o) => <option key={o}>{o}</option>)}</select></div>
             <div><span style={lbl}>償却率</span><div style={{ ...input, background: '#f5f7f9', textAlign: 'right', whiteSpace: 'nowrap', overflow: 'hidden' }}>{f.method} {life}年　<b>{rate}</b></div></div>
             <div><span style={lbl}>場所・物量等</span><input className="field-input" value={f.place} onChange={(e) => set('place', e.target.value)} style={input} /></div>
             <div><span style={lbl}>使用目的</span><input className="field-input" value={f.purpose} onChange={(e) => set('purpose', e.target.value)} style={input} /></div>
@@ -1209,7 +1256,7 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
               <input className="field-input" value={f.disposalDate} onChange={(e) => set('disposalDate', e.target.value)} placeholder="処分年月日" disabled={f.disposal === '設定なし'} style={{ ...input, ...disabledBg(f.disposal !== '設定なし') }} />
               <button type="button" className="btn-outline" title="一部 除却／売却／移管(元)（数量の一部を処分する）" onClick={() => { const replay = isMemoReplaying(); if (!cost && !replay) return toast('先に取得価額を入力してください'); if (f.disposal !== '設定なし' && !replay) return toast('全数量の処分が設定されています。一部処分は「設定なし」に戻してから行ってください'); setDlg('partial'); }} style={{ ...btn(), padding: '5px 10px' }}>一部処分</button>
             </div>
-            {partial && <div style={{ marginTop: 6, display: 'flex', gap: 6, alignItems: 'center', fontSize: 12, color: '#48565f', flexWrap: 'wrap' }}>{tag(`一部${partial.proc}`)}{partial.qty}／{qty} 個・{partial.date}・当期減少額 {yen(D)}</div>}
+            {partial && <div style={{ marginTop: 6, display: 'flex', gap: 6, alignItems: 'center', fontSize: 12, color: '#48565f', flexWrap: 'wrap' }}>{tag(`一部${partial.proc}`)}{partial.qty}／{qty} 個・{partial.date}・処分額（当期減少額） {yen(D)}</div>}
           </div>
         </div>
 
@@ -1217,14 +1264,21 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
         <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'hidden', flex: 'none' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <colgroup><col style={{ width: 132 }} />{calcHead.map((h) => <col key={h} />)}</colgroup>
-            <thead><tr><th style={{ ...TH, padding: '6px 8px' }} />{calcHead.map((h) => <th key={h} style={{ ...TH, padding: '6px 5px', fontSize: 12, textAlign: 'right', whiteSpace: 'pre', lineHeight: 1.35, verticalAlign: 'bottom', overflow: 'hidden' }}>{h}</th>)}</tr></thead>
+            <thead><tr><th style={{ ...TH, padding: '4px 6px', verticalAlign: 'bottom' }}>
+              {!manual && <div data-calc-tools style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                {calcEditing
+                  ? <button type="button" data-calc-cancel onClick={() => { setCalcOv(calcEdit?.before ?? {}); setCalcEdit(null); toast('編集前の金額に戻しました'); }} title="編集を取り消して、編集前の金額に戻します" style={calcBtn()}>キャンセル</button>
+                  : <button type="button" data-calc-edit-start onClick={() => setCalcEdit({ before: { ...calcOv } })} title="この表の金額を直接書き換えます" style={calcBtn(accent)}>編集</button>}
+                <button type="button" data-calc-reset disabled={!calcEdited} onClick={() => { setCalcOv({}); setCalcEdit(null); toast('自動計算の金額に戻しました'); }} title="手で書き換えた金額をやめ、自動計算の金額に戻します" style={{ ...calcBtn(), opacity: calcEdited ? 1 : 0.45, cursor: calcEdited ? 'pointer' : 'default' }}>リセット</button>
+              </div>}
+            </th>{calcHead.map((h) => <th key={h} style={{ ...TH, padding: '6px 5px', fontSize: 12, textAlign: 'right', whiteSpace: 'pre', lineHeight: 1.35, verticalAlign: 'bottom', overflow: 'hidden' }}>{h}</th>)}</tr></thead>
             <tbody>
               <tr>
                 <td style={{ ...calcLbl, fontWeight: 700 }}>取得価額</td>
-                {(['A', 'B', 'C', 'D'] as const).map((k) => <td key={k} style={calcTd}>{manual ? <input className="field-input" data-cur={k} value={yen({ A, B, C, D }[k])} onChange={(e) => setCell('数量／減価償却', curIdx, ({ A: 'a', B: 'b', C: 'c', D: 'd' } as const)[k], num(e.target.value))} inputMode="numeric" style={{ ...numIn, padding: '3px 5px', fontSize: 13 }} /> : yen({ A, B, C, D }[k])}</td>)}
+                {(['A', 'B', 'C', 'D'] as const).map((k) => <td key={k} style={calcTd}>{calcEditing ? calcInput(k, { A, B, C, D }[k]) : manual ? <input className="field-input" data-cur={k} value={yen({ A, B, C, D }[k])} onChange={(e) => setCell('数量／減価償却', curIdx, ({ A: 'a', B: 'b', C: 'c', D: 'd' } as const)[k], num(e.target.value))} inputMode="numeric" style={{ ...numIn, padding: '3px 5px', fontSize: 13 }} /> : yen({ A, B, C, D }[k])}</td>)}
                 <td style={{ ...calcTd, fontWeight: 700 }}>{yen(E)}</td><td style={calcTd}>{yen(F)}</td><td style={calcTd}>{yen(G)}</td>
               </tr>
-              <tr><td style={calcLbl}>国庫補助金等の額</td>{subRow.map((v, k) => <td key={k} style={calcTd}>{yen(v)}</td>)}</tr>
+              <tr><td style={calcLbl}>国庫補助金等の額</td>{subRow.map((v, k) => <td key={k} style={calcTd}>{calcEditing && k < 4 ? calcInput((['sA', 'sB', 'sC', 'sD'] as const)[k], v) : yen(v)}</td>)}</tr>
               <tr><td style={{ ...calcLbl, color: '#7a8794', borderBottom: 'none' }}>（うち償還補助金）</td>{redeemRow.map((v, k) => <td key={k} style={{ ...calcTd, borderBottom: 'none' }}>{yen(v)}</td>)}<td style={{ ...calcTd, borderBottom: 'none' }} /><td style={{ ...calcTd, borderBottom: 'none' }} /></tr>
             </tbody>
           </table>
@@ -1284,7 +1338,7 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
       {dlg === 'life' && <LifeDictModal accent={accent} onClose={() => setDlg('')} onPick={(d) => { setF((s) => ({ ...s, life: String(d.life), account: d.account })); toast(`耐用年数 ${d.life} 年をセットしました`); }} />}
       {dlg === 'round' && <RoundingModal accent={accent} value={rounding} onClose={() => setDlg('')} onSave={(r) => { setRounding(r); toast('端数処理を設定しました'); }} />}
       {dlg === 'subsidy' && <SubsidyModal accent={accent} rows={subsidies} cost={totalCost} toast={toast} onClose={() => setDlg('')} onSave={(rows) => { setSubsidies(rows); setF((x) => ({ ...x, subsidy: String(rows.reduce((s, r) => s + r.amount, 0)), redeem: String(rows.reduce((s, r) => s + r.redeem, 0)) })); toast('補助金を設定しました'); }} />}
-      {dlg === 'partial' && <PartialModal accent={accent} qty={qty} cost={totalCost} book={A + B - C} value={partial} toast={toast} onClose={() => setDlg('')} onApply={(p) => { setPartial(p); if (p) { set('disposalAmt', String(p.amount)); set('disposalDate', p.date); toast(`一部${p.proc}（${p.qty}／${qty}）を設定しました`); } else toast('一部処分を取り消しました'); }} />}
+      {dlg === 'partial' && <PartialModal accent={accent} qty={qty} cost={totalCost} vals={{ A, B, C }} value={partial} toast={toast} onClose={() => setDlg('')} onApply={(p) => { setPartial(p); if (p) { set('disposalAmt', String(p.amount)); set('disposalDate', p.date); toast(`一部${p.proc}（${p.qty}／${qty}）を設定しました`); } else toast('一部処分を取り消しました'); }} />}
       {dlg === 'calc' && <CalcChangeModal accent={accent} current={{ life, method: f.method, unit: num(f.unit) }} toast={toast} onClose={() => setDlg('')} onApply={(ch) => { setCalcChange(ch); setF((s) => ({ ...s, life: ch.reason === '耐用年数の変更' ? String(ch.life) : s.life, method: ch.reason === '償却方法の変更' ? ch.method : s.method, unit: ch.reason === '取得価額の訂正' ? String(ch.unit) : s.unit })); toast(`計算変更（${ch.reason}）を適用しました`); }} />}
       {dlg === 'capex' && <CapexModal accent={accent} rows={capex} onClose={() => setDlg('')} onSave={(rows) => { setCapex(rows); toast(rows.length ? `資本的支出 ${yen(rows.reduce((s, r) => s + r.amount, 0))} を当期増加額に加算しました` : '資本的支出を解除しました'); }} />}
     </div>

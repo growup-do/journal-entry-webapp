@@ -128,7 +128,8 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
           {compound ? (
             <span title="1枚の伝票に複数行ある仕訳（複合仕訳）が含まれるため、金額を単純に合計できません" style={{ padding: '2px 8px', borderRadius: 8, background: '#fff7e6', border: '1px solid #f3d9b0', color: '#8a5a00', fontSize: 12, fontWeight: 700 }}>複合仕訳を含むため検索合計は表示できません</span>
           ) : (
-            <>{filtered && s.env.searchTotal ? '検索合計' : '合計'} <b style={{ color: filtered ? accent : '#22303c', fontVariantNumeric: 'tabular-nums' }}>{money(total)}</b></>
+            // 金額の合計は出さない（確認メモ #260）。動作環境で「検索合計」を有効にしているときだけ、絞り込み中に検索合計を出す
+            filtered && s.env.searchTotal ? <>検索合計 <b style={{ color: accent, fontVariantNumeric: 'tabular-nums' }}>{money(total)}</b></> : null
           )}
         </span>
       }
