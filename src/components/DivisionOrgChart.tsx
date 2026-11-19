@@ -39,7 +39,8 @@ interface Props {
 
 export function DivisionOrgChart({ tree, accent, isSelected, onSelect, onConfirm, canSelect = (n) => n.use !== false, action, hint, maxHeight = '54vh' }: Props) {
   /** 組織図の1枚（法人・事業区分・拠点区分・サービス区分…） */
-  const card = (n: DivisionNode, tier: 'root' | 'head' | 'leaf') => {
+  /** link：ぶら下がる区分の罫線（mid＝途中の区分、last＝最後の区分。縦線をカードの中央で止める） */
+  const card = (n: DivisionNode, tier: 'root' | 'head' | 'leaf', link?: 'mid' | 'last') => {
     const selectable = canSelect(n);
     const k = kindOf(n);
     const on = isSelected(n);
@@ -51,6 +52,9 @@ export function DivisionOrgChart({ tree, accent, isSelected, onSelect, onConfirm
     const act = action?.(n);
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, position: 'relative', zIndex: 1 }}>
+        {/* カードの高さは文字量で変わるため、罫線はカードの中央（50%）に付ける */}
+        {link && <span aria-hidden style={{ position: 'absolute', left: -22, top: '50%', width: 22, borderTop: `1.5px solid ${LINE}` }} />}
+        {link === 'last' && <span aria-hidden style={{ position: 'absolute', left: -22, top: -GAP, height: `calc(50% + ${GAP}px)`, borderLeft: `1.5px solid ${LINE}` }} />}
         <button
           type="button"
           data-division={divisionLabel(n)}
@@ -59,12 +63,12 @@ export function DivisionOrgChart({ tree, accent, isSelected, onSelect, onConfirm
           onClick={() => onSelect(n)}
           onDoubleClick={onConfirm ? () => onConfirm(n) : undefined}
           title={selectable ? hint : 'この区分は使用しない設定です'}
-          style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0, height: CARD_H, padding: '0 12px', borderRadius: 10, textAlign: 'left', fontFamily: 'inherit', cursor: selectable ? 'pointer' : 'not-allowed', ...base }}
+          style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0, minHeight: CARD_H, padding: '6px 12px', borderRadius: 10, textAlign: 'left', fontFamily: 'inherit', cursor: selectable ? 'pointer' : 'not-allowed', ...base }}
         >
           {n.color && n.use !== false && <span style={{ flex: 'none', width: 12, height: 12, borderRadius: 3, background: n.color, border: '1px solid ' + (on ? 'rgba(255,255,255,.7)' : '#c3ccd4') }} />}
           <span style={{ minWidth: 0, flex: 1 }}>
-            <span style={{ display: 'block', fontSize: 12, fontWeight: 700, color: on ? 'rgba(255,255,255,.85)' : '#8290a0', lineHeight: 1.3 }}>{n.kind}{n.code ? `　${n.code}` : ''}</span>
-            <span style={{ display: 'block', fontSize: tier === 'root' ? 14.5 : 14, fontWeight: 700, lineHeight: 1.35, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.name}</span>
+            <span style={{ display: 'flex', flexWrap: 'wrap', columnGap: 8, fontSize: 12, fontWeight: 700, color: on ? 'rgba(255,255,255,.85)' : '#8290a0', lineHeight: 1.3 }}><span style={{ whiteSpace: 'nowrap' }}>{n.kind}</span>{n.code && <span style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{n.code}</span>}</span>
+            <span style={{ display: 'block', fontSize: tier === 'root' ? 14.5 : 14, fontWeight: 700, lineHeight: 1.35, overflowWrap: 'anywhere' }}>{n.name}</span>
           </span>
           <span style={{ flex: 'none', fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: on ? 'rgba(255,255,255,.25)' : n.use === false ? '#eef2f6' : k === '入力区分' ? '#eaf5ef' : '#eef2f6', color: on ? '#fff' : n.use === false ? '#9aa5b1' : k === '入力区分' ? '#1f7a52' : '#5b6773' }}>{n.use === false ? '非使用' : k}</span>
         </button>
@@ -74,12 +78,11 @@ export function DivisionOrgChart({ tree, accent, isSelected, onSelect, onConfirm
   };
   /** 事業区分の下にぶら下がる区分（拠点区分 › サービス区分 › 小サービス区分）を、罫線でつないで縦に並べる */
   const branch = (nodes: DivisionNode[]) => (
-    <div style={{ marginLeft: 24 }}>
+    <div style={{ marginLeft: 14 }}>
       {nodes.map((c, i) => (
         <div key={c.id} style={{ position: 'relative', paddingLeft: 22, paddingTop: GAP }}>
-          <span style={{ position: 'absolute', left: 0, top: 0, width: 0, borderLeft: `1.5px solid ${LINE}`, height: i === nodes.length - 1 ? GAP + CARD_H / 2 : '100%' }} />
-          <span style={{ position: 'absolute', left: 0, top: GAP + CARD_H / 2, width: 22, borderTop: `1.5px solid ${LINE}` }} />
-          {card(c, 'leaf')}
+          {i < nodes.length - 1 && <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, width: 0, borderLeft: `1.5px solid ${LINE}`, height: '100%' }} />}
+          {card(c, 'leaf', i < nodes.length - 1 ? 'mid' : 'last')}
           {(c.children ?? []).length > 0 && branch(c.children ?? [])}
         </div>
       ))}
@@ -88,7 +91,7 @@ export function DivisionOrgChart({ tree, accent, isSelected, onSelect, onConfirm
   const heads = tree.children ?? [];
   return (
     <div data-org-chart style={{ border: '1px solid #e2e8ee', borderRadius: 12, padding: '18px 18px 20px', maxHeight, overflow: 'auto', background: '#fbfcfd' }}>
-      <div style={{ minWidth: heads.length * 320 }}>
+      <div style={{ minWidth: heads.length * 340 }}>
         <div style={{ width: action ? 420 : 380, maxWidth: '100%', margin: '0 auto' }}>{card(tree, 'root')}</div>
         {heads.length > 0 && <div style={{ width: 0, height: 18, margin: '0 auto', borderLeft: `1.5px solid ${LINE}` }} />}
         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(heads.length, 1)}, minmax(0, 1fr))` }}>
