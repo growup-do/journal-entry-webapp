@@ -4,7 +4,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { PreviewModal, PrintDialog, REPORTS, sampleReportData, type ReportDef, type TableData } from './PrintCenter';
+import { PreviewModal, PrintDialog, SCREEN_DETAIL, sampleReportData, type ReportDef, type TableData } from './PrintCenter';
+import { REPORTS, condOk } from './printCatalog';
+import { useSession } from '../store/session';
 import { Chevron, btn } from './ui';
 
 export interface PrintItem { name: string; /** 詳細設定の元にする帳票（REPORTS の名前）。'WAMNET' は WAMNET連携のダイアログで扱う */ base: string; note?: string; /** 画面に表示中の表を印刷データに使う */ screenData?: boolean; /** 決算書の様式（共通の印刷設定「様式設定」で省略にした様式はメニューに出さない） */ form?: string }
@@ -17,51 +19,50 @@ export interface PrintActionGroup { label?: string; items: (PrintAction | PrintI
 const JOURNAL = (screenData: boolean): PrintItem[] => [{ name: '日記帳', base: '仕訳日記帳', screenData }, { name: '伝票', base: '仕訳伝票（伝票式）' }, { name: '振替伝票', base: '振替伝票（振替式）' }];
 const BUDGET_KINDS = ['前年度', '当初', '補正', '次年度'];
 // 決算書の様式（第一〜第四様式）。第二様式（事業区分別の内訳表）も現行の印刷メニューにある（確認事項「【帳票・印刷】現行との差分について」）
-const CLOSING: PrintItem[] = [
-  { name: '法人単位資金収支計算書', base: '資金収支計算書（第一号様式）', note: '第一号第一様式', form: 'c1-1' }, { name: '資金収支内訳表', base: '資金収支計算書（第一号様式）', note: '第一号第二様式', form: 'c1-2' }, { name: '社会福祉事業区分 資金収支内訳表', base: '資金収支計算書（第一号様式）', note: '第一号第三様式', form: 'c1-3' }, { name: '拠点区分 資金収支計算書', base: '資金収支計算書（第一号様式）', note: '第一号第四様式', form: 'c1-4' },
-  { name: '法人単位事業活動計算書', base: '事業活動計算書（第二号様式）', note: '第二号第一様式', form: 'c2-1' }, { name: '事業活動内訳表', base: '事業活動計算書（第二号様式）', note: '第二号第二様式', form: 'c2-2' }, { name: '社会福祉事業区分 事業活動内訳表', base: '事業活動計算書（第二号様式）', note: '第二号第三様式', form: 'c2-3' }, { name: '拠点区分 事業活動計算書', base: '事業活動計算書（第二号様式）', note: '第二号第四様式', form: 'c2-4' },
-  { name: '法人単位貸借対照表', base: '貸借対照表（第三号様式）', note: '第三号第一様式', form: 'c3-1' }, { name: '貸借対照表内訳表', base: '貸借対照表（第三号様式）', note: '第三号第二様式', form: 'c3-2' }, { name: '社会福祉事業区分 貸借対照表内訳表', base: '貸借対照表（第三号様式）', note: '第三号第三様式', form: 'c3-3' }, { name: '拠点区分 貸借対照表', base: '貸借対照表（第三号様式）', note: '第三号第四様式', form: 'c3-4' },
-];
+const CLOSING: PrintItem[] = REPORTS.filter((r) => r.cat === '決算書').map((r) => ({ name: r.name.replace('○○事業区分', '社会福祉事業区分').replace('○○拠点区分', '拠点区分'), base: r.name, note: r.note, form: r.form }));
 /** WAMNET連携出力（現行の印刷メニューの 7 項目）。選ぶと WAMNET連携のダイアログを開く */
 const WAMNET: PrintItem[] = ['WAMNET連携設定', 'WAMNET連携科目チェック', 'WAMNET連携ファイル出力', 'WAMNET連携注記出力（PDF）', 'WAMNET連携注記出力（Excel）', 'WAMNET連携附属明細書出力（PDF）', 'WAMNET連携附属明細書出力（Excel）'].map((name) => ({ name, base: 'WAMNET' }));
 const PRE_CLOSING: PrintItem[] = [
-  { name: '拠点区分 貸借対照表明細書', base: '準決算書（C別紙6〜9／C1-5〜C3-6）' },
-  ...['001 本部', '002 チャイルド保育園'].flatMap((d) => ['資金収支計算書', '事業活動計算書', '貸借対照表'].map((r) => ({ name: `${d}サービス区分 ${r}`, base: '準決算書（C別紙6〜9／C1-5〜C3-6）' }))),
+  { name: '拠点区分 貸借対照表明細書', base: '○○拠点区分 貸借対照表明細書', note: 'C別紙6', form: 'pc6' },
+  ...['001 本部', '002 チャイルド保育園'].flatMap((d) => (['資金収支計算書', '事業活動計算書', '貸借対照表'] as const).map((r, i) => ({ name: `${d}サービス区分 ${r}`, base: `○○サービス区分 ${r}`, note: `C${i + 1}-5`, form: `pc${i + 1}-5` }))),
 ];
 
 /** 画面キー → 印刷できる帳票（現行の印刷メニューの振り分け） */
 export const SCREEN_PRINTS: Record<string, PrintGroup[]> = {
-  仕訳一覧: [{ label: '仕訳日記帳', items: JOURNAL(true) }, { label: '内部取引 一覧表', items: [{ name: '内部取引 仕訳一覧表', base: '仕訳日記帳' }] }],
+  仕訳一覧: [{ label: '仕訳日記帳', items: JOURNAL(true) }, { label: '内部取引 一覧表', items: [{ name: '内部取引 仕訳一覧表', base: '内部取引 仕訳一覧表' }] }],
   伝票入力: [{ label: '仕訳日記帳', items: JOURNAL(false) }],
   収入支出: [{ items: [{ name: '収入・支出調書', base: '仕訳伝票（伝票式）', screenData: true }] }],
-  勘定元帳: [{ label: '元帳', items: [{ name: '総勘定元帳', base: '総勘定元帳', screenData: true }, { name: '集計元帳', base: '集計元帳' }] }, { label: '補助簿（明細表）', items: ['事業未収金', '未収金', '未収補助金', '事業未払金', 'その他の未払金', '未払費用', '職員預り金'].map((n) => ({ name: `${n} 明細表`, base: /預り/.test(n) ? '補助簿（現預金・預かり金）' : '補助簿（未払金・未収金）' })) }],
+  勘定元帳: [{ label: '元帳', items: [{ name: '総勘定元帳', base: '総勘定元帳', screenData: true }, { name: '集計元帳', base: '集計元帳' }] }, { label: '補助簿（明細表）', items: ['事業未収金', '未収金', '未収補助金', '事業未払金', 'その他の未払金', '未払費用', '職員預り金'].map((n) => ({ name: `${n} 明細表`, base: '○○［科目名］明細表' })) }],
   資金元帳: [{ items: [{ name: '資金元帳', base: '資金元帳', screenData: true }] }],
-  業者元帳: [{ label: '元帳', items: [{ name: '取引先元帳', base: '取引先元帳', screenData: true }, { name: '取引先元帳（合算集計）法人全体', base: '取引先元帳' }] }, { label: 'その他', items: [{ name: '取引先内訳表', base: '取引先元帳' }] }],
-  業者推移: [{ items: [{ name: '取引先内訳表', base: '取引先元帳' }] }],
-  月次試算: [{ label: '試算表', items: [{ name: '資金収支計算書', base: '資金収支計算書（試算表）' }, { name: '事業活動計算書', base: '事業活動計算書（試算表）' }, { name: '貸借対照表', base: '貸借対照表（試算表）', screenData: true }, { name: '資金収支残高試算表', base: '資金収支残高試算表' }, { name: '残高試算表', base: '残高試算表' }] }, { label: '内部取引 一覧表', items: [{ name: '内部取引 残高一覧表', base: '残高試算表' }] }],
-  月次決算: [{ label: '決算書', items: CLOSING }, { label: '準決算書', items: PRE_CLOSING }, { label: 'その他', items: [{ name: '収支分析表', base: '収支分析表' }, { name: '決算書 表紙', base: '資金収支計算書（第一号様式）' }] }, { label: 'WAMNET連携出力', items: WAMNET }],
-  予算: [{ label: '資金収支予算書', items: BUDGET_KINDS.map((k) => ({ name: `資金収支${k}予算書`, base: '予算書' })) }, { label: '拠点区分 資金収支予算書', items: BUDGET_KINDS.map((k) => ({ name: `拠点区分 資金収支${k}予算書`, base: '予算書' })) }],
+  業者元帳: [{ label: '元帳', items: [{ name: '取引先元帳', base: '取引先元帳', screenData: true }, { name: '取引先元帳（合算集計）法人全体', base: '取引先元帳' }] }, { label: 'その他', items: [{ name: '取引先内訳表', base: '取引先内訳表' }] }],
+  業者推移: [{ items: [{ name: '取引先内訳表', base: '取引先内訳表' }] }],
+  月次試算: [{ label: '試算表', items: [{ name: '資金収支計算書', base: '資金収支計算書（試算表）' }, { name: '事業活動計算書', base: '事業活動計算書（試算表）' }, { name: '貸借対照表', base: '貸借対照表（試算表）', screenData: true }, { name: '資金収支残高試算表', base: '資金収支残高試算表' }, { name: '残高試算表', base: '残高試算表' }] }, { label: '内部取引 一覧表', items: [{ name: '内部取引 残高一覧表', base: '内部取引 残高一覧表' }] }],
+  月次決算: [{ label: '決算書', items: CLOSING }, { label: '準決算書', items: PRE_CLOSING }, { label: 'その他', items: [{ name: '収支分析表', base: '収支分析表' }, { name: '決算書 表紙', base: '決算書 表紙' }] }, { label: 'WAMNET連携出力', items: WAMNET }],
+  予算: [{ label: '予算書', items: [...BUDGET_KINDS.map((k) => ({ name: `資金収支${k}予算書`, base: `資金収支${k}予算書` })), { name: '資金収支予算内訳表', base: '資金収支予算内訳表' }, { name: '資金収支次年度予算内訳表', base: '資金収支次年度予算内訳表' }] }, { label: '予算書（拠点区分）', items: BUDGET_KINDS.map((k) => ({ name: `資金収支${k}予算書（拠点区分）`, base: `資金収支${k}予算書（拠点区分）` })) }],
   // 予算書・予算管理表（月別の推移表を含む）は、予算対比表の「印刷 ▾」からも出す（確認事項「【帳票・印刷】現行との差分について」）
   予算対比: [
     { label: '予算管理表', items: [{ name: '資金収支予算管理表（予算対比表）', base: '予算管理表（予算対比表）', screenData: true }, { name: '資金収支月別予算推移表', base: '資金収支月別予算推移表' }, { name: '資金収支月別実績推移表', base: '資金収支月別実績推移表' }, { name: '資金収支月別予算実績推移表', base: '資金収支月別予算実績推移表' }] },
-    { label: '予算書', items: BUDGET_KINDS.map((k) => ({ name: `資金収支${k}予算書`, base: '予算書' })) },
+    { label: '予算書', items: BUDGET_KINDS.map((k) => ({ name: `資金収支${k}予算書`, base: `資金収支${k}予算書` })) },
+    { label: '予算書（拠点区分）', items: BUDGET_KINDS.map((k) => ({ name: `資金収支${k}予算書（拠点区分）`, base: `資金収支${k}予算書（拠点区分）` })) },
     { label: '内部取引 一覧表', items: [{ name: '内部取引 予算一覧表', base: '内部取引 予算一覧表' }] },
   ],
   税区分: [{ label: '消費税', items: ['消費税区分別集計内訳表', '消費税区分別集計表', '科目別消費税区分別集計表', '消費税区分コード内訳表', '売上仕入税額集計表'].map((n) => ({ name: n, base: n })) }],
-  仕訳辞書: [{ items: [{ name: '自動按分出力（CSV）', base: '自動按分出力（CSV）' }] }],
-  共通の印刷設定: [{ label: '備考・摘要', items: [{ name: '社会福祉法人 チャイルド保育園 資金収支計算書（備考・摘要）', base: '資金収支計算書（第一号様式）' }, { name: 'チャイルド保育園拠点区分 資金収支計算書（備考・摘要）', base: '資金収支計算書（第一号様式）' }] }],
-  経年グラフ: [{ label: '経営分析', items: [{ name: '経年推移グラフ', base: '経年推移表／経月推移表' }, { name: '経月推移グラフ', base: '経年推移表／経月推移表' }, { name: '前年度同月対比表', base: '前年度同月対比表' }, { name: '3期連続資金収支比較表', base: '3期連続資金収支比較表' }] }],
-  分析グラフ: [{ label: '経営分析', items: [{ name: '財務分析一覧表', base: '財務分析一覧表（5年）' }, { name: '財務分析グラフ', base: '財務分析グラフ（10年）' }, { name: '財務分析シート', base: '財務分析一覧表（5年）' }, { name: '基本チェック表', base: '財務分析一覧表（5年）' }] }],
+  仕訳辞書: [{ items: [{ name: '自動按分出力', base: '自動按分出力' }] }],
+  共通の印刷設定: [{ label: '備考・摘要', items: [{ name: '社会福祉法人 チャイルド保育園 資金収支計算書（備考・摘要）', base: '法人単位資金収支計算書' }, { name: 'チャイルド保育園拠点区分 資金収支計算書（備考・摘要）', base: '○○拠点区分 資金収支計算書' }] }],
+  経年グラフ: [{ label: '経営分析', items: ['経年推移グラフ', '経月推移グラフ', '前年度同月対比表', '3期連続資金収支比較表', '経年推移内訳グラフ', '経月推移内訳グラフ'].map((n) => ({ name: n, base: n })) }],
+  分析グラフ: [{ label: '経営分析', items: ['財務分析一覧表', '財務分析グラフ', '財務分析シート', '基本チェック表', '財務分析内訳グラフ'].map((n) => ({ name: n, base: n })) }],
 };
 
 function reportOf(item: PrintItem): ReportDef {
   const base = REPORTS.find((r) => r.name === item.base);
-  return { ...(base ?? { id: 'x', name: item.name, cat: '画面の帳票', detail: ['タイトルを印刷する', '区分名を印刷する'] }), id: 'menu:' + item.name, name: item.name, note: item.note, cat: base?.cat ?? '画面の帳票' };
+  return { ...(base ?? { id: 'x', name: item.name, cat: '画面の帳票', detail: SCREEN_DETAIL }), id: 'menu:' + item.name, name: item.name, note: item.note ?? base?.note, cat: base?.cat ?? '画面の帳票' };
 }
 
 /** 画面の「印刷」ボタン。帳票が1つならそのまま印刷ダイアログ、複数なら一覧から選ぶ */
 export function ScreenPrintMenu({ page, groups, actions, accent, data, label = '印刷', small, tone, style }: { page?: string; groups?: PrintGroup[]; /** 画面独自の印刷処理（指定時は groups／page より優先） */ actions?: PrintActionGroup[]; accent: string; /** 画面に表示中の表（screenData の帳票に使う） */ data?: TableData; label?: string; small?: boolean; /** 'act'＝伝票入力の操作ボタン（定型仕訳など）と同じ大きさ・色 */ tone?: 'act'; style?: CSSProperties }) {
-  const gs: { label?: string; items: (PrintItem | PrintAction)[]; dashedBelow?: boolean }[] = actions ?? groups ?? (page ? SCREEN_PRINTS[page] : undefined) ?? [];
+  const s = useSession();
+  const okItem = (it: PrintItem | PrintAction) => { if ('onClick' in it) return true; const base = REPORTS.find((r) => r.name === it.base); return !base || condOk(base, s); };
+  const gs: { label?: string; items: (PrintItem | PrintAction)[]; dashedBelow?: boolean }[] = (actions ?? groups ?? (page ? SCREEN_PRINTS[page] : undefined) ?? []).map((g) => ({ ...g, items: g.items.filter(okItem) })).filter((g) => g.items.length > 0);
   const items = gs.flatMap((g) => g.items);
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<PrintItem | null>(null);

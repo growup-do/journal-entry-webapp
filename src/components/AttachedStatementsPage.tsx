@@ -205,7 +205,7 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
   };
   const saveAll = () => { setSaved(draft); toast.show(`${displayName('決算附属明細書')}を保存しました`); };
   const cancelAll = () => { setDraft(saved); toast.show('変更を取り消しました'); };
-  const goAppendix = () => { if (onNavigate) onNavigate('別紙（注記・明細書・財産目録）'); else toast.show('「帳票・印刷 ＞ 別紙（注記・明細書・財産目録）」を開いてください'); };
+  const goAppendix = () => { if (onNavigate) onNavigate('別紙（注記・明細書・財産目録）'); else toast.show('「帳票・印刷 ＞ 帳票の印刷 ＞ 別紙」を開いてください'); };
 
   /** コンボボックスの表（項目 ｜ 科目）。同じ明細書の中で同じ科目を 2 か所に選んだときは注意を出す */
   const comboRows = (c: ComboSec, after?: (i: number) => ReactNode) => {

@@ -10,7 +10,7 @@ import { LABEL, SwitchPill } from './ReportShell';
 import { btn } from './ui';
 import { FUSEN_COLORS, type Voucher } from '../store/journalStore';
 import { flattenDivisions, setSession, startKindOf, useSession, type DivisionNode } from '../store/session';
-import { DivisionColorPicker, mapTree } from './DivisionTreeEditor';
+import { DivisionColorPicker, isDarkColor, mapTree, textOnColor } from './DivisionTreeEditor';
 
 /** 伝票の区分コード（先頭3桁） */
 export const codeOf = (r: Voucher) => r.service.slice(0, 3);
@@ -33,13 +33,15 @@ export function useDivisionTools(all: Voucher[], accent: string) {
 
   /** 行の背景（付箋 › 区分色） */
   const rowBg = (r: Voucher) => (r.fusen ? FUSEN_COLORS[r.fusen] + '14' : colorOn ? divOf(codeOf(r))?.color ?? '#f5f7f9' : 'transparent');
+  /** 行の背景が濃い区分色か（文字を白にする。確認メモ #73）。行に data-dark-row として付ける */
+  const rowDark = (r: Voucher): true | undefined => (!r.fusen && colorOn && isDarkColor(divOf(codeOf(r))?.color) ? true : undefined);
   /** Seq 下などに置く小さな色チップ */
   const chip = (r: Voucher): ReactNode => { const d = divOf(codeOf(r)); return colorOn && d ? <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: d.color, border: '1px solid #c3ccd4', marginRight: 4, verticalAlign: 'middle' }} /> : null; };
   /** 区分名のタグ（区分名スイッチが ON のときだけ） */
   const nameTag = (r: Voucher): ReactNode => {
     if (!nameOn) return null;
     const d = divOf(codeOf(r));
-    return <span data-division-name style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 8, background: d?.color ?? '#f1f4f6', border: '1px solid #dde4ea', fontSize: 12, fontWeight: 700, color: '#48565f', whiteSpace: 'nowrap' }}><span style={{ fontVariantNumeric: 'tabular-nums', color: '#8290a0', fontWeight: 500 }}>{codeOf(r)}</span>{d?.name ?? r.service.replace(/^\d+ /, '')}</span>;
+    return <span data-division-name style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 8, background: d?.color ?? '#f1f4f6', border: '1px solid #dde4ea', fontSize: 12, fontWeight: 700, color: textOnColor(d?.color) ?? '#48565f', whiteSpace: 'nowrap' }} data-keep-color><span style={{ fontVariantNumeric: 'tabular-nums', color: textOnColor(d?.color) ?? '#8290a0', fontWeight: 500, opacity: isDarkColor(d?.color) ? 0.85 : 1 }}>{codeOf(r)}</span>{d?.name ?? r.service.replace(/^\d+ /, '')}</span>;
   };
 
   /** 表示切替に並べるスイッチ（区分色・区分名） */
@@ -53,7 +55,7 @@ export function useDivisionTools(all: Voucher[], accent: string) {
   const legend = colorOn ? (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 12, color: '#5b6773' }}>
       <span style={LABEL}>区分色</span>
-      {usedCodes.map((c) => { const d = divOf(c); return <span key={c} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 10px', borderRadius: 8, background: d?.color ?? '#f1f4f6', border: '1px solid #e2e8ee' }}><span style={{ fontVariantNumeric: 'tabular-nums', color: '#8290a0' }}>{c}</span>{d?.name ?? '（区分なし）'}</span>; })}
+      {usedCodes.map((c) => { const d = divOf(c); return <span key={c} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 10px', borderRadius: 8, background: d?.color ?? '#f1f4f6', border: '1px solid #e2e8ee', color: textOnColor(d?.color) }}><span style={{ fontVariantNumeric: 'tabular-nums', color: textOnColor(d?.color) ?? '#8290a0', opacity: isDarkColor(d?.color) ? 0.85 : 1 }}>{c}</span>{d?.name ?? '（区分なし）'}</span>; })}
       <button type="button" className="btn-outline" onClick={() => setColorOpen(true)} style={btn(accent, false, true)}>区分色の設定</button>
     </div>
   ) : null;
@@ -79,7 +81,7 @@ export function useDivisionTools(all: Voucher[], accent: string) {
     </Modal>
   );
 
-  return { enabled, colorOn, nameOn, rowBg, chip, nameTag, switches, legend, modal };
+  return { enabled, colorOn, nameOn, rowBg, rowDark, chip, nameTag, switches, legend, modal };
 }
 
 /** 区分色の切替スイッチ（単体で使う場合） */

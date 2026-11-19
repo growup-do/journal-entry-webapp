@@ -180,7 +180,7 @@ export function LedgerPage({ kind, variant, accent, onNavigate }: Props) {
             {!target && <tr><td colSpan={colCount} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>{isVendor ? '取引先' : '科目'}を指定してください。</td></tr>}
             {target && lines.length === 0 && <tr><td colSpan={colCount} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>この月に該当する仕訳はありません。</td></tr>}
             {lines.map((l) => (
-              <tr key={l.r.id} data-voucher={l.r.id} onDoubleClick={() => ra.openEdit(l.r)} title={ra.editable ? 'ダブルクリックで伝票を訂正' : undefined} style={{ cursor: ra.editable ? 'pointer' : 'default', background: dt.rowBg(l.r) }}>
+              <tr key={l.r.id} data-voucher={l.r.id} data-dark-row={dt.rowDark(l.r)} onDoubleClick={() => ra.openEdit(l.r)} title={ra.editable ? 'ダブルクリックで伝票を訂正' : undefined} style={{ cursor: ra.editable ? 'pointer' : 'default', background: dt.rowBg(l.r) }}>
                 <td style={TD}>{l.r.date}</td>
                 <td style={TD}>{dt.chip(l.r)}{l.r.seq}</td>
                 {dt.nameOn && <td style={TD}>{dt.nameTag(l.r)}</td>}
@@ -191,7 +191,7 @@ export function LedgerPage({ kind, variant, accent, onNavigate }: Props) {
                     {!isVendor && opts.spare && (l.r.spare1 || l.r.spare2) ? <span style={{ marginLeft: 8, color: '#9aa5b1' }}>予備：{[l.r.spare1, l.r.spare2].filter(Boolean).join('／')}</span> : null}
                   </div>
                 </td>
-                {taxCols && <td style={TD}><span style={{ fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 8, background: l.tax.startsWith('課税') ? '#e8f0fb' : l.tax === '非課税' ? '#eaf5ef' : '#f1f4f6', color: l.tax.startsWith('課税') ? '#2c5f9e' : l.tax === '非課税' ? '#1f7a52' : '#7a8794' }}>{l.tax}</span></td>}
+                {taxCols && <td style={TD}><span data-keep-color style={{ fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 8, background: l.tax.startsWith('課税') ? '#e8f0fb' : l.tax === '非課税' ? '#eaf5ef' : '#f1f4f6', color: l.tax.startsWith('課税') ? '#2c5f9e' : l.tax === '非課税' ? '#1f7a52' : '#7a8794' }}>{l.tax}</span></td>}
                 {taxCols && <td style={{ ...NUM, color: l.taxAmt ? undefined : '#b8c2cc' }}>{l.taxAmt ? money(l.taxAmt) : '—'}</td>}
                 <td style={{ ...NUM, color: colorDC ? '#2c5f9e' : undefined }}>{l.debit ? money(l.debit) : ''}</td>
                 {!isVendor && <td style={{ ...NUM, color: colorDC ? '#b0426a' : undefined }}>{l.credit ? money(l.credit) : ''}</td>}

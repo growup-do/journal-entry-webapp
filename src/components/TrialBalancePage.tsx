@@ -123,9 +123,9 @@ function closingPrints(s: Session): PrintGroup[] {
   const bases = baseNamesOf(s);
   const groups: PrintGroup[] = [];
   (SCREEN_PRINTS['月次決算'] ?? []).forEach((g) => {
-    // 共通の印刷設定「様式設定」で省略にした様式は出さない
+    // 決算書 共通印刷設定の「帳票選択」で省略にした様式は出さない
     const items = g.items.filter((it) => !it.form || formEnabled(s.print.forms, it.form, s.tree)).flatMap((it) => (it.name.startsWith(BASE_HEAD) && bases.length ? bases.map((b) => ({ ...it, name: `${b}${BASE_HEAD}${it.name.slice(BASE_HEAD.length)}` })) : [it]));
-    const chunks = g.label === '決算書' ? chunkBy(items, (it) => it.base) : g.label === '準決算書' ? chunkBy(items, (it) => it.name.split(/(?:拠点|サービス)区分 /)[0]) : [items];
+    const chunks = g.label === '決算書' ? chunkBy(items, (it) => (it.form ?? '').slice(0, 2)) : g.label === '準決算書' ? chunkBy(items, (it) => it.name.split(/(?:拠点|サービス)区分 /)[0]) : [items];
     chunks.forEach((c, i) => {
       if (i > 0) groups[groups.length - 1].dashedBelow = true;
       groups.push({ label: i === 0 ? g.label : undefined, items: c });
@@ -360,7 +360,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
   const printActions = prints && [
     ...prints.map((g) => ({ label: g.label, dashedBelow: g.dashedBelow, items: g.items.map((it) => ({ name: it.name, note: it.note, onClick: () => (it.base === 'WAMNET' ? setWamnet(WAMNET_ITEMS.find((w) => w.name === it.name) ?? null) : setBatch(it)) })) })),
     // 現行の印刷メニューの「様式設定」：使う様式（省略する様式）は共通の印刷設定で選ぶ
-    { label: '設定', items: [{ name: '様式設定', note: '共通の印刷設定', onClick: () => onNavigate('共通の印刷設定') }] },
+    { label: '設定', items: [{ name: '様式設定', note: '決算書 共通印刷設定', onClick: () => onNavigate('共通の印刷設定') }] },
   ];
   /** 帳票一括印刷の月の初期値：画面で選んでいる月（範囲を選んでいるときは、その開始月〜終了月） */
   const batchInit: [string, string] = range ? [range.from.split('/')[0], range.to.split('/')[0]] : [view.month, view.month];

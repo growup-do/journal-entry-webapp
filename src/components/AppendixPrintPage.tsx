@@ -4,55 +4,72 @@
 //   附属明細書の明細入力・内訳表の合算テーブルも、印刷の準備としてここに置く（科目設定・監視は「決算附属明細書設定」）。
 //   印刷は画面内で完結：詳細設定 → 出力先 → 印刷／プレビュー（PrintCenter の PrintFlow を利用）。
 //   確認メモ #163：画面上部に「キャンセル」を置く。保存していない変更（注記・明細・財産目録の行設定・合算テーブル）を破棄し、最後に保存した内容へ戻す。
+//   確認メモ #238：メニューの「別紙」は廃止し、「帳票の印刷」の中区分の1つにした（embedded で帳票の印刷の中に描く）。
+//     小区分は 計算書類に対する注記／附属明細書（別紙3）／財産目録。表示条件（帳票選択・就労支援・授産）を満たさない別紙は一覧に出さない。
+//     ⑩⑪ は共通印刷設定＝有（印刷の詳細設定に「共通の印刷設定を反映」を置く）。
 
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { runExport } from './ExportDialog';
 import { Modal } from './Modal';
 import { PreviewModal, PrintFlow, type ReportDef, type TableData } from './PrintCenter';
+import { appendixSpec, formCond, formEnabled } from './printCatalog';
 import { ImportExportButton, ImportExportDialog } from './ImportExportDialog';
 import { NUM, TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
 import { Field, Notice, SettingsShell, Tabs, Toggle, btn, card, cardHead, input, numInput, toInt, yen } from './ui';
 import { SERVICES, displayName } from '../data';
-import { useSession } from '../store/session';
+import { useSession, type Session } from '../store/session';
 
 type Editor = 'note' | 'detail' | 'auto' | 'inventory' | 'merge';
 type Group = '計算書類に対する注記' | '附属明細書' | '財産目録' | '内訳表の準備';
-interface Sheet { id: string; group: Group; no: string; name: string; unit: '法人全体' | '拠点区分' | ''; editor: Editor; /** 対象事業がない（就労支援・授産） */ na?: boolean; /** 自動作成の元になるデータ */ source?: string }
+interface Sheet { id: string; group: Group; no: string; name: string; unit: '法人全体' | '拠点区分' | ''; editor: Editor; /** 対象事業がない（就労支援・授産）。表示条件を満たさない */ na?: boolean; /** 自動作成の元になるデータ */ source?: string; /** 表示条件の説明 */ cond?: string; /** 帳票選択の様式キー（使用にしたときだけ表示） */ form?: string; /** 共通印刷設定＝有 */ common?: boolean }
 
 const MARU = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩', '⑪', '⑫', '⑬', '⑭', '⑮', '⑯', '⑰', '⑱', '⑲'];
-const DETAIL_SHEETS: [string, Sheet['unit'], Editor, string?][] = [
-  ['借入金明細書', '法人全体', 'detail'],
-  ['寄附金収益明細書', '法人全体', 'detail'],
-  ['補助金事業等収益明細書', '法人全体', 'detail'],
-  ['事業区分間及び拠点区分間繰入金明細書', '法人全体', 'detail'],
-  ['事業区分間及び拠点区分間貸付金（借入金）残高明細書', '法人全体', 'detail'],
-  ['基本金明細書', '法人全体', 'detail'],
-  ['国庫補助金等特別積立金明細書', '法人全体', 'detail'],
-  ['基本財産及びその他の固定資産（有形・無形固定資産）の明細書', '拠点区分', 'auto', '固定資産台帳（減価償却）'],
-  ['引当金明細書', '拠点区分', 'detail'],
-  ['拠点区分資金収支明細書', '拠点区分', 'auto', '伝票（サービス区分ごとの集計）'],
-  ['拠点区分事業活動明細書', '拠点区分', 'auto', '伝票（サービス区分ごとの集計）'],
-  ['積立金・積立資産明細書', '拠点区分', 'detail'],
-  ['サービス区分間繰入金明細書', '拠点区分', 'detail'],
-  ['サービス区分間貸付金（借入金）残高明細書', '拠点区分', 'detail'],
-  ['就労支援事業別事業活動明細書', '拠点区分', 'auto'],
-  ['就労支援事業製造原価明細書', '拠点区分', 'auto'],
-  ['就労支援事業販管費明細書', '拠点区分', 'auto'],
-  ['就労支援事業明細書', '拠点区分', 'auto'],
-  ['授産事業費用明細書', '拠点区分', 'auto'],
+const SHUROU = '就労支援事業を行う区分（就労支援区分）があるとき';
+const SHUROU_S = '就労支援区分（年間売上高5,000万円以下）があるとき';
+/** 附属明細書（別紙3 ①〜⑲。⑮〜⑱ は多機能事業所用等の -2 様式あり）：[番号, 名称, 作成単位, 編集, 自動作成の元, 表示条件] */
+const DETAIL_SHEETS: [string, string, Sheet['unit'], Editor, string?, string?][] = [
+  [MARU[0], '借入金明細書', '法人全体', 'detail'],
+  [MARU[1], '寄附金収益明細書', '法人全体', 'detail'],
+  [MARU[2], '補助金事業等収益明細書', '法人全体', 'detail'],
+  [MARU[3], '事業区分間及び拠点区分間繰入金明細書', '法人全体', 'detail'],
+  [MARU[4], '事業区分間及び拠点区分間貸付金（借入金）残高明細書', '法人全体', 'detail'],
+  [MARU[5], '基本金明細書', '法人全体', 'detail'],
+  [MARU[6], '国庫補助金等特別積立金明細書', '法人全体', 'detail'],
+  [MARU[7], '基本財産及びその他の固定資産（有形・無形固定資産）の明細書', '拠点区分', 'auto', '固定資産台帳（減価償却）'],
+  [MARU[8], '引当金明細書', '拠点区分', 'detail'],
+  [MARU[9], '拠点区分資金収支明細書', '拠点区分', 'auto', '伝票（サービス区分ごとの集計）'],
+  [MARU[10], '拠点区分事業活動明細書', '拠点区分', 'auto', '伝票（サービス区分ごとの集計）'],
+  [MARU[11], '積立金・積立資産明細書', '拠点区分', 'detail'],
+  [MARU[12], 'サービス区分間繰入金明細書', '拠点区分', 'detail'],
+  [MARU[13], 'サービス区分間貸付金（借入金）残高明細書', '拠点区分', 'detail'],
+  [MARU[14], '就労支援事業別事業活動明細書', '拠点区分', 'auto', undefined, `${SHUROU}、または${SHUROU_S}`],
+  [MARU[14] + '-2', '就労支援事業別事業活動明細書（多機能事業所用等）', '拠点区分', 'auto', undefined, `${SHUROU}、または${SHUROU_S}`],
+  [MARU[15], '就労支援事業製造原価明細書', '拠点区分', 'auto', undefined, SHUROU],
+  [MARU[15] + '-2', '就労支援事業製造原価明細書（多機能事業所用等）', '拠点区分', 'auto', undefined, SHUROU],
+  [MARU[16], '就労支援事業販管費明細書', '拠点区分', 'auto', undefined, SHUROU],
+  [MARU[16] + '-2', '就労支援事業販管費明細書（多機能事業所用等）', '拠点区分', 'auto', undefined, SHUROU],
+  [MARU[17], '就労支援事業明細書', '拠点区分', 'auto', undefined, SHUROU_S],
+  [MARU[17] + '-2', '就労支援事業明細書（多機能事業所用等）', '拠点区分', 'auto', undefined, SHUROU_S],
+  [MARU[18], '授産事業費用明細書', '拠点区分', 'auto', undefined, '授産事業を行う区分（授産事業区分）があるとき'],
 ];
 /** 附属明細書の名前（①〜⑲。WAMNET連携附属明細書出力で使う） */
-export const APPENDIX_SHEET_NAMES = DETAIL_SHEETS.map(([n], i) => MARU[i] + ' ' + n);
+export const APPENDIX_SHEET_NAMES = DETAIL_SHEETS.map(([no, n]) => no + ' ' + n);
 const SHEETS: Sheet[] = [
-  { id: 'note-corp', group: '計算書類に対する注記', no: '注', name: '計算書類に対する注記（法人全体用）', unit: '法人全体', editor: 'note' },
-  { id: 'note-base', group: '計算書類に対する注記', no: '注', name: '計算書類に対する注記（拠点区分用）', unit: '拠点区分', editor: 'note' },
-  ...DETAIL_SHEETS.map(([name, unit, editor, source], i): Sheet => ({ id: `d${i + 1}`, group: '附属明細書', no: MARU[i], name, unit, editor, source, na: i >= 14 })),
+  { id: 'note-corp', group: '計算書類に対する注記', no: '注', name: '計算書類に対する注記（法人全体用）', unit: '法人全体', editor: 'note', form: 'note' },
+  { id: 'note-base', group: '計算書類に対する注記', no: '注', name: '計算書類に対する注記（拠点区分用）', unit: '拠点区分', editor: 'note', form: 'note' },
+  ...DETAIL_SHEETS.map(([no, name, unit, editor, source, cond], i): Sheet => ({ id: `d${i + 1}`, group: '附属明細書', no, name, unit, editor, source, cond, na: !!cond, form: i === 9 ? 'a10' : i === 10 ? 'a11' : undefined, common: i === 9 || i === 10 })),
   { id: 'inventory', group: '財産目録', no: '財', name: '財産目録', unit: '法人全体', editor: 'inventory' },
   { id: 'merge', group: '内訳表の準備', no: '表', name: '合算テーブル（内訳表の横軸）', unit: '', editor: 'merge' },
 ];
 const GROUPS: Group[] = ['計算書類に対する注記', '附属明細書', '財産目録', '内訳表の準備'];
+/** 表示条件を満たすか（帳票選択で省略にした様式・対象事業のない明細書は満たさない） */
+const sheetOk = (x: Sheet, s: Session) => !x.na && (!x.form || formEnabled(s.print.forms, x.form, s.tree));
+/** 表示条件の説明 */
+const condText = (x: Sheet) => x.cond ?? (x.form ? formCond(x.form).label : '');
+/** 一覧に出す別紙の数（帳票の印刷の中区分タブの件数） */
+export const appendixCount = (s: Session) => SHEETS.filter((x) => x.editor !== 'merge' && sheetOk(x, s)).length;
 
 /** 明細入力の列と初期データ（num＝金額の列） */
 const KURIIRE_COLS = ['繰入元の区分', '繰入先の区分', '繰入金の財源', '金額', '使用目的等'];
@@ -117,12 +134,13 @@ interface Draft { rows: Record<string, string[][]>; notes: Record<string, string
 const cloneDraft = (d: Draft): Draft => JSON.parse(JSON.stringify(d));
 const stamp = () => { const d = new Date(); return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`; };
 
-export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'form' | 'sheet'; accent: string; /** メニュー項目名で別画面へ移動（決算附属明細書設定へのリンクに使用） */ onNavigate?: (label: string) => void }) {
+export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { variant: 'form' | 'sheet'; accent: string; /** メニュー項目名で別画面へ移動（決算附属明細書設定へのリンクに使用） */ onNavigate?: (label: string) => void; /** 帳票の印刷の中区分「別紙」として、画面の枠（SettingsShell）なしで描く */ embedded?: boolean }) {
   const s = useSession();
   const toast = useToast();
   const [cur, setCur] = useState('note-corp');
   const [mode, setMode] = useState('設定・編集');
   const [hideNa, setHideNa] = useState(true);
+  const shown = (x: Sheet) => !hideNa || sheetOk(x, s);
   const [rows, setRows] = useState<Record<string, string[][]>>(() => Object.fromEntries(Object.entries(DETAILS).map(([k, v]) => [k, v.rows.map((r) => [...r])])));
   const [notes, setNotes] = useState<Record<string, string>>({ 'note-corp': NOTE_DEFAULT, 'note-base': NOTE_BASE_DEFAULT });
   const [inv, setInv] = useState<Record<string, string[][]>>(cloneInv);
@@ -144,7 +162,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
   const restoreSaved = () => { const d = cloneDraft(saved); setRows(d.rows); setNotes(d.notes); setInv(d.inv); setMerge(d.merge); setPerPage(d.perPage); setInvSel(null); toast.show('変更を破棄し、最後に保存した内容に戻しました'); };
   const cancelAll = () => { if (!dirty) { toast.show('保存していない変更はありません'); return; } setAsk({ msg: '保存していない変更（注記・明細・財産目録の行設定・合算テーブル）を破棄して、最後に保存した内容に戻しますか？', ok: '変更を破棄', run: restoreSaved }); };
 
-  const sheet = SHEETS.find((x) => x.id === cur) ?? SHEETS[0];
+  const sheet = SHEETS.find((x) => x.id === cur && shown(x)) ?? SHEETS.find(shown) ?? SHEETS[0];
   const def = DETAILS[sheet.id];
   const myRows = rows[sheet.id] ?? [];
   const invRows = inv[invTab] ?? [];
@@ -153,7 +171,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
 
   /** 左の一覧に出す状態 */
   const statusOf = (x: Sheet): { label: string; bg: string; fg: string } => {
-    if (x.na) return { label: '対象外', bg: '#f1f4f6', fg: '#9aa5b1' };
+    if (!sheetOk(x, s)) return { label: '条件外', bg: '#f1f4f6', fg: '#9aa5b1' };
     if (x.editor === 'auto') return { label: '自動作成', bg: '#e8f0fb', fg: '#2c5f9e' };
     if (x.editor === 'detail') { const d = DETAILS[x.id]; const filled = (rows[x.id] ?? []).some((r) => d.num.some((i) => toInt(r[i] ?? '') !== 0)); return filled ? { label: '入力あり', bg: '#eaf5ef', fg: '#1f7a52' } : { label: '金額なし', bg: '#fff7e6', fg: '#8a5a00' }; }
     if (x.editor === 'inventory') return Object.values(inv).some((r) => r.length) ? { label: '行設定済み', bg: '#eaf5ef', fg: '#1f7a52' } : { label: '未設定', bg: '#fff7e6', fg: '#8a5a00' };
@@ -172,9 +190,10 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
     if (x.editor === 'note') return { header: [x.name], rows: (notes[x.id] ?? '').split('\n').map((l) => [l]) };
     return undefined;
   };
+  // 詳細設定は現行の各明細書の画面に合わせる（確認メモ #238）
   const reportOf = (x: Sheet): ReportDef => ({
-    id: 'appendix:' + x.id, name: x.group === '附属明細書' ? `${x.name}（別紙3${x.no}）` : x.name, cat: '別紙', annual: true,
-    detail: x.editor === 'note' ? ['注記の予備費充当額を自動印刷する', '「該当なし」の項目も印刷する'] : x.editor === 'inventory' ? ['差引純資産を網掛け、太字にする', '行送りを標準（6.4mm）にする'] : ['合計行を網掛け、太字にする', '区分名を印刷する', '金額が発生していない項目も印刷する'],
+    id: 'appendix:' + x.id, name: x.group === '附属明細書' ? `${x.name}（別紙3${x.no}）` : x.name, cat: '別紙', sub: x.group, annual: true, common: x.common, title: x.name,
+    ...appendixSpec(x.id),
   });
 
   /* ---- 設定ファイル（財産目録の行設定／注記） ---- */
@@ -219,34 +238,42 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
   const moveInv = (dir: -1 | 1) => { if (invSel == null) return; const j = invSel + dir; if (j < 0 || j >= invRows.length) return; const n = [...invRows]; [n[invSel], n[j]] = [n[j], n[invSel]]; setInv({ ...inv, [invTab]: n }); setInvSel(j); };
   const setCell = (ri: number, ci: number, v: string) => setRows((d) => ({ ...d, [sheet.id]: (d[sheet.id] ?? []).map((r, i) => (i === ri ? r.map((c, k) => (k === ci ? v : c)) : r)) }));
 
-  const canPrint = sheet.editor !== 'merge' && !sheet.na;
+  const canPrint = sheet.editor !== 'merge' && sheetOk(sheet, s);
   const tag = (label: string, bg: string, fg: string): ReactNode => <span style={{ fontSize: 12, fontWeight: 800, padding: '2px 8px', borderRadius: 8, background: bg, color: fg, whiteSpace: 'nowrap' }}>{label}</span>;
 
-  return (
-    <SettingsShell variant={variant} title="別紙（注記・附属明細書・財産目録）" badge="印刷" desc="決算書に添付する別紙の編集と印刷を行います。左の一覧から別紙を選び、右側で内容の編集と印刷をします。" actions={<>
-      <button type="button" className="btn-outline" onClick={cancelAll} title="保存していない変更を破棄して、最後に保存した内容に戻します" style={btn()} data-appendix-cancel>キャンセル</button>
-      <button type="button" className="submit-btn" onClick={saveAll} style={btn(accent, true)}>保存</button>
-    </>}>
+  const actions = <>
+    <button type="button" className="btn-outline" onClick={cancelAll} title="保存していない変更を破棄して、最後に保存した内容に戻します" style={btn()} data-appendix-cancel>キャンセル</button>
+    <button type="button" className="submit-btn" onClick={saveAll} style={btn(accent, true)}>保存</button>
+  </>;
+  const body = (
+    <>
       <ToastView msg={toast.msg} />
+      {embedded && (
+        <div data-appendix-bar style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '8px 16px', borderBottom: '1px solid #eef2f5', background: dirty ? '#fff8ea' : '#fff' }}>
+          <span style={{ fontSize: 14, color: '#5b6773' }}>決算書に添付する別紙です。注記・明細・財産目録の行設定は、編集したあと「保存」で確定します。</span>
+          {dirty && <span style={{ fontSize: 12, fontWeight: 700, color: '#8a5a00' }}>保存していない変更があります</span>}
+          <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>{actions}</span>
+        </div>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: '300px minmax(0,1fr)', minHeight: 520, alignItems: 'start' }}>
         {/* 左：別紙の一覧 */}
         <nav aria-label="別紙の一覧" style={{ borderRight: '1px solid #eef2f5', padding: 10, maxHeight: 'calc(100vh - 220px)', overflow: 'auto', alignSelf: 'stretch' }}>
           {GROUPS.map((g) => {
-            const items = SHEETS.filter((x) => x.group === g && !(hideNa && x.na));
+            const items = SHEETS.filter((x) => x.group === g && shown(x));
             return (
               <div key={g} style={{ marginBottom: 10 }}>
                 <div style={{ fontSize: 12, fontWeight: 800, color: '#8290a0', padding: '6px 8px 4px', display: 'flex', alignItems: 'center', gap: 6 }}>{g}{g === '附属明細書' && <span style={{ fontWeight: 500 }}>（別紙3 ①〜⑲）</span>}</div>
                 {items.map((x) => {
                   const on = x.id === cur; const st = statusOf(x);
                   return (
-                    <button key={x.id} type="button" onClick={() => pick(x.id)} aria-current={on ? 'true' : undefined} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, width: '100%', textAlign: 'left', padding: '7px 8px', border: 'none', borderRadius: 8, background: on ? accent : 'transparent', color: on ? '#fff' : x.na ? '#9aa5b1' : '#22303c', fontFamily: 'inherit', cursor: 'pointer', marginBottom: 1 }}>
-                      <span style={{ width: 20, flex: 'none', fontSize: 14, fontWeight: 700, textAlign: 'center', opacity: 0.85 }}>{x.no}</span>
+                    <button key={x.id} type="button" data-sheet={x.id} onClick={() => pick(x.id)} aria-current={on ? 'true' : undefined} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, width: '100%', textAlign: 'left', padding: '7px 8px', border: 'none', borderRadius: 8, background: on ? accent : 'transparent', color: on ? '#fff' : sheetOk(x, s) ? '#22303c' : '#9aa5b1', fontFamily: 'inherit', cursor: 'pointer', marginBottom: 1 }}>
+                      <span style={{ width: x.no.length > 1 && x.group === '附属明細書' ? 30 : 20, flex: 'none', fontSize: 14, fontWeight: 700, textAlign: 'center', opacity: 0.85, whiteSpace: 'nowrap' }}>{x.no}</span>
                       <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: on ? 700 : 500, lineHeight: 1.45 }}>{x.name}</span>
                       <span style={{ flex: 'none', fontSize: 12, fontWeight: 800, padding: '1px 6px', borderRadius: 6, background: on ? 'rgba(255,255,255,.22)' : st.bg, color: on ? '#fff' : st.fg, marginTop: 2 }}>{st.label}</span>
                     </button>
                   );
                 })}
-                {g === '附属明細書' && <label style={{ display: 'flex', gap: 5, alignItems: 'center', fontSize: 12, color: '#8290a0', padding: '4px 8px', cursor: 'pointer' }}><input type="checkbox" checked={!hideNa} onChange={(e) => setHideNa(!e.target.checked)} />対象外の明細書（就労支援・授産 ⑮〜⑲）も表示</label>}
+                {g === '附属明細書' && <label style={{ display: 'flex', gap: 5, alignItems: 'center', fontSize: 12, color: '#8290a0', padding: '4px 8px', cursor: 'pointer' }}><input type="checkbox" checked={!hideNa} onChange={(e) => setHideNa(!e.target.checked)} />表示条件を満たさない別紙も表示（就労支援・授産 ⑮〜⑲ など）</label>}
               </div>
             );
           })}
@@ -258,8 +285,11 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16, minWidth: 0 }}>{sheet.group === '附属明細書' ? `${sheet.no} ` : ''}{sheet.name}</div>
             {sheet.group === '附属明細書' && tag(`別紙3（${sheet.no}）`, '#eef2f6', '#3d4a56')}
             {sheet.unit && tag(`${sheet.unit}で作成`, sheet.unit === '法人全体' ? '#e4f1f0' : '#fff3dc', sheet.unit === '法人全体' ? '#1f6f6b' : '#8a5a00')}
+            {sheet.common && tag('共通印刷設定：有', '#f1eafb', '#6b3fa0')}
+            {condText(sheet) && tag(sheetOk(sheet, s) ? '表示条件あり' : '表示条件を満たしていません', sheetOk(sheet, s) ? '#eef2f6' : '#fdecea', sheetOk(sheet, s) ? '#3d4a56' : '#b03a2e')}
             <span style={{ marginLeft: 'auto', fontSize: 12, color: '#8290a0' }}>{s.fiscalYear}　{s.division}</span>
           </div>
+          {condText(sheet) && <div data-sheet-cond style={{ padding: '0 22px 8px', fontSize: 12, color: '#8290a0' }}>表示条件：{condText(sheet)}</div>}
           {canPrint && <Tabs items={['設定・編集', '印刷']} current={mode} onChange={setMode} accent={accent} small />}
 
           {mode === '印刷' && canPrint ? (
@@ -313,7 +343,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
 
               {/* ---- 自動作成／対象外 ---- */}
               {sheet.editor === 'auto' && (
-                sheet.na ? <Notice>この明細書は、就労支援事業・授産事業を行う法人が作成するものです。起動中の法人には対象の事業がないため、編集・印刷する内容はありません。</Notice>
+                !sheetOk(sheet, s) ? <Notice>{sheet.na ? 'この明細書は、就労支援事業・授産事業を行う法人が作成するものです。起動中の法人には対象の事業がないため、編集・印刷する内容はありません。' : `この明細書は表示条件（${condText(sheet)}）を満たしていないため、印刷できません。`}</Notice>
                   : <>
                     <Notice tone="ok">この明細書は「{sheet.source}」から自動で作成します。この画面で編集する項目はありません。</Notice>
                     <div><button type="button" onClick={() => setMode('印刷')} style={btn(accent, true)}>印刷へ進む</button></div>
@@ -416,6 +446,12 @@ export function AppendixPrintPage({ variant, accent, onNavigate }: { variant: 'f
       <PreviewModal open={!!preview} onClose={() => setPreview(null)} title={preview?.title ?? ''} opts={preview?.opts} accent={accent} pages={1} data={preview ? tableOf(sheet) : undefined}>
         {preview && sheet.editor === 'note' ? <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'inherit', lineHeight: 1.9 }}>{notes[sheet.id] ?? ''}</pre> : undefined}
       </PreviewModal>
+    </>
+  );
+  if (embedded) return <div data-appendix-embedded>{body}</div>;
+  return (
+    <SettingsShell variant={variant} title="別紙（注記・附属明細書・財産目録）" badge="印刷" desc="決算書に添付する別紙の編集と印刷を行います。左の一覧から別紙を選び、右側で内容の編集と印刷をします。" actions={actions}>
+      {body}
     </SettingsShell>
   );
 }

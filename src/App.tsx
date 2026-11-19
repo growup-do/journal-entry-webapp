@@ -148,6 +148,13 @@ export default function App() {
     else if (alive(label) !== shown) guard(() => setPage(label));
   };
 
+  // 画面の中の部品からの画面移動（goScreen）。メニュー選択と同じ扱い（未保存の確認・権限の確認を通す）
+  useEffect(() => {
+    const h = (e: Event) => { const key = (e as CustomEvent<string>).detail; if (key) selectMenu(key); };
+    window.addEventListener('proto-navigate', h);
+    return () => window.removeEventListener('proto-navigate', h);
+  });
+
   const screenLabel = labelOf;
   const navigateTo = (key: string) => {
     if (key === FEATURES_KEY) { window.location.href = '?page=features'; return; }

@@ -18,13 +18,17 @@ export const CATEGORIES = ['法人本部', '保育事業', '子育て支援', '�
 /** 区分を追加したときに自動で付ける色（あとから区分のカラー欄で自由に変えられる） */
 export const COLORS = ['#e8f0fb', '#eaf5ef', '#fff7e6', '#fdeef3', '#f1f4f6', '#efe6fb', '#fbe9d0', '#e0f4f7'];
 
-/** 色の明るさ（0〜1）。濃い色は一覧の文字が読みにくくなるので注意を出す */
+/** 色の明るさ（0〜1） */
 const lightness = (hex: string) => {
   const m = /^#([0-9a-f]{6})$/i.exec(hex);
   if (!m) return 1;
   const n = parseInt(m[1], 16);
   return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
 };
+/** 濃い色か（一覧で文字を白にする。確認メモ #73） */
+export const isDarkColor = (hex?: string) => !!hex && lightness(hex) < 0.6;
+/** 区分色を背景にしたときの文字色。濃い色は白、それ以外は指定なし（既定の文字色） */
+export const textOnColor = (hex?: string) => (isDarkColor(hex) ? '#ffffff' : undefined);
 /** 区分のカラー：カラーピッカーで自由に選ぶ（確認メモ #73。決まったパレットからは選ばない）。色コード（#RRGGBB）の直接入力もできる */
 export function DivisionColorPicker({ value, onChange, compact }: { value?: string; onChange: (c: string) => void; /** 区分色の設定の一覧など、1行に収めるとき */ compact?: boolean }) {
   const cur = value && /^#[0-9a-f]{6}$/i.test(value) ? value.toLowerCase() : '#f1f4f6';
@@ -34,13 +38,13 @@ export function DivisionColorPicker({ value, onChange, compact }: { value?: stri
     const v = t.trim().replace(/^([0-9a-f]{6})$/i, '#$1');
     if (/^#[0-9a-f]{6}$/i.test(v)) onChange(v.toLowerCase()); else setText(cur);
   };
-  const dark = lightness(cur) < 0.72;
+  const dark = isDarkColor(cur);
   return (
     <span data-division-color style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
       <input type="color" value={cur} onChange={(e) => onChange(e.target.value.toLowerCase())} aria-label="カラーを選ぶ" title="クリックすると色を自由に選べます" style={{ width: compact ? 34 : 44, height: compact ? 26 : 34, padding: 2, border: '1px solid #cfd8e0', borderRadius: 7, background: '#fff', cursor: 'pointer' }} />
       <input className="field-input" value={text} onChange={(e) => setText(e.target.value)} onBlur={(e) => commit(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) commit(e.currentTarget.value); }} aria-label="色コード" title="色コード（#RRGGBB）でも指定できます" spellCheck={false} style={{ ...input, width: 96, padding: compact ? '3px 8px' : '6px 8px', fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 14 }} />
-      {!compact && <span style={{ padding: '5px 12px', borderRadius: 7, background: cur, border: '1px solid #e2e8ee', fontSize: 14, color: '#22303c', whiteSpace: 'nowrap' }}>一覧での見え方</span>}
-      {dark && <span style={{ fontSize: 12, color: '#b7791f' }}>濃い色は一覧の文字が読みにくくなります</span>}
+      {!compact && <span data-color-preview style={{ padding: '5px 12px', borderRadius: 7, background: cur, border: '1px solid #e2e8ee', fontSize: 14, color: dark ? '#ffffff' : '#22303c', whiteSpace: 'nowrap' }}>一覧での見え方</span>}
+      {dark && !compact && <span style={{ fontSize: 12, color: '#5b6773' }}>濃い色のため、一覧の文字は白で表示します</span>}
     </span>
   );
 }

@@ -11,7 +11,7 @@ import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
 import { Notice, btn, input } from './ui';
 import { runExport, type ExportKind } from './ExportDialog';
-import { FORM_GROUPS, formEnabled } from './PrintCenter';
+import { FORM_GROUPS, formEnabled } from './printCatalog';
 import { APPENDIX_SHEET_NAMES } from './AppendixPrintPage';
 import { useSession } from '../store/session';
 
@@ -70,7 +70,7 @@ export function WamnetDialog({ item, onClose, accent }: { item: WamnetItem | nul
   const mode = cur.mode;
   const unmapped = unmappedOf(saved);
   // WAMNET に取り込むのは決算書（第一〜第三号様式）。準決算書は対象外
-  const forms = FORM_GROUPS.filter((g) => g.title !== '準決算書').flatMap((g) => g.items.map((it) => ({ key: it.key, name: `${g.title.replace(/（.*$/, '')} ${it.name}` }))).filter((it) => formEnabled(s.print.forms, it.key, s.tree));
+  const forms = FORM_GROUPS.filter((g) => g.closing).flatMap((g) => g.items.map((it) => ({ key: it.key, name: `${g.title.replace(/（.*$/, '')} ${it.name}` }))).filter((it) => formEnabled(s.print.forms, it.key, s.tree));
   const noteNames = ['計算書類に対する注記（法人全体用）', '計算書類に対する注記（拠点区分用）'];
   const listFor = mode === 'ファイル出力' ? forms.map((f) => f.name) : mode === '注記出力' ? noteNames : mode === '附属明細書出力' ? APPENDIX_SHEET_NAMES : [];
   const isOn = (n: string) => !picks.has(n);
@@ -147,8 +147,8 @@ export function WamnetDialog({ item, onClose, accent }: { item: WamnetItem | nul
     }
     // ファイル出力／注記出力／附属明細書出力
     const desc = mode === 'ファイル出力' ? '決算書の各様式を、WAMNET に取り込むファイル（CSV）として出力します。出力する様式は、共通の印刷設定の「様式設定」で使用にしているものです。'
-      : mode === '注記出力' ? `計算書類に対する注記を、WAMNET に添付する形式（${cur.format}）で出力します。注記の内容は「別紙（注記・明細書・財産目録）」で編集します。`
-        : `附属明細書を、WAMNET に添付する形式（${cur.format}）で出力します。明細の内容は「別紙（注記・明細書・財産目録）」で入力します。`;
+      : mode === '注記出力' ? `計算書類に対する注記を、WAMNET に添付する形式（${cur.format}）で出力します。注記の内容は「帳票の印刷 ＞ 別紙」で編集します。`
+        : `附属明細書を、WAMNET に添付する形式（${cur.format}）で出力します。明細の内容は「帳票の印刷 ＞ 別紙」で入力します。`;
     return (
       <div style={{ display: 'grid', gap: 12 }}>
         <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.7 }}>{desc}</div>

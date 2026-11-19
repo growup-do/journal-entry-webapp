@@ -1,12 +1,15 @@
 // 帳票の印刷（提案C／依頼書 5.1.1・5.5.1・6.3・6.5）
 //   印刷の流れは「1. 詳細設定 → 2. 出力先 → 3. 印刷／プレビュー」に統一（確認事項「印刷の画面遷移の統一」。枠は PrintSteps と共通）。
 //   帳票選択は印刷画面に入れない。帳票は印刷画面を開く前（各画面の「印刷 ▾」、帳票の印刷の一覧）で決める。期間・区分は詳細設定の先頭に置く。
-//   詳細設定は影響範囲で 3 つに分けて表示する：
-//     ① この帳票のみの設定（帳票個別）　② 全帳票共通の設定（共通の印刷設定。その場で変更可）　③ 動作環境から引き継ぐ設定（全区分共通／区分ごと。確認のみ）
+//   詳細設定は影響範囲で分けて表示する：
+//     ① この帳票の詳細設定（帳票個別。現行の画面の枠ごとにチェック・ラジオ・選択を描き分ける）
+//     ② 決算書 共通印刷設定から使う設定（共通印刷設定＝有 の帳票だけ。「共通の印刷設定を反映」「決算書 共通印刷設定を開く」を置く。確認メモ #238）
+//     ③ 動作環境から引き継ぐ設定（全区分共通／区分ごと。確認のみ）
+//   帳票の一覧（中区分 › 小区分 › 帳票）は printCatalog.ts、画面は PrintCenterPage.tsx。
 //   各帳票画面には PrintButton を置き、画面内から同じ流れを開く（5.1.1）。
 //   金額は動作環境の金額書式（桁区切り・負数の表記と色）で表示し、0円行は「0データを表示しない」に従って省く（6.5）。
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { FISCAL_MONTHS } from './FiscalMonthTabs';
 import { Modal } from './Modal';
@@ -16,12 +19,15 @@ import { Field, Notice, SettingsShell, Toggle, btn, card, cardHead, input, lbl, 
 import { ExportDialog, runExport, type ExportKind, type ExportSpec } from './ExportDialog';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { PrintSteps, type OutKind } from './PrintSteps';
-import { PrintOutDialog } from './PrintOutDialog';
 import { LoadDivisionSettings } from './DivisionSettingsLoad';
-import { WAMNET_ITEMS, WamnetDialog, type WamnetItem } from './WamnetDialog';
+import { COMMON_LINK, DEPTHS, FORM_GROUPS, REPORTS, formEnabled, omittable, type DetailItem, type DetailSection, type DetailValue, type ReportDef } from './printCatalog';
+import { goScreen } from '../lib/nav';
 import { ACCOUNT_META } from '../lib/accounts';
 import { ACCOUNTS, displayName } from '../data';
-import { PRINT_ITEMS, divisionLabel, flattenDivisions, fusenLabel, setSession, startKindOf, useSession, type EnvSettings, type PrintCommon, type Session, type DivisionNode } from '../store/session';
+import { PRINT_ITEMS, divisionLabel, flattenDivisions, fusenLabel, setSession, startKindOf, useSession, type EnvSettings, type PrintCommon, type Session } from '../store/session';
+
+export { CATS, FORM_GROUPS, REPORTS, formEnabled } from './printCatalog';
+export type { ReportDef } from './printCatalog';
 
 /** 印刷・出力に使う表データ（各画面の実データ、または帳票ごとのサンプル） */
 export interface TableData { header: string[]; rows: (string | number)[][]; }
@@ -61,10 +67,10 @@ export function dropZeroRows(data: TableData): { data: TableData; dropped: numbe
 }
 
 /* ---------------- 設定の影響範囲バッジ（依頼書 5.5.1／6.3） ---------------- */
-export type ScopeKind = '帳票個別' | '全帳票共通' | '全区分共通' | '区分ごと';
+export type ScopeKind = '帳票個別' | '決算書共通' | '全区分共通' | '区分ごと';
 const SCOPE_STYLE: Record<ScopeKind, { bg: string; fg: string; bd: string; hint: string }> = {
   帳票個別: { bg: '#e8f0fb', fg: '#2c5f9e', bd: '#c9d9ec', hint: 'この帳票の印刷だけに影響します' },
-  全帳票共通: { bg: '#f1eafb', fg: '#6b3fa0', bd: '#dccdf0', hint: 'すべての帳票の印刷に影響します' },
+  決算書共通: { bg: '#f1eafb', fg: '#6b3fa0', bd: '#dccdf0', hint: '決算書（共通印刷設定＝有 の帳票）の印刷に影響します' },
   全区分共通: { bg: '#e4f1f0', fg: '#1f6f6b', bd: '#bfdcd9', hint: 'システム全体（すべての区分）に影響します' },
   区分ごと: { bg: '#fff3dc', fg: '#8a5a00', bd: '#f0dcae', hint: '起動中の区分だけに影響します' },
 };
@@ -106,84 +112,26 @@ export function ScopeBlock({ kind, title, desc, right, children, toggle }: { kin
   );
 }
 
-export interface ReportDef { id: string; name: string; cat: string; note?: string; detail: string[]; scope?: boolean; /** 年次の帳票（期間は会計年度の期首〜期末。月の指定なし） */ annual?: boolean; /** WAMNET連携出力：印刷ではなく WAMNET連携のダイアログを開く */ wamnet?: boolean; }
-const D = {
-  journal: ['伝票番号：入力番号／自動連番（番号指定）／自動連番（Seq-No）／Seq指定', '印刷順序：入力順／日付順', '印刷科目：印刷用／表示用', '伝票種別：通常伝票／移行伝票', '伝票区分を印刷する', '科目コードを印刷する', '入力予備1（2）を印刷する', 'A4縦に印刷する', '摘要のフォントサイズを自動調整する'],
-  voucher: ['伝票番号の種類', '印刷順序', 'タイトル印刷', 'カラー印刷時の基調色：緑／動作環境の色指定', '科目欄：科目／入力コード・科目／科目名・資金科目', '取引先名を印刷する', '複写の伝票を印刷する', '証ひょうの有無を印刷する', 'A4白紙に印刷する（上下連続）', 'A5白紙に印刷する', '元号を印字する'],
-  ledger: ['残高のみも印刷する', '月計を印刷する', '合計を印刷する（年間で集計）', '月次で改頁する', '月計だけ印刷する', '残高を日計で印刷する', 'Seq番号を印刷する', '現金・預金の表題を変更する', '残高0も印刷する', '証憑の有無を印刷する', '入力予備1（2）を印刷する', 'A4白紙に印刷する', '摘要行も印刷する（空白は印刷しない）', '貸借の金額が一致する行を消し込む', '伝票入力区分名を印刷する', 'カラー印刷時の基調色：緑／青／動作環境'],
-  trial: ['費目行を網掛け、太字にする', '費目下を太線にする', '区分名を印刷する', '項目・科目毎に横線を印刷する', '脚注を印刷する', '科目名のフォントサイズを自動調整する'],
-  closing: ['資金収支計算書予備費充当額（円）／注記の予備費充当額を自動印刷する', '貸借対照表内訳表：連続型印刷をする', '費目行を網掛け、太字にする', '区分名を印刷する'],
-  budget: ['前年度予算額を印刷する', '補正予算の内訳（月別）を印刷する', '費目行を網掛け、太字にする', '区分名を印刷する'],
-  sub: ['明細表内に印刷する金額の指定（伝票を選択）', '印刷日付の指定：日付印刷しない／期首〜期末／指定月', 'タイトル（全角20文字）', '取引先コード小計：同一取引先コードがあった場合集計する', '合計行を網掛け、太字にする', '区分名を印刷する'],
-  analysis: ['タイトル印刷', '伝票入力区分名を印刷する', '単位：円／千円／百万円', 'グラフ数（1ページ 3〜8個）', '縦軸スケールを自動調整', '平均値の表示'],
-  tax: ['集計期間：月別／期間指定', '税区分コードの範囲', '0円の税区分を印刷しない', '区分名を印刷する'],
-  internal: ['相手区分を印刷する', '内部取引の科目だけを印刷する', '区分名を印刷する'],
-  monthly: ['前年度予算額を印刷する', '月計の行を網掛けにする', '費目行を網掛け、太字にする', '区分名を印刷する'],
-};
-export const REPORTS: ReportDef[] = [
-  { id: 'j1', name: '仕訳日記帳', cat: '仕訳日記帳', detail: D.journal },
-  { id: 'j2', name: '仕訳伝票（伝票式）', cat: '仕訳日記帳', detail: D.voucher },
-  { id: 'j3', name: '振替伝票（振替式）', cat: '仕訳日記帳', detail: D.voucher },
-  { id: 'l1', name: '総勘定元帳', cat: '元帳', scope: true, detail: D.ledger },
-  { id: 'l2', name: '資金元帳', cat: '元帳', scope: true, detail: [...D.ledger, '合計印刷時に予算残を印刷する'] },
-  { id: 'l3', name: '取引先元帳', cat: '元帳', scope: true, detail: [...D.ledger, '合計印刷時に予算残を印刷する'] },
-  { id: 'l4', name: '集計元帳', cat: '元帳', scope: true, detail: D.ledger },
-  { id: 'l5', name: '取引先元帳（合算集計）', cat: '元帳', scope: true, note: '法人全体の取引先を合算（旧 元帳（業者合算集計））', detail: D.ledger },
-  { id: 't1', name: '資金収支計算書（試算表）', cat: '試算表', detail: D.trial },
-  { id: 't2', name: '事業活動計算書（試算表）', cat: '試算表', detail: D.trial },
-  { id: 't3', name: '貸借対照表（試算表）', cat: '試算表', detail: D.trial },
-  { id: 't4', name: '資金収支残高試算表', cat: '試算表', detail: D.trial },
-  { id: 't5', name: '残高試算表', cat: '試算表', detail: D.trial },
-  { id: 'b1', name: '予算書', cat: '予算', note: '前年度・当初・補正・次年度（資金収支／拠点区分）', detail: D.budget },
-  { id: 'b2', name: '予算管理表（予算対比表）', cat: '予算', detail: D.budget },
-  { id: 'b3', name: '資金収支月別予算推移表', cat: '予算', note: '予算管理表', detail: D.monthly },
-  { id: 'b4', name: '資金収支月別実績推移表', cat: '予算', note: '予算管理表', detail: D.monthly },
-  { id: 'b5', name: '資金収支月別予算実績推移表', cat: '予算', note: '予算管理表', detail: D.monthly },
-  { id: 'c1', name: '資金収支計算書（第一号様式）', cat: '決算書', note: '帳票選択で有効にした様式のみ', detail: D.closing },
-  { id: 'c2', name: '事業活動計算書（第二号様式）', cat: '決算書', detail: D.closing },
-  { id: 'c3', name: '貸借対照表（第三号様式）', cat: '決算書', detail: D.closing },
-  { id: 'c4', name: '財務諸表に対する注記', cat: '決算書', note: '編集と印刷は「別紙」画面', detail: ['注記の予備費充当額を自動印刷する'] },
-  { id: 'c5', name: '決算附属明細書（3①〜3⑲）', cat: '決算書', note: '明細入力と印刷は「別紙」画面', detail: D.closing },
-  { id: 'c6', name: '財産目録', cat: '決算書', note: '行設定と印刷は「別紙」画面', detail: ['差引純資産を網掛け、太字にする', '行送り（標準6.4mm）'] },
-  { id: 'c7', name: '準決算書（C別紙6〜9／C1-5〜C3-6）', cat: '決算書', detail: D.closing },
-  { id: 'c8', name: '決算書 表紙', cat: '決算書', detail: ['法人名・年度を印刷する', '作成日を印刷する'] },
-  { id: 's1', name: '補助簿（未払金・未収金）', cat: '補助簿（明細表）', detail: D.sub },
-  { id: 's2', name: '補助簿（現預金・預かり金）', cat: '補助簿（明細表）', detail: D.sub },
-  { id: 'o1', name: '自動按分出力（CSV）', cat: 'その他', detail: ['出力種類：貸借対照表／事業活動計算書／資金収支計算書の按分出力', '出力する列：当年度末／前年度末／増減', '合計値を印刷', '端数の加算区分'] },
-  { id: 'o2', name: '収支分析表', cat: 'その他', detail: ['金額を千円単位で表示する', '設定（科目名称・金額の決定方法・色）'] },
-  { id: 'o3', name: '取引先内訳表', cat: 'その他', note: '旧 業者内訳表', detail: ['取引先コード小計', '0円の取引先を印刷しない', '区分名を印刷する'] },
-  { id: 'a1', name: '財務分析一覧表（5年）', cat: '経営分析', detail: D.analysis },
-  { id: 'a2', name: '財務分析グラフ（10年）', cat: '経営分析', detail: D.analysis },
-  { id: 'a3', name: '経年推移表／経月推移表', cat: '経営分析', detail: D.analysis },
-  { id: 'a4', name: '前年度同月対比表', cat: '経営分析', detail: D.analysis },
-  { id: 'a5', name: '3期連続資金収支比較表', cat: '経営分析', detail: ['当年度予算予想額の算出方法：当月より倍率／当月累計＋過去の平均', '千円単位にする', ...D.analysis] },
-  { id: 'a6', name: '財務分析シート', cat: '経営分析', detail: D.analysis },
-  { id: 'a7', name: '基本チェック表', cat: '経営分析', detail: D.analysis },
-  // 消費税・内部取引 一覧表・WAMNET連携出力（確認事項「【帳票・印刷】現行との差分について」。現行の印刷メニューに合わせて追加）
-  ...['消費税区分別集計内訳表', '消費税区分別集計表', '科目別消費税区分別集計表', '消費税区分コード内訳表', '売上仕入税額集計表'].map((name, i): ReportDef => ({ id: 'x' + (i + 1), name, cat: '消費税', detail: D.tax })),
-  ...['内部取引 仕訳一覧表', '内部取引 残高一覧表', '内部取引 予算一覧表'].map((name, i): ReportDef => ({ id: 'i' + (i + 1), name, cat: '内部取引 一覧表', detail: D.internal })),
-  ...['WAMNET連携設定', 'WAMNET連携科目チェック', 'WAMNET連携ファイル出力', 'WAMNET連携注記出力（PDF）', 'WAMNET連携注記出力（Excel）', 'WAMNET連携附属明細書出力（PDF）', 'WAMNET連携附属明細書出力（Excel）'].map((name, i): ReportDef => ({ id: 'w' + (i + 1), name, cat: 'WAMNET連携出力', wamnet: true, note: i < 2 ? '設定・確認' : '出力', detail: [] })),
-];
-const CATS = ['仕訳日記帳', '元帳', '試算表', '予算', '決算書', '補助簿（明細表）', '消費税', '経営分析', '内部取引 一覧表', 'WAMNET連携出力', 'その他'];
 export const OUTPUTS = ['プリンターから印刷する', '画面へプレビューする', 'エクセル互換ファイル（CSV）へ出力する', 'Excelファイル出力', 'PDFファイル出力'];
 
+/** 一覧にない画面専用の帳票の詳細設定 */
+export const SCREEN_DETAIL: DetailSection[] = [{ title: '印刷項目', items: [{ k: 'title', t: 'check', label: 'タイトルを印刷する', on: true }, { k: 'area', t: 'check', label: '区分名を印刷する', on: true }] }];
 /** 画面の帳票名から印刷対象の帳票を探す。一覧にない名前は、その画面専用の帳票として扱う */
 export function findReport(name: string): ReportDef {
   const exact = REPORTS.find((r) => r.name === name);
   if (exact) return exact;
   const part = REPORTS.find((r) => r.name.includes(name) || name.includes(r.name.replace(/（.*$/, '')));
   if (part) return part;
-  const KEY: [RegExp, string][] = [[/日記帳|仕訳一覧/, 'j1'], [/資金元帳/, 'l2'], [/取引先元帳|取引先別支払/, 'l3'], [/元帳/, 'l1'], [/試算/, 't1'], [/予算/, 'b2'], [/決算/, 'c1'], [/推移/, 'a3']];
+  const KEY: [RegExp, string][] = [[/日記帳|仕訳一覧/, 'j1'], [/資金元帳/, 'l2'], [/取引先元帳|取引先別支払/, 'l3'], [/元帳/, 'l1'], [/試算/, 't1'], [/予算/, 'bm1'], [/決算/, 'c1-1'], [/推移/, 'a5']];
   const hit = KEY.find(([re]) => re.test(name));
   const base = hit ? REPORTS.find((r) => r.id === hit[1]) : undefined;
-  return { id: 'screen:' + name, name, cat: base?.cat ?? '画面の帳票', scope: base?.scope, detail: base?.detail ?? ['タイトルを印刷する', '区分名を印刷する'] };
+  return { id: 'screen:' + name, name, cat: base?.cat ?? '画面の帳票', sub: base?.sub, scope: base?.scope, common: base?.common, detail: base?.detail ?? SCREEN_DETAIL };
 }
 
 /* ---------------- 印刷の流れ（1つのパネルで完結） ---------------- */
 /** 出力先（PrintSteps）と、帳票ごとに覚えておく出力の文言（OUTPUTS）の対応 */
 const OUT_OF: Record<OutKind, string> = { print: OUTPUTS[0], pdf: OUTPUTS[4], excel: OUTPUTS[3], csv: OUTPUTS[2] };
 const kindOfOut = (o: string): OutKind => (o === OUTPUTS[4] ? 'pdf' : o === OUTPUTS[3] ? 'excel' : o === OUTPUTS[2] ? 'csv' : 'print');
-const DEPTHS = ['大区分まで印刷', '中区分まで印刷', '小区分まで印刷', '細区分まで印刷', '細々区分まで印刷', '就労授産まで印刷'];
 const FONTS = ['Noto Sans JP 9pt', 'Noto Sans JP 10pt', 'Noto Sans JP 11pt', 'Noto Serif JP 10pt', 'ＭＳ 明朝 10pt', 'ＭＳ ゴシック 10pt'];
 /** 備考・摘要設定を保持する単位（依頼書 3.2：1つには統合しない） */
 export const REMARK_UNITS = ['法人の決算書', '拠点の決算書', 'サービス区分の資金収支計算書'];
@@ -191,8 +139,10 @@ function remarkUnitOf(s: Session): string {
   const k = flattenDivisions(s.tree).find((x) => divisionLabel(x.node) === s.division)?.node.kind;
   return k === '法人' || k === '事業区分' ? REMARK_UNITS[0] : k === 'サービス区分' || k === '小サービス区分' ? REMARK_UNITS[2] : REMARK_UNITS[1];
 }
-const usesRemark = (r: ReportDef) => r.cat === '決算書' || r.cat === '予算' || /資金収支計算書/.test(r.name);
-const usesDepth = (r: ReportDef) => r.cat === '試算表' || r.cat === '決算書' || r.cat === '予算';
+const usesRemark = (r: ReportDef) => r.cat === '決算書' || r.cat === '準決算書' || r.cat === '予算' || /資金収支計算書/.test(r.name);
+const itemsOf = (r: ReportDef): DetailItem[] => r.detail.flatMap((sec) => sec.items);
+const usesDepth = (r: ReportDef) => itemsOf(r).some((it) => it.k === 'depth');
+
 
 const eraYear = (fy: string) => parseInt(fy.replace(/[^0-9]/g, ''), 10) || 8;
 const monthNo = (m: string) => (m === '決' ? 3 : Number(m));
@@ -203,16 +153,71 @@ const monthEnd = (fy: number, m: string) => `令和${monthYear(fy, m)}年${month
 interface FlowPrefs {
   months: string[]; from: string; to: string; range: string; scope: string; target: string;
   checks: { check: boolean; red: boolean; blue: boolean; yellow: boolean; green: boolean };
-  output: string; zeroHide: boolean; title: string; depthOwn: boolean; depth: string; detail: Record<string, boolean>;
+  output: string; zeroHide: boolean; title: string; detail: Record<string, DetailValue>;
 }
-/** 帳票ごとの印刷条件（この帳票のみの設定）。開き直しても前回の条件を引き継ぐ */
+/** 帳票ごとの印刷条件（この帳票の詳細設定）。開き直しても前回の条件を引き継ぐ */
 const PREFS = new Map<string, FlowPrefs>();
+/** 共通印刷設定＝有 の帳票：決算書 共通印刷設定の値のうち、この帳票の詳細設定にある項目（「共通の印刷設定を反映」で写す） */
+export function commonValues(r: ReportDef, common: PrintCommon): Record<string, DetailValue> {
+  return Object.fromEntries(itemsOf(r).filter((it) => it.k in COMMON_LINK).map((it): [string, DetailValue | undefined] => [it.k, COMMON_LINK[it.k](common)]).filter((x): x is [string, DetailValue] => x[1] !== undefined));
+}
+const initDetail = (r: ReportDef, common: PrintCommon): Record<string, DetailValue> => ({
+  ...Object.fromEntries(itemsOf(r).map((it): [string, DetailValue] => [it.k, it.t === 'check' ? !!it.on : it.def ?? ''])),
+  ...(r.common ? commonValues(r, common) : {}),
+});
 const defaultPrefs = (r: ReportDef, fy: number, common: PrintCommon): FlowPrefs => ({
   months: r.annual ? [] : ['8'], from: monthStart(fy, r.annual ? '4' : '8'), to: monthEnd(fy, r.annual ? '3' : '8'), range: '範囲指定の合計を印刷', scope: '全て', target: '起動中の区分',
   checks: { check: false, red: false, blue: false, yellow: false, green: false },
-  output: OUTPUTS[0], zeroHide: !!common.items.zero, title: r.name, depthOwn: false, depth: DEPTHS.includes(common.depth) ? common.depth : DEPTHS[4],
-  detail: Object.fromEntries(r.detail.map((d) => [d, /印刷する$|自動調整|網掛け/.test(d)])),
+  output: r.outs ? OUT_OF[r.outs[0]] : OUTPUTS[0], zeroHide: r.noZero ? false : r.zero ?? !!common.items.zero, title: r.title ?? r.name, detail: initDetail(r, common),
 });
+
+/** 詳細設定の項目（現行の画面の枠ごとに、チェック・ラジオ・選択・入力を描き分ける。確認メモ #238） */
+export function DetailSections({ sections, values, onChange, accent, linked }: { sections: DetailSection[]; values: Record<string, DetailValue>; onChange: (k: string, v: DetailValue) => void; accent: string; /** 「共通の印刷設定を反映」の対象の項目に「共通」の印を付ける */ linked?: boolean }) {
+  const uid = useId();
+  const mark = (k: string) => (linked && k in COMMON_LINK ? <span data-common-mark title="「共通の印刷設定を反映」で、決算書 共通印刷設定の値に置き換わります" style={{ flex: 'none', fontSize: 12, fontWeight: 700, color: '#8a6bb8', lineHeight: '18px' }}>共通</span> : null);
+  const head = (it: DetailItem) => <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: '#8290a0' }}>{it.label}{mark(it.k)}</span>;
+  return (
+    <div data-detail-sections style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 10, alignItems: 'start' }}>
+      {sections.map((sec) => {
+        // 項目の多い枠（元帳の印刷項目など）は横幅いっぱいに広げ、項目を複数列に並べる
+        const wide = sec.items.length > 8;
+        return (
+        <fieldset key={sec.title} data-detail-section={sec.title} style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: '4px 12px 12px', margin: 0, minWidth: 0, background: '#fff', gridColumn: wide ? '1 / -1' : undefined }}>
+          <legend style={{ fontSize: 12, fontWeight: 800, color: '#5b6773', padding: '0 6px', letterSpacing: '.04em' }}>{sec.title}</legend>
+          <div style={{ display: 'grid', gap: wide ? '7px 16px' : 9, gridTemplateColumns: wide ? 'repeat(auto-fill, minmax(260px, 1fr))' : undefined }}>
+            {sec.items.map((it) => {
+              const v = values[it.k];
+              if (it.t === 'check') return (
+                <label key={it.k} data-detail-item={it.k} data-type="check" style={{ display: 'flex', gap: 7, alignItems: 'flex-start', fontSize: 14, cursor: 'pointer', lineHeight: 1.5 }}>
+                  <input type="checkbox" checked={!!v} onChange={() => onChange(it.k, !v)} style={{ marginTop: 4, accentColor: accent }} /><span style={{ flex: 1 }}>{it.label}</span>{mark(it.k)}
+                </label>
+              );
+              if (it.t === 'radio') return (
+                <div key={it.k} role="radiogroup" aria-label={it.label} data-detail-item={it.k} data-type="radio" style={{ display: 'grid', gap: 3 }}>
+                  {head(it)}
+                  <div style={{ display: 'flex', gap: '2px 14px', flexWrap: 'wrap' }}>{it.options.map((o) => <label key={o} style={{ display: 'flex', gap: 5, alignItems: 'center', fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' }}><input type="radio" name={uid + it.k} checked={v === o} onChange={() => onChange(it.k, o)} style={{ accentColor: accent }} />{o}</label>)}</div>
+                </div>
+              );
+              if (it.t === 'select') return (
+                <label key={it.k} data-detail-item={it.k} data-type="select" style={{ display: 'grid', gap: 3 }}>
+                  {head(it)}
+                  <select value={String(v ?? '')} onChange={(e) => onChange(it.k, e.target.value)} style={{ ...input, padding: '6px 8px' }}>{it.options.map((o) => <option key={o}>{o}</option>)}</select>
+                </label>
+              );
+              return (
+                <label key={it.k} data-detail-item={it.k} data-type="text" style={{ display: 'grid', gap: 3 }}>
+                  {head(it)}
+                  <input className="field-input" value={String(v ?? '')} placeholder={it.placeholder} onChange={(e) => onChange(it.k, e.target.value)} style={{ ...input, padding: '6px 8px', width: it.width ?? '100%', maxWidth: '100%' }} />
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+        );
+      })}
+    </div>
+  );
+}
 
 export interface PrintFlowProps {
   report: ReportDef;
@@ -230,19 +235,22 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
   const fy = eraYear(s.fiscalYear);
   const [p, setP] = useState<FlowPrefs>(() => PREFS.get(report.id) ?? defaultPrefs(report, fy, s.print));
   const [exp, setExp] = useState<ExportSpec | null>(null);
-  const [commonOpen, setCommonOpen] = useState(false);
-  const [snap] = useState<PrintCommon>(() => s.print);
   const [unit, setUnit] = useState(() => remarkUnitOf(s));
   useEffect(() => { PREFS.set(report.id, p); }, [report.id, p]);
   const set = (patch: Partial<FlowPrefs>) => setP((x) => ({ ...x, ...patch }));
   const pr = s.print;
   const setCommon = (patch: Partial<PrintCommon>) => setSession({ print: { ...pr, ...patch } });
-  const changed = (Object.keys(pr) as (keyof PrintCommon)[]).filter((k) => k !== 'unitRemarks' && JSON.stringify(pr[k]) !== JSON.stringify(snap[k])).length;
   const kind = startKindOf(s);
   const myUnit = remarkUnitOf(s);
   const destKind = kindOfOut(p.output);
-  const detailItems = report.detail.filter((d) => !/0データ|印刷位置|行の間隔|ページ番号|捺印欄|共通の印刷設定/.test(d));
-  const onCount = detailItems.filter((d) => p.detail[d]).length;
+  const onCount = itemsOf(report).filter((it) => it.t === 'check' && p.detail[it.k]).length;
+  // 決算書 共通印刷設定との差（共通印刷設定＝有 の帳票のみ）
+  const cv = report.common ? commonValues(report, pr) : {};
+  const diff = report.common ? Object.keys(cv).filter((k) => p.detail[k] !== cv[k]).length + (p.zeroHide !== !!pr.items.zero ? 1 : 0) : 0;
+  const applyCommon = () => {
+    set({ detail: { ...p.detail, ...cv }, zeroHide: !!pr.items.zero });
+    toast.show(diff ? `決算書 共通印刷設定の内容を反映しました（${diff} 項目を変更）` : '決算書 共通印刷設定と同じ内容です（変更はありません）');
+  };
 
   const toggleMonth = (m: string) => {
     const n = new Set(p.months);
@@ -262,25 +270,27 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
 
   const chip = (on: boolean): CSSProperties => ({ minWidth: 30, height: 26, padding: '0 8px', borderRadius: 6, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', border: '1px solid ' + (on ? accent : '#d3dbe3') });
   const radio = (on: boolean): CSSProperties => ({ display: 'flex', gap: 6, alignItems: 'center', padding: '5px 8px', borderRadius: 8, background: on ? '#eef2f6' : 'transparent', fontSize: 14, cursor: 'pointer' });
+  const confirm: [string, string][] = [
+    ['帳票', report.name],
+    ['期間', `${p.from} 〜 ${p.to}${report.range ? `（${p.range}）` : ''}`],
+    ['区分', `${s.division}${kind !== '入力区分' ? `（${p.target === '起動中の区分' ? '合計で印刷' : '構成する区分ごとに印刷'}）` : ''}`],
+    ['この帳票の詳細設定', `${report.noZero ? '' : `0データ：${p.zeroHide ? '表示しない' : '表示する'}／`}印刷項目 ${onCount} 件を有効${usesDepth(report) ? `／印刷範囲：${p.detail.depth}` : ''}${usesRemark(report) ? `／備考：${myUnit}${pr.unitRemarks[myUnit] ? '' : '（未入力）'}` : ''}`],
+  ];
+  if (report.common) confirm.push(['決算書 共通印刷設定', `${diff ? `${diff} 項目が共通の設定と異なる` : '共通の設定どおり'}／行の間隔 ${pr.lineGap}・${pr.fontName}`]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       <ToastView msg={toast.msg} />
       <PrintSteps
         accent={accent}
-        detailSummary={`${p.from}〜${p.to}／この帳票のみ ${onCount + (p.zeroHide ? 1 : 0)} 項目${changed ? `／共通 ${changed} 項目を変更` : ''}`}
+        detailSummary={`${p.from}〜${p.to}／印刷項目 ${onCount} 件${report.common ? (diff ? `／共通と異なる ${diff} 項目` : '／共通の設定どおり') : ''}`}
         dest={destKind}
+        dests={report.outs}
         onDest={(k) => set({ output: OUT_OF[k] })}
         onPreview={preview}
         onRun={run}
         onClose={onClose}
-        confirm={[
-          ['帳票', report.name],
-          ['期間', `${p.from} 〜 ${p.to}${usesDepth(report) ? `（${p.range}）` : ''}`],
-          ['区分', `${s.division}${kind !== '入力区分' ? `（${p.target === '起動中の区分' ? '合計で印刷' : '構成する区分ごとに印刷'}）` : ''}`],
-          ['この帳票のみの設定', `0データ：${p.zeroHide ? '表示しない' : '表示する'}／印刷項目 ${onCount} 件を有効${usesDepth(report) ? `／印刷範囲：${p.depthOwn ? p.depth : '共通の設定に従う'}` : ''}${usesRemark(report) ? `／備考：${myUnit}${pr.unitRemarks[myUnit] ? '' : '（未入力）'}` : ''}`],
-          ['全帳票共通の設定', `${pr.depth}・${pr.lineGap}・${pr.fontName}${changed ? `（今回 ${changed} 項目を変更）` : ''}`],
-        ]}
+        confirm={confirm}
         detail={<>
           <ScopeBlock title="基本条件" desc="印刷する期間と区分です。">
             <div data-print-basic style={{ display: 'grid', gap: 14 }}>
@@ -297,12 +307,6 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
               </div>
               <div style={{ fontSize: 12, color: '#8290a0', marginTop: 4 }}>印刷する区分を変える場合は、画面上部の区分の切替で区分を選び直します。</div>
             </div>
-            {report.cat === '決算書' && (
-              <div data-forms-in-use>
-                <span style={lbl}>印刷する様式（「共通の印刷設定 › 帳票選択」で使用にした様式）</span>
-                <div style={{ fontSize: 14, lineHeight: 1.8 }}>{FORM_GROUPS.flatMap((g) => g.items).filter((it) => formEnabled(s.print.forms, it.key, s.tree)).map((it) => it.name).join('／')}</div>
-              </div>
-            )}
             {(report.cat === '仕訳日記帳' || report.cat === '元帳') && (
               <div>
                 <span style={lbl}>チェック・付箋で絞り込む（選ばなければ全件）</span>
@@ -315,38 +319,31 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
             {report.scope && (
               <div><span style={lbl}>科目の範囲</span><div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>{['全て', '科目指定'].map((o) => <label key={o} style={radio(p.scope === o)}><input type="radio" checked={p.scope === o} onChange={() => set({ scope: o })} />{o}</label>)}{p.scope === '科目指定' && <span style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 14 }}><input className="field-input" placeholder="開始科目" style={{ ...input, width: 150 }} /><span>〜</span><input className="field-input" placeholder="終了科目" style={{ ...input, width: 150 }} /></span>}</div></div>
             )}
-            {usesDepth(report) && (
-              <div><span style={lbl}>範囲指定の種類</span><div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>{['範囲指定の合計を印刷', '範囲指定の月を連続で印刷'].map((o) => <label key={o} style={radio(p.range === o)}><input type="radio" checked={p.range === o} onChange={() => set({ range: o })} />{o}</label>)}</div></div>
+            {report.range && (
+              <div><span style={lbl}>範囲指定の種類</span><div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>{(report.rangeSumOnly ? ['範囲指定の合計を印刷'] : ['範囲指定の合計を印刷', '範囲指定の月を連続で印刷']).map((o) => <label key={o} style={radio(p.range === o)}><input type="radio" checked={p.range === o} onChange={() => set({ range: o })} />{o}</label>)}</div></div>
+            )}
+            {report.budget === '通常' && (
+              <div data-budget-date><span style={lbl}>印字する年月日（何も入力しなくても印刷されます。入力した値をそのまま印字します）</span><div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', fontSize: 14 }}><select defaultValue="令和" aria-label="元号" style={{ ...input, width: 90 }}>{['明治', '大正', '昭和', '平成', '令和'].map((o) => <option key={o}>{o}</option>)}</select><input className="field-input" aria-label="年" style={{ ...input, width: 60 }} />年<input className="field-input" aria-label="月" style={{ ...input, width: 60 }} />月<input className="field-input" aria-label="日" style={{ ...input, width: 60 }} />日</div></div>
+            )}
+            {report.budget === '補正' && (
+              <div data-budget-rev><span style={lbl}>補正予算の年月</span><div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', fontSize: 14 }}>第<input className="field-input" aria-label="補正の回数" defaultValue="1" style={{ ...input, width: 60 }} />次補正　令和<input className="field-input" aria-label="年" style={{ ...input, width: 60 }} />年<input className="field-input" aria-label="月" style={{ ...input, width: 60 }} />月</div></div>
             )}
             </div>
           </ScopeBlock>
-            <ScopeBlock kind="帳票個別" title="この帳票のみの設定" desc={`「${report.name}」の印刷だけに反映されます。ほかの帳票には影響しません。`}>
+            <ScopeBlock kind="帳票個別" title="この帳票の詳細設定" desc={`「${report.name}」の印刷だけに反映されます。`} right={report.common ? <>
+              <button type="button" data-apply-common onClick={(e) => { e.stopPropagation(); applyCommon(); }} title="決算書 共通印刷設定の値を、この帳票の詳細設定に写します" style={{ ...btn(accent, true, true), whiteSpace: 'nowrap' }}>共通の印刷設定を反映</button>
+              <button type="button" data-open-common onClick={(e) => { e.stopPropagation(); goScreen('共通の印刷設定'); }} title="決算書 共通印刷設定の画面を開きます" style={{ ...btn('#5b6773', false, true), whiteSpace: 'nowrap' }}>決算書 共通印刷設定を開く</button>
+            </> : undefined}>
               <div style={{ display: 'grid', gap: 12 }}>
+                {report.common && <div data-common-diff={diff} style={{ fontSize: 12, color: diff ? '#6b3fa0' : '#8290a0', lineHeight: 1.6 }}>{diff ? `決算書 共通印刷設定と異なる項目が ${diff} 件あります。「共通の印刷設定を反映」で共通の値にそろえます。` : '決算書 共通印刷設定と同じ内容です。「共通」の印の項目は、反映ボタンで共通の値に置き換わります。'}</div>}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
-                  <div style={{ display: 'grid', gap: 4, alignContent: 'start' }}>
+                  {!report.noZero && <div style={{ display: 'grid', gap: 4, alignContent: 'start' }}>
                     <Toggle on={p.zeroHide} onChange={(v) => set({ zeroHide: v })} accent={accent} label="0データを表示しない" />
                     <span style={{ fontSize: 12, color: '#8290a0', paddingLeft: 46 }}>金額がすべて 0 円の行を印刷・プレビューから省きます。</span>
-                  </div>
+                  </div>}
                   <Field label="タイトル（印刷様式）"><input className="field-input" value={p.title} onChange={(e) => set({ title: e.target.value })} style={input} /></Field>
-                  {usesDepth(report) && (
-                    <div style={{ gridColumn: '1 / -1' }}>
-                      <span style={lbl}>印刷範囲（印刷する科目の階層）</span>
-                      <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <label style={radio(!p.depthOwn)}><input type="radio" checked={!p.depthOwn} onChange={() => set({ depthOwn: false })} />共通の設定に従う（{pr.depth}）</label>
-                        <label style={radio(p.depthOwn)}><input type="radio" checked={p.depthOwn} onChange={() => set({ depthOwn: true })} />この帳票だけ変える</label>
-                        {p.depthOwn && <select value={p.depth} onChange={(e) => set({ depth: e.target.value })} style={{ ...input, width: 200 }}>{[...DEPTHS, '科目毎に指定'].map((o) => <option key={o}>{o}</option>)}</select>}
-                      </div>
-                    </div>
-                  )}
                 </div>
-                {detailItems.length > 0 && (
-                  <div>
-                    <span style={lbl}>この帳票の印刷項目</span>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '4px 12px' }}>
-                      {detailItems.map((d) => <label key={d} style={{ display: 'flex', gap: 6, alignItems: 'flex-start', fontSize: 14, cursor: 'pointer' }}><input type="checkbox" checked={!!p.detail[d]} onChange={() => set({ detail: { ...p.detail, [d]: !p.detail[d] } })} style={{ marginTop: 3 }} /><span>{d}</span></label>)}
-                    </div>
-                  </div>
-                )}
+                {report.detail.length > 0 && <DetailSections sections={report.detail} values={p.detail} onChange={(k, v) => set({ detail: { ...p.detail, [k]: v } })} accent={accent} linked={report.common} />}
                 {usesRemark(report) && (
                   <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: 10, display: 'grid', gap: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}><b style={{ fontSize: 14 }}>備考・摘要</b><span style={{ fontSize: 12, fontWeight: 800, padding: '2px 8px', borderRadius: 8, background: '#eef2f6', color: '#3d4a56' }}>単位ごとに保持</span><span style={{ fontSize: 12, color: '#8290a0' }}>法人・拠点・サービス区分で内容が異なる場合があるため、単位ごとに別々に保存します。</span></div>
@@ -358,54 +355,13 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
               </div>
             </ScopeBlock>
 
-            <ScopeBlock kind="全帳票共通" title="全帳票共通の設定" desc={commonOpen ? 'すべての帳票の印刷に反映されます。' : '見出しを押すと開き、ここで変更できます。'} toggle={{ open: commonOpen, onToggle: () => setCommonOpen((o) => !o) }}>
-              {!commonOpen ? (
-                <div style={{ display: 'flex', gap: '4px 16px', flexWrap: 'wrap', fontSize: 14, color: '#48565f' }}>
-                  <span>印刷位置：{pr.depth}</span><span>行の間隔：{pr.lineGap}{pr.lineGap === '空きなし' ? '' : `（${pr.gapSize}）`}</span><span>位置調整：横 {pr.offsetX}mm／縦 {pr.offsetY}mm</span><span>フォント：{pr.fontName}</span><span>捺印欄：{pr.items.stamp ? pr.stamps.filter(Boolean).join('・') || '（氏名なし）' : '印刷しない'}</span><span>ページ番号：{pr.items.page ? `印刷する（${pr.pageStart} から）` : '印刷しない'}</span>
-                  {changed > 0 && <span style={{ color: '#6b3fa0', fontWeight: 700 }}>{changed} 項目を変更済み（全帳票に反映）</span>}
+            {report.common && (
+              <ScopeBlock kind="決算書共通" title="決算書 共通印刷設定から使う設定" desc="決算書の帳票に共通の設定です（ここでは確認のみ。変更は「決算書 共通印刷設定を開く」から）。">
+                <div data-common-summary style={{ display: 'flex', gap: '4px 16px', flexWrap: 'wrap', fontSize: 14, color: '#48565f' }}>
+                  <span>行の間隔：{pr.lineGap}{pr.lineGap === '空きなし' ? '' : `（${pr.gapSize}）`}</span><span>位置調整：横 {pr.offsetX}mm／縦 {pr.offsetY}mm</span><span>印刷幅：科目 {pr.widthName}mm／金額 {pr.widthAmount}mm</span><span>フォント：{pr.fontHeader}／{pr.fontName}／{pr.fontAmount}</span><span>捺印欄の氏名：{pr.stamps.filter(Boolean).join('・') || '（なし）'}</span><span>ページ番号の開始：{pr.pageStart}</span>
                 </div>
-              ) : (
-                <div style={{ display: 'grid', gap: 12 }}>
-                  <Notice tone="warn">ここを変更すると、この帳票だけでなく<b>すべての帳票</b>の印刷に反映されます。この帳票だけ変えたい場合は、上の「この帳票のみの設定」を使います。</Notice>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-                    <Field label="印刷位置（印刷する科目の階層）"><select value={pr.depth} onChange={(e) => setCommon({ depth: e.target.value })} style={input}>{DEPTHS.map((o) => <option key={o}>{o}</option>)}</select></Field>
-                    <Field label="行の間隔"><select value={pr.lineGap} onChange={(e) => setCommon({ lineGap: e.target.value })} style={input}>{['上・下空き', '上のみ空き', '空きなし'].map((o) => <option key={o}>{o}</option>)}</select></Field>
-                    <Field label="空きの間隔"><select value={pr.gapSize} onChange={(e) => setCommon({ gapSize: e.target.value })} style={input} disabled={pr.lineGap === '空きなし'}>{['1mm', '2mm', '3mm', '4mm'].map((o) => <option key={o}>{o}</option>)}</select></Field>
-                    <Field label="印刷位置の調整：右方向（mm）"><input className="field-input" value={String(pr.offsetX)} onChange={(e) => setCommon({ offsetX: parseInt(e.target.value.replace(/[^0-9-]/g, ''), 10) || 0 })} inputMode="numeric" style={numInput} /></Field>
-                    <Field label="印刷位置の調整：上方向（mm）"><input className="field-input" value={String(pr.offsetY)} onChange={(e) => setCommon({ offsetY: parseInt(e.target.value.replace(/[^0-9-]/g, ''), 10) || 0 })} inputMode="numeric" style={numInput} /></Field>
-                    {(['fontHeader', 'fontName', 'fontAmount'] as const).map((k, i) => <Field key={k} label={['ヘッダー', '科目名', '金額'][i] + 'のフォント'}><select value={pr[k]} onChange={(e) => setCommon({ [k]: e.target.value } as Partial<PrintCommon>)} style={input}>{FONTS.map((o) => <option key={o}>{o}</option>)}</select></Field>)}
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12, alignItems: 'start' }}>
-                    <div style={{ display: 'grid', gap: 6 }}>
-                      <Toggle on={!!pr.items.stamp} onChange={(v) => setCommon({ items: { ...pr.items, stamp: v } })} accent="#6b3fa0" label="捺印欄を印刷する" />
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4, opacity: pr.items.stamp ? 1 : 0.5 }}>{pr.stamps.map((v, i) => <input key={i} className="field-input" value={v} disabled={!pr.items.stamp} onChange={(e) => setCommon({ stamps: pr.stamps.map((x, k) => (k === i ? e.target.value : x)) })} placeholder={`捺印${i + 1}`} style={{ ...input, padding: '5px 8px', fontSize: 14 }} />)}</div>
-                    </div>
-                    <div style={{ display: 'grid', gap: 6 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}><Toggle on={!!pr.items.page} onChange={(v) => setCommon({ items: { ...pr.items, page: v } })} accent="#6b3fa0" label="ページ番号を印刷する" /><label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: '#5b6773' }}>開始番号<input className="field-input" value={String(pr.pageStart)} disabled={!pr.items.page} onChange={(e) => setCommon({ pageStart: parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 1 })} inputMode="numeric" style={{ ...numInput, width: 64, padding: '4px 8px' }} /></label></div>
-                      <Toggle on={!!pr.items.date} onChange={(v) => setCommon({ items: { ...pr.items, date: v } })} accent="#6b3fa0" label="印刷時の日付を印刷する" />
-                    </div>
-                  </div>
-                  <div style={{ borderTop: '1px solid #e8e0f4', paddingTop: 10, display: 'grid', gap: 10 }}>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: '#6b3fa0', letterSpacing: '.04em' }}>印刷項目の切替え</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '6px 16px' }}>
-                      {PRINT_ITEMS.filter(([k]) => !['stamp', 'page', 'date'].includes(k)).map(([k, label]) => <Toggle key={k} on={!!pr.items[k]} onChange={(v) => setCommon({ items: { ...pr.items, [k]: v } })} accent="#6b3fa0" label={k === 'zero' ? '0データを印刷しない（各帳票の初期値）' : label} />)}
-                    </div>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: '#6b3fa0', letterSpacing: '.04em' }}>内訳表</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                      <Toggle on={pr.twoLineNames} onChange={(v) => setCommon({ twoLineNames: v })} accent="#6b3fa0" label="項目名を二行で印刷する" />
-                      <Toggle on={pr.autoFontHeader} onChange={(v) => setCommon({ autoFontHeader: v })} accent="#6b3fa0" label="項目名のフォントサイズを自動調整" />
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: '#5b6773' }}>1ページの区分数<select value={String(pr.perPage)} onChange={(e) => setCommon({ perPage: Number(e.target.value) })} style={{ ...input, width: 70, padding: '4px 6px' }}>{[4, 5, 6, 7, 8].map((o) => <option key={o}>{o}</option>)}</select></label>
-                    </div>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: '#6b3fa0', letterSpacing: '.04em' }}>帳票の色・印字 <span style={{ fontWeight: 500, color: '#8290a0', marginLeft: 6 }}>動作環境から移した項目</span></div>
-                    <ReportStyleSettings accent="#6b3fa0" compact />
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 12, color: '#8290a0' }}>
-                    <span>同じ内容は「共通の印刷設定」画面でも変更できます。</span>
-                    {changed > 0 && <button type="button" onClick={() => setSession({ print: { ...snap, unitRemarks: pr.unitRemarks } })} style={{ ...btn('#5b6773', false, true), marginLeft: 'auto' }}>開いたときの設定に戻す（{changed} 項目）</button>}
-                  </div>
-                </div>
-              )}
-            </ScopeBlock>
+              </ScopeBlock>
+            )}
 
             <ScopeBlock title="動作環境から引き継ぐ設定" desc="画面表示と印刷の両方に関わるため動作環境に残した設定です（ここでは確認のみ。区分ごと／全区分共通の別を表示）。">
               <EnvPrintSummary env={s.env} division={s.division} />
@@ -418,7 +374,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
   );
 }
 
-/** 帳票の色・印字（全帳票共通）。動作環境にあった印刷関連の項目を、印刷の詳細設定と共通の印刷設定に集約（依頼書 5.5.1） */
+/** 帳票の色・印字。動作環境にあった印刷関連の項目を、印刷の詳細設定と共通の印刷設定に集約（依頼書 5.5.1） */
 export function ReportStyleSettings({ accent, compact }: { accent: string; compact?: boolean }) {
   const s = useSession();
   const e = s.env;
@@ -558,93 +514,7 @@ function DataPage({ zoom, data, shade, line, env, groupRows }: { zoom: number; d
   );
 }
 
-/* ---------------- 帳票の印刷（帳票一覧。1帳票ずつ／まとめて印刷を画面内で切り替える） ---------------- */
-export function PrintCenterPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: string }) {
-  /** まとめて印刷（旧「一括印刷」メニュー）。帳票をチェックで選び、出力先を1回指定して順に出力する */
-  const [batch, setBatch] = useState(false);
-  const [cat, setCat] = useState('仕訳日記帳');
-  const [target, setTarget] = useState<ReportDef | null>(null);
-  const [preview, setPreview] = useState<{ title: string; batch?: boolean; opts: { from: string; to: string; output: string; hideZero?: boolean } } | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set(['j1', 'l1', 't1', 't2', 't3']));
-  const [batchOpen, setBatchOpen] = useState(false);
-  const [wamnet, setWamnet] = useState<WamnetItem | null>(null);
-  const toast = useToast();
-  // まとめて印刷では、印刷ではない WAMNET連携出力を出さない
-  const pool = batch ? REPORTS.filter((r) => !r.wamnet) : REPORTS;
-  const cats = batch ? CATS.filter((c) => pool.some((r) => r.cat === c)) : CATS;
-  const list = pool.filter((r) => cat === 'すべて' || r.cat === cat);
-  const picked = pool.filter((r) => selected.has(r.id));
-  const batchData = () => ({ header: ['帳票名', '科目', '当月', '累計'], rows: picked.flatMap((r) => sampleReportData(r.name).rows.map((row) => [r.name, ...row])) });
-  const setMode = (b: boolean) => { setBatch(b); if (b) setCat('すべて'); };
-  const toggle = (id: string) => setSelected((x) => { const n = new Set(x); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const allOn = list.length > 0 && list.every((r) => selected.has(r.id));
-  const toggleAll = () => setSelected((x) => { const n = new Set(x); list.forEach((r) => { if (allOn) n.delete(r.id); else n.add(r.id); }); return n; });
-  // まとめて印刷：選んだ帳票を1つの出力にまとめる（帳票名列を付けて連結。本番では帳票ごとに改ページ）
-  const seg = (on: boolean): CSSProperties => ({ position: 'relative', zIndex: 1, padding: '8px 18px', border: 'none', borderRadius: 8, background: on ? accent : 'transparent', color: on ? '#fff' : '#3d4a56', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
-  return (
-    <SettingsShell variant={variant} title={displayName('印刷センター')} badge="印刷" draft={false} desc="帳票の一覧です。帳票を選ぶと「1. 詳細設定 → 2. 出力先 → 3. 印刷／プレビュー」の印刷画面が開きます。複数の帳票は「まとめて印刷」に切り替えると、一度に出力できます。">
-      <ToastView msg={toast.msg} />
-      {/* 印刷のしかたの切替：1帳票ずつ／まとめて印刷（旧「一括印刷」） */}
-      <div data-print-mode={batch ? 'batch' : 'single'} style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '12px 16px', borderBottom: '1px solid #eef2f5', background: batch ? '#f4f9f6' : '#fafbfc' }}>
-        <div role="radiogroup" aria-label="印刷のしかた" style={{ display: 'inline-flex', gap: 2, padding: 3, borderRadius: 11, background: '#e6ecf0' }}>
-          <button type="button" role="radio" aria-checked={!batch} data-print-mode-btn="single" onClick={() => setMode(false)} style={seg(!batch)}>1帳票ずつ印刷</button>
-          <button type="button" role="radio" aria-checked={batch} data-print-mode-btn="batch" onClick={() => setMode(true)} style={seg(batch)}>まとめて印刷</button>
-        </div>
-        {batch ? (
-          <>
-            <span style={{ fontSize: 14, color: '#3d4a56' }}>選択中 <b style={{ fontSize: 16, color: accent, fontVariantNumeric: 'tabular-nums' }}>{picked.length}</b> 帳票</span>
-            <button type="button" className="btn-outline" onClick={toggleAll} style={btn('#5b6773', false, true)}>{allOn ? '表示中の選択を解除' : '表示中をすべて選択'}</button>
-            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <button type="button" className="submit-btn" data-print-batch-run disabled={!picked.length} onClick={() => setBatchOpen(true)} style={{ ...btn(accent, true), opacity: picked.length ? 1 : 0.5, cursor: picked.length ? 'pointer' : 'not-allowed' }}>選んだ {picked.length} 帳票を印刷</button>
-            </div>
-          </>
-        ) : <span style={{ fontSize: 14, color: '#7a8794' }}>帳票を押すと、その帳票の印刷条件を指定できます。</span>}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '200px minmax(0,1fr)', minHeight: 420 }}>
-        <div style={{ borderRight: '1px solid #eef2f5', padding: 10 }}>
-          {['すべて', ...cats].map((c) => {
-            const n = c === 'すべて' ? pool.length : pool.filter((r) => r.cat === c).length;
-            const sel = batch ? (c === 'すべて' ? picked.length : picked.filter((r) => r.cat === c).length) : 0;
-            const on = cat === c;
-            return <button key={c} type="button" onClick={() => setCat(c)} style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', textAlign: 'left', padding: '9px 12px', border: 'none', borderRadius: 8, background: on ? accent : 'transparent', color: on ? '#fff' : '#22303c', fontSize: 14, fontWeight: on ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer' }}>{c}{sel > 0 && <span style={{ fontSize: 12, fontWeight: 800, padding: '0 6px', borderRadius: 8, background: on ? 'rgba(255,255,255,.25)' : '#e3f1ea', color: on ? '#fff' : accent }}>選択 {sel}</span>}<span style={{ marginLeft: 'auto', fontSize: 12, opacity: 0.7 }}>{n}</span></button>;
-          })}
-        </div>
-        <div style={{ padding: 16 }}>
-          {batch ? <div style={{ marginBottom: 10 }}><Notice>期間は「令和8年8月1日〜8月31日」（当月）で一括指定します。帳票ごとの詳細設定は、各帳票の設定値を使います。</Notice></div>
-            : <div style={{ marginBottom: 10, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: 14, color: '#5b6773' }}><span>設定の影響範囲：</span><ScopeBadge kind="帳票個別" /><span>その帳票だけ</span><ScopeBadge kind="全帳票共通" /><span>すべての帳票</span><ScopeBadge kind="全区分共通" /><ScopeBadge kind="区分ごと" /><span>動作環境から引き継ぎ</span></div>}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
-            {list.map((r) => {
-              const on = selected.has(r.id);
-              return (
-                <div key={r.id} data-report={r.id} onClick={() => (batch ? toggle(r.id) : r.wamnet ? setWamnet(WAMNET_ITEMS.find((w) => w.name === r.name) ?? null) : setTarget(r))} style={{ ...card, padding: '12px 14px', cursor: 'pointer', borderColor: batch && on ? accent : '#e2e8ee', background: batch && on ? '#f4f9f6' : '#fff', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  {batch && <input type="checkbox" checked={on} readOnly style={{ marginTop: 3 }} />}
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700 }}>{r.name}</div>
-                    <div style={{ fontSize: 12, color: '#8290a0', marginTop: 2 }}>{r.cat}{r.note ? `　${r.note}` : ''}</div>
-                  </div>
-                  {!batch && <span style={{ fontSize: 12, fontWeight: 700, color: accent, whiteSpace: 'nowrap' }}>{r.wamnet ? '開く →' : '印刷 →'}</span>}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-      <PrintDialog open={!!target} onClose={() => setTarget(null)} report={target} accent={accent} keepOpenOnPreview onPreview={(title, opts) => setPreview({ title, opts })} />
-      <PreviewModal open={!!preview} onClose={() => setPreview(null)} title={preview?.title ?? ''} opts={preview?.opts} accent={accent} data={preview ? sampleReportData(preview.title) : undefined} />
-      {/* まとめて印刷：帳票は一覧で選んでから開く。出力の形式は「2. 出力先」で選ぶ */}
-      <PrintOutDialog open={batchOpen} onClose={() => setBatchOpen(false)} name={`まとめて印刷（${picked.length}帳票）`} accent={accent} data={batchData} fileName="まとめて印刷_令和8年8月" meta={`令和8年8月1日〜8月31日　対象：${picked.map((r) => r.name).join('、')}`}
-        previewOpts={{ from: '令和8年8月1日', to: '令和8年8月31日', output: OUTPUTS[1] }} detailSummary={`${picked.length} 帳票`} confirm={[['選んだ帳票', picked.map((r) => r.name).join('、')], ['期間', '令和8年8月1日〜8月31日']]}
-        detail={<div style={{ display: 'grid', gap: 10 }}>
-          <span style={lbl}>まとめて印刷する帳票（{picked.length}）</span>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{picked.map((r) => <span key={r.id} style={{ padding: '4px 10px', borderRadius: 8, background: '#eef2f6', fontSize: 14 }}>{r.name}</span>)}</div>
-          <div style={{ fontSize: 12, color: '#8290a0' }}>期間：令和8年8月1日〜8月31日。帳票ごとの詳細設定は、1帳票ずつ印刷するときに決めた内容を使います。帳票を変えるときは、この画面を閉じて一覧で選び直します。</div>
-        </div>} />
-      <WamnetDialog item={wamnet} onClose={() => setWamnet(null)} accent={accent} />
-    </SettingsShell>
-  );
-}
-
-/* ---------------- 共通の印刷設定（全帳票共通） ---------------- */
+/* ---------------- 決算書 共通印刷設定（確認メモ #238：全帳票共通ではなく、決算書の印刷設定にした） ---------------- */
 /** 「0データを印刷しない」の除外科目（旧【0データの除外科目設定】）：0円でも印刷したい科目を指定する。法人内で共通 */
 function ZeroExcludeCard({ accent }: { accent: string }) {
   const toast = useToast();
@@ -663,9 +533,9 @@ function ZeroExcludeCard({ accent }: { accent: string }) {
   return (
     <div style={card} data-zero-exclude>
       <ToastView msg={toast.msg} />
-      <div style={cardHead}>「0データを印刷しない」の除外科目<ScopeBadge kind="全帳票共通" /></div>
+      <div style={cardHead}>「0データを印刷しない」の除外科目<ScopeBadge kind="決算書共通" /></div>
       <div style={{ padding: 14, display: 'grid', gap: 10, fontSize: 14 }}>
-        <div style={{ color: '#5b6773' }}>各帳票の詳細設定で「0データを表示しない」を有効にしていても、ここで指定した科目は 0 円のまま印刷します。法人内で共通の設定です。</div>
+        <div style={{ color: '#5b6773' }}>決算書の詳細設定で「0データを表示しない」を有効にしていても、ここで指定した科目は 0 円のまま印刷します。法人内で共通の設定です。</div>
         <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
           <span>資金科目 <b>{fund.length}</b> 科目</span><span>貸借・事業科目 <b>{bs.length}</b> 科目</span>
           <button type="button" onClick={() => setOpen(true)} style={{ ...btn(accent, false, true), marginLeft: 'auto' }}>除外科目を指定する</button>
@@ -683,41 +553,22 @@ function ZeroExcludeCard({ accent }: { accent: string }) {
   );
 }
 
-/** 帳票選択の様式（旧 動作環境パネル「帳票選択」）。区分階層により省略が許される様式がある（確認メモ #49） */
-export const FORM_GROUPS: { title: string; items: { key: string; name: string; omit?: '事業区分' | '拠点区分' }[] }[] = [
-  { title: '資金収支計算書（第一号様式）', items: [{ key: 'c1-1', name: '第一号第一様式（法人全体）' }, { key: 'c1-2', name: '第一号第二様式（事業区分別 内訳表）', omit: '事業区分' }, { key: 'c1-3', name: '第一号第三様式（拠点区分別 内訳表）', omit: '拠点区分' }, { key: 'c1-4', name: '第一号第四様式（拠点区分）' }] },
-  { title: '事業活動計算書（第二号様式）', items: [{ key: 'c2-1', name: '第二号第一様式（法人全体）' }, { key: 'c2-2', name: '第二号第二様式（事業区分別 内訳表）', omit: '事業区分' }, { key: 'c2-3', name: '第二号第三様式（拠点区分別 内訳表）', omit: '拠点区分' }, { key: 'c2-4', name: '第二号第四様式（拠点区分）' }] },
-  { title: '貸借対照表（第三号様式）', items: [{ key: 'c3-1', name: '第三号第一様式（法人全体）' }, { key: 'c3-2', name: '第三号第二様式（事業区分別 内訳表）', omit: '事業区分' }, { key: 'c3-3', name: '第三号第三様式（拠点区分別 内訳表）', omit: '拠点区分' }, { key: 'c3-4', name: '第三号第四様式（拠点区分）' }] },
-  { title: '準決算書', items: [{ key: 'p1', name: 'C別紙6〜9' }, { key: 'p2', name: 'C1-5〜C3-6' }] },
-];
-/** 区分階層から省略できる様式を判定：事業区分が1つなら第二様式、各事業区分の拠点区分が1つなら第三様式を省略できる */
-function omittable(tree: DivisionNode): Record<'事業区分' | '拠点区分', boolean> {
-  const biz = (tree.children ?? []).filter((b) => (b.children ?? []).length > 0);
-  const sites = biz.map((b) => (b.children ?? []).length);
-  return { 事業区分: biz.length <= 1, 拠点区分: sites.every((n) => n <= 1) };
-}
-/** 帳票選択：使う様式／省略する様式。省略できる様式は既定で省略（確認メモ #49：区分階層ツリーの内容によって省略が許される帳票がある） */
-export const formEnabled = (forms: Record<string, boolean>, key: string, tree: DivisionNode) => {
-  if (key in forms) return forms[key];
-  const item = FORM_GROUPS.flatMap((g) => g.items).find((x) => x.key === key);
-  return !(item?.omit && omittable(tree)[item.omit]);
-};
 function FormSelectCard() {
   const s = useSession();
   const can = omittable(s.tree);
   const set = (key: string, on: boolean) => setSession({ print: { ...s.print, forms: { ...s.print.forms, [key]: on } } });
   return (
     <div style={card} data-form-select>
-      <div style={cardHead}>様式設定（決算書・準決算書で使う様式）<span style={{ fontWeight: 500, color: '#7a8794', marginLeft: 8, fontSize: 12 }}>現行の印刷メニュー「様式設定」・旧 動作環境パネル「帳票選択」</span></div>
+      <div style={cardHead}>帳票選択（決算書・別紙・準決算書で使う様式）<span style={{ fontWeight: 500, color: '#7a8794', marginLeft: 8, fontSize: 12 }}>現行の印刷メニュー「様式設定」・旧 動作環境パネル「帳票選択」</span></div>
       <div style={{ padding: 14, display: 'grid', gap: 12 }}>
-        <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.7 }}>印刷メニューの決算書・準決算書に出す帳票を選びます。区分階層（事業区分・拠点区分の数）によって省略できる様式は、既定で省略しています。<br />現在の区分階層：事業区分 {can.事業区分 ? '1つ（第二様式を省略できます）' : '複数（第二様式が必要）'}／拠点区分 {can.拠点区分 ? '各1つ（第三様式を省略できます）' : '複数の事業区分あり（第三様式が必要）'}</div>
+        <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.7 }}>帳票の印刷の一覧（決算書・別紙・準決算書）に出す帳票を選びます。使用にした様式だけが一覧に出ます。区分階層（事業区分・拠点区分の数）によって省略できる様式は、既定で省略しています。<br />現在の区分階層：事業区分 {can.事業区分 ? '1つ（第二様式を省略できます）' : '複数（第二様式が必要）'}／拠点区分 {can.拠点区分 ? '各1つ（第三様式を省略できます）' : '複数の事業区分あり（第三様式が必要）'}</div>
         {FORM_GROUPS.map((g) => (
           <div key={g.title}>
             <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{g.title}</div>
             <div style={{ display: 'grid', gap: 4 }}>
               {g.items.map((it) => { const on = formEnabled(s.print.forms, it.key, s.tree); const omit = !!it.omit && can[it.omit]; return (
                 <label key={it.key} data-form={it.key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, padding: '4px 8px', borderRadius: 8, background: on ? 'transparent' : '#f6f8fa', color: on ? '#22303c' : '#8290a0' }}>
-                  <input type="checkbox" checked={on} onChange={() => set(it.key, !on)} />{on ? '使用' : '省略'}：{it.name}
+                  <input type="checkbox" checked={on} onChange={() => set(it.key, !on)} /><b style={{ minWidth: 76, fontVariantNumeric: 'tabular-nums' }}>{it.label}</b>{it.name}<span style={{ fontSize: 12, color: on ? '#1f7a52' : '#8290a0', fontWeight: 700 }}>{on ? '使用' : '省略'}</span>
                   {omit && <span style={{ fontSize: 12, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: '#eaf5ef', color: '#1f7a52' }}>省略できる様式</span>}
                   {!omit && it.omit && <span style={{ fontSize: 12, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: '#fff7e6', color: '#8a5a00' }}>区分階層上は必要</span>}
                 </label>
@@ -740,14 +591,17 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
   const [preview, setPreview] = useState(false);
   const FOOT_REPORTS = ['資金収支計算書（第一号第一様式）', '資金収支計算書（第一号第四様式）', '事業活動計算書', '貸借対照表'];
   return (
-    <SettingsShell variant={variant} title="共通の印刷設定" badge="印刷" desc={<><ScopeBadge kind="全帳票共通" />　すべての帳票の印刷に反映される設定です。印刷に関わる設定はここと各帳票の「詳細設定」に集約し、動作環境には置きません。同じ内容は、各帳票の印刷の「詳細設定 ＞ 全帳票共通の設定」からも変更できます。</>} actions={<>
+    <SettingsShell variant={variant} title={displayName('共通の印刷設定')} badge="印刷" desc={<><ScopeBadge kind="決算書共通" />　決算書の印刷に使う共通の設定です（確認メモ #238。全帳票の共通設定ではありません）。各帳票の詳細設定にある「共通の印刷設定を反映」で、ここの値をその帳票に写します。</>} actions={<>
       <ScreenPrintMenu page="共通の印刷設定" accent={accent} label="備考・摘要の印刷" />
       <button type="button" className="btn-outline" onClick={() => setPreview(true)} style={btn()}>プレビューで確認</button>
       <LoadDivisionSettings accent={accent} kind="印刷設定" onDone={(from) => toast.show(`「${from}」の印刷設定を読み込みました`)} />
-      <button type="button" className="submit-btn" onClick={() => toast.show('共通の印刷設定を保存しました')} style={btn(accent, true)}>決定</button>
+      <button type="button" className="submit-btn" onClick={() => toast.show('決算書 共通印刷設定を保存しました')} style={btn(accent, true)}>決定</button>
     </>}>
       <ToastView msg={toast.msg} />
-      <div style={{ padding: '16px 22px 0' }}><Notice>帳票ごとに変えたい項目（0データを表示しない・印刷範囲・備考など）は、各帳票の印刷の「詳細設定 ＞ この帳票のみの設定」で指定します。金額の書式やカラー帳票などは「{displayName('環境設定')}」の設定が印刷に反映されます。</Notice></div>
+      <div style={{ padding: '16px 22px 0', display: 'grid', gap: 10 }}>
+        <Notice>仕訳日記帳・元帳・試算表・予算書など、決算書以外の帳票は、それぞれの詳細設定だけで印刷の内容を決めます。決算書の帳票も、帳票ごとに変えたい項目は詳細設定で変更できます。金額の書式などは「{displayName('環境設定')}」の設定が印刷に反映されます。</Notice>
+        <div data-common-targets style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', fontSize: 14 }}><span style={{ fontSize: 12, fontWeight: 800, color: '#8290a0', marginRight: 4 }}>この設定を使う帳票</span>{[...REPORTS.filter((r) => r.common && r.cat === '決算書').map((r) => r.name), '別紙3（⑩）拠点区分資金収支明細書', '別紙3（⑪）拠点区分事業活動明細書', ...REPORTS.filter((r) => r.common && r.cat === '準決算書').map((r) => r.name)].map((n) => <span key={n} style={{ fontSize: 12, padding: '2px 8px', borderRadius: 8, background: '#f1eafb', color: '#6b3fa0', border: '1px solid #dccdf0', whiteSpace: 'nowrap' }}>{n}</span>)}</div>
+      </div>
       <div style={{ padding: 22, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 18, alignItems: 'start' }}>
         <div style={{ display: 'grid', gap: 18 }}>
           <ZeroExcludeCard accent={accent} />
@@ -790,14 +644,14 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
             <div style={{ padding: 14, display: 'grid', gap: 8 }}>
               {PRINT_ITEMS.map(([k, label]) => (
                 <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <Toggle on={!!p.items[k]} onChange={(v) => set({ items: { ...p.items, [k]: v } })} accent={accent} label={k === 'zero' ? '0データを印刷しない（各帳票の初期値。帳票ごとに変更可）' : label} />
+                  <Toggle on={!!p.items[k]} onChange={(v) => set({ items: { ...p.items, [k]: v } })} accent={accent} label={k === 'zero' ? '0データを印刷しない（決算書の各帳票の初期値。帳票ごとに変更可）' : label} />
                   {k === 'page' && <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: '#5b6773' }}>開始番号<input className="field-input" value={String(p.pageStart)} disabled={!p.items.page} onChange={(e) => set({ pageStart: parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 1 })} inputMode="numeric" style={{ ...numInput, width: 64, padding: '4px 8px' }} /></label>}
                 </div>
               ))}
             </div>
           </div>
           <div style={card}>
-            <div style={cardHead}>帳票の色・印字 <span style={{ fontSize: 12, fontWeight: 500, color: '#8290a0', marginLeft: 6 }}>動作環境から移した項目（5.5.1）</span></div>
+            <div style={cardHead}>帳票の色・印字 <span style={{ fontSize: 12, fontWeight: 500, color: '#8290a0', marginLeft: 6 }}>動作環境から移した項目（5.5.1）。予算書・試算表・仕訳日記帳の罫線と網掛けにも使います</span></div>
             <div style={{ padding: 14 }}><ReportStyleSettings accent={accent} /></div>
           </div>
           <div style={card}>

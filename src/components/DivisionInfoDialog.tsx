@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
 import { Field, Notice, Tabs, btn, input, lbl } from './ui';
-import { CATEGORIES, COLORS, DivisionTreeEditor, mapTree } from './DivisionTreeEditor';
+import { CATEGORIES, COLORS, DivisionColorPicker, DivisionTreeEditor, mapTree } from './DivisionTreeEditor';
 import { divisionLabel, flattenDivisions, getSession, setSession, useSession, type DivisionNode } from '../store/session';
 
 const TABS = ['集計区分の設定', '法人情報の設定', '伝票入力区分の設定'];
@@ -97,7 +97,7 @@ export function DivisionInfoDialog({ open, onClose, accent }: { open: boolean; o
           </div>
           <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'auto', maxHeight: 420 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
-              <thead><tr><th style={TH}>内部コード</th><th style={{ ...TH, width: 70 }}>区分コード</th><th style={{ ...TH, minWidth: 180 }}>名称</th><th style={{ ...TH, width: 44 }}>使用</th><th style={{ ...TH, width: 110 }}>カラー</th><th style={{ ...TH, width: 150 }}>集計区分</th><th style={{ ...TH, width: 120 }}>事業種別</th><th style={{ ...TH, width: 90 }}>開始年度</th><th style={{ ...TH, width: 90 }}>年度更新待ち</th></tr></thead>
+              <thead><tr><th style={TH}>内部コード</th><th style={{ ...TH, width: 70 }}>区分コード</th><th style={{ ...TH, minWidth: 180 }}>名称</th><th style={{ ...TH, width: 44 }}>使用</th><th style={{ ...TH, width: 160 }}>カラー</th><th style={{ ...TH, width: 150 }}>集計区分</th><th style={{ ...TH, width: 120 }}>事業種別</th><th style={{ ...TH, width: 90 }}>開始年度</th><th style={{ ...TH, width: 90 }}>年度更新待ち</th></tr></thead>
               <tbody>
                 {entries.map(({ node: n }) => (
                   <tr key={n.id} style={{ opacity: n.use === false ? 0.6 : 1 }}>
@@ -105,7 +105,7 @@ export function DivisionInfoDialog({ open, onClose, accent }: { open: boolean; o
                     <td style={TD}><input className="field-input ring" value={n.code} onChange={(e) => update(n.id, { code: e.target.value.replace(/[^0-9]/g, '').slice(0, 3) })} style={{ ...input, padding: '5px 8px', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }} /></td>
                     <td style={TD}><input className="field-input ring" value={n.name} maxLength={32} onChange={(e) => update(n.id, { name: e.target.value })} style={{ ...input, padding: '5px 8px' }} /></td>
                     <td style={{ ...TD, textAlign: 'center' }}><input type="checkbox" checked={n.use !== false} onChange={() => update(n.id, { use: n.use === false })} title="区分選択画面に表示する" /></td>
-                    <td style={TD}><div style={{ display: 'flex', gap: 3 }}>{COLORS.map((c) => <span key={c} onClick={() => update(n.id, { color: c })} title={c} style={{ width: 12, height: 12, borderRadius: 3, background: c, border: '1px solid ' + (n.color === c ? accent : '#dde4ea'), boxShadow: n.color === c ? `0 0 0 1px ${accent}` : 'none', cursor: 'pointer' }} />)}</div></td>
+                    <td style={TD}><DivisionColorPicker compact value={n.color} onChange={(c) => update(n.id, { color: c })} /></td>
                     <td style={TD}><select value={parentOf(n.id)} onChange={(e) => move(n, e.target.value)} style={{ ...input, padding: '5px 6px', fontSize: 14 }}>{parents.filter((p) => p.node.id !== n.id).map((p) => <option key={p.node.id}>{p.node.name}</option>)}</select></td>
                     <td style={TD}><select value={n.category ?? ''} onChange={(e) => update(n.id, { category: e.target.value })} style={{ ...input, padding: '5px 6px', fontSize: 14 }}>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select></td>
                     <td style={{ ...TD, color: '#5b6773', fontSize: 14 }}>{n.startYear}</td>

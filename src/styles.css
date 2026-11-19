@@ -197,3 +197,7 @@ a:hover {
   from { transform: translateX(48px); opacity: 0; }
   to { transform: none; opacity: 1; }
 }
+
+/* 濃い区分色の行は文字を白にする（確認メモ #73）。ボタン・入力欄と、自分の背景色を持つタグ（data-keep-color）はそのまま */
+tr[data-dark-row] > td,
+tr[data-dark-row] > td *:not(button):not(button *):not(input):not(select):not([data-keep-color]):not([data-keep-color] *) { color: #ffffff !important; }

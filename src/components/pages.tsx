@@ -13,12 +13,12 @@ import { SufficiencyPage } from './SufficiencyPage';
 import { JournalListPage } from './JournalListPage';
 import { LedgerPage } from './LedgerPage';
 import { BalanceCheckPage, LedgerInquiryPage } from './InquiryPages';
-import { CommonPrintSettingsPage, PrintCenterPage } from './PrintCenter';
+import { CommonPrintSettingsPage } from './PrintCenter';
+import { PrintCenterPage } from './PrintCenterPage';
 import { TrendPage } from './TrendPage';
 import { TrialBalancePage } from './TrialBalancePage';
 import { PlaceholderPage } from './PlaceholderPage';
 import { FiscalYearPage } from './FiscalYearPage';
-import { AppendixPrintPage } from './AppendixPrintPage';
 import { AuditSettingsPage, BackupPage, FinancialAnalysisSettingsPage, JournalRefreshPage } from './MaintenancePages';
 import { renderSettingsPage } from './SettingsPages';
 import { CarryoverJudgmentPage, DepreciationLinkPage } from './CarryoverPages';
@@ -45,8 +45,9 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
       return <JournalRefreshPage variant={variant} accent={accent} onNavigate={onNavigate} />;
     case 'データのバックアップ':
       return <BackupPage variant={variant} accent={accent} />;
+    // 確認メモ #238：別紙は「帳票の印刷」の中区分の1つ。旧画面キーで来たら、帳票の印刷を「別紙」の分類で開く
     case '別紙（注記・明細書・財産目録）':
-      return <AppendixPrintPage variant={variant} accent={accent} onNavigate={onNavigate} />;
+      return <PrintCenterPage key="appendix" variant={variant} accent={accent} onNavigate={onNavigate} initialCat="別紙" />;
   }
   if (SETTINGS_MENU.includes(page)) return renderSettingsPage(page, variant, accent, onNavigate);
   switch (page) {
@@ -69,7 +70,7 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
     case '業者元帳':
       return <LedgerPage kind="vendor" variant={variant} accent={accent} accentRgb={accentRgb} onNavigate={onNavigate} />;
     case '印刷センター':
-      return <PrintCenterPage variant={variant} accent={accent} />;
+      return <PrintCenterPage key="print" variant={variant} accent={accent} onNavigate={onNavigate} />;
     case '共通の印刷設定':
       return <CommonPrintSettingsPage variant={variant} accent={accent} />;
     case '元帳１':

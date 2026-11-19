@@ -74,7 +74,7 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
       <button type="button" className="btn-outline" onClick={() => setInfoOpen(true)} style={btn()}>部門情報の変更</button>
       <button type="button" className="btn-outline" data-import-export-btn={displayName('環境設定')} onClick={() => setFileOpen(true)} style={btn()}>インポート／エクスポート</button>
       <LoadDivisionSettings accent={accent} kind="動作設定" onDone={(from) => toast.show(`「${from}」の動作設定を読み込みました（未保存：OK（保存）で確定）`)} />
-      {onNavigate && <button type="button" className="btn-outline" onClick={() => onNavigate('共通の印刷設定')} style={btn()} data-open-print-settings>印刷の詳細設定（全帳票共通）</button>}
+      {onNavigate && <button type="button" className="btn-outline" onClick={() => onNavigate('共通の印刷設定')} style={btn()} data-open-print-settings>決算書 共通印刷設定</button>}
       <button type="button" className="btn-outline" onClick={() => { setV(DEFAULT_ENV); toast.show('初期値に戻しました（未保存）'); }} style={btn()}>初期値に戻す</button>
       <button type="button" className="submit-btn" onClick={save} style={btn(accent, true)}>OK（保存）</button>
     </>}>
