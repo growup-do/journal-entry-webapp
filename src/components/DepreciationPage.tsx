@@ -6,7 +6,7 @@
 //   値はサンプル。定額法の年間償却額＝（取得価額－残存価額）÷耐用年数 で自動計算。
 //   帳票・ファイル出力は ExportDialog（印刷／CSV）で実際に出力する。各種設定ダイアログは画面内の状態を変更する。
 
-import { Fragment, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent } from 'react';
 import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
@@ -26,6 +26,7 @@ import { FunctionDirectory, type FunctionGroup } from './FunctionFinder';
 import { EditVoucherModal, groupVouchers } from './VoucherEdit';
 import { addVoucher, deleteVouchers, useVouchers, type Voucher as JVoucher } from '../store/journalStore';
 import { divisionLabel, flattenDivisions, useSession, type DivisionNode } from '../store/session';
+import { isMemoReplaying } from '../memo/uiContext';
 
 const yen = (n: number) => n.toLocaleString('ja-JP');
 const USER = '鈴木';
@@ -62,7 +63,59 @@ interface Voucher { name: string; date: string; format: string; proc: string; /*
 interface LogRow { time: string; kind: '資産' | '備品' | 'システム'; code: string; target: string; action: string; user: string }
 interface Disposal { code: string; name: string; account: string; proc: string; date: string; amount: number; opening: number; cost: number; subsidy: number; /** 区分を選んで移管したときの移管先（確認メモ #247） */ to?: string }
 /** 補助金1件。償還補助金は国庫補助金等の内訳（内数）で、補助金総合計には加算しない（確認メモ #63） */
-interface SubsidyRow { name: string; /** 国庫補助金等の額 */ amount: number; /** うち償還補助金の額（amount の内数） */ redeem: number; date: string }
+interface SubsidyRow { name: string; /** 国庫補助金等の額 */ amount: number; /** うち償還補助金の額（amount の内数） */ redeem: number; date: string; /** 会計の伝票から選んだときの伝票No */ src?: string; /** 伝票から選んだときの伝票の金額（登録できる上限） */ max?: number }
+/** 会計の国庫補助金の伝票（プロトタイプのサンプル）。redeem＝償還補助金の伝票（設備資金借入金元金償還補助金） */
+interface SubsidyVoucher { no: string; date: string; account: string; tekiyo: string; amount: number; redeem: boolean }
+const SUBSIDY_VOUCHERS: SubsidyVoucher[] = [
+  { no: '5-25', date: '令和8年5月20日', account: '施設整備等補助金収益', tekiyo: '施設整備費補助金（園舎改修）', amount: 5000000, redeem: false },
+  { no: '6-31', date: '令和8年6月25日', account: '設備資金借入金元金償還補助金収益', tekiyo: '償還補助金（園舎建設借入金 元金分）', amount: 480000, redeem: true },
+  { no: '7-12', date: '令和8年7月10日', account: '施設整備等補助金収益', tekiyo: '施設整備費補助金（空調設備）', amount: 3200000, redeem: false },
+  { no: '8-21', date: '令和8年8月18日', account: '施設整備等補助金収益', tekiyo: '施設整備費補助金（調理室改修）', amount: 1650000, redeem: false },
+];
+
+/** 国庫補助金の伝票から選ぶ。登録する金額は全額か一部を任意に入力する（確認メモ #255） */
+function SubsidyVoucherPicker({ used, onClose, onAdd, accent, toast }: { used: string[]; onClose: () => void; onAdd: (rows: SubsidyRow[]) => void; accent: string; toast: (m: string) => void }) {
+  const [sel, setSel] = useState<Record<string, number>>({});
+  const on = (v: SubsidyVoucher) => v.no in sel;
+  const toggle = (v: SubsidyVoucher) => setSel((m) => { const n = { ...m }; if (v.no in n) delete n[v.no]; else n[v.no] = v.amount; return n; });
+  return (
+    <Modal open onClose={onClose} width={900} title="国庫補助金の伝票から選ぶ">
+      <div style={{ padding: '12px 22px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ fontSize: 14, color: '#5b6773' }}>この固定資産に充てる補助金の伝票を選び、登録する金額を入力します。全額でも一部の金額でも登録できます。</div>
+        <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead><tr><th style={{ ...TH, width: 36 }} /><th style={TH}>伝票No</th><th style={TH}>日付</th><th style={TH}>科目</th><th style={TH}>摘要</th><th style={{ ...TH, textAlign: 'right' }}>伝票の金額</th><th style={{ ...TH, textAlign: 'right' }}>登録する金額</th></tr></thead>
+            <tbody>{SUBSIDY_VOUCHERS.map((v) => {
+              const done = used.includes(v.no);
+              return (
+                <tr key={v.no} data-subsidy-voucher={v.no} style={{ background: on(v) ? '#f4f8f6' : undefined, color: done ? '#9aa5b1' : undefined }}>
+                  <td style={TD}><input type="checkbox" checked={on(v)} disabled={done} onChange={() => toggle(v)} aria-label={`伝票 ${v.no} を選ぶ`} /></td>
+                  <td style={{ ...TD, fontVariantNumeric: 'tabular-nums' }}>{v.no}</td>
+                  <td style={{ ...TD, whiteSpace: 'nowrap' }}>{v.date}</td>
+                  <td style={TD}>{v.account}{v.redeem && <span style={{ marginLeft: 6, fontSize: 12, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: '#eef3fb', color: '#2c5f9e' }}>償還補助金</span>}</td>
+                  <td style={TD}>{v.tekiyo}</td>
+                  <td style={{ ...TD, ...NUM }}>{yen(v.amount)}</td>
+                  <td style={{ ...TD, textAlign: 'right' }}>{done ? <span style={{ fontSize: 12 }}>登録済み</span> : <input className="field-input" data-subsidy-pick-amount value={on(v) ? yen(sel[v.no]) : ''} disabled={!on(v)} onChange={(e) => setSel((m) => ({ ...m, [v.no]: Math.min(numOf(e.target.value), v.amount) }))} inputMode="numeric" placeholder="選ぶと全額" style={{ ...IN_NUM, width: 130 }} />}</td>
+                </tr>
+              );
+            })}</tbody>
+          </table>
+        </div>
+        <div style={{ fontSize: 12, color: '#7a8794' }}>伝票の金額を超えては入力できません。償還補助金の伝票は、うち償還補助金額にも同じ金額が入ります。</div>
+        <div style={FOOT}>
+          <button type="button" onClick={onClose} style={BTN()}>キャンセル</button>
+          <button type="button" className="submit-btn" onClick={() => {
+            const picked = SUBSIDY_VOUCHERS.filter((v) => v.no in sel);
+            if (!picked.length) return toast('伝票を選んでください');
+            if (picked.some((v) => !sel[v.no])) return toast('登録する金額を入力してください');
+            onAdd(picked.map((v) => ({ name: v.tekiyo, amount: sel[v.no], redeem: v.redeem ? sel[v.no] : 0, date: v.date, src: v.no, max: v.amount })));
+            onClose();
+          }} style={BTN(accent, true)}>選んだ伝票を追加</button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
 interface CapexRow { date: string; name: string; amount: number; subsidy: number }
 interface HistoryRow { time: string; file: string; count: number; user: string; result: string }
 type RoundMode = '切捨て' | '四捨五入' | '切上げ';
@@ -368,19 +421,20 @@ function RoundingModal({ value, onClose, onSave, accent }: { value: Rounding; on
 /** 補助金設定（複数の補助金の内訳） */
 function SubsidyModal({ rows, cost, onClose, onSave, accent, toast }: { rows: SubsidyRow[]; cost: number; onClose: () => void; onSave: (rows: SubsidyRow[]) => void; accent: string; toast: (m: string) => void }) {
   const [rs, setRs] = useState<SubsidyRow[]>(rows.length ? rows : [{ name: '', amount: 0, redeem: 0, date: waToday() }]);
+  const [pick, setPick] = useState(false);
   const upd = (i: number, p: Partial<SubsidyRow>) => setRs((a) => a.map((r, k) => (k === i ? { ...r, ...p } : r)));
   const total = rs.reduce((s, r) => s + r.amount, 0);
   const redeem = rs.reduce((s, r) => s + r.redeem, 0);
   return (
-    <Modal open onClose={onClose} width={760} title="補助金設定">
+    <Modal open onClose={onClose} width={940} title="補助金設定">
       <div style={{ padding: '12px 22px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead><tr><th style={TH}>補助金名称</th><th style={{ ...TH, textAlign: 'right' }}>国庫補助金等の額</th><th style={{ ...TH, textAlign: 'right' }}>うち償還補助金額</th><th style={TH}>交付年月日</th><th style={{ ...TH, width: 60 }} /></tr></thead>
             <tbody>
               {rs.map((r, i) => <tr key={i}>
-                <td style={TD}><input className="field-input" value={r.name} onChange={(e) => upd(i, { name: e.target.value })} placeholder="例：施設整備費補助金" style={IN} /></td>
-                <td style={TD}><input className="field-input" data-sub-amount value={r.amount ? yen(r.amount) : ''} onChange={(e) => { const a = numOf(e.target.value); upd(i, { amount: a, redeem: Math.min(r.redeem, a) }); }} inputMode="numeric" placeholder="0" style={{ ...IN_NUM, width: 130 }} /></td>
+                <td style={{ ...TD, minWidth: 300 }}><input className="field-input" value={r.name} onChange={(e) => upd(i, { name: e.target.value })} placeholder="例：施設整備費補助金" style={IN} />{r.src && <div data-sub-src style={{ fontSize: 12, color: '#7a8794', marginTop: 2 }}>伝票 {r.src} から（伝票の金額 {yen(r.max ?? 0)}）</div>}</td>
+                <td style={TD}><input className="field-input" data-sub-amount value={r.amount ? yen(r.amount) : ''} onChange={(e) => { const a = Math.min(numOf(e.target.value), r.max ?? Infinity); upd(i, { amount: a, redeem: Math.min(r.redeem, a) }); }} inputMode="numeric" placeholder="0" style={{ ...IN_NUM, width: 130 }} /></td>
                 <td style={TD}><input className="field-input" data-sub-redeem value={r.redeem ? yen(r.redeem) : ''} onChange={(e) => upd(i, { redeem: Math.min(numOf(e.target.value), r.amount) })} inputMode="numeric" placeholder="0" title="国庫補助金等の額のうち、償還補助金にあたる額（国庫補助金等の額を超えては入力できません）" style={{ ...IN_NUM, width: 130 }} /></td>
                 <td style={TD}><input className="field-input" value={r.date} onChange={(e) => upd(i, { date: e.target.value })} style={{ ...IN, width: 140 }} /></td>
                 <td style={TD}><button type="button" className="btn-outline" onClick={() => setRs((a) => a.filter((_, k) => k !== i))} style={{ ...BTN('#c0392b'), padding: '4px 8px', fontSize: 12 }}>削除</button></td>
@@ -389,10 +443,12 @@ function SubsidyModal({ rows, cost, onClose, onSave, accent, toast }: { rows: Su
           </table>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14 }}>
-          <button type="button" className="btn-outline" onClick={() => setRs((a) => [...a, { name: '', amount: 0, redeem: 0, date: waToday() }])} style={BTN()}>＋ 行を追加</button>
+          <button type="button" className="btn-outline" data-subsidy-pick onClick={() => setPick(true)} style={BTN()}>国庫補助金の伝票から選ぶ</button>
+          <button type="button" className="btn-outline" onClick={() => setRs((a) => [...a, { name: '', amount: 0, redeem: 0, date: waToday() }])} style={BTN()}>＋ 手入力で行を追加</button>
           <span style={{ marginLeft: 'auto' }}>補助金総合計 <b style={{ fontSize: 14 }} data-sub-total>{yen(total)}</b>　（うち償還補助金 <b data-sub-redeem-total>{yen(redeem)}</b>）</span>
         </div>
         <div style={{ fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>補助金総合計は「国庫補助金等の額」の合計です。償還補助金は国庫補助金等の内訳のため、総合計には加算しません。</div>
+        {pick && <SubsidyVoucherPicker accent={accent} toast={toast} used={rs.map((r) => r.src ?? '').filter(Boolean)} onClose={() => setPick(false)} onAdd={(add) => setRs((a) => [...a.filter((r) => r.amount > 0 || r.name || r.src), ...add])} />}
         {cost > 0 && total > cost && <Notice tone="warn">補助金の合計が取得価額（{yen(cost)}）を超えています。</Notice>}
         <div style={FOOT}><button type="button" onClick={onClose} style={BTN()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { if (cost > 0 && total > cost) return toast('補助金の合計が取得価額を超えています'); onSave(rs.filter((r) => r.amount > 0 || r.name).map((r) => ({ ...r, redeem: Math.min(r.redeem, r.amount) }))); onClose(); }} style={BTN(accent, true)}>設定</button></div>
       </div>
@@ -585,10 +641,17 @@ export function DepreciationPage({ variant, accent }: Props) {
     setDetail(null);
     toast.show('削除しました');
   };
-  const saveAsset = (a: Asset, note?: string) => {
+  const [assetFormKey, setAssetFormKey] = useState(0);
+  const saveAsset = (a: Asset, note?: string, next?: boolean) => {
     const exists = assets.some((x) => x.code === a.code);
     setAssets((as) => (exists ? as.map((x) => (x.code === a.code ? a : x)) : [...as, a]));
     addLog('資産', a.code, `${Number(a.code)}:${a.name}`, (exists ? '変更' : '登録') + (note ? `（${note}）` : ''));
+    if (next) {
+      // 登録して次を入力：画面は閉じずに入力欄を空にし、次の資産コードから続ける（確認メモ #254）
+      setAssetFormKey((k) => k + 1);
+      toast.show(`固定資産「${a.name}」を登録しました。続けて次の固定資産を入力できます`);
+      return;
+    }
     setAssetModal({ open: false, asset: null, manual: false });
     setDetail(a);
     toast.show(`固定資産「${a.name}」を保存しました`);
@@ -758,7 +821,7 @@ export function DepreciationPage({ variant, accent }: Props) {
 
       {/* 固定資産の登録／変更（モーダル） */}
       <Modal open={assetModal.open} onClose={() => setAssetModal({ open: false, asset: null, manual: false })} width={1540} style={{ maxHeight: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} title={<>{assetModal.asset ? '固定資産の変更' : '固定資産の登録'}{assetModal.manual && <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#fff1b8', color: '#8a6d00' }}>全項目手入力</span>}</>}>
-        {assetModal.open && <AssetForm accent={accent} asset={assetModal.asset} manual={assetModal.manual} sortItems={sortItems} nextCode={String(assets.reduce((m, a) => Math.max(m, Number(a.code) < 10000 ? Number(a.code) : 0), 0) + 1).padStart(5, '0')} imageSrc={images['A:' + (assetModal.asset?.code ?? '')]} onSave={saveAsset} onCancel={() => setAssetModal({ open: false, asset: null, manual: false })} onReport={openReport} onLog={(code) => openLog('資産', code)} onImage={(code, name) => setImgTarget({ key: 'A:' + code, title: `資産画像：${name || code}` })} toast={toast.show} />}
+        {assetModal.open && <AssetForm key={assetFormKey} accent={accent} asset={assetModal.asset} manual={assetModal.manual} sortItems={sortItems} nextCode={String(assets.reduce((m, a) => Math.max(m, Number(a.code) < 10000 ? Number(a.code) : 0), 0) + 1).padStart(5, '0')} imageSrc={images['A:' + (assetModal.asset?.code ?? '')]} onSave={saveAsset} onCancel={() => setAssetModal({ open: false, asset: null, manual: false })} onReport={openReport} onLog={(code) => openLog('資産', code)} onImage={(code, name) => setImgTarget({ key: 'A:' + code, title: `資産画像：${name || code}` })} toast={toast.show} />}
       </Modal>
       <Modal open={equipModal} onClose={() => setEquipModal(false)} width={1000} title="備品の登録">
         {equipModal && <EquipForm accent={accent} equips={equips} sortItems={sortItems} imageSrc={images} onSave={(e) => { setEquips((es) => [...es, e]); addLog('備品', e.code, `${Number(e.code)}:${e.name}`, '登録'); toast.show(`備品「${e.name}」を登録しました`); }} onCancel={() => setEquipModal(false)} onReport={openReport} onLog={(code) => openLog('備品', code)} onImage={(code, name) => setImgTarget({ key: 'E:' + code, title: `備品画像：${name || code}` })} toast={toast.show} />}
@@ -888,7 +951,7 @@ function AssetDetail({ accent, asset, imageSrc, onClose, onEdit, onManual, onPri
 }
 
 /* ================= 固定資産登録 ================= */
-function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSave, onCancel, onReport, onLog, onImage, toast }: { accent: string; asset: Asset | null; manual: boolean; sortItems: string[]; nextCode: string; imageSrc?: string; onSave: (a: Asset, note?: string) => void; onCancel: () => void; onReport: (name: string, single?: Asset) => void; onLog: (code: string) => void; onImage: (code: string, name: string) => void; toast: (m: string) => void }) {
+function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSave, onCancel, onReport, onLog, onImage, toast }: { accent: string; asset: Asset | null; manual: boolean; sortItems: string[]; nextCode: string; imageSrc?: string; onSave: (a: Asset, note?: string, next?: boolean) => void; onCancel: () => void; onReport: (name: string, single?: Asset) => void; onLog: (code: string) => void; onImage: (code: string, name: string) => void; toast: (m: string) => void }) {
   const [f, setF] = useState({
     code: asset?.code ?? nextCode,
     sort: sortItems[0] ?? '土地',
@@ -902,6 +965,8 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
     memo: '1',
     residual: '0',
     subsidy: asset ? String(asset.subsidy) : '0',
+    /** うち償還補助金（補助金総合計の内数） */
+    redeem: '0',
     disposal: '設定なし',
     disposalAmt: '',
     disposalDate: '',
@@ -933,7 +998,7 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
   const opening = asset ? asset.opening : 0;
   const c = Math.min(annual, Math.max(0, opening + capexSum - num(f.memo)));
   const sub = num(f.subsidy);
-  const redeem = subsidies.reduce((s, r) => s + r.redeem, 0);
+  const redeem = Math.min(num(f.redeem), sub);
   const totalCost = cost + capexSum;
   const subOf = (v: number) => (totalCost ? roundBy((v * sub) / totalCost, rounding.sub) : 0);
   const redeemOf = (v: number) => (totalCost ? roundBy((v * redeem) / totalCost, rounding.sub) : 0);
@@ -1037,15 +1102,37 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
   const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '7px 12px', borderRadius: 7, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
   const tag = (t: string) => <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 6, background: '#e8f0fb', color: '#2c5f9e', whiteSpace: 'nowrap' }}>{t}</span>;
   const current = (): Asset => ({ code: f.code, name: f.name.trim() || '（未入力）', account: f.account, acquired: f.acquired, life, cost: totalCost, status: f.method === '非償却' || !life ? '対象外' : E <= num(f.memo) ? '償却終了' : '償却中', opening: E, subsidy: sub, method: f.method, qty, place: f.place, purpose: f.purpose, transferIn: asset?.transferIn || f.transferNew, depStart: f.useStart && f.startDate.trim() ? f.startDate.trim() : undefined, manualRows: manual ? mRows : asset?.manualRows });
-  const save = () => {
+  const save = (next?: boolean) => {
     if (!f.name.trim()) return toast('資産名称を入力してください');
     if (!cost) return toast('取得価額（数量×単価）を入力してください');
     if (f.method !== '非償却' && !life) return toast('耐用年数を入力してください');
     if (f.disposal !== '設定なし' && !f.disposalDate) return toast('処分年月日を入力してください');
     if (f.useStart && !f.startDate.trim()) return toast('償却開始年月日を入力してください');
     const notes = [calcChange && `計算変更：${calcChange.reason}`, capex.length && `資本的支出 ${yen(capexSum)}`, partial && `一部${partial.proc} ${partial.qty}/${qty}`, f.disposal !== '設定なし' && `${f.disposal} ${f.disposalDate}`].filter(Boolean).join('、');
-    onSave(current(), notes || undefined);
+    onSave(current(), notes || undefined, next);
   };
+
+  /* Enter で次の入力欄へ（伝票入力と同じ。確認メモ #254）。最後の欄からは「登録して次を入力」（変更のときは「登録」）へ。
+     日本語入力の変換を確定する Enter は無視する。ボタンの上の Enter はそのボタンを押す */
+  const formRef = useRef<HTMLDivElement>(null);
+  const inputsRef = useRef<HTMLDivElement>(null);
+  const fields = () => Array.from(inputsRef.current?.querySelectorAll<HTMLElement>('input:not([type=checkbox]):not([type=radio]), select') ?? []).filter((el) => !(el as HTMLInputElement).disabled && el.getClientRects().length > 0);
+  const focusEl = (el: HTMLElement | null | undefined) => { el?.focus(); if (el instanceof HTMLInputElement) el.select(); };
+  const onEnterNext = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || e.nativeEvent.isComposing || e.keyCode === 229) return;
+    const list = fields();
+    const i = list.indexOf(e.target as HTMLElement);
+    if (i < 0) return;
+    e.preventDefault();
+    focusEl(list[i + 1] ?? formRef.current?.querySelector<HTMLElement>(asset ? '[data-asset-save]' : '[data-asset-next]'));
+  };
+  // 開いたら最初の入力欄へ（新規の登録のとき。続けて登録するときも、ここから入力できる）
+  useEffect(() => {
+    if (asset) return;
+    const t = window.setTimeout(() => focusEl(fields()[0]), 80);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const disabledBg = (on: boolean): CSSProperties => ({ background: on ? '#fff' : '#f5f7f9' });
   // 償却計算表の 国庫補助金等／うち償還補助金。全項目手入力では、国庫補助金の表の当期の行を出す
   const sc = mRows['国庫補助金'][curIdx];
@@ -1064,8 +1151,8 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
   return (
     // 1600×768 で、画面全体が縦にも横にもスクロールしない配置にする。縦にスクロールするのは右の経年表示の表だけ（確認メモ #249／#250）
     //   左：入力欄と償却計算表、右：経年表示、下：帳票・計算変更などのボタンと「登録」
-    <div data-asset-form style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: 'minmax(0,1fr) min(700px, 46%)', gridTemplateRows: 'minmax(0,1fr) auto' }}>
-      <div style={{ padding: '12px 14px', borderRight: '1px solid #eef2f5', display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0, minHeight: 0, overflow: 'auto' }}>
+    <div data-asset-form ref={formRef} onKeyDown={onEnterNext} style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: 'minmax(0,1fr) min(700px, 46%)', gridTemplateRows: 'minmax(0,1fr) auto' }}>
+      <div ref={inputsRef} style={{ padding: '12px 14px', borderRight: '1px solid #eef2f5', display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0, minHeight: 0, overflow: 'auto' }}>
         <div style={box}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 8 }}>
             <div><span style={lbl}>資産コード</span><input className="field-input" value={f.code} onChange={(e) => set('code', e.target.value)} title="新規の登録では自動で採番します。手入力で変更できます" style={{ ...input, background: '#fff9c4', fontWeight: 700 }} /></div>
@@ -1106,10 +1193,11 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
               <div style={{ textAlign: 'center', paddingBottom: 7 }}>＝</div>
               <div><span style={lbl}>取得価額合計</span><div style={{ ...numIn, background: '#f5f7f9', whiteSpace: 'nowrap', overflow: 'hidden' }}>{yen(cost)}{capexSum > 0 && <span style={{ fontSize: 12, color: '#2c5f9e' }}>　+{yen(capexSum)}</span>}</div></div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr) minmax(0,1.6fr) auto', gap: 6, alignItems: 'end', marginTop: 6 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,0.8fr) minmax(0,0.8fr) minmax(0,1.2fr) minmax(0,1.2fr) auto', gap: 6, alignItems: 'end', marginTop: 6 }}>
               <div><span style={lbl}>備忘価額</span><input className="field-input" value={f.memo} onChange={(e) => set('memo', e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" style={numIn} /></div>
               <div><span style={lbl}>残存価額</span><input className="field-input" value={f.residual} onChange={(e) => set('residual', e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" style={numIn} /></div>
-              <div><span style={lbl} title={`うち償還補助金額 ${yen(redeem)}`}>補助金総合計（うち償還 {yen(redeem)}）</span><input className="field-input" value={yen(sub)} onChange={(e) => set('subsidy', e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" style={numIn} /></div>
+              <div><span style={lbl}>補助金総合計</span><input className="field-input" data-subsidy-total value={yen(sub)} onChange={(e) => set('subsidy', e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" style={numIn} /></div>
+              <div><span style={lbl}>うち償還補助金</span><input className="field-input" data-redeem-input value={yen(num(f.redeem))} onChange={(e) => set('redeem', e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" title="補助金総合計のうち、償還補助金にあたる額（補助金総合計を超えては計算しません）" style={{ ...numIn, ...(num(f.redeem) > sub ? { border: '1px solid #c0392b', background: '#fdeee9' } : {}) }} /></div>
               <button type="button" className="btn-outline" onClick={() => setDlg('subsidy')} style={{ ...btn(), padding: '5px 10px' }}>補助金設定{subsidies.length > 0 && `（${subsidies.length}件）`}</button>
             </div>
           </div>
@@ -1119,7 +1207,7 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
               <select value={f.disposal} onChange={(e) => { set('disposal', e.target.value); if (e.target.value !== '設定なし') setPartial(null); }} style={input}>{['設定なし', '除却', '売却', '移管(元)'].map((o) => <option key={o}>{o}</option>)}</select>
               <input className="field-input" value={f.disposalAmt ? yen(num(f.disposalAmt)) : ''} onChange={(e) => set('disposalAmt', e.target.value.replace(/[^0-9]/g, ''))} placeholder="除却／売却／移管(元)額" disabled={f.disposal === '設定なし'} inputMode="numeric" style={{ ...numIn, ...disabledBg(f.disposal !== '設定なし') }} />
               <input className="field-input" value={f.disposalDate} onChange={(e) => set('disposalDate', e.target.value)} placeholder="処分年月日" disabled={f.disposal === '設定なし'} style={{ ...input, ...disabledBg(f.disposal !== '設定なし') }} />
-              <button type="button" className="btn-outline" title="一部 除却／売却／移管(元)（数量の一部を処分する）" onClick={() => { if (!cost) return toast('先に取得価額を入力してください'); if (f.disposal !== '設定なし') return toast('全数量の処分が設定されています。一部処分は「設定なし」に戻してから行ってください'); setDlg('partial'); }} style={{ ...btn(), padding: '5px 10px' }}>一部処分</button>
+              <button type="button" className="btn-outline" title="一部 除却／売却／移管(元)（数量の一部を処分する）" onClick={() => { const replay = isMemoReplaying(); if (!cost && !replay) return toast('先に取得価額を入力してください'); if (f.disposal !== '設定なし' && !replay) return toast('全数量の処分が設定されています。一部処分は「設定なし」に戻してから行ってください'); setDlg('partial'); }} style={{ ...btn(), padding: '5px 10px' }}>一部処分</button>
             </div>
             {partial && <div style={{ marginTop: 6, display: 'flex', gap: 6, alignItems: 'center', fontSize: 12, color: '#48565f', flexWrap: 'wrap' }}>{tag(`一部${partial.proc}`)}{partial.qty}／{qty} 個・{partial.date}・当期減少額 {yen(D)}</div>}
           </div>
@@ -1185,15 +1273,17 @@ function AssetForm({ accent, asset, manual, sortItems, nextCode, imageSrc, onSav
         <button type="button" className="btn-outline" onClick={() => setDlg('capex')} style={fbtn}>資本的支出{capex.length > 0 && `（${capex.length}件）`}</button>
         <button type="button" className="btn-outline" onClick={() => onLog(f.code)} style={fbtn}>操作ログ・詳細情報</button>
         <button type="button" className="btn-outline" onClick={() => onImage(f.code, f.name)} style={{ ...fbtn, display: 'inline-flex', alignItems: 'center', gap: 6 }}>{imageSrc && <img src={imageSrc} alt="" style={{ width: 18, height: 18, objectFit: 'cover', borderRadius: 3 }} />}資産画像</button>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          <button type="button" className="submit-btn" onClick={save} style={{ ...btn(accent, true), padding: '8px 26px', fontSize: 14 }}>登録</button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ fontSize: 12, color: '#7a8794' }}>Enter で次の項目へ</span>
+          {!asset && <button type="button" className="btn-outline" data-asset-next onClick={() => save(true)} title="登録して、続けて次の固定資産を入力します" style={{ ...btn(accent), padding: '8px 18px', fontSize: 14 }}>登録して次を入力</button>}
+          <button type="button" className="submit-btn" data-asset-save onClick={() => save()} style={{ ...btn(accent, true), padding: '8px 26px', fontSize: 14 }}>登録</button>
           <button type="button" onClick={onCancel} style={{ ...btn(), padding: '8px 20px', fontSize: 14 }}>キャンセル</button>
         </div>
       </div>
 
       {dlg === 'life' && <LifeDictModal accent={accent} onClose={() => setDlg('')} onPick={(d) => { setF((s) => ({ ...s, life: String(d.life), account: d.account })); toast(`耐用年数 ${d.life} 年をセットしました`); }} />}
       {dlg === 'round' && <RoundingModal accent={accent} value={rounding} onClose={() => setDlg('')} onSave={(r) => { setRounding(r); toast('端数処理を設定しました'); }} />}
-      {dlg === 'subsidy' && <SubsidyModal accent={accent} rows={subsidies} cost={totalCost} toast={toast} onClose={() => setDlg('')} onSave={(rows) => { setSubsidies(rows); set('subsidy', String(rows.reduce((s, r) => s + r.amount, 0))); toast('補助金を設定しました'); }} />}
+      {dlg === 'subsidy' && <SubsidyModal accent={accent} rows={subsidies} cost={totalCost} toast={toast} onClose={() => setDlg('')} onSave={(rows) => { setSubsidies(rows); setF((x) => ({ ...x, subsidy: String(rows.reduce((s, r) => s + r.amount, 0)), redeem: String(rows.reduce((s, r) => s + r.redeem, 0)) })); toast('補助金を設定しました'); }} />}
       {dlg === 'partial' && <PartialModal accent={accent} qty={qty} cost={totalCost} book={A + B - C} value={partial} toast={toast} onClose={() => setDlg('')} onApply={(p) => { setPartial(p); if (p) { set('disposalAmt', String(p.amount)); set('disposalDate', p.date); toast(`一部${p.proc}（${p.qty}／${qty}）を設定しました`); } else toast('一部処分を取り消しました'); }} />}
       {dlg === 'calc' && <CalcChangeModal accent={accent} current={{ life, method: f.method, unit: num(f.unit) }} toast={toast} onClose={() => setDlg('')} onApply={(ch) => { setCalcChange(ch); setF((s) => ({ ...s, life: ch.reason === '耐用年数の変更' ? String(ch.life) : s.life, method: ch.reason === '償却方法の変更' ? ch.method : s.method, unit: ch.reason === '取得価額の訂正' ? String(ch.unit) : s.unit })); toast(`計算変更（${ch.reason}）を適用しました`); }} />}
       {dlg === 'capex' && <CapexModal accent={accent} rows={capex} onClose={() => setDlg('')} onSave={(rows) => { setCapex(rows); toast(rows.length ? `資本的支出 ${yen(rows.reduce((s, r) => s + r.amount, 0))} を当期増加額に加算しました` : '資本的支出を解除しました'); }} />}

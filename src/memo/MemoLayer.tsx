@@ -135,7 +135,7 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
   // 案内は数秒で消す
   useEffect(() => {
     if (!hint) return;
-    const t = setTimeout(() => setHint(''), 7000);
+    const t = setTimeout(() => setHint(''), 12000);
     return () => clearTimeout(t);
   }, [hint]);
 
@@ -159,7 +159,9 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
     setCtxNow(readCtx());
     if (!ok) {
       const d = describeCtx(m.ctx);
-      setHint(`メモ #${m.no} は${d ? d + '状態' : '別の状態'}で置かれています。その画面を開くと番号が表示されます。`);
+      // 記録した操作（ボタンの名前）を順に案内する
+      const steps = (m.path ?? []).map((k) => k.replace(/^[a-zA-Z]+=/, '').replace(/#\d+$/, '')).filter(Boolean);
+      setHint(`メモ #${m.no} は${d ? d + '状態' : '別の状態'}で置かれています。${steps.length ? `この画面で「${steps.join('」＞「')}」の順に押すと番号が表示されます。` : 'その画面を開くと番号が表示されます。'}`);
       return;
     }
     setOpenId(m.id);

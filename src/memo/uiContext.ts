@@ -226,6 +226,10 @@ export function currentPath(): string[] {
   return history.flatMap((s) => [...(s.pre ?? []), s.key]).filter(Boolean);
 }
 
+let replaying = false;
+/** メモの位置へ移るために操作を再生している間だけ true。入力が済んでいないと開けないボタン（固定資産の「一部処分」など）も、このときは開けるようにする */
+export const isMemoReplaying = () => replaying;
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function waitFor<T>(fn: () => T | null, ms: number): Promise<T | null> {
   const end = Date.now() + ms;
@@ -255,7 +259,12 @@ export async function restoreCtx(saved: UiCtx | undefined, path: string[] | unde
   for (const key of steps) {
     const el = await waitFor(() => findByKey(key), 2500);
     if (!el) return false;
-    el.click();
+    replaying = true;
+    try {
+      el.click();
+    } finally {
+      replaying = false;
+    }
     await sleep(220);
   }
   await sleep(120);
