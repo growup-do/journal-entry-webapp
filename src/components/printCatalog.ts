@@ -233,7 +233,7 @@ const AP_LINKED = (activity: boolean): DetailSection[] => [
   { title: '内訳表', items: [chk('twoLine', '項目名を二行で印刷する'), chk('autoFontHead', '項目名のフォントサイズを自動調整する', true), sel('perPage', '１ページの区分数', Array.from({ length: 20 }, (_, i) => String(i + 1)), '6'), chk('pickArea', '印刷区分を指定する')] },
   POSITION('-8', '5'),
 ];
-export interface AppendixSpec { detail: DetailSection[]; note?: string; zero?: boolean; noZero?: boolean; outs?: ReportDef['outs']; range?: boolean }
+export interface AppendixSpec { detail: DetailSection[]; note?: string; /** 開発用のメモ。画面には出さない */ memo?: string; zero?: boolean; noZero?: boolean; outs?: ReportDef['outs']; range?: boolean }
 const AP: Record<string, AppendixSpec> = {
   // 別紙1・2 注記（「注記印刷詳細」。年月指定は無い）
   'note-corp': { noZero: true, outs: ['print', 'excel', 'pdf'], detail: [{ title: '印刷項目', items: [chk('corp', '法人名を印刷する'), chk('page', 'ページ番号を印刷する'), txt('pageStart', 'ページ番号の開始番号', '1', '1', 80), chk('date', '印刷時の日付を印刷する')] }, POSITION('0', '0')] },
@@ -246,7 +246,7 @@ const AP: Record<string, AppendixSpec> = {
   d6: { noZero: true, range: true, detail: [{ title: '印刷項目', items: apItems({ shade: true, autofont: true, extra: [chk('noMove', '基本金明細書 組入・取崩が発生していなくても印刷する', true), chk('sumCol', '基本金明細書 通常行の合計金額の列も印字する')] }) }, AP_INNER(true), AP_GAP('上・下空き'), POSITION('0', '0')] },
   d7: { noZero: true, range: true, detail: [{ title: '印刷項目', items: apItems({ shade: true, autofont: true, extra: [chk('sumCol', '国庫補助金等特別積立金明細書 通常行の合計金額の列も印字する')] }) }, AP_INNER(true), AP_GAP('上・下空き'), POSITION('0', '0')] },
   // ⑧ の詳細設定は減価償却システム側の画面（フォント・罫線・データ印字の選択）
-  d8: { noZero: true, outs: ['print', 'excel', 'pdf'], note: '詳細設定は減価償却の画面（フォント・罫線・データ印字の選択）で行う', detail: [] },
+  d8: { noZero: true, outs: ['print', 'excel', 'pdf'], memo: '詳細設定は減価償却の画面（フォント・罫線・データ印字の選択）で行う', detail: [] },
   d9: { zero: true, range: true, detail: [{ title: '印刷項目', items: apItems({ shade: false, autofont: false }) }, AP_GAP('空きなし'), POSITION('-13', '0')] },
   d10: { zero: true, range: true, detail: AP_LINKED(false) },
   d11: { zero: true, range: true, detail: AP_LINKED(true) },
@@ -304,7 +304,8 @@ export interface ReportDef {
   id: string; name: string;
   /** 中区分 */ cat: string;
   /** 小区分（左の一覧の見出し） */ sub?: string;
-  note?: string; detail: DetailSection[]; scope?: boolean;
+  /** 一覧の帳票名の下に出す補足（様式番号など短いものだけ） */ note?: string; detail: DetailSection[]; scope?: boolean;
+  /** 開発用のメモ（現行との違いなど）。画面には出さない */ memo?: string;
   /** 年次の帳票（期間は会計年度の期首〜期末。月の指定なし） */ annual?: boolean;
   /** WAMNET連携出力：印刷ではなく WAMNET連携のダイアログを開く */ wamnet?: boolean;
   /** 共通印刷設定＝有（詳細設定に「共通の印刷設定を反映」を置く） */ common?: boolean;
@@ -346,7 +347,7 @@ export const REPORTS: ReportDef[] = [
     { id: 'l2', name: '資金元帳', scope: true, detail: D.fundLedger },
     { id: 'l3', name: '取引先元帳', scope: true, detail: D.vendorLedger },
     { id: 'l4', name: '集計元帳', scope: true, cond: C.entry, detail: D.ledger },
-    { id: 'l5', name: '取引先元帳（合算集計）', scope: true, note: '法人全体の取引先を合算（旧 元帳（業者合算集計））', detail: D.vendorLedger },
+    { id: 'l5', name: '取引先元帳（合算集計）', scope: true, memo: '法人全体の取引先を合算（旧 元帳（業者合算集計））', detail: D.vendorLedger },
   ]),
   ...group('試算表', '試算表', [
     { id: 't1', name: '資金収支計算書（試算表）', title: '資 金 収 支 計 算 書', detail: TRIAL() },
@@ -358,7 +359,7 @@ export const REPORTS: ReportDef[] = [
   ...group('予算', '予算書', [
     ...BUDGET4.map((k, i): R => ({ id: 'b' + (i + 1), name: `資金収支${k}予算書`, annual: true, budget: k === '補正' ? '補正' : '通常', title: BUDGET_TITLE[k], detail: BUDGET(k as BudgetKind) })),
     { id: 'b5', name: '資金収支予算内訳表', annual: true, cond: C.parent, rangeSumOnly: true, detail: BUDGET_INNER },
-    { id: 'b6', name: '資金収支次年度予算内訳表', annual: true, cond: C.parent, rangeSumOnly: true, note: '合算テーブルの作成が必要', detail: BUDGET_INNER },
+    { id: 'b6', name: '資金収支次年度予算内訳表', annual: true, cond: C.parent, rangeSumOnly: true, memo: '合算テーブルの作成が必要', detail: BUDGET_INNER },
   ]),
   ...group('予算', '予算書（拠点区分）', BUDGET4.map((k, i): R => ({ id: 'bk' + (i + 1), name: `資金収支${k}予算書（拠点区分）`, annual: true, cond: C.service, budget: k === '補正' ? '補正' : '通常', title: BUDGET_TITLE[k], detail: BUDGET(k as BudgetKind) }))),
   ...group('予算', '予算管理表', [
@@ -368,7 +369,7 @@ export const REPORTS: ReportDef[] = [
   ...group('決算書', '決算書', CLOSING12.map(([name, form]): R => ({ id: 'c' + form.slice(1), name, note: FORM_NOTE[form], common: true, form, cond: formCond(form), detail: closingOf(form) }))),
   // 別紙（注記・附属明細書・財産目録）は、中区分「別紙」の画面（AppendixPrintPage）で一覧・編集・印刷する
   ...group('補助簿（明細表）', '補助簿（明細表）', [
-    { id: 's1', name: '○○［科目名］明細表', note: '補助簿（明細表）設定で指定した科目ごと（例：事業未収金 明細表・職員預り金 明細表）', cond: C.subAcct, detail: D.sub },
+    { id: 's1', name: '○○［科目名］明細表', memo: '補助簿（明細表）設定で指定した科目ごと（例：事業未収金 明細表・職員預り金 明細表）', cond: C.subAcct, detail: D.sub },
   ]),
   ...group('準決算書', '準決算書', [
     { id: 'p1', name: '○○拠点区分 貸借対照表明細書', note: 'C別紙6', common: true, form: 'pc6', cond: formCond('pc6'), detail: CLOSING('内訳表', { serial: true }) },
@@ -377,28 +378,28 @@ export const REPORTS: ReportDef[] = [
     { id: 'p4', name: '○○サービス区分 貸借対照表', note: 'C3-5', common: true, form: 'pc3-5', cond: formCond('pc3-5'), detail: CLOSING('貸借対照表') },
   ]),
   ...group('消費税', '消費税', [
-    { id: 'x1', name: '消費税区分別集計内訳表', note: '現行は条件画面だけ（詳細設定ボタンなし）', noZero: true, detail: D.taxInner },
+    { id: 'x1', name: '消費税区分別集計内訳表', memo: '現行は条件画面だけ（詳細設定ボタンなし）', noZero: true, detail: D.taxInner },
     { id: 'x2', name: '消費税区分別集計表', range: true, noZero: true, title: '消費税区分別集計表', detail: D.tax },
-    { id: 'x3', name: '科目別消費税区分別集計表', note: '勘定科目・資金科目の一覧で印刷する科目を選ぶ（科目設定は他の伝票入力区分と共有）', zero: false, title: '消費税区分別集計表', detail: [{ ...D.tax[0], items: D.tax[0].items.map((it) => (it.k === 'area' && it.t === 'check' ? { ...it, on: false } : it)) }, ...D.tax.slice(1)] },
+    { id: 'x3', name: '科目別消費税区分別集計表', memo: '勘定科目・資金科目の一覧で印刷する科目を選ぶ（科目設定は他の伝票入力区分と共有）', zero: false, title: '消費税区分別集計表', detail: [{ ...D.tax[0], items: D.tax[0].items.map((it) => (it.k === 'area' && it.t === 'check' ? { ...it, on: false } : it)) }, ...D.tax.slice(1)] },
     { id: 'x4', name: '消費税区分コード内訳表', range: true, zero: false, detail: D.taxCode },
-    { id: 'x5', name: '売上仕入税額集計表', note: '現行の印刷メニューでは見当たらない（帳票・印刷_画面一覧には記載）', cond: C.honsoku, range: true, noZero: true, title: '売上仕入税額集計表', detail: D.tax },
+    { id: 'x5', name: '売上仕入税額集計表', memo: '現行の印刷メニューでは見当たらない（帳票・印刷_画面一覧には記載）', cond: C.honsoku, range: true, noZero: true, title: '売上仕入税額集計表', detail: D.tax },
   ]),
   ...group('経営分析', '経営分析', [
-    ...([['財務分析一覧表', '各種財務分析事項の5年間の推移を一覧表形式で確認'], ['財務分析グラフ', '各種財務分析事項の10年間の推移を棒グラフで確認'], ['財務分析シート', '当年度の各種財務分析事項を円グラフで確認'], ['基本チェック表', '財務3表および選択した財務分析事項のグラフを確認'], ['経年推移グラフ', '各科目毎の推移を年別に棒グラフで確認'], ['経月推移グラフ', '各科目毎の推移を月別に棒グラフで確認'], ['前年度同月対比表', '各科目毎の前年度同月対比を一覧表形式で確認']] as const).map(([name, note], i): R => ({ id: 'a' + (i + 1), name, note, noZero: true, detail: D.analysis })),
-    { id: 'a8', name: '３期連続資金収支比較表', note: '3期連続の資金収支を比較。決算予想ができる', noZero: true, detail: [{ title: '予想額', items: [rad('forecast', '当年度予算予想額の算出方法', ['当月より倍率', '当月累計＋過去の平均']), chk('thousand', '千円単位にする')] }, ...D.analysis] },
-    ...([['財務分析内訳グラフ', '各経理区分の財務分析事項を円グラフで確認'], ['経月推移内訳グラフ', '各経理区分、各科目毎の推移を月別に棒グラフで確認'], ['経年推移内訳グラフ', '各経理区分、各科目毎の推移を年別に棒グラフで確認']] as const).map(([name, note], i): R => ({ id: 'a' + (i + 9), name, note, noZero: true, cond: C.parent, detail: D.analysis })),
+    ...([['財務分析一覧表', '各種財務分析事項の5年間の推移を一覧表形式で確認'], ['財務分析グラフ', '各種財務分析事項の10年間の推移を棒グラフで確認'], ['財務分析シート', '当年度の各種財務分析事項を円グラフで確認'], ['基本チェック表', '財務3表および選択した財務分析事項のグラフを確認'], ['経年推移グラフ', '各科目毎の推移を年別に棒グラフで確認'], ['経月推移グラフ', '各科目毎の推移を月別に棒グラフで確認'], ['前年度同月対比表', '各科目毎の前年度同月対比を一覧表形式で確認']] as const).map(([name, note], i): R => ({ id: 'a' + (i + 1), name, memo: note, noZero: true, detail: D.analysis })),
+    { id: 'a8', name: '３期連続資金収支比較表', memo: '3期連続の資金収支を比較。決算予想ができる', noZero: true, detail: [{ title: '予想額', items: [rad('forecast', '当年度予算予想額の算出方法', ['当月より倍率', '当月累計＋過去の平均']), chk('thousand', '千円単位にする')] }, ...D.analysis] },
+    ...([['財務分析内訳グラフ', '各経理区分の財務分析事項を円グラフで確認'], ['経月推移内訳グラフ', '各経理区分、各科目毎の推移を月別に棒グラフで確認'], ['経年推移内訳グラフ', '各経理区分、各科目毎の推移を年別に棒グラフで確認']] as const).map(([name, note], i): R => ({ id: 'a' + (i + 9), name, memo: note, noZero: true, cond: C.parent, detail: D.analysis })),
   ]),
   ...group('内部取引 一覧表', '内部取引 一覧表', [
-    { id: 'i1', name: '内部取引 仕訳一覧表', note: '登録されている仕訳伝票のみの集計（残高は含まない）。借方側・貸方側・要確認を色分け', noZero: true, outs: ['print', 'csv'], detail: D.internal },
-    { id: 'i2', name: '内部取引 残高一覧表', note: 'サービス区分ごとの表（内 事業／内 拠点／内 サービス／内 小サービス）と貸借計・差異', noZero: true, outs: ['print'], detail: [] },
-    { id: 'i3', name: '内部取引 予算一覧表', note: '残高一覧表と同じ表', noZero: true, outs: ['print'], detail: [] },
+    { id: 'i1', name: '内部取引 仕訳一覧表', memo: '登録されている仕訳伝票のみの集計（残高は含まない）。借方側・貸方側・要確認を色分け', noZero: true, outs: ['print', 'csv'], detail: D.internal },
+    { id: 'i2', name: '内部取引 残高一覧表', memo: 'サービス区分ごとの表（内 事業／内 拠点／内 サービス／内 小サービス）と貸借計・差異', noZero: true, outs: ['print'], detail: [] },
+    { id: 'i3', name: '内部取引 予算一覧表', memo: '残高一覧表と同じ表', noZero: true, outs: ['print'], detail: [] },
   ]),
   ...group('WAMNET連携出力', 'WAMNET連携出力', ['WAMNET連携設定', 'WAMNET連携科目チェック', 'WAMNET連携ファイル出力', 'WAMNET連携注記出力（PDF）', 'WAMNET連携注記出力（Excel）', 'WAMNET連携附属明細書出力（PDF）', 'WAMNET連携附属明細書出力（Excel）'].map((name, i): R => ({ id: 'w' + (i + 1), name, wamnet: true, note: i < 2 ? '設定・確認' : '出力', detail: [] }))),
   ...group('その他', 'その他', [
     { id: 'o1', name: '決算書 表紙', noZero: true, detail: [] },
-    { id: 'o2', name: '収支分析表', note: '［設定］で科目名称・金額の決定方法・背景色・文字色を指定', noZero: true, outs: ['print', 'excel'], detail: [{ title: '印刷項目', items: [chk('thousand', '金額を千円単位で表示する', true)] }] },
+    { id: 'o2', name: '収支分析表', memo: '［設定］で科目名称・金額の決定方法・背景色・文字色を指定', noZero: true, outs: ['print', 'excel'], detail: [{ title: '印刷項目', items: [chk('thousand', '金額を千円単位で表示する', true)] }] },
     { id: 'o3', name: '自動按分出力', cond: C.belowSite, detail: [{ title: '出力条件', items: [rad('kind', '出力種類', ['貸借対照表', '事業活動計算書', '資金収支計算書']), rad('cols', '出力する列', ['当年度末', '前年度末', '増減']), rad('round', '端数の加算区分', ['按分率の最も大きい区分', '最後の区分'])] }, { title: '印刷項目', items: [chk('sum', '合計値を印刷する', true)] }] },
-    { id: 'o4', name: '取引先内訳表', note: '旧 業者内訳表', cond: C.belowSite, detail: [{ title: '印刷項目', items: [chk('vsub', '取引先コード小計'), chk('zeroV', '0円の取引先を印刷しない', true), chk('area', '区分名を印刷する', true)] }] },
+    { id: 'o4', name: '取引先内訳表', memo: '旧 業者内訳表', cond: C.belowSite, detail: [{ title: '印刷項目', items: [chk('vsub', '取引先コード小計'), chk('zeroV', '0円の取引先を印刷しない', true), chk('area', '区分名を印刷する', true)] }] },
   ]),
 ];
 /** 中区分の並び（現行の印刷メニューの順。別紙は決算書の次） */
