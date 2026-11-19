@@ -6,7 +6,7 @@
 //   旧 伝票メニューの「インポート伝票一括削除」「自動按分伝票一括削除」は右上の「一括削除 ▾」（依頼書 2.3／6.4）。
 //   一括削除は年度内の全件が対象で、取込・按分の実行単位（GUID）ごとに消す（確認メモ #56）。
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { BizSwitch, useDivisionTools } from './DivisionTools';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
@@ -21,7 +21,7 @@ import { Modal } from './Modal';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { displayName } from '../data';
 import { useVouchers, type Voucher } from '../store/journalStore';
-import { getSession, setSession, useSession } from '../store/session';
+import { canEdit, editBlockReason, getSession, setSession, useSession } from '../store/session';
 import type { MonthFilter } from '../types';
 import { inPeriod, periodLabel as periodText, type Period } from '../lib/period';
 
@@ -59,7 +59,6 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
   const [showBiz, setShowBiz] = useState(false);
   /** 借方・貸方の色付け（依頼書 2.5／5.4.3：Fキーではなく画面上の切替） */
   const [colorDC, setColorDC] = useState(false);
-  const [bulkOpen, setBulkOpen] = useState(false);
   const [exp, setExp] = useState<ExportSpec | null>(null);
   const toast = useToast();
   const dt = useDivisionTools(all, accent);
@@ -98,12 +97,6 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
     setLastIdx(idx);
   };
   const selectable = ra.editable;
-  /** 一括削除（インポート伝票／自動按分伝票）：年度内の全件から取込・按分の実行単位を選び、通常の削除確認に渡す */
-  const [bulkSrc, setBulkSrc] = useState<NonNullable<Voucher['source']> | null>(null);
-  const bulkPick = (src: NonNullable<Voucher['source']>) => { setBulkOpen(false); setBulkSrc(src); };
-  /** 一括削除の選択画面から削除の確認へ進んだとき：「削除しないで戻る」で選択画面へ戻す（確認メモ #262） */
-  const [bulkBack, setBulkBack] = useState<{ src: NonNullable<Voucher['source']>; ids: number[] } | null>(null);
-  const bulkConfirm = (ids: number[]) => { if (bulkSrc) setBulkBack({ src: bulkSrc, ids }); setBulkSrc(null); setSel(ids); setDelOpen(true); };
   const colCount = 5 + (dt.nameOn ? 1 : 0) + 1 + (selectable ? 1 : 0);
 
   return (
@@ -116,7 +109,7 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
       tools={[
         { label: '検索条件', onClick: () => setSearchOpen(true), primary: true },
       ]}
-      extraTools={<>{selectable && <BulkDeleteMenu open={bulkOpen} onToggle={() => setBulkOpen((o) => !o)} onPick={bulkPick} />}<ScreenPrintMenu page="仕訳一覧" accent={accent} data={table} /></>}
+      extraTools={<ScreenPrintMenu page="仕訳一覧" accent={accent} data={table} />}
       period={
         <>
           <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} withAll range={range} onRange={(p) => { setRange(p); setDay(null); }} />
@@ -157,7 +150,7 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
       notice={markNotice || ra.notice ? <>{markNotice}{ra.notice}</> : undefined}
     >
       <ToastView msg={toast.msg} />
-      <SelectionBar count={sel.length} unit="行" hint="Shift＋クリックで範囲、Ctrl／⌘＋クリックで追加・解除" onClear={() => setSel([])} actions={<button type="button" data-action="選択した行を削除" onClick={() => { setBulkBack(null); setDelOpen(true); }} style={btn('#c0392b', true, true)}>選択した行を削除</button>} />
+      <SelectionBar count={sel.length} unit="行" hint="Shift＋クリックで範囲、Ctrl／⌘＋クリックで追加・解除" onClear={() => setSel([])} actions={<button type="button" data-action="選択した行を削除" onClick={() => setDelOpen(true)} style={btn('#c0392b', true, true)}>選択した行を削除</button>} />
       <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 330px)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead style={{ position: 'sticky', top: 0, zIndex: 2 }}>
@@ -204,8 +197,7 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
         </table>
       </div>
       {ra.modals}
-      {bulkSrc && <BulkDeleteModal src={bulkSrc} all={all} initial={bulkBack?.src === bulkSrc ? bulkBack.ids : undefined} onClose={() => { setBulkSrc(null); setBulkBack(null); }} onConfirm={bulkConfirm} />}
-      {delOpen && <DeleteVoucherModal rows={all.filter((r) => sel.includes(r.id))} multi onClose={() => { setDelOpen(false); setBulkBack(null); }} onCancel={bulkBack ? () => { setDelOpen(false); setSel([]); setBulkSrc(bulkBack.src); } : undefined} onDeleted={() => { toast.show(`${sel.length} 行の仕訳を削除しました`); setSel([]); }} />}
+      {delOpen && <DeleteVoucherModal rows={all.filter((r) => sel.includes(r.id))} multi onClose={() => setDelOpen(false)} onDeleted={() => { toast.show(`${sel.length} 行の仕訳を削除しました`); setSel([]); }} />}
       <AdvancedSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} cond={cond} onApply={setCond} accent={accent} />
       <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
       {dt.modal}
@@ -214,19 +206,22 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
 }
 
 /** 旧 伝票メニューの「インポート伝票一括削除」「自動按分伝票一括削除」（依頼書 2.3／6.4）。取込・按分の単位を選ぶ画面を開く。入力内容を持たないメニューなので Esc で閉じてよい */
-function BulkDeleteMenu({ open, onToggle, onPick }: { open: boolean; onToggle: () => void; onPick: (src: NonNullable<Voucher['source']>) => void }) {
+function BulkDeleteMenu({ open, onToggle, onPick, small, up, disabled, reason }: { open: boolean; onToggle: () => void; onPick: (src: NonNullable<Voucher['source']>) => void; /** 小さめのボタン（ホームのカードの左下） */ small?: boolean; /** メニューを上に開く */ up?: boolean; disabled?: boolean; reason?: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     if (!open) return;
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onToggle(); };
+    const out = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onToggle(); };
     window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
+    window.addEventListener('mousedown', out);
+    return () => { window.removeEventListener('keydown', h); window.removeEventListener('mousedown', out); };
   }, [open, onToggle]);
   const item: CSSProperties = { display: 'block', width: '100%', textAlign: 'left', padding: '8px 10px', border: 'none', background: 'transparent', borderRadius: 8, fontSize: 14, fontWeight: 700, color: '#c0392b', fontFamily: 'inherit', cursor: 'pointer' };
   return (
-    <span style={{ position: 'relative', display: 'inline-flex' }} data-bulk-delete>
-      <button type="button" onClick={onToggle} aria-expanded={open} aria-haspopup="menu" title="インポート伝票・自動按分伝票をまとめて削除します" style={{ ...btn('#c0392b', false, true), display: 'inline-flex', alignItems: 'center', gap: 4 }}>一括削除<Chevron open={open} color="currentColor" /></button>
+    <span ref={ref} style={{ position: 'relative', display: 'inline-flex' }} data-bulk-delete>
+      <button type="button" onClick={disabled ? undefined : onToggle} aria-expanded={open} aria-haspopup="menu" aria-disabled={disabled || undefined} title={disabled ? reason : 'インポート伝票・自動按分伝票をまとめて削除します'} style={small ? { display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 8px', border: '1px solid ' + (disabled ? '#e3e8ec' : '#f2c9c2'), borderRadius: 6, background: '#fff', color: disabled ? '#b3bcc5' : '#c0392b', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: disabled ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' } : { ...btn('#c0392b', false, true), display: 'inline-flex', alignItems: 'center', gap: 4 }}>一括削除<Chevron open={open} color="currentColor" /></button>
       {open && (
-        <div role="menu" style={{ position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 40, minWidth: 280, background: '#fff', border: '1px solid #e2e8ee', borderRadius: 10, boxShadow: '0 10px 30px rgba(20,30,40,.14)', padding: 6 }}>
+        <div role="menu" style={{ position: 'absolute', ...(up ? { left: 0, bottom: 'calc(100% + 4px)' } : { right: 0, top: 'calc(100% + 4px)' }), zIndex: 40, minWidth: 280, background: '#fff', border: '1px solid #e2e8ee', borderRadius: 10, boxShadow: '0 10px 30px rgba(20,30,40,.14)', padding: 6 }}>
           <div style={{ padding: '4px 10px 6px', fontSize: 12, color: '#8290a0', lineHeight: 1.6 }}>年度内の全件から、取込・按分の実行単位を選んで削除します（削除した仕訳は元に戻せません）</div>
           {(['インポート', '自動按分'] as const).map((src) => (
             <button key={src} type="button" role="menuitem" data-bulk-src={src} onClick={() => onPick(src)} style={item}>
@@ -237,6 +232,27 @@ function BulkDeleteMenu({ open, onToggle, onPick }: { open: boolean; onToggle: (
         </div>
       )}
     </span>
+  );
+}
+
+/** ホームの「日記帳・元帳」カードの左下に置く一括削除（確認メモ #261：日記帳の画面から移した）。
+ *  メニュー → 取込・按分の単位を選ぶ → 削除の確認。確認で「削除しないで戻る」を押すと、選んだ単位を残したまま選択画面へ戻る（確認メモ #262） */
+export function BulkDeleteLauncher() {
+  const s = useSession();
+  const all = useVouchers();
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [src, setSrc] = useState<NonNullable<Voucher['source']> | null>(null);
+  const [back, setBack] = useState<{ src: NonNullable<Voucher['source']>; ids: number[] } | null>(null);
+  const [ids, setIds] = useState<number[] | null>(null);
+  const ok = canEdit(s);
+  return (
+    <>
+      <BulkDeleteMenu small up open={open} disabled={!ok} reason={editBlockReason(s)} onToggle={() => setOpen((o) => !o)} onPick={(x) => { setOpen(false); setBack(null); setSrc(x); }} />
+      {src && <BulkDeleteModal src={src} all={all} initial={back?.src === src ? back.ids : undefined} onClose={() => { setSrc(null); setBack(null); }} onConfirm={(list) => { setBack({ src, ids: list }); setSrc(null); setIds(list); }} />}
+      {ids && <DeleteVoucherModal rows={all.filter((r) => ids.includes(r.id))} multi onClose={() => { setIds(null); setBack(null); }} onCancel={back ? () => { setIds(null); setSrc(back.src); } : undefined} onDeleted={() => toast.show(`${ids.length} 行の仕訳を削除しました`)} />}
+      <ToastView msg={toast.msg} />
+    </>
   );
 }
 

@@ -7,6 +7,7 @@
 //   分類のアイコンと分類名は緑で目立たせ、機能はすべて同じ形の枠つきボタンで 1 行に 1 つ並べる。分類の間は仕切り線で区切る。
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { BulkDeleteLauncher } from './JournalListPage';
 import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import { HOME_CHECKS, MENU_GROUPS, SETTINGS_GROUPS, displayName, settingsMenuName } from '../data';
 import { setSession, startKindOf, useSession } from '../store/session';
@@ -88,7 +89,7 @@ export function splitParen(name: string): [string, string] {
 /* ---------------- 全機能の一覧（分類ごと） ----------------
  *  分類ごとに、左に大きなアイコンと分類名、右にその分類の機能を文字のリンクで並べる。
  *  先頭の機能と重要度・高の機能（確認メモ #241）は大きな見出しの文字、重要度・中はやや大きい文字にする。 */
-export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, cols, stacked, wide, big, fav, tiles, links, cards, accent, nameOf }: { /** 分類ごとに独立したボックス（白い枠）にして、間に余白をとって並べる（仕切り線は使わない） */ cards?: boolean; /** 機能を枠なしのテキストリンクで 1 列に並べ、項目の間に点線を入れる（星は文字のすぐ右） */ links?: boolean; /** 機能を 2 列のタイル型のボタン（名前を中央、星をタイルの下）で並べる。fav と一緒に使う */ tiles?: boolean; /** アイコン・分類名・ボタンの文字を大きくする（ホームの 1 段目） */ big?: boolean; /** お気に入りの星（ボタンの枠の中。押すと登録・解除。登録済みは金の星、未登録は灰色の星。big と一緒に使うと 2 列のタイルにして星を下に常に出す） */ fav?: boolean; groups: Group[]; onNavigate: (label: string) => void; accent: string; /** 検索中：Enter で開く先頭の項目（強調表示） */ first?: string; /** 列の最小幅 */ minCol?: number; /** 列の数を固定するとき（既定は幅に合わせて自動） */ cols?: number; /** 分類のアイコンと名前を上に置き、機能のボタンをその下に横幅いっぱいで並べる（列が狭いとき。横幅いっぱいの分類も同じ見出しの形） */ stacked?: boolean; /** 横幅いっぱいに置く分類と、その機能を並べる列の数（項目の多い分類。例 減価償却の帳票） */ wide?: Record<string, number>; /** ボタンに出す名前（会計以外の画面で使うとき。既定は会計の表示名） */ nameOf?: (label: string) => string }) {
+export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, cols, stacked, wide, big, fav, tiles, links, cards, accent, nameOf, extras }: { /** 分類のカードの左下に置く小さな操作（例：日記帳・元帳の一括削除。確認メモ #261） */ extras?: Record<string, ReactNode>; /** 分類ごとに独立したボックス（白い枠）にして、間に余白をとって並べる（仕切り線は使わない） */ cards?: boolean; /** 機能を枠なしのテキストリンクで 1 列に並べ、項目の間に点線を入れる（星は文字のすぐ右） */ links?: boolean; /** 機能を 2 列のタイル型のボタン（名前を中央、星をタイルの下）で並べる。fav と一緒に使う */ tiles?: boolean; /** アイコン・分類名・ボタンの文字を大きくする（ホームの 1 段目） */ big?: boolean; /** お気に入りの星（ボタンの枠の中。押すと登録・解除。登録済みは金の星、未登録は灰色の星。big と一緒に使うと 2 列のタイルにして星を下に常に出す） */ fav?: boolean; groups: Group[]; onNavigate: (label: string) => void; accent: string; /** 検索中：Enter で開く先頭の項目（強調表示） */ first?: string; /** 列の最小幅 */ minCol?: number; /** 列の数を固定するとき（既定は幅に合わせて自動） */ cols?: number; /** 分類のアイコンと名前を上に置き、機能のボタンをその下に横幅いっぱいで並べる（列が狭いとき。横幅いっぱいの分類も同じ見出しの形） */ stacked?: boolean; /** 横幅いっぱいに置く分類と、その機能を並べる列の数（項目の多い分類。例 減価償却の帳票） */ wide?: Record<string, number>; /** ボタンに出す名前（会計以外の画面で使うとき。既定は会計の表示名） */ nameOf?: (label: string) => string }) {
   const session = useSession();
   const kind = startKindOf(session);
   const favs = session.favorites;
@@ -128,6 +129,7 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
                 <div data-group-title style={{ fontSize: top ? (big ? 17 : 15) : big ? 16 : 13, fontWeight: 800, color: ink, lineHeight: 1.35, whiteSpace: 'nowrap' }}>
                   {l2 ? <><span style={{ display: 'block', fontSize: 11, fontWeight: 700, color: ink, opacity: 0.7 }}>{l1}</span>{l2}</> : l1}
                 </div>
+                {extras?.[g.key] && <div data-group-extra style={{ marginTop: 'auto', alignSelf: 'flex-start', paddingTop: 8 }}>{extras[g.key]}</div>}
               </div>
               {/* 機能はすべて同じ形のボタンで、1 行に 1 つ（横幅いっぱいの分類は、指定の列の数で並べる） */}
               <div style={wideCols || tile ? { display: 'grid', gridTemplateColumns: `repeat(${wideCols || 2}, minmax(0, 1fr))`, gap: tile ? 8 : 6, minWidth: 0 } : fill ? { display: 'grid', gridAutoRows: '1fr', gap: link ? 0 : 6, minWidth: 0 } : { display: 'flex', flexDirection: 'column', gap: link ? 0 : 6, minWidth: 0 }}>
@@ -222,7 +224,7 @@ export function FinderPanel({ accent, onNavigate, onSearch }: { accent: string; 
       <section data-finder-search data-finder-panel style={{ ['--finder-accent' as string]: accent } as CSSProperties}>
       {/* 1 段目：伝票入力・日記帳・元帳・帳票・印刷（大きく）／2・3 段目：ほかの 8 分類（2 段×4 列） */}
       <div style={{ display: 'grid', gap: 14 }}>
-        {top.length > 0 && <FunctionDirectory groups={top} onNavigate={onNavigate} accent={accent} cols={3} big links fav cards />}
+        {top.length > 0 && <FunctionDirectory groups={top} onNavigate={onNavigate} accent={accent} cols={3} big links fav cards extras={{ ledger: <BulkDeleteLauncher /> }} />}
         {(rest.length > 0 || top.length === 0) && <FunctionDirectory groups={rest} onNavigate={onNavigate} accent={accent} cols={4} links fav cards />}
       </div>
       </section>

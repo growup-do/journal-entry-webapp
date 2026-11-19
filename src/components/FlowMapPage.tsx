@@ -69,7 +69,7 @@ const NODES: Node[] = [
   N('period', '集計期間の指定', 'dialog', 'ledger', { open: '仕訳一覧', note: '日付の範囲（カレンダーつき）。月の範囲は月タブのドラッグ／Shift＋クリック。元帳・試算表・出納帳・収入支出調書も同じ' }),
   N('vedit', '伝票の訂正', 'modal', 'ledger', { open: '仕訳一覧', note: '同一伝票の全行を同時編集' }),
   N('vdelete', '削除の確認', 'dialog', 'ledger', { open: '仕訳一覧' }),
-  N('bulkdel', 'インポート伝票／自動按分伝票の一括削除', 'dialog', 'ledger', { open: '仕訳一覧', note: '取込・按分の単位ごとに年度内の全件' }),
+  N('bulkdel', 'インポート伝票／自動按分伝票の一括削除', 'dialog', 'ledger', { open: 'ホーム', note: 'ホームの「日記帳・元帳」カードの左下から。取込・按分の単位ごとに年度内の全件' }),
   N('ledger1', '元帳１／元帳２（参照）', 'page', 'ledger', { open: '元帳１' }),
   N('ledgerpanel', '元帳パネル（右側）', 'panel', 'ledger', { open: '月次試算', note: '試算表・決算書・予算対比表・推移表の行から。画面遷移しない' }),
   N('balcheck', '残高照合', 'page', 'ledger', { open: '残高照合', note: '月を切り替えて照合' }),
@@ -163,7 +163,7 @@ const E = (from: string, to: string, label?: string, weak = false): Edge => ({ f
 const EDGES: Edge[] = [
   E('journal', 'period', '期間を指定', true), E('ledger', 'period', '期間を指定', true),
   E('favmenu', 'favedit', 'お気に入りメニューを編集', true), E('favmenu', 'home', '登録した画面を開く', true),
-  E('journal', 'bulkdel', '一括削除 ▾', true), E('bulkdel', 'vdelete', '削除確認へ', true), E('closing', 's-carry', '繰越判断', true),
+  E('home', 'bulkdel', '一括削除（日記帳・元帳カード）', true), E('bulkdel', 'vdelete', '削除確認へ', true), E('vdelete', 'bulkdel', '削除しないで戻る'), E('closing', 's-carry', '繰越判断', true),
   E('login', 'pwreset', 'お忘れですか', true), E('login', 'division', 'ログイン'), E('division', 'merge', '合算追加', true), E('division', 'divinfo', '部門情報の変更', true), E('division', 'yearconfirm', '年度を変えて OK'), E('yearconfirm', 'continuity', '年度を切り替える'), E('division', 'continuity', '起動時の OK', true),
   E('division', 'home', 'OK（初期画面：ホーム）'), E('login', 'home', 'ログイン（区分選択を1か月表示しない設定のとき）', true), E('division', 'e-voucher', 'OK（初期画面：伝票入力）', true),
   E('home', 's-update', '年度更新の案内'), E('home', 'support', 'FAQ すべて見る', true), E('home', 'e-voucher', '伝票入力をはじめる'), E('usersettings', 'pwmail', 'パスワードを変更', true),
