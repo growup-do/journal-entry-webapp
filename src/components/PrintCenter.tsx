@@ -79,7 +79,7 @@ export function ScopeBadge({ kind, label }: { kind: ScopeKind; label?: string })
   return <span title={c.hint} style={{ display: 'inline-block', fontSize: 12, fontWeight: 800, padding: '2px 8px', borderRadius: 8, background: c.bg, color: c.fg, border: '1px solid ' + c.bd, whiteSpace: 'nowrap', lineHeight: 1.5 }}>{label ?? kind}</span>;
 }
 /** 影響範囲ごとのまとまり（見出しにバッジと説明を付けた枠） */
-export function ScopeBlock({ kind, title, desc, right, children, toggle }: { kind?: ScopeKind; title: string; desc?: ReactNode; right?: ReactNode; children: ReactNode; /** アコーディオン：見出し全体を押すと開閉。右端に「変更する ▾／閉じる ▴」を出す */ toggle?: { open: boolean; onToggle: () => void; openLabel?: string; closeLabel?: string } }) {
+export function ScopeBlock({ kind, title, desc, right, children, toggle, descBelow }: { kind?: ScopeKind; title: string; desc?: ReactNode; right?: ReactNode; /** 説明文を見出しの下の行に置き、right を見出しと同じ行の右端に出す */ descBelow?: boolean; children: ReactNode; /** アコーディオン：見出し全体を押すと開閉。右端に「変更する ▾／閉じる ▴」を出す */ toggle?: { open: boolean; onToggle: () => void; openLabel?: string; closeLabel?: string } }) {
   const c = kind ? SCOPE_STYLE[kind] : { bg: '#f3f6f9', bd: '#dde4ea' };
   const fg = kind ? SCOPE_STYLE[kind].fg : '#3d4a56';
   const head = (
@@ -87,7 +87,7 @@ export function ScopeBlock({ kind, title, desc, right, children, toggle }: { kin
       {toggle && <span aria-hidden style={{ flex: 'none', width: 18, height: 18, borderRadius: 5, background: '#fff', border: '1px solid ' + c.bd, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: fg, transition: 'transform .18s', transform: toggle.open ? 'rotate(90deg)' : 'none' }}>▶</span>}
       {kind && <ScopeBadge kind={kind} />}
       <b style={{ fontSize: 14 }}>{title}</b>
-      {desc && <span style={{ fontSize: 12, color: '#5b6773' }}>{desc}</span>}
+      {desc && <span style={{ fontSize: 12, color: '#5b6773', ...(descBelow ? { order: 2, flexBasis: '100%' } : {}) }}>{desc}</span>}
       {(right || toggle) && (
         <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
           {right}
@@ -362,7 +362,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
               </ScopeBlock>
             )}
 
-            <ScopeBlock title="動作環境から引き継ぐ設定" desc="画面表示と印刷の両方に関わるため動作環境に残した設定です（ここでは確認のみ。区分ごと／全区分共通の別を表示）。">
+            <ScopeBlock title="動作環境から引き継ぐ設定" descBelow right={<button type="button" data-open-env onClick={(e) => { e.stopPropagation(); goScreen('環境設定'); }} style={btn('#5b6773', false, true)}>{displayName('環境設定')}を開く</button>} desc="画面表示と印刷の両方に関わるため動作環境に残した設定です（ここでは確認のみ。区分ごと／全区分共通の別を表示）。">
               <EnvPrintSummary env={s.env} division={s.division} />
             </ScopeBlock>
         </>}
@@ -408,10 +408,6 @@ export function EnvPrintSummary({ env, division }: { env: EnvSettings; division:
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <tbody>{rows.map(([k, v, scope]) => <tr key={k}><td style={{ ...TD, width: 176, fontSize: 14, fontWeight: 700, color: '#5b6773', padding: '6px 8px' }}>{k}</td><td style={{ ...TD, fontSize: 14, padding: '6px 8px' }}>{v}</td><td style={{ ...TD, width: 190, padding: '6px 8px', textAlign: 'right' }}><ScopeBadge kind={scope} label={scope === '区分ごと' ? `区分ごと（${division}）` : undefined} /></td></tr>)}</tbody>
       </table>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 260, fontSize: 12, color: '#8290a0', lineHeight: 1.7 }}>変更は「各種設定 ＞ {displayName('環境設定')}」で行います。「全区分共通」はすべての区分の印刷に、「区分ごと」は起動中の区分の印刷だけに反映されます。</div>
-        <button type="button" data-open-env onClick={(e) => { e.stopPropagation(); goScreen('環境設定'); }} style={btn('#5b6773', false, true)}>{displayName('環境設定')}を開く</button>
-      </div>
     </div>
   );
 }
