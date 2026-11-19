@@ -107,6 +107,10 @@ export interface PrintCommon {
   depth: string; lineGap: string; gapSize: string; perPage: number; twoLineNames: boolean; autoFontHeader: boolean;
   items: Record<string, boolean>; offsetX: number; offsetY: number;
   widthName: number; widthAmount: number; fontHeader: string; fontName: string; fontAmount: string;
+  /** 共通の印刷書式設定（現行）：ヘッダー項目名・備考のフォント */
+  fontHeaderItem: string; fontRemark: string;
+  /** 内訳書の共通の印刷書式（現行【内訳書 - 共通の印刷書式設定】） */
+  inner: InnerFormat;
   stamps: string[]; footnotes: Record<string, string>;
   /** ページ番号の開始番号 */
   pageStart: number;
@@ -115,6 +119,9 @@ export interface PrintCommon {
   /** 帳票選択（旧 動作環境パネル「帳票選択」。確認メモ #49）：決算書・準決算書で使う様式。区分階層により省略できる様式は false にできる */
   forms: Record<string, boolean>;
 }
+/** 内訳書の共通の印刷書式（現行マニュアル 7.1.2） */
+export interface InnerFormat { paper: 'A4' | 'A3'; orient: '縦' | '横'; fontHeader: string; fontHeaderItem: string; fontName: string; fontAmount: string; widthName: number; widthAmount: number; deptEveryPage: boolean }
+export const DEFAULT_INNER_FORMAT: InnerFormat = { paper: 'A4', orient: '横', fontHeader: 'Noto Sans JP 11pt', fontHeaderItem: 'Noto Sans JP 9pt', fontName: 'Noto Sans JP 9pt', fontAmount: 'Noto Sans JP 9pt', widthName: 50, widthAmount: 24, deptEveryPage: true };
 export const PRINT_ITEMS: [string, string][] = [
   ['zero', '0データを印刷しない'], ['shade', '費目行を網掛け、太字にする'], ['bold', '費目下を太線にする'], ['stamp', '捺印欄を印刷する'], ['corp', '法人名を印刷する'],
   ['hline', '項目・科目毎に横線を印刷する'], ['note', '（注）予備費の充当額等を印刷する'], ['autofont', '科目名のフォントサイズを自動調整する'], ['page', 'ページ番号を印刷する'], ['date', '印刷時の日付を印刷する'],
@@ -124,6 +131,7 @@ export const DEFAULT_PRINT: PrintCommon = {
   depth: '細々区分まで印刷', lineGap: '上・下空き', gapSize: '2mm', perPage: 6, twoLineNames: false, autoFontHeader: true,
   items: Object.fromEntries(PRINT_ITEMS.map(([k]) => [k, ['zero', 'shade', 'corp', 'autofont', 'page', 'date'].includes(k)])),
   offsetX: 0, offsetY: 0, widthName: 60, widthAmount: 28, fontHeader: 'Noto Sans JP 11pt', fontName: 'Noto Sans JP 9pt', fontAmount: 'Noto Sans JP 9pt',
+  fontHeaderItem: 'Noto Sans JP 9pt', fontRemark: 'Noto Sans JP 9pt', inner: DEFAULT_INNER_FORMAT,
   stamps: ['理事長', '園長', '事務長', ''], footnotes: {},
   pageStart: 1, unitRemarks: {}, forms: {},
 };

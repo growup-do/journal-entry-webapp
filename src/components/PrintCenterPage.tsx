@@ -58,7 +58,7 @@ export function PrintCenterPage({ variant, accent, onNavigate, initialCat }: { v
         {CATS.map((c) => {
           const on = c === cat;
           return (
-            <button key={c} type="button" role="tab" aria-selected={on} className="print-cat-tab" data-print-cat={c} onClick={() => setCat(c)} style={{ flex: 'none', position: 'relative', padding: on ? '9px 14px 10px' : '7px 12px 7px', border: '1px solid ' + (on ? '#cfd8e0' : '#e2e8ee'), borderBottom: 'none', borderRadius: '8px 8px 0 0', background: on ? '#fff' : '#e8ecf0', color: on ? accent : '#7d8995', boxShadow: on ? `inset 0 3px 0 ${accent}` : 'none', fontSize: 14, fontWeight: on ? 800 : 600, fontFamily: 'inherit', cursor: on ? 'default' : 'pointer', whiteSpace: 'nowrap', marginBottom: -1, zIndex: on ? 1 : 0 }}>
+            <button key={c} type="button" role="tab" aria-selected={on} className="print-cat-tab" data-print-cat={c} onClick={() => setCat(c)} style={{ flex: 'none', position: 'relative', padding: on ? '9px 14px 10px' : '7px 12px 7px', borderStyle: 'solid', borderWidth: '1px 1px 0', borderColor: on ? '#cfd8e0' : '#e2e8ee', borderRadius: '8px 8px 0 0', background: on ? '#fff' : '#e8ecf0', color: on ? accent : '#7d8995', boxShadow: on ? `inset 0 3px 0 ${accent}` : 'none', fontSize: 14, fontWeight: on ? 800 : 600, fontFamily: 'inherit', cursor: on ? 'default' : 'pointer', whiteSpace: 'nowrap', marginBottom: -1, zIndex: on ? 1 : 0 }}>
               {c}
             </button>
           );
