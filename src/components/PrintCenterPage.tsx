@@ -54,12 +54,13 @@ export function PrintCenterPage({ variant, accent, onNavigate, initialCat }: { v
     </>}>
       <ToastView msg={toast.msg} />
       {/* 中区分 */}
-      <div role="tablist" aria-label="帳票の分類" data-print-cats style={{ display: 'flex', gap: 4, flexWrap: 'wrap', padding: '10px 16px', borderBottom: '1px solid #eef2f5', background: '#fafbfc' }}>
+      {/* 中区分はタブ（画面内の他のタブと同じ下線式）。幅が足りないときは横にスクロール */}
+      <div role="tablist" aria-label="帳票の分類" data-print-cats style={{ display: 'flex', gap: 0, padding: '0 8px', borderBottom: '1px solid #e2e8ee', overflowX: 'auto', scrollbarWidth: 'thin' }}>
         {CATS.map((c) => {
           const on = c === cat;
           return (
-            <button key={c} type="button" role="tab" aria-selected={on} data-print-cat={c} onClick={() => setCat(c)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, border: '1px solid ' + (on ? accent : '#dde4ea'), background: on ? accent : '#fff', color: on ? '#fff' : '#22303c', fontSize: 14, fontWeight: on ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-              {c}<span style={{ fontSize: 12, opacity: 0.75, fontVariantNumeric: 'tabular-nums' }}>{countOf(c)}</span>
+            <button key={c} type="button" role="tab" aria-selected={on} className="tab" data-print-cat={c} onClick={() => setCat(c)} style={{ flex: 'none', display: 'inline-flex', alignItems: 'baseline', gap: 5, padding: '12px 10px 10px', border: 'none', borderBottom: '3px solid ' + (on ? accent : 'transparent'), background: 'transparent', color: on ? accent : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', marginBottom: -1 }}>
+              {c}<span style={{ fontSize: 12, fontWeight: 600, color: on ? accent : '#9aa5b1', fontVariantNumeric: 'tabular-nums' }}>{countOf(c)}</span>
             </button>
           );
         })}
@@ -69,12 +70,12 @@ export function PrintCenterPage({ variant, accent, onNavigate, initialCat }: { v
         <div style={{ display: 'grid', gridTemplateColumns: '300px minmax(0,1fr)', minHeight: 520, alignItems: 'start' }}>
           {/* 左：小区分の見出しと帳票 */}
           <nav aria-label={`${cat}の帳票`} data-print-list style={{ borderRight: '1px solid #eef2f5', padding: 10, maxHeight: 'calc(100vh - 230px)', overflow: 'auto', alignSelf: 'stretch' }}>
-            {subsOf(cat).map((g) => {
+            {subsOf(cat).filter((g) => list.some((r) => (r.sub ?? cat) === g)).map((g, gi) => {
               const items = list.filter((r) => (r.sub ?? cat) === g);
-              if (!items.length) return null;
+              // 小区分の間に区切り線を入れて、見出しのまとまりを分かりやすくする
               return (
-                <div key={g} data-print-sub={g} style={{ marginBottom: 10 }}>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: '#8290a0', padding: '6px 8px 4px' }}>{g}</div>
+                <div key={g} data-print-sub={g} style={{ borderTop: gi > 0 ? '1px solid #e2e8ee' : 'none', marginTop: gi > 0 ? 8 : 0, paddingTop: gi > 0 ? 8 : 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#8290a0', padding: '6px 8px 4px', letterSpacing: '0.04em' }}>{g}</div>
                   {items.map((r) => {
                     const on = r.id === cur?.id;
                     const fine = ok(r);
