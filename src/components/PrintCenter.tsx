@@ -742,9 +742,9 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
       {/* 脚注編集：帳票一覧 */}
       <Modal open={footList} onClose={() => setFootList(false)} width={620} title="脚注編集">
         <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 10 }}>
-          <div style={note}>帳票をダブルクリックすると、脚注を編集できます。</div>
+          <div style={note}>帳票をクリックすると、脚注を編集できます。</div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}><tbody>{FOOT_REPORTS.map((r) => (
-            <tr key={r} data-foot-report={r} onDoubleClick={() => { setFoot(r); setFootText(p.footnotes[r] ?? ''); }} style={{ cursor: 'pointer' }}>
+            <tr key={r} data-foot-report={r} className="row-hover" onClick={() => { setFoot(r); setFootText(p.footnotes[r] ?? ''); }}>
               <td style={{ ...TD, fontSize: 14 }}>{r}</td>
               <td style={{ ...TD, fontSize: 12, color: '#7a8794' }}>{p.footnotes[r] ? p.footnotes[r].slice(0, 24) + (p.footnotes[r].length > 24 ? '…' : '') : '（未設定）'}</td>
               <td style={{ ...TD, textAlign: 'right' }}><button type="button" onClick={() => { setFoot(r); setFootText(p.footnotes[r] ?? ''); }} style={btn('#5b6773', false, true)}>編集</button></td>

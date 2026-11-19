@@ -128,7 +128,7 @@ export function LedgerDrawer({ state, accent, onNavigate, disabled, disabledNote
         </div>
         <div style={{ flex: 'none', padding: '8px 16px', borderTop: '1px solid #eef2f5', background: '#fbfcfd', fontSize: 12, color: '#8290a0', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <span><b style={{ color: '#22303c' }}>{monthLabel}</b>　{lines.length} 件　{vendor ? '支払' : '増減'} <b style={{ color: total < 0 ? '#c0392b' : '#22303c', fontVariantNumeric: 'tabular-nums' }}>{total.toLocaleString('ja-JP')}</b></span>
-          <span style={{ marginLeft: 'auto' }}>別の行を押すと、その{vendor ? '取引先' : '科目'}に差し替わります。行をダブルクリック、または「{editable ? '訂正' : '表示'}」で伝票を開きます</span>
+          <span style={{ marginLeft: 'auto' }}>別の行を押すと、その{vendor ? '取引先' : '科目'}に差し替わります。行をクリック、または「{editable ? '訂正' : '表示'}」で伝票を開きます</span>
         </div>
       </aside>
       )}

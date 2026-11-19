@@ -8,6 +8,7 @@
 //   当期資金収支差額合計、前期末支払資金残高、当期末支払資金残高。集計行は緑、科目の行は白と薄い緑の縞。金額はサンプル。
 
 import { useState } from 'react';
+import { rowClick } from './ui';
 import type { CSSProperties, ReactNode } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { NUM, pct, ReportShell, Segmented, TD, TH, useMoney, useViewState } from './ReportShell';
@@ -108,7 +109,7 @@ export function BudgetComparePage({ variant, accent, onNavigate }: Props) {
       accent={accent}
       asideWidth={drawer.asideWidth}
       title={displayName(KEY)}
-      subtitle="現額予算と実績額を科目ごとに対比し、予算残高・達成率・構成比を表示します。表とグラフ（実績／達成率／構成比）を切り替えできます。表の科目の行の「元帳」ボタン（または行のダブルクリック）で、右側に資金元帳を表示します。"
+      subtitle="現額予算と実績額を科目ごとに対比し、予算残高・達成率・構成比を表示します。表とグラフ（実績／達成率／構成比）を切り替えできます。表の科目の行をクリック（または「元帳」ボタン）で、右側に資金元帳を表示します。"
       extraTools={<ScreenPrintMenu page="予算対比" accent={accent} />}
       tools={[{ label: '再計算' }]}
       period={
@@ -184,7 +185,7 @@ export function BudgetComparePage({ variant, accent, onNavigate }: Props) {
                   const bold = r.level === 0;
                   const on = r.leaf && picked(r.name);
                   return (
-                    <tr key={i} data-account={r.name} onDoubleClick={() => { if (r.leaf) openLedger(r.name); }} title={r.leaf ? 'ダブルクリックで資金元帳を開く' : undefined} data-picked={on || undefined} style={{ background: on ? '#dff0e6' : hit(r.name) ? '#fff8d6' : stripe ? STRIPE_BG : '#fff', boxShadow: on ? `inset 3px 0 0 ${accent}` : undefined, cursor: r.leaf ? 'pointer' : 'default' }}>
+                    <tr key={i} data-account={r.name} className={r.leaf ? 'row-hover' : undefined} onClick={rowClick(() => { if (r.leaf) openLedger(r.name); })} title={r.leaf ? 'クリックで資金元帳を開く' : undefined} data-picked={on || undefined} style={{ background: on ? '#dff0e6' : hit(r.name) ? '#fff8d6' : stripe ? STRIPE_BG : '#fff', boxShadow: on ? `inset 3px 0 0 ${accent}` : undefined, cursor: r.leaf ? 'pointer' : 'default' }}>
                       <td style={{ ...TD, paddingLeft: 12 + r.level * 18, fontWeight: bold || on ? 700 : 400, whiteSpace: 'nowrap' }}>
                         {r.name}
                         {r.leaf && <button type="button" className="btn-outline" data-action="元帳" onClick={(e) => { e.stopPropagation(); openLedger(r.name); }} style={linkBtn}>元帳 ›</button>}

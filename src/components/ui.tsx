@@ -110,3 +110,9 @@ export function Chevron({ open = false, color = '#9aa5b1', size = 12 }: { open?:
     </svg>
   );
 }
+
+/** 一覧の行をクリックで開く（確認メモ #271：ダブルクリックから変更）。文字を選択しただけのときは開かない */
+export const rowClick = (fn: () => void) => () => {
+  if (String(window.getSelection?.() ?? '').trim()) return;
+  fn();
+};

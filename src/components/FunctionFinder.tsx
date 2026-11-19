@@ -193,6 +193,8 @@ export function FinderPanel({ accent, onNavigate, onSearch }: { accent: string; 
       <div data-home-head style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '0 4px' }}>
         <h1 style={{ margin: 0, fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 21, color: '#1c2a36' }}>ホーム</h1>
         <span style={{ fontSize: 14, color: '#5b6875' }}>{s.fiscalYear}　{s.division}</span>
+        {/* お気に入りの登録方法（小さく添える） */}
+        <span data-fav-hint title="未登録の機能の★は、マウスを載せると表示されます。もう一度押すとお気に入りから外れます" style={{ fontSize: 12, color: '#7a8794', whiteSpace: 'nowrap' }}><span aria-hidden style={{ color: '#d9a520', fontSize: 14 }}>★</span> を押すと、左のメニューの「お気に入りメニュー」に追加されます</span>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span aria-hidden style={{ flex: 'none', width: 26, height: 26, borderRadius: '50%', background: accent, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>

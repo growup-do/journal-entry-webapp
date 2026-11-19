@@ -13,7 +13,7 @@ import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { LABEL, NUM, ReportShell, SwitchPill, TD, TH, useMoney } from './ReportShell';
 import { TargetCombo } from './TargetCombo';
-import { ACTION_HEAD, ACTION_TH, useRowActions } from './RowActions';
+import { ACTION_HEAD, ACTION_TH, InternalTag, useRowActions } from './RowActions';
 import { ToastView, useToast } from './Toast';
 import { AdvancedSearchModal, DeleteVoucherModal, EMPTY_COND, applyCond, condActive, type SearchCond } from './VoucherEdit';
 import { Chevron, Notice, SelectionBar, btn } from './ui';
@@ -101,7 +101,9 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
   /** 一括削除（インポート伝票／自動按分伝票）：年度内の全件から取込・按分の実行単位を選び、通常の削除確認に渡す */
   const [bulkSrc, setBulkSrc] = useState<NonNullable<Voucher['source']> | null>(null);
   const bulkPick = (src: NonNullable<Voucher['source']>) => { setBulkOpen(false); setBulkSrc(src); };
-  const bulkConfirm = (ids: number[]) => { setBulkSrc(null); setSel(ids); setDelOpen(true); };
+  /** 一括削除の選択画面から削除の確認へ進んだとき：「削除しないで戻る」で選択画面へ戻す（確認メモ #262） */
+  const [bulkBack, setBulkBack] = useState<{ src: NonNullable<Voucher['source']>; ids: number[] } | null>(null);
+  const bulkConfirm = (ids: number[]) => { if (bulkSrc) setBulkBack({ src: bulkSrc, ids }); setBulkSrc(null); setSel(ids); setDelOpen(true); };
   const colCount = 5 + (dt.nameOn ? 1 : 0) + 1 + (selectable ? 1 : 0);
 
   return (
@@ -109,7 +111,7 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
       variant={variant}
       accent={accent}
       title={title}
-      subtitle="指定月の仕訳を伝票順に一覧します。行の右端の「訂正」「削除」、または行のダブルクリックで伝票を訂正できます。証憑・チェック・付箋は行の右端で切り替えます。"
+      subtitle="指定月の仕訳を伝票順に一覧します。行をクリックすると伝票を訂正できます。証憑・チェック・付箋は行の右端で切り替えます。"
       returnTo={boot ? { from: boot.from, onBack: () => onNavigate(boot.from), here: `${boot.month}月${boot.day}日の伝票`, hint: '伝票を訂正したら戻り、「検査継続」で再検査します' } : null}
       tools={[
         { label: '検索条件', onClick: () => setSearchOpen(true), primary: true },
@@ -134,7 +136,7 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
         </span>
       }
       targetLabel="絞り込み"
-      listNote={<span>行の右端の「訂正」「削除」、または行のダブルクリックで伝票を訂正できます{selectable && '。行頭のチェックで複数行を選び、まとめて削除できます'}</span>}
+      listNote={<span>行をクリックすると伝票を訂正できます。行にマウスを載せると、表示順の入換（↑↓・左端のつまみをドラッグ）と削除のボタンが出ます{selectable && '。行頭のチェックで複数行を選び、まとめて削除できます'}</span>}
       target={
         <>
           <span style={LABEL}>指定科目</span>
@@ -155,10 +157,10 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
       notice={markNotice || ra.notice ? <>{markNotice}{ra.notice}</> : undefined}
     >
       <ToastView msg={toast.msg} />
-      <SelectionBar count={sel.length} unit="行" hint="Shift＋クリックで範囲、Ctrl／⌘＋クリックで追加・解除" onClear={() => setSel([])} actions={<button type="button" data-action="選択した行を削除" onClick={() => setDelOpen(true)} style={btn('#c0392b', true, true)}>選択した行を削除</button>} />
+      <SelectionBar count={sel.length} unit="行" hint="Shift＋クリックで範囲、Ctrl／⌘＋クリックで追加・解除" onClear={() => setSel([])} actions={<button type="button" data-action="選択した行を削除" onClick={() => { setBulkBack(null); setDelOpen(true); }} style={btn('#c0392b', true, true)}>選択した行を削除</button>} />
       <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 330px)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
+          <thead style={{ position: 'sticky', top: 0, zIndex: 2 }}>
             <tr>
               {selectable && <th style={{ ...TH, width: 34, textAlign: 'center' }}><input type="checkbox" aria-label="表示中の行をすべて選択" title="表示中の行をすべて選択" checked={rows.length > 0 && sel.length === rows.length} onChange={() => setSel(sel.length === rows.length ? [] : rows.map((r) => r.id))} /></th>}
               <th style={{ ...TH, width: 70 }}>Seq-No</th>
@@ -179,10 +181,10 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
               const marked = markIds.includes(r.id);
               const bar = marked ? { boxShadow: `inset 4px 0 0 ${MARK}` } : null;
               return (
-              <tr key={r.id} data-voucher={r.id} data-mismatch={marked || undefined} data-selected={sel.includes(r.id) || undefined} data-dark-row={sel.includes(r.id) || marked ? undefined : dt.rowDark(r)} onDoubleClick={() => ra.openEdit(r)} onClick={(e) => { if (selectable && (e.shiftKey || e.metaKey || e.ctrlKey)) { e.preventDefault(); toggleSel(r.id, idx, e.shiftKey); } }} title={ra.editable ? 'ダブルクリックで伝票を訂正' : undefined} style={{ cursor: ra.editable ? 'pointer' : 'default', background: sel.includes(r.id) ? '#fff7cc' : marked ? '#fdecea' : dt.rowBg(r) }}>
-                {selectable && <td style={{ ...TD, textAlign: 'center', ...bar }} onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}><input type="checkbox" checked={sel.includes(r.id)} onChange={() => undefined} onClick={(e) => toggleSel(r.id, idx, e.shiftKey)} aria-label={`Seq ${r.seq} を選択`} /></td>}
-                <td style={selectable ? TD : { ...TD, ...bar }}><div style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{dt.chip(r)}{r.seq}{marked && <span data-mismatch-tag title={`日次調査で不一致になった伝票${boot?.markNote ? `（${boot.markNote}）` : ''}`} style={{ marginLeft: 6, padding: '0 6px', borderRadius: 6, background: MARK, color: '#fff', fontSize: 12 }}>不一致</span>}</div></td>
-                <td style={TD}><div style={{ fontSize: 12, color: '#9aa5b1' }}>{r.kind}{r.source && <span data-source={r.source} title={r.source === '自動按分' ? `自動按分で登録した伝票（${r.from ?? ''}）` : `別システムから取り込んだ伝票（${r.from ?? ''}）`} data-keep-color style={{ marginLeft: 3, padding: '0 4px', borderRadius: 4, background: '#eef2f5', color: '#5b6773', fontWeight: 700 }}>{r.source === '自動按分' ? '按分' : r.source}</span>}</div><div>{r.date}</div></td>
+              <tr key={r.id} data-voucher={r.id} data-mismatch={marked || undefined} data-selected={sel.includes(r.id) || undefined} data-dark-row={sel.includes(r.id) || marked ? undefined : dt.rowDark(r)} {...ra.rowProps(r)} onClick={(e) => { if (selectable && (e.shiftKey || e.metaKey || e.ctrlKey)) { e.preventDefault(); toggleSel(r.id, idx, e.shiftKey); return; } ra.rowProps(r).onClick(e); }} style={{ background: sel.includes(r.id) ? '#fff7cc' : marked ? '#fdecea' : dt.rowBg(r) }}>
+                {selectable && <td style={{ ...TD, textAlign: 'center', ...bar }} onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={sel.includes(r.id)} onChange={() => undefined} onClick={(e) => toggleSel(r.id, idx, e.shiftKey)} aria-label={`Seq ${r.seq} を選択`} /></td>}
+                <td style={selectable ? TD : { ...TD, ...bar }}><div style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{ra.handle(r)}{dt.chip(r)}{r.seq}{marked && <span data-mismatch-tag title={`日次調査で不一致になった伝票${boot?.markNote ? `（${boot.markNote}）` : ''}`} style={{ marginLeft: 6, padding: '0 6px', borderRadius: 6, background: MARK, color: '#fff', fontSize: 12 }}>不一致</span>}</div></td>
+                <td style={TD}><div style={{ fontSize: 12, color: '#9aa5b1' }}>{r.kind}{r.source && <span data-source={r.source} title={r.source === '自動按分' ? `自動按分で登録した伝票（${r.from ?? ''}）` : `別システムから取り込んだ伝票（${r.from ?? ''}）`} data-keep-color style={{ marginLeft: 3, padding: '0 4px', borderRadius: 4, background: '#eef2f5', color: '#5b6773', fontWeight: 700 }}>{r.source === '自動按分' ? '按分' : r.source}</span>}</div><div style={{ whiteSpace: 'nowrap' }}>{r.date}<InternalTag v={r} /></div></td>
                 <td style={TD}>{r.no}</td>
                 {dt.nameOn && <td style={TD}>{dt.nameTag(r)}</td>}
                 <td style={TD}>
@@ -202,8 +204,8 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
         </table>
       </div>
       {ra.modals}
-      {bulkSrc && <BulkDeleteModal src={bulkSrc} all={all} onClose={() => setBulkSrc(null)} onConfirm={bulkConfirm} />}
-      {delOpen && <DeleteVoucherModal rows={all.filter((r) => sel.includes(r.id))} multi onClose={() => setDelOpen(false)} onDeleted={() => { toast.show(`${sel.length} 行の仕訳を削除しました`); setSel([]); }} />}
+      {bulkSrc && <BulkDeleteModal src={bulkSrc} all={all} initial={bulkBack?.src === bulkSrc ? bulkBack.ids : undefined} onClose={() => { setBulkSrc(null); setBulkBack(null); }} onConfirm={bulkConfirm} />}
+      {delOpen && <DeleteVoucherModal rows={all.filter((r) => sel.includes(r.id))} multi onClose={() => { setDelOpen(false); setBulkBack(null); }} onCancel={bulkBack ? () => { setDelOpen(false); setSel([]); setBulkSrc(bulkBack.src); } : undefined} onDeleted={() => { toast.show(`${sel.length} 行の仕訳を削除しました`); setSel([]); }} />}
       <AdvancedSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} cond={cond} onApply={setCond} accent={accent} />
       <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
       {dt.modal}
@@ -239,14 +241,14 @@ function BulkDeleteMenu({ open, onToggle, onPick }: { open: boolean; onToggle: (
 }
 
 /** 一括削除の対象を選ぶ：年度内のインポート伝票／自動按分伝票を、取込・按分の実行単位（既存の GUID）ごとに一覧し、選んだ単位の全件を削除確認へ渡す（確認メモ #56） */
-export function BulkDeleteModal({ src, all, onClose, onConfirm }: { src: NonNullable<Voucher['source']>; all: Voucher[]; onClose: () => void; onConfirm: (ids: number[]) => void }) {
+export function BulkDeleteModal({ src, all, onClose, onConfirm, initial }: { src: NonNullable<Voucher['source']>; all: Voucher[]; onClose: () => void; onConfirm: (ids: number[]) => void; /** 削除の確認から戻ったとき、選んでいた伝票（確認メモ #262） */ initial?: number[] }) {
   const money = useMoney();
   const groups = useMemo(() => {
     const map = new Map<string, Voucher[]>();
     all.filter((r) => r.source === src).forEach((r) => { const k = r.batch ?? 'none'; map.set(k, [...(map.get(k) ?? []), r]); });
     return Array.from(map.entries()).map(([batch, rows]) => ({ batch, rows, from: rows[0].from ?? src, first: rows[0].date, last: rows[rows.length - 1].date, total: rows.reduce((a, r) => a + r.amount, 0) }));
   }, [all, src]);
-  const [picked, setPicked] = useState<string[]>([]);
+  const [picked, setPicked] = useState<string[]>(() => (initial ? groups.filter((g) => g.rows.some((r) => initial.includes(r.id))).map((g) => g.batch) : []));
   const ids = groups.filter((g) => picked.includes(g.batch)).flatMap((g) => g.rows.map((r) => r.id));
   const th: CSSProperties = { ...TH, whiteSpace: 'nowrap' };
   return (

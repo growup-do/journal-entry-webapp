@@ -3,7 +3,7 @@
 //   当年／前年の切替と元帳１・２・残高照合は、以前はヘッダーにあったもの（ヘッダーからは外し、このパネルに集約）。
 //   画面の幅が 1600px 以上（1600×768 を想定）のときは、開くと左メニューを自動でたたみ、本文をパネルの幅だけ空けて重ならないようにする（確認メモ #243）。
 //   それより狭いときは本文の右に重ねて表示する（本文を押し出さない。11/10）。幅が狭いときは初期状態を折りたたみにする（3.3）。
-//   選んだ表示・開閉・元帳の科目は localStorage に覚える。行のダブルクリック、または「訂正」ボタンで伝票の訂正を開く。
+//   選んだ表示・開閉・元帳の科目は localStorage に覚える。行のクリック、または「訂正」ボタンで伝票の訂正を開く。
 
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { CSSProperties } from 'react';
@@ -11,7 +11,7 @@ import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { PrevYearJournal } from './PrevYearJournal';
 import { ComboField, EntryStyles, FieldLabel, scopeStyle } from './EntryCommon';
 import { EditVoucherModal } from './VoucherEdit';
-import { yen } from './ui';
+import { yen, rowClick } from './ui';
 import { BALANCE_ACCOUNTS } from '../data';
 import { metaOf } from '../lib/accounts';
 import { inPeriod, matchPeriod, type Period } from '../lib/period';
@@ -164,7 +164,7 @@ export function WidePanel({ accent, layout, state, top = 0, highlightIds, return
   });
   const isNew = (r: Voucher) => !!highlightIds?.includes(r.id);
   const editBtn = (r: Voucher) => (
-    <button type="button" className="ef-act" data-menu="参照パネル:訂正" onClick={() => setEdit(r)} title={editable ? 'この伝票を訂正（行のダブルクリックでも開きます）' : 'この伝票の内容を表示（参照のみ）'} style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid #cfd8e0', background: '#fff', color: '#2c5f9e', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>{editable ? '訂正' : '表示'}</button>
+    <button type="button" className="ef-act" data-menu="参照パネル:訂正" onClick={() => setEdit(r)} title={editable ? 'この伝票を訂正（行のクリックでも開きます）' : 'この伝票の内容を表示（参照のみ）'} style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid #cfd8e0', background: '#fff', color: '#2c5f9e', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>{editable ? '訂正' : '表示'}</button>
   );
   const flags = (r: Voucher) => (
     <span style={{ display: 'inline-flex', gap: 2, marginLeft: 4, verticalAlign: 'middle' }}>
@@ -251,7 +251,7 @@ export function WidePanel({ accent, layout, state, top = 0, highlightIds, return
             <tbody>
               {journal.length === 0 && <tr><td colSpan={5} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 30 }}>この月の仕訳はありません。</td></tr>}
               {journal.map((r) => (
-                <tr key={r.id} onDoubleClick={() => setEdit(r)} title="ダブルクリックで伝票を開きます" style={{ background: isNew(r) ? '#fff2c9' : 'transparent', animation: isNew(r) ? 'rowin 1.8s ease' : 'none', cursor: 'default' }}>
+                <tr key={r.id} className="row-hover" onClick={rowClick(() => setEdit(r))} title="クリックで伝票を開きます" style={{ background: isNew(r) ? '#fff2c9' : 'transparent', animation: isNew(r) ? 'rowin 1.8s ease' : 'none' }}>
                   <td style={{ ...TD, color: '#8895a3', fontSize: 12 }}>{r.date}</td>
                   <td style={TD}><div style={{ ...clip, fontWeight: 500 }}>{r.kari}</div><div style={{ ...clip, color: '#5b6773', fontSize: 12 }}>{r.kashi}</div></td>
                   <td style={TD}><div style={{ ...clip, color: '#7a8794', fontSize: 12 }}>{r.tekiyo}{flags(r)}</div><div style={{ ...clip, color: '#a3adb8', fontSize: 12 }}>No {r.no}{r.gyosha ? `　${r.gyosha}` : ''}</div></td>
@@ -274,7 +274,7 @@ export function WidePanel({ accent, layout, state, top = 0, highlightIds, return
       {(view === '日記帳' || slot > 0) && (
         <div style={{ flex: 'none', padding: '7px 14px', borderTop: '1px solid #eef2f5', background: '#fbfcfd', fontSize: 12, color: '#8290a0', display: 'flex', gap: 10 }}>
           <span>{view === '日記帳' ? journal.length : lines.length} 件</span>
-          <span style={{ marginLeft: 'auto' }}>行をダブルクリック、または「{editable ? '訂正' : '表示'}」で伝票を開きます</span>
+          <span style={{ marginLeft: 'auto' }}>行をクリック、または「{editable ? '訂正' : '表示'}」で伝票を開きます</span>
         </div>
       )}
     </>
@@ -351,14 +351,14 @@ export function LedgerTable({ account, month, range, editable, highlightIds, onE
         {!vendor && <tr style={{ background: '#f8fafc' }}><td style={TD} colSpan={4}><span style={{ color: '#7a8794', fontWeight: 700, fontSize: 12 }}>繰越金額</span></td><td style={{ ...NUM, fontWeight: 700 }}>{yen(carry)}</td><td style={TD} /></tr>}
         {lines.length === 0 && <tr><td colSpan={6} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 30 }}>この月の仕訳はありません。</td></tr>}
         {lines.map((l) => (
-          <tr key={l.r.id} onDoubleClick={() => onEdit(l.r)} title="ダブルクリックで伝票を開きます" style={{ background: isNew(l.r) ? '#fff2c9' : 'transparent' }}>
+          <tr key={l.r.id} className="row-hover" onClick={rowClick(() => onEdit(l.r))} title="クリックで伝票を開きます" style={{ background: isNew(l.r) ? '#fff2c9' : 'transparent' }}>
             <td style={{ ...TD, color: '#8895a3', fontSize: 12 }}>{l.r.date}</td>
             <td style={TD}><div style={{ ...clip, fontWeight: 500 }}>{l.other}</div><div style={{ ...clip, color: '#7a8794', fontSize: 12 }}>{l.r.tekiyo}{flags(l.r)}</div></td>
             <td style={NUM}>{l.d ? yen(l.d) : ''}</td>
             {!vendor && <td style={NUM}>{l.c ? yen(l.c) : ''}</td>}
             <td style={{ ...NUM, fontWeight: 700, color: l.bal < 0 ? '#c0392b' : '#22303c' }}>{yen(l.bal)}</td>
             <td style={{ ...TD, textAlign: 'right' }}>
-              <button type="button" className="ef-act" data-menu="参照パネル:訂正" onClick={() => onEdit(l.r)} title={editable ? 'この伝票を訂正（行のダブルクリックでも開きます）' : 'この伝票の内容を表示（参照のみ）'} style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid #cfd8e0', background: '#fff', color: '#2c5f9e', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>{editable ? '訂正' : '表示'}</button>
+              <button type="button" className="ef-act" data-menu="参照パネル:訂正" onClick={() => onEdit(l.r)} title={editable ? 'この伝票を訂正（行のクリックでも開きます）' : 'この伝票の内容を表示（参照のみ）'} style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid #cfd8e0', background: '#fff', color: '#2c5f9e', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>{editable ? '訂正' : '表示'}</button>
             </td>
           </tr>
         ))}

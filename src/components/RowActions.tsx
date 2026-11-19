@@ -1,14 +1,16 @@
 // 一覧行の操作（依頼書 5.4.4／6.4／6.5）— 日記帳・各元帳で同じ部品を使う
-//   行の右端に「証憑・チェック・付箋」「▲▼（同一日内の表示順入換）」「訂正」「削除」を常に表示する。
-//   削除は訂正から離して置き、確認ダイアログ（伝票の内容＋取り消せない旨）を経てから実行する。
-//   参照のみ権限には操作ボタンを出さず「表示」だけ。親区分・合算区分で起動して使えないときは無効表示＋理由のツールチップ。
+//   行をクリックすると伝票を訂正（参照のみ権限は表示）で開く。行にマウスを載せると色が変わる（確認メモ #271）。
+//   行の右端の「証憑・チェック・付箋」は常に表示。表示順の入換（↑↓とドラッグハンドル）と削除（ごみ箱）は、
+//   行にマウスを載せたときだけ表示する（確認メモ #267）。削除は確認ダイアログ（伝票の内容＋取り消せない旨）を経てから実行する。
+//   親区分・合算区分で起動して使えないときは無効表示＋理由のツールチップ。
 
 import { useState } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
+import type { CSSProperties, DragEvent, MouseEvent, ReactNode } from 'react';
 import { Modal } from './Modal';
 import { TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
 import { EditVoucherModal, FlagCell } from './VoucherEdit';
+import { needsPartner } from './EntryCommon';
 import { btn } from './ui';
 import { deleteVoucher, getVouchers, moveVoucher, type Voucher } from '../store/journalStore';
 import { canEdit, canReorder, editBlockReason, isViewOnly, startKindOf, useSession, type Session } from '../store/session';
@@ -21,7 +23,6 @@ export const reorderBlockReason = (s: Session) => (s.role !== '入力可' ? '参
 
 interface RowActionsProps {
   v: Voucher;
-  accent: string;
   /** 訂正・削除ができるか／できない理由 */
   editable: boolean;
   editReason: string;
@@ -32,28 +33,33 @@ interface RowActionsProps {
   canUp: boolean;
   canDown: boolean;
   onMove: (dir: -1 | 1) => void;
-  onEdit: () => void;
   onDelete: () => void;
 }
 
-const small = (color: string, disabled: boolean): CSSProperties => ({
-  padding: '4px 10px', borderRadius: 7, border: '1px solid ' + (disabled ? '#dde4ea' : color), background: '#fff', color: disabled ? '#b3bcc5' : color,
-  fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: disabled ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', pointerEvents: disabled ? 'none' : 'auto',
+const icon = (disabled: boolean, danger = false): CSSProperties => ({
+  width: 28, height: 28, padding: 0, borderRadius: 7, border: '1px solid ' + (disabled ? '#e6ecf1' : danger ? '#f2c9c2' : '#cfd8e0'), background: '#fff', color: disabled ? '#c8d0d8' : danger ? RED : '#48565f',
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit', cursor: disabled ? 'not-allowed' : 'pointer', pointerEvents: disabled ? 'none' : 'auto',
 });
-const arrow = (disabled: boolean): CSSProperties => ({
-  width: 24, height: 24, padding: 0, borderRadius: 6, border: '1px solid ' + (disabled ? '#e6ecf1' : '#cfd8e0'), background: disabled ? '#f8fafc' : '#fff', color: disabled ? '#c8d0d8' : '#5b6773',
-  fontSize: 12, fontWeight: 800, fontFamily: 'inherit', cursor: disabled ? 'not-allowed' : 'pointer', lineHeight: 1, pointerEvents: disabled ? 'none' : 'auto',
-});
+const svg = (d: ReactNode) => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{d}</svg>;
+const UP = svg(<path d="M12 19V5M5 12l7-7 7 7" />);
+const DOWN = svg(<path d="M12 5v14M5 12l7 7 7-7" />);
+const TRASH = svg(<><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" /><path d="M10 11v6M14 11v6" /></>);
+const GRIP = <svg width="12" height="18" viewBox="0 0 12 18" fill="currentColor" aria-hidden><circle cx="3" cy="3" r="1.6" /><circle cx="9" cy="3" r="1.6" /><circle cx="3" cy="9" r="1.6" /><circle cx="9" cy="9" r="1.6" /><circle cx="3" cy="15" r="1.6" /><circle cx="9" cy="15" r="1.6" /></svg>;
 
-/** 行の操作エリア（1行分） */
-export function RowActions({ v, accent, editable, editReason, reorderable, reorderReason, canUp, canDown, onMove, onEdit, onDelete }: RowActionsProps) {
+/** 内部取引の伝票の印（取引日の列に出す。確認メモ #268） */
+export const isInternalVoucher = (v: Voucher) => !!v.internal || !!v.internalSide || needsPartner({ kari: v.kari, kashi: v.kashi });
+export function InternalTag({ v }: { v: Voucher }) {
+  if (!isInternalVoucher(v)) return null;
+  return <span data-internal-tag title="内部取引の伝票です" data-keep-color style={{ display: 'inline-block', marginLeft: 5, padding: '0 5px', borderRadius: 5, background: '#efe7fa', color: '#6b3fb5', border: '1px solid #d6c4f0', fontSize: 12, fontWeight: 800, lineHeight: '18px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>内部</span>;
+}
+
+/** 行の操作エリア（1行分）。証憑・チェック・付箋は常に表示、↑↓とごみ箱は行にマウスを載せたときだけ */
+export function RowActions({ v, editable, editReason, reorderable, reorderReason, canUp, canDown, onMove, onDelete }: RowActionsProps) {
   const s = useSession();
   if (isViewOnly(s)) {
     return (
-      <div data-row-actions onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+      <div data-row-actions onClick={(e) => e.stopPropagation()} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
         <FlagCell v={v} compact />
-        <span style={{ width: 1, height: 18, background: '#e2e8ee', margin: '0 4px' }} />
-        <button type="button" data-action="表示" title="伝票の内容を表示します（参照のみ）" onClick={onEdit} style={small(accent, false)}>表示</button>
       </div>
     );
   }
@@ -61,22 +67,19 @@ export function RowActions({ v, accent, editable, editReason, reorderable, reord
   const downOff = !reorderable || !canDown;
   const moveTip = (ok: boolean, label: string) => (!reorderable ? reorderReason : ok ? label : '同一日の中でのみ入れ替えできます');
   return (
-    <div data-row-actions onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+    <div data-row-actions onClick={(e) => e.stopPropagation()} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
       <FlagCell v={v} compact />
-      <span style={{ width: 1, height: 18, background: '#e2e8ee', margin: '0 4px' }} />
-      <span title={moveTip(canUp, '表示順を1つ上へ（同一日内）')} style={{ display: 'inline-flex', cursor: upOff ? 'not-allowed' : undefined }}>
-        <button type="button" aria-label="表示順を上へ" aria-disabled={upOff} tabIndex={upOff ? -1 : 0} onClick={() => onMove(-1)} style={arrow(upOff)}>▲</button>
-      </span>
-      <span title={moveTip(canDown, '表示順を1つ下へ（同一日内）')} style={{ display: 'inline-flex', cursor: downOff ? 'not-allowed' : undefined }}>
-        <button type="button" aria-label="表示順を下へ" aria-disabled={downOff} tabIndex={downOff ? -1 : 0} onClick={() => onMove(1)} style={arrow(downOff)}>▼</button>
-      </span>
-      <span style={{ width: 1, height: 18, background: '#e2e8ee', margin: '0 4px' }} />
-      <span title={editable ? '伝票を訂正する' : editReason} style={{ display: 'inline-flex', cursor: editable ? undefined : 'not-allowed' }}>
-        <button type="button" data-action="訂正" aria-disabled={!editable} tabIndex={editable ? 0 : -1} onClick={onEdit} style={small(accent, !editable)}>訂正</button>
-      </span>
-      {/* 削除は誤操作を避けるため、訂正から間隔を空けて置く */}
-      <span title={editable ? '伝票を削除する（確認があります）' : editReason} style={{ display: 'inline-flex', marginLeft: 16, cursor: editable ? undefined : 'not-allowed' }}>
-        <button type="button" data-action="削除" aria-disabled={!editable} tabIndex={editable ? 0 : -1} onClick={onDelete} style={small(RED, !editable)}>削除</button>
+      <span className="ra-hover" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: 10 }}>
+        <span title={moveTip(canUp, '表示順を1つ上へ（同一日内）')} style={{ display: 'inline-flex', cursor: upOff ? 'not-allowed' : undefined }}>
+          <button type="button" aria-label="表示順を上へ" aria-disabled={upOff} tabIndex={upOff ? -1 : 0} onClick={() => onMove(-1)} style={icon(upOff)}>{UP}</button>
+        </span>
+        <span title={moveTip(canDown, '表示順を1つ下へ（同一日内）')} style={{ display: 'inline-flex', cursor: downOff ? 'not-allowed' : undefined }}>
+          <button type="button" aria-label="表示順を下へ" aria-disabled={downOff} tabIndex={downOff ? -1 : 0} onClick={() => onMove(1)} style={icon(downOff)}>{DOWN}</button>
+        </span>
+        {/* 削除は誤操作を避けるため、入換から間隔を空けて置く */}
+        <span title={editable ? '伝票を削除する（確認があります）' : editReason} style={{ display: 'inline-flex', marginLeft: 14, cursor: editable ? undefined : 'not-allowed' }}>
+          <button type="button" data-action="削除" aria-label="伝票を削除" aria-disabled={!editable} tabIndex={editable ? 0 : -1} onClick={onDelete} style={icon(!editable, true)}>{TRASH}</button>
+        </span>
       </span>
     </div>
   );
@@ -159,8 +162,72 @@ export function useRowActions({ rows, accent, returnTo }: { /** 画面に表示�
   const openDelete = (v: Voucher) => { if (editable) setDel(v); };
 
   const cell = (v: Voucher) => (
-    <RowActions v={v} accent={accent} editable={editable} editReason={editReason} reorderable={reorderable} reorderReason={reorderReason} canUp={!!neighbor(v, -1)} canDown={!!neighbor(v, 1)} onMove={(d) => move(v, d)} onEdit={() => openEdit(v)} onDelete={() => openDelete(v)} />
+    <RowActions v={v} editable={editable} editReason={editReason} reorderable={reorderable} reorderReason={reorderReason} canUp={!!neighbor(v, -1)} canDown={!!neighbor(v, 1)} onMove={(d) => move(v, d)} onDelete={() => openDelete(v)} />
   );
+
+  /* ---- ドラッグで表示順を入れ替える（同じ日の中。確認メモ #267） ---- */
+  const [dragId, setDragId] = useState<number | null>(null);
+  const [over, setOver] = useState<{ id: number; pos: 'before' | 'after' } | null>(null);
+  const endDrag = () => { setDragId(null); setOver(null); };
+  /** v を target の位置へ（下へ動かすときは target の下、上へ動かすときは target の上） */
+  const moveTo = (v: Voucher, target: Voucher) => {
+    const all = getVouchers();
+    const a = all.findIndex((r) => r.id === v.id), b = all.findIndex((r) => r.id === target.id);
+    if (a < 0 || b < 0 || a === b) return;
+    const dir = b > a ? 1 : -1;
+    for (let k = 0; k < Math.abs(b - a); k++) if (!moveVoucher(v.id, dir)) break;
+  };
+  /** 行の左端に置くドラッグハンドル（行にマウスを載せたときだけ表示） */
+  const handle = (v: Voucher) => (isViewOnly(s) ? null : (
+    <span
+      className="ra-hover"
+      data-drag-handle
+      draggable={reorderable}
+      onClick={(e) => e.stopPropagation()}
+      onDragStart={(e: DragEvent<HTMLSpanElement>) => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(v.id));
+        const tr = e.currentTarget.closest('tr');
+        if (tr) e.dataTransfer.setDragImage(tr, 16, 16);
+        setDragId(v.id);
+      }}
+      onDragEnd={endDrag}
+      title={reorderable ? 'ドラッグして表示順を入れ替えます（同じ日の中）' : reorderReason}
+      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 14, height: 22, marginRight: 4, verticalAlign: 'middle', color: '#9aa5b1', cursor: reorderable ? 'grab' : 'not-allowed' }}
+    >
+      {GRIP}
+    </span>
+  ));
+  const clickable = editable || isViewOnly(s);
+  /** 一覧の行（tr）に付ける属性：ホバーの色・クリックで訂正・ドラッグの受け先 */
+  const rowProps = (v: Voucher) => ({
+    className: clickable ? 'row-hover ra-row' : 'ra-row',
+    'data-drop': over?.id === v.id ? over.pos : undefined,
+    'data-dragging': dragId === v.id || undefined,
+    title: editable ? 'クリックで伝票を訂正' : isViewOnly(s) ? 'クリックで伝票の内容を表示' : undefined,
+    onClick: (e: MouseEvent<HTMLTableRowElement>) => {
+      if (e.shiftKey || e.metaKey || e.ctrlKey) return;
+      // 文字を選択しただけのときは開かない
+      if (String(window.getSelection?.() ?? '').trim()) return;
+      if (clickable) openEdit(v);
+    },
+    onDragOver: (e: DragEvent<HTMLTableRowElement>) => {
+      if (dragId == null) return;
+      const d = rows.find((r) => r.id === dragId);
+      if (!d || d.id === v.id || d.date !== v.date) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const pos = rows.indexOf(d) < rows.indexOf(v) ? 'after' : 'before';
+      if (over?.id !== v.id || over.pos !== pos) setOver({ id: v.id, pos });
+    },
+    onDragLeave: () => { if (over?.id === v.id) setOver(null); },
+    onDrop: (e: DragEvent<HTMLTableRowElement>) => {
+      e.preventDefault();
+      const d = rows.find((r) => r.id === dragId);
+      if (d && d.date === v.date) moveTo(d, v);
+      endDrag();
+    },
+  });
 
   /** 一覧の上に出す1行の注意書き（使える操作がすべて有効なら null） */
   const notice: ReactNode = !editable || !reorderable ? (
@@ -168,7 +235,7 @@ export function useRowActions({ rows, accent, returnTo }: { /** 画面に表示�
       <span style={{ padding: '1px 8px', borderRadius: 6, background: '#fff', border: '1px solid #f3d9b0', fontWeight: 700, fontSize: 12 }}>{s.role !== '入力可' ? '参照のみ' : startKindOf(s)}</span>
       <span>
         {editReason || reorderReason}。
-        {isViewOnly(s) ? '行の「表示」で伝票の内容を確認できます。訂正・削除・表示順の入換のボタンは表示されません。' : !editable ? `「訂正」「削除」${!reorderable ? '「▲▼（表示順の入換）」' : ''}は使えません（無効表示）。` : '「▲▼（表示順の入換）」は使えません（無効表示）。'}
+        {isViewOnly(s) ? '行をクリックすると伝票の内容を表示します。削除・表示順の入換のボタンは表示されません。' : !editable ? `訂正・削除${!reorderable ? '・表示順の入換' : ''}は使えません（無効表示）。` : '表示順の入換は使えません（無効表示）。'}
       </span>
     </>
   ) : null;
@@ -181,9 +248,9 @@ export function useRowActions({ rows, accent, returnTo }: { /** 画面に表示�
     </>
   );
 
-  return { editable, reorderable, openEdit, openDelete, cell, notice, modals };
+  return { editable, reorderable, openEdit, openDelete, cell, handle, rowProps, notice, modals };
 }
 
 /** 操作列の見出し */
-export const ACTION_TH: CSSProperties = { ...TH, width: 300 };
-export const ACTION_HEAD = '証憑・チェック・付箋 ／ 入換 ／ 訂正・削除';
+export const ACTION_TH: CSSProperties = { ...TH, width: 230 };
+export const ACTION_HEAD = '証憑・チェック・付箋';

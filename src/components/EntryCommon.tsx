@@ -10,7 +10,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
 import { Modal } from './Modal';
 import { btn } from './ui';
-import { ACCOUNTS, SERVICES, SUMMARIES, VENDORS, displayName } from '../data';
+import { ACCOUNTS, JOURNAL_ROWS, SERVICES, SUMMARIES, VENDORS, displayName } from '../data';
 import { ACCOUNT_META, budgetSample, judgeTorihiki, metaOf, toKatakana } from '../lib/accounts';
 import { fusenLabel, type EnvSettings } from '../store/session';
 
@@ -761,7 +761,8 @@ export function FlagButtons({ shohyo, check, fusen, onChange, disabled, showShoh
 /* ------------------------------------------------------------------ */
 /* 内部取引相手区分の保持（プロトタイプ用。共有ストアに項目がないため、仕訳 id ごとに覚えておく） */
 /* ------------------------------------------------------------------ */
-const PARTNERS = new Map<number, string>();
+// サンプルの内部取引（本部経費の繰入）の相手区分。伝票の id は JOURNAL_ROWS の並び順＋1
+const PARTNERS = new Map<number, string>(JOURNAL_ROWS.flatMap((r, i): [number, string][] => (r.internal && r.aite ? [[i + 1, r.aite]] : [])));
 export const setPartner = (id: number, aite: string) => { if (aite) PARTNERS.set(id, aite); else PARTNERS.delete(id); };
 export const partnerOf = (id: number) => PARTNERS.get(id) ?? '';
 

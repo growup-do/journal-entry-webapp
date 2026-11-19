@@ -10,7 +10,7 @@ import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { TargetCombo } from './TargetCombo';
 import { Modal } from './Modal';
-import { btn } from './ui';
+import { btn, rowClick } from './ui';
 import { FISCAL_MONTHS } from './FiscalMonthTabs';
 import { LABEL, NUM, ReportShell, Segmented, TD, TH, useMoney, useViewState } from './ReportShell';
 import { seededSeries } from '../lib/hier';
@@ -120,7 +120,7 @@ export function TrendPage({ kind, variant, accent, onNavigate }: Props) {
       asideWidth={drawer.asideWidth}
       extraTools={isVendor ? <ScreenPrintMenu page="業者推移" accent={accent} /> : undefined}
       title={title}
-      subtitle={<>{isVendor ? '指定した取引先' : '指定した科目'}の月ごとの推移を年度で一覧します。行は「当初」（期首）から各月、「決算月」の順です。月の行の「元帳」ボタン（または行のダブルクリック）で、右側にその月の元帳を表示します。全画面で見たいときはパネルの「元帳の画面で開く」を使います。<span style={{ color: '#b7791f' }}>（表示中の値はサンプルです）</span></>}
+      subtitle={<>{isVendor ? '指定した取引先' : '指定した科目'}の月ごとの推移を年度で一覧します。行は「当初」（期首）から各月、「決算月」の順です。月の行をクリック（または「元帳」ボタン）で、右側にその月の元帳を表示します。全画面で見たいときはパネルの「元帳の画面で開く」を使います。<span style={{ color: '#b7791f' }}>（表示中の値はサンプルです）</span></>}
       tools={[{ label: isVendor ? '取引先検索' : '科目検索', onClick: () => document.getElementById('trend-target')?.focus() }, { label: 'グラフ作成', onClick: () => setGraphOpen(true), primary: true }]}
       period={
         <>
@@ -182,10 +182,10 @@ export function TrendPage({ kind, variant, accent, onNavigate }: Props) {
               const canOpen = r.kind !== 'opening' && !future && !isPrev && !!target;
               const current = !isPrev && r.m === '8';
               const isOpening = r.kind === 'opening';
-              const rowTitle = isOpening ? (isAcct ? '期首の残高（当初）' : '当初予算（年額）') : r.kind === 'closing' ? (future ? '決算整理の分。決算が確定すると表示されます' : '決算整理の分') : canOpen ? 'ダブルクリックでこの月の元帳を開く' : undefined;
+              const rowTitle = isOpening ? (isAcct ? '期首の残高（当初）' : '当初予算（年額）') : r.kind === 'closing' ? (future ? '決算整理の分。決算が確定すると表示されます' : '決算整理の分') : canOpen ? 'クリックでこの月の元帳を開く' : undefined;
               const isSel = picked(r.m);
               return (
-                <tr key={r.label} data-month={r.m ?? '当初'} data-row-kind={r.kind} onDoubleClick={() => { if (canOpen) openLedger(r.m); }} title={rowTitle} data-picked={isSel || undefined} style={{ background: isSel ? '#eaf5ef' : current ? '#fff8d6' : isOpening || r.kind === 'closing' ? '#f8fafc' : 'transparent', boxShadow: isSel ? `inset 3px 0 0 ${accent}` : undefined, cursor: canOpen ? 'pointer' : 'default', borderTop: r.kind === 'closing' ? '2px solid #e2e8ee' : undefined, borderBottom: isOpening ? '2px solid #e2e8ee' : undefined }}>
+                <tr key={r.label} data-month={r.m ?? '当初'} data-row-kind={r.kind} className={canOpen ? 'row-hover' : undefined} onClick={rowClick(() => { if (canOpen) openLedger(r.m); })} title={rowTitle} data-picked={isSel || undefined} style={{ background: isSel ? '#eaf5ef' : current ? '#fff8d6' : isOpening || r.kind === 'closing' ? '#f8fafc' : 'transparent', boxShadow: isSel ? `inset 3px 0 0 ${accent}` : undefined, cursor: canOpen ? 'pointer' : 'default', borderTop: r.kind === 'closing' ? '2px solid #e2e8ee' : undefined, borderBottom: isOpening ? '2px solid #e2e8ee' : undefined }}>
                   <td style={{ ...TD, fontWeight: 700, whiteSpace: 'nowrap', color: isOpening ? '#5b6773' : undefined }}>
                     {r.label}{current && <span style={{ marginLeft: 6, fontSize: 12, color: '#b7791f' }}>当月</span>}
                     {canOpen && <button type="button" className="btn-outline" data-action="元帳" onClick={(e) => { e.stopPropagation(); openLedger(r.m); }} style={{ marginLeft: 10, padding: '1px 8px', borderRadius: 6, border: '1px solid #dde4ea', background: '#fff', color: accent, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>元帳 ›</button>}

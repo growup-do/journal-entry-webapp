@@ -446,6 +446,12 @@ export function useEntryTools(o: EntryToolsOptions) {
   const [del, setDel] = useState<Voucher[] | null>(null);
   /** 一括削除から開いた削除確認か（行単位の案内にする） */
   const [bulk, setBulk] = useState(false);
+  /** 削除の確認をどの画面から開いたか（「削除しないで戻る」でその画面へ戻す。確認メモ #262） */
+  const [delFrom, setDelFrom] = useState<'削除' | '一括削除' | null>(null);
+  /** 伝票選択の一覧を開き直す番号。削除の確認から戻るときは変えず、絞り込みと選択位置を残す */
+  const [pickSeq, setPickSeq] = useState(0);
+  /** 一括削除の選択画面へ戻ったとき、選んでいた伝票 */
+  const [backIds, setBackIds] = useState<number[] | null>(null);
   const [leave, setLeave] = useState<string | null>(null);
   /** 登録の確認（確認メモ #153）。run＝確認後に実行する登録処理、back＝「入力に戻る」で戻すフォーカス */
   const [ask, setAsk] = useState<null | { run: () => void; back: HTMLElement | null }>(null);
@@ -548,7 +554,7 @@ export function useEntryTools(o: EntryToolsOptions) {
         {viewOnly && settingButtons}
       </ActionGroup>
       {!viewOnly && <ActionGroup caption="伝票の整理">
-        <ActButton label="インポート伝票一括削除" tone="danger" accent={o.accent} disabled={ro} title={why('インポートで取り込んだ伝票を、取込の単位ごとにまとめて削除します')} onClick={() => setDlg('一括削除')} />
+        <ActButton label="インポート伝票一括削除" tone="danger" accent={o.accent} disabled={ro} title={why('インポートで取り込んだ伝票を、取込の単位ごとにまとめて削除します')} onClick={() => { setBackIds(null); setDlg('一括削除'); }} />
       </ActionGroup>}
     </div>
   );
@@ -586,11 +592,11 @@ export function useEntryTools(o: EntryToolsOptions) {
       {dlg === '科目別残' && <AccountBalanceModal open onClose={() => setDlg(null)} accent={o.accent} entries={current} month={month} focus={[o.kari, o.kashi]} />}
       {dlg === '現預金残' && <CashBalanceModal open onClose={() => setDlg(null)} accent={o.accent} entries={current} month={month} focus={[o.kari, o.kashi]} />}
       {dlg === 'カレンダー' && <CalendarModal open extended onClose={() => setDlg(null)} accent={o.accent} entries={vouchers} month={calMonth} day={o.day} onPick={(m, d) => { if (withYear) { const k = entryDateOfKey(m); o.onPickDate(k.month, d, k.year); o.toast(`日付を ${entryDateText(k.month, d, k.year)} にしました`); } else { o.onPickDate(m, d); o.toast(`日付を ${entryDateText(m, d)} にしました`); } }} />}
-      <VoucherPickerModal key={dlg === '削除' ? 'd' : 'e'} open={dlg === '訂正' || dlg === '削除'} mode={dlg === '削除' ? '削除' : '訂正'} onClose={() => setDlg(null)} accent={o.accent} onPick={(g) => { if (dlg === '削除') { setBulk(false); setDel(g.rows); } else setEdit(g.head); setDlg(null); }} />
+      <VoucherPickerModal key={(dlg === '訂正' ? 'e' : 'd') + pickSeq} open={dlg === '訂正' || dlg === '削除'} mode={dlg === '削除' ? '削除' : '訂正'} onClose={() => { setDlg(null); setPickSeq((n) => n + 1); }} accent={o.accent} onPick={(g) => { if (dlg === '削除') { setBulk(false); setDel(g.rows); setDelFrom('削除'); } else { setEdit(g.head); setPickSeq((n) => n + 1); } setDlg(null); }} />
       <EditVoucherModal entry voucher={edit} onClose={() => setEdit(null)} accent={o.accent} returnTo={name} />
-      <DeleteVoucherModal entry multi={bulk} rows={del} onClose={() => setDel(null)} onDeleted={() => { o.onDeleted?.((del ?? []).map((r) => r.id)); o.toast(bulk ? `インポート伝票 ${(del ?? []).length} 行を削除しました` : '伝票を削除しました'); }} />
+      <DeleteVoucherModal entry multi={bulk} rows={del} onClose={() => { setDel(null); setDelFrom(null); setPickSeq((n) => n + 1); }} onCancel={delFrom ? () => { setBackIds(delFrom === '一括削除' ? (del ?? []).map((r) => r.id) : null); setDel(null); setDlg(delFrom); setDelFrom(null); } : undefined} onDeleted={() => { o.onDeleted?.((del ?? []).map((r) => r.id)); o.toast(bulk ? `インポート伝票 ${(del ?? []).length} 行を削除しました` : '伝票を削除しました'); }} />
       {/* インポート伝票の一括削除（確認メモ #159）。対象は、いま登録できる入力区分の伝票 */}
-      {dlg === '一括削除' && <BulkDeleteModal src="インポート" all={vouchers.filter((v) => mine.includes(v.service))} onClose={() => setDlg(null)} onConfirm={(ids) => { setDlg(null); setBulk(true); setDel(vouchers.filter((v) => ids.includes(v.id))); }} />}
+      {dlg === '一括削除' && <BulkDeleteModal src="インポート" initial={backIds ?? undefined} all={vouchers.filter((v) => mine.includes(v.service))} onClose={() => setDlg(null)} onConfirm={(ids) => { setDlg(null); setBulk(true); setDelFrom('一括削除'); setDel(vouchers.filter((v) => ids.includes(v.id))); }} />}
       {/* 登録の確認（確認メモ #153）。Enter でそのまま登録できるよう、初期フォーカスは「登録する」 */}
       <ConfirmModal open={!!ask} title="伝票登録の確認" okLabel="登録する" focusOk accent={o.accent} extra={<button type="button" className="ef-act" data-register-print onClick={registerAndPrint} title="登録したあと、その伝票の印刷プレビューを開きます" style={btn(o.accent)}>登録して印刷</button>} onClose={() => { const b = ask?.back; setAsk(null); window.setTimeout(() => b?.focus(), 0); }} onOk={() => { const r = ask?.run; setAsk(null); r?.(); }}>
         この内容で伝票を登録しますか？

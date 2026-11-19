@@ -69,6 +69,8 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
   const { memos, loaded, error, add, update, remove } = useMemos();
   const [panelOpen, setPanelOpen] = useState(false);
   const [placing, setPlacing] = useState(false);
+  /** ピンを置き直すメモ（古いメモの位置を、いまの画面の要素に結び付け直す） */
+  const [moving, setMoving] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [draftText, setDraftText] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
@@ -100,7 +102,7 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
   // Esc は「メモを置く」操作の中止だけ。入力中の下書きや開いているメモは閉じない（入力途中の内容を消さない）
   useEffect(() => {
     const h = (e: globalThis.KeyboardEvent) => {
-      if (e.key === 'Escape') setPlacing(false);
+      if (e.key === 'Escape') { setPlacing(false); setMoving(null); }
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
@@ -166,6 +168,8 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
     }
     setOpenId(m.id);
     if (!m.anchor) setTimeout(() => window.scrollTo({ top: Math.max(0, m.y - 220), behavior: 'smooth' }), 60);
+    // 画面の要素に結び付けたメモは、その要素の位置へスクロールする
+    else if (m.anchor.name === 'el') { const a = m.anchor; setTimeout(() => { const p = anchorPos(a); if (p) window.scrollTo({ top: Math.max(0, p.top - 220), behavior: 'smooth' }); }, 60); }
   };
 
   // 別の画面から番号を選んで来たとき：この画面になったら状態を再現して開く
@@ -192,14 +196,22 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
 
   const startPlacing = () => {
     setPlacing(true);
+    setMoving(null);
     setDraft(null);
     setOpenId(null);
     setPanelOpen(false);
   };
   const onPlaceClick = (e: MouseEvent<HTMLDivElement>) => {
     const x = (e.pageX / document.documentElement.scrollWidth) * 100;
-    // モーダル・パネルの中なら、その要素からの相対位置も覚える（オーバーレイを透かして下の要素を見る）
+    // クリックした位置の要素（モーダル・パネルの中ならその要素）からの相対位置を覚える。オーバーレイを透かして下の要素を見る
     const anchor = anchorAt(e.clientX, e.clientY, overlayRef.current);
+    if (moving) {
+      void update(moving, { x: Math.min(98, Math.max(2, x)), y: e.pageY, anchor: anchor ?? undefined, ctx: readCtx(), path: currentPath() });
+      setOpenId(moving);
+      setMoving(null);
+      setPlacing(false);
+      return;
+    }
     setDraft({ x: Math.min(98, Math.max(2, x)), y: e.pageY, anchor, ctx: readCtx(), path: currentPath() });
     setDraftText('');
     setPlacing(false);
@@ -322,6 +334,9 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
                     未解決に戻す
                   </button>
                 )}
+                <button type="button" data-memo-move onClick={() => { setMoving(openMemo.id); setOpenId(null); setDraft(null); setPanelOpen(false); setPlacing(true); }} title="ピンの位置を置き直します。置いた場所のボタンや表のセルに結び付くので、ウィンドウの大きさが変わっても位置がずれません" style={btn('#5b6773')}>
+                  位置を置き直す
+                </button>
                 <button type="button" onClick={() => del(openMemo)} style={{ ...btn('#c0392b'), marginLeft: 'auto' }}>
                   削除
                 </button>
@@ -375,7 +390,7 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
       {placing && (
         <div ref={overlayRef} data-memo-layer onClick={onPlaceClick} style={{ position: 'fixed', inset: 0, zIndex: 290, cursor: 'crosshair', background: 'rgba(217,119,6,.06)' }}>
           <div style={{ position: 'fixed', top: 14, left: '50%', transform: 'translateX(-50%)', background: '#22303c', color: '#fff', padding: '8px 16px', borderRadius: 10, fontSize: 14, fontWeight: 600, boxShadow: '0 6px 20px rgba(0,0,0,.25)' }}>
-            メモを貼りたい場所をクリック（Esc で中止）
+            {moving ? 'このメモを置き直す場所をクリック（Esc で中止）' : 'メモを貼りたい場所をクリック（Esc で中止）'}
           </div>
         </div>
       )}
@@ -435,7 +450,7 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
 
       {/* ツールバー（右下固定。フッターに被らないよう1段上に置く） */}
       <div data-memo-layer style={{ position: 'fixed', right: 18, bottom: 68, zIndex: 300, display: 'flex', gap: 8 }}>
-        <button type="button" onClick={placing ? () => setPlacing(false) : startPlacing} style={{ ...toolBtn, background: placing ? '#22303c' : '#fff', color: placing ? '#fff' : AMBER, border: `1px solid ${placing ? '#22303c' : '#f3d9b0'}` }}>
+        <button type="button" onClick={placing ? () => { setPlacing(false); setMoving(null); } : startPlacing} style={{ ...toolBtn, background: placing ? '#22303c' : '#fff', color: placing ? '#fff' : AMBER, border: `1px solid ${placing ? '#22303c' : '#f3d9b0'}` }}>
           {placing ? '配置を中止' : '＋ メモを置く'}
         </button>
         <button type="button" onClick={() => setPanelOpen((o) => !o)} style={{ ...toolBtn, background: panelOpen ? AMBER : '#fff', color: panelOpen ? '#fff' : '#22303c', border: `1px solid ${panelOpen ? AMBER : '#dde4ea'}` }}>

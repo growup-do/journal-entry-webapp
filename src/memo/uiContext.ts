@@ -20,9 +20,49 @@ export interface UiCtx {
 
 /** ピンを置いた要素（モーダル本体・固定パネル）と、その左上からの位置（CSS px） */
 export interface MemoAnchor {
+  /** data-memo-anchor の名前。'el' は、ピンを置いた画面の要素（ボタン・表のセルなど）に結び付けたもの */
   name: string;
   dx: number;
   dy: number;
+  /** name='el'：要素の場所（CSS セレクタ）と、その要素の文字・タグ。ウィンドウの大きさでレイアウトが変わっても同じ要素の上に出す */
+  sel?: string;
+  text?: string;
+  tag?: string;
+}
+
+/** ピンを結び付ける要素（クリックした位置にある、ボタン・入力欄・表のセルなどの意味のある単位） */
+const PIN_TARGET = 'button, a, input, select, textarea, label, [role="tab"], [role="radio"], [role="option"], [role="switch"], th, td, li, h1, h2, h3, h4, [data-memo-click]';
+
+/** 要素の場所を CSS セレクタで表す（id があればそこから。React の自動 id は使わない） */
+function cssPath(el: Element): string {
+  const parts: string[] = [];
+  let cur: Element | null = el;
+  while (cur && cur !== document.body && cur !== document.documentElement) {
+    if (cur.id && !cur.id.includes(':')) { parts.unshift('#' + CSS.escape(cur.id)); return parts.join(' > '); }
+    const p: Element | null = cur.parentElement;
+    if (!p) break;
+    parts.unshift(`${cur.tagName.toLowerCase()}:nth-child(${Array.from(p.children).indexOf(cur) + 1})`);
+    cur = p;
+  }
+  return 'body > ' + parts.join(' > ');
+}
+
+/** 'el' アンカーの要素。場所で見つけた要素の文字が変わっていれば、同じ文字の要素を探す（行の追加などで場所がずれたとき） */
+function elAnchor(a: MemoAnchor): HTMLElement | null {
+  let byPath: HTMLElement | null = null;
+  try { byPath = a.sel ? document.querySelector<HTMLElement>(a.sel) : null; } catch { byPath = null; }
+  if (byPath && !visible(byPath)) byPath = null;
+  if (byPath && (!a.text || txt(byPath) === a.text)) return byPath;
+  if (a.text) {
+    const same = Array.from(document.querySelectorAll<HTMLElement>(a.tag || '*')).filter((e) => !inMemoLayer(e) && visible(e) && txt(e) === a.text);
+    if (same.length) {
+      if (!byPath) return same[0];
+      const r0 = byPath.getBoundingClientRect();
+      const dist = (e: HTMLElement) => { const r = e.getBoundingClientRect(); return Math.hypot(r.left - r0.left, r.top - r0.top); };
+      return same.sort((x, y) => dist(x) - dist(y))[0];
+    }
+  }
+  return byPath;
 }
 
 const CLICKABLE = 'button, [role="tab"], [role="radio"], [role="option"], a, tr, summary, label, [data-memo-click]';
@@ -87,7 +127,14 @@ export function anchorAt(clientX: number, clientY: number, ignore?: HTMLElement 
   const hit = document.elementFromPoint(clientX, clientY);
   if (ignore) ignore.style.pointerEvents = prev ?? '';
   const el = hit?.closest<HTMLElement>('[data-memo-anchor]');
-  if (!el) return null;
+  if (!el) {
+    // モーダル・パネルの外：クリックした位置の要素に結び付ける（ウィンドウの大きさで位置がずれないように）
+    const t = (hit?.closest<HTMLElement>(PIN_TARGET) ?? hit) as HTMLElement | null;
+    if (!t || t === document.body || t === document.documentElement || inMemoLayer(t)) return null;
+    const rt = t.getBoundingClientRect();
+    const zt = zoom();
+    return { name: 'el', dx: (clientX - rt.left) / zt, dy: (clientY - rt.top) / zt, sel: cssPath(t), text: txt(t), tag: t.tagName.toLowerCase() };
+  }
   const r = el.getBoundingClientRect();
   const z = zoom();
   return { name: el.getAttribute('data-memo-anchor') ?? '', dx: (clientX - r.left) / z + el.scrollLeft, dy: (clientY - r.top) / z + el.scrollTop };
@@ -95,6 +142,14 @@ export function anchorAt(clientX: number, clientY: number, ignore?: HTMLElement 
 
 /** アンカー基準のピンのページ座標（CSS px）。アンカーが無ければ null（＝表示しない） */
 export function anchorPos(a: MemoAnchor): { left: number; top: number } | null {
+  if (a.name === 'el') {
+    const t = elAnchor(a);
+    if (!t) return null;
+    const rt = t.getBoundingClientRect();
+    const zt = zoom();
+    // 要素の幅・高さが変わっても、要素の外にはみ出さない
+    return { left: rt.left / zt + Math.min(a.dx, rt.width / zt) + window.scrollX, top: rt.top / zt + Math.min(a.dy, rt.height / zt) + window.scrollY };
+  }
   const el = anchorEl(a.name);
   if (!el) return null;
   const r = el.getBoundingClientRect();

@@ -9,12 +9,14 @@ import type { CSSProperties } from 'react';
 import { Modal } from './Modal';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { Field, Notice, btn, input, numInput, toInt, yen } from './ui';
-import { ActButton, ActDivider, ComboField, EntryStyles, FieldLabel, FlagButtons, FundAccountLine, IssueList, ReadOnlyBanner, fieldState, fmtNum, focusId, hasError, hasWarn, judgeEntry, needsPartner, onEnter, partnerOf, scopeStyle, setPartner, toNum, useShortcuts, type Issue, FusenTab } from './EntryCommon';
+import { ActButton, ActDivider, ComboField, ConfirmModal, EntryMonthNote, EntryStyles, FieldLabel, FlagButtons, FundAccountLine, IssueList, ReadOnlyBanner, fieldState, fmtNum, focusId, hasError, hasWarn, judgeEntry, needsPartner, onEnter, parseEntryMonth, entryYearOf, partnerOf, scopeStyle, setPartner, toNum, useShortcuts, type Issue, FusenTab } from './EntryCommon';
 import { SERVICES } from '../data';
+import { InternalSwitch } from './EntryExtras';
+import { CalendarModal } from './SingleEntryTools';
 import { FUSEN_COLORS, FUSEN_CYCLE, addVoucher, cycleFusen, deleteVoucher, getVouchers, moveVoucher, setVoucherFlags, updateVoucher, useVouchers, type Fusen, type Voucher } from '../store/journalStore';
 import { judgeTorihiki, TORIHIKI_COLOR } from '../lib/accounts';
 import { TAX_OPTS, taxAmountOf, taxDefaultOf } from '../lib/transferTax';
-import { canEdit, canReorder, editBlockReason, fusenLabel, useSession, isViewOnly } from '../store/session';
+import { canEdit, editBlockReason, fusenLabel, useSession, isViewOnly } from '../store/session';
 import { canEnterVoucher, entryBlockReason } from '../lib/entryDivision';
 import { matchPeriod, type Period } from '../lib/period';
 import type { MonthFilter } from '../types';
@@ -54,7 +56,7 @@ export function FlagCell({ v, compact }: { v: Voucher; compact?: boolean }) {
 }
 
 /* ---------------- 伝票削除の確認（依頼書 6.4） ---------------- */
-export function DeleteVoucherModal({ rows, onClose, onDeleted, multi, entry }: { rows: Voucher[] | null; onClose: () => void; onDeleted?: () => void; /** 一覧で複数行を選んで削除するとき（伝票単位ではなく行単位の案内にする） */ multi?: boolean; /** 伝票入力の画面から開いたとき（親区分で起動中でも、配下の入力区分の伝票を削除できる。確認メモ #182） */ entry?: boolean }) {
+export function DeleteVoucherModal({ rows, onClose, onDeleted, onCancel, multi, entry }: { rows: Voucher[] | null; onClose: () => void; onDeleted?: () => void; /** 「削除しないで戻る」と ×。前の画面（削除する伝票の選択など）へ戻す。確認メモ #262 */ onCancel?: () => void; /** 一覧で複数行を選んで削除するとき（伝票単位ではなく行単位の案内にする） */ multi?: boolean; /** 伝票入力の画面から開いたとき（親区分で起動中でも、配下の入力区分の伝票を削除できる。確認メモ #182） */ entry?: boolean }) {
   const s = useSession();
   const ok = entry ? canEnterVoucher(s) : canEdit(s);
   const blockReason = entry ? entryBlockReason(s) : editBlockReason(s);
@@ -62,7 +64,7 @@ export function DeleteVoucherModal({ rows, onClose, onDeleted, multi, entry }: {
   const h = rows[0];
   const total = rows.reduce((a, r) => a + r.amount, 0);
   return (
-    <Modal open onClose={onClose} width={multi ? 760 : 620} title={multi ? '選択した仕訳の削除' : '伝票削除の確認'} strict>
+    <Modal open onClose={onCancel ?? onClose} width={multi ? 760 : 620} title={multi ? '選択した仕訳の削除' : '伝票削除の確認'} strict>
       <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
           <span aria-hidden style={{ width: 40, height: 40, borderRadius: '50%', background: '#fdeee9', color: '#c0392b', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 900, flex: 'none' }}>!</span>
@@ -89,7 +91,7 @@ export function DeleteVoucherModal({ rows, onClose, onDeleted, multi, entry }: {
         </div>
         {!ok && <Notice tone="warn">{blockReason}</Notice>}
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
-          <button type="button" className="ef-act" autoFocus onClick={onClose} style={btn()}>削除しないで戻る</button>
+          <button type="button" className="ef-act" data-delete-back autoFocus onClick={onCancel ?? onClose} style={btn()}>削除しないで戻る</button>
           <button type="button" className="ef-act" disabled={!ok} title={ok ? undefined : blockReason} onClick={() => { rows.forEach((r) => { deleteVoucher(r.id); setPartner(r.id, ''); }); onDeleted?.(); onClose(); }} style={btn('#c0392b', true)}>{multi ? `選択した ${rows.length} 行を削除する` : `この伝票を削除する（${rows.length} 行）`}</button>
         </div>
       </div>
@@ -192,6 +194,8 @@ interface EditFlags { shohyo: boolean; check: boolean; fusen: Fusen }
 interface EditState { base: Voucher; ids: number[]; shared: boolean; multi: boolean; service: string; month: string; day: string; no: string; kari: string; kashi: string; aite: string; internal: boolean; cheque: string; flags: EditFlags; rows: EditRow[] }
 let rowKey = 0;
 const newRow = (p?: Partial<EditRow>): EditRow => ({ key: 'n' + rowKey++, id: null, kari: '', kashi: '', tekiyo: '', gyosha: '', amount: '', kashiAmount: '', spare1: '', spare2: '', kariTax: '', kashiTax: '', internal: false, aite: '', ...p });
+/** 何も入力していない行 */
+const blankRow = (r: EditRow) => !r.kari && !r.kashi && !r.tekiyo.trim() && !r.gyosha && !toNum(r.amount) && !toNum(r.kashiAmount) && !r.spare1 && !r.spare2;
 /** 登録済みの行 → 編集用の行 */
 const toEditRow = (r: Voucher): EditRow => {
   // 振替伝票形式は、行の借方金額と貸方金額を別々に持つ（未指定の伝票は amount を両方に使う）
@@ -232,37 +236,60 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
   const editable = entry ? canEnterVoucher(sess) : canEdit(sess);
   const reason = entry ? entryBlockReason(sess) : editBlockReason(sess);
   const [st, setSt] = useState<EditState | null>(null);
+  const st0 = st;
   const [loadedId, setLoadedId] = useState<number | null>(null);
   const [active, setActive] = useState(0);
   const [msg, setMsg] = useState<{ tone: 'error' | 'info'; text: string } | null>(null);
   const [rowErr, setRowErr] = useState<Record<string, string>>({});
   const [delOpen, setDelOpen] = useState(false);
+  /** 前の伝票／次の伝票へ移動したとき、その伝票の id（確認メモ #263） */
+  const [navId, setNavId] = useState<number | null>(null);
+  /** 訂正中の内容に変更があるか（移動の前に破棄の確認を出す） */
+  const [dirty, setDirty] = useState(false);
+  const [askNav, setAskNav] = useState<number | null>(null);
+  const [calOpen, setCalOpen] = useState(false);
+  /** 前後の伝票の並び（伝票の登録順。同じ伝票の行は1つにまとめる） */
+  const groups = useMemo(() => groupVouchers(all), [all]);
 
-  if (!voucher && loadedId !== null) { setLoadedId(null); setSt(null); }
-  if (voucher && voucher.id !== loadedId) {
-    const group = all.filter((r) => sameVoucher(r, voucher));
-    const rows = group.length ? group : [voucher];
-    const transfer = voucher.kind === '振替' || voucher.kind === '振単';
+  if (!voucher && navId !== null) setNavId(null);
+  const target = (navId != null ? all.find((r) => r.id === navId) : undefined) ?? voucher;
+  if (!target && loadedId !== null) { setLoadedId(null); setSt(null); }
+  if (target && target.id !== loadedId) {
+    const group = all.filter((r) => sameVoucher(r, target));
+    const rows = group.length ? group : [target];
+    const transfer = target.kind === '振替' || target.kind === '振単';
     const shared = !transfer && rows.every((r) => r.kari === rows[0].kari && r.kashi === rows[0].kashi);
-    const [m, d] = voucher.date.split('/');
+    const [m, d] = target.date.split('/');
+    // 決算月は月欄に 99、翌年度の予備月は 13〜15 で表示する（確認メモ #269）
+    const mm = rows[0].term === '決算' ? '99' : rows[0].term === '予備' ? String(parseInt(m, 10) + 9) : m ?? '';
     setSt({
       // 振替単一形式は、1枚の伝票に複数行を持てる（確認メモ #195）。1伝票1行なのは単一形式だけ
-      base: rows[0], ids: rows.map((r) => r.id), shared, multi: voucher.kind !== '単一',
-      service: rows[0].service, month: m ?? '', day: d ?? '', no: rows[0].no, kari: rows[0].kari, kashi: rows[0].kashi,
+      base: rows[0], ids: rows.map((r) => r.id), shared, multi: target.kind !== '単一',
+      service: rows[0].service, month: mm, day: d ?? '', no: rows[0].no, kari: rows[0].kari, kashi: rows[0].kashi,
       aite: partnerOf(rows[0].id), internal: !!rows[0].internal, cheque: rows[0].cheque ?? '',
       flags: { shohyo: rows[0].shohyo, check: rows[0].check, fusen: rows[0].fusen },
       rows: rows.map(toEditRow),
     });
-    setLoadedId(voucher.id);
+    setLoadedId(target.id);
     setActive(0);
     setMsg(null);
     setRowErr({});
     setDelOpen(false);
+    setDirty(false);
   }
 
-  const set = (p: Partial<EditState>) => { setSt((s) => (s ? { ...s, ...p } : s)); setMsg(null); };
-  const setFlags = (p: Partial<EditFlags>) => { setSt((s) => (s ? { ...s, flags: { ...s.flags, ...p } } : s)); setMsg(null); };
-  const setRow = (i: number, p: Partial<EditRow>) => { setSt((s) => (s ? { ...s, rows: s.rows.map((r, k) => (k === i ? { ...r, ...p } : r)) } : s)); setRowErr({}); setMsg(null); };
+  const set = (p: Partial<EditState>) => { setSt((s) => (s ? { ...s, ...p } : s)); setMsg(null); setDirty(true); };
+  const setFlags = (p: Partial<EditFlags>) => { setSt((s) => (s ? { ...s, flags: { ...s.flags, ...p } } : s)); setMsg(null); setDirty(true); };
+  const setRow = (i: number, p: Partial<EditRow>) => { setSt((s) => (s ? { ...s, rows: s.rows.map((r, k) => (k === i ? { ...r, ...p } : r)) } : s)); setRowErr({}); setMsg(null); setDirty(true); };
+  /** 前の伝票／次の伝票（確認メモ #263：表示順の入替から変更） */
+  const gi = st ? groups.findIndex((g) => g.rows.some((r) => st.ids.includes(r.id))) : -1;
+  const prevG = gi > 0 ? groups[gi - 1] : undefined;
+  const nextG = gi >= 0 && gi < groups.length - 1 ? groups[gi + 1] : undefined;
+  const goNav = (id: number, force = false) => {
+    if (dirty && !force && editable) { setAskNav(id); return; }
+    setAskNav(null);
+    setNavId(id);
+  };
   const rowsN = st?.rows.length ?? 0;
   const act = Math.min(active, Math.max(0, rowsN - 1));
   /** 振替伝票形式：行に借方金額と貸方金額を持つ（確認メモ #199） */
@@ -277,6 +304,7 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
     const next = [...st.rows];
     next.splice(at, 0, newRow());
     setSt({ ...st, rows: next });
+    setDirty(true);
     setActive(at);
     setRowErr({});
     focusId(firstField(at));
@@ -285,27 +313,11 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
     if (!st || !editable || !st.multi) return;
     if (st.rows.length <= 1) { setMsg({ tone: 'error', text: '最後の1行は削除できません。伝票ごと削除する場合は「伝票削除」を使ってください。' }); return; }
     setSt({ ...st, rows: st.rows.filter((_, k) => k !== i) });
+    setDirty(true);
     const n = Math.max(0, Math.min(i, st.rows.length - 2));
     setActive(n);
     setRowErr({});
     focusId(firstField(n));
-  };
-  const moveRow = (i: number, dir: -1 | 1) => {
-    if (!st || !editable) return;
-    const j = i + dir;
-    if (j < 0 || j >= st.rows.length) return;
-    const next = [...st.rows];
-    [next[i], next[j]] = [next[j], next[i]];
-    setSt({ ...st, rows: next });
-    setActive(j);
-  };
-  const moveGroup = (dir: -1 | 1) => {
-    if (!st) return;
-    const ids = getVouchers().filter((r) => st.ids.includes(r.id)).map((r) => r.id);
-    const seq = dir === -1 ? ids : [...ids].reverse();
-    let ok = seq.length > 0;
-    for (const id of seq) if (!moveVoucher(id, dir)) { ok = false; break; }
-    setMsg(ok ? { tone: 'info', text: `伝票の表示順を${dir === -1 ? '上' : '下'}へ入れ替えました。` } : { tone: 'error', text: '表示順の入換は、同じ日の伝票の中でのみ行えます。' });
   };
 
   const pairIssues: Issue[] = st && st.shared ? judgeEntry({ kari: st.kari, kashi: st.kashi, fundMode: '自動資金', internal: st.internal, aite: st.aite, division: st.service, amount: 0 }, sess.env) : [];
@@ -319,13 +331,23 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
   const rowPartnerOf = (r: EditRow) => needsPartner({ kari: r.kari, kashi: r.kashi, internal: r.internal });
   /** 伝票に1つの内部取引相手区分（振替単一形式は行ごとに持つので対象外） */
   const partner = !!st && !isTs && (st.shared ? needsPartner({ kari: st.kari, kashi: st.kashi, internal: st.internal }) : st.internal || st.rows.some((r) => needsPartner({ kari: r.kari, kashi: r.kashi })));
+  /** 内部取引科目を使っているため、内部取引をオフにできない */
+  const internalLocked = !!st && !isTs && (st.shared ? needsPartner({ kari: st.kari, kashi: st.kashi }) : st.rows.some((r) => needsPartner({ kari: r.kari, kashi: r.kashi })));
   /** 税区分（空＝科目からの既定）と、税額の基礎になる金額（借方は借方金額、貸方は貸方金額。振替単一形式は行の金額） */
   const taxKindOf = (r: EditRow, side: 'kari' | 'kashi') => (side === 'kari' ? r.kariTax || taxDefaultOf(r.kari) : r.kashiTax || taxDefaultOf(r.kashi));
   const taxBase = (r: EditRow, side: 'kari' | 'kashi') => toNum(side === 'kashi' && isTr ? r.kashiAmount : r.amount);
 
   const save = (confirmed: boolean) => {
-    if (!st || !editable) return;
+    if (!st0 || !editable) return;
+    // 金額欄の Enter で追加したまま何も入力していない行は、登録の対象にしない（確認メモ #264）
+    const kept = st0.rows.filter((r) => r.id != null || !blankRow(r));
+    const st: EditState = { ...st0, rows: kept.length ? kept : st0.rows.slice(0, 1) };
     if (!st.month || !st.day) { setMsg({ tone: 'error', text: '年月日を入力してください。' }); focusId('ed-month'); return; }
+    // 月は 1〜12、決算月は 99、翌年度の予備月は 13〜15（確認メモ #269）
+    const em = parseEntryMonth(st.month);
+    const dd = parseInt(st.day, 10);
+    if (!em.ok) { setMsg({ tone: 'error', text: '月は 1〜12 で入力してください（決算月は 99、翌年度の予備月は 13〜15）。' }); focusId('ed-month'); return; }
+    if (!(dd >= 1 && dd <= 31)) { setMsg({ tone: 'error', text: '日を正しく入力してください。' }); focusId('ed-day'); return; }
     if (!st.no.trim()) { setMsg({ tone: 'error', text: '伝票Noを入力してください。' }); focusId('ed-no'); return; }
     if (st.shared && (!st.kari || !st.kashi)) { setMsg({ tone: 'error', text: '借方科目・貸方科目を入力してください。' }); focusId(st.kari ? 'ed-kashi' : 'ed-kari'); return; }
     const re: Record<string, string> = {};
@@ -345,7 +367,7 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
     if (isTr && total !== kashiTotal) { setMsg({ tone: 'error', text: `借方合計と貸方合計が一致していません（差額 ${Math.abs(total - kashiTotal).toLocaleString('ja-JP')} 円）。` }); return; }
     if (hasError(allIssues)) { setMsg({ tone: 'error', text: '登録できない仕訳があります。赤い表示の内容を確認してください。' }); return; }
     if (hasWarn(allIssues) && !confirmed) { setMsg({ tone: 'info', text: '確認が必要な内容があります。黄色の表示を確認し、「確認して登録」を押してください。' }); focusId('ed-confirm'); return; }
-    const date = `${st.month}/${st.day}`;
+    const date = `${em.month}/${dd}`;
     const keep = st.rows.filter((r) => r.id != null).map((r) => r.id as number);
     st.ids.filter((id) => !keep.includes(id)).forEach((id) => { deleteVoucher(id); setPartner(id, ''); });
     const ids: number[] = [];
@@ -369,6 +391,7 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
         // 予備入力1・予備入力2 は行ごと（確認メモ #198）
         spare1: r.spare1 || undefined, spare2: r.spare2 || undefined,
         internal: rp || undefined,
+        term: em.term,
       };
       if (r.id != null) { updateVoucher(r.id, { ...body, no: st.no.trim(), check: st.flags.check, fusen: st.flags.fusen }); ids.push(r.id); }
       else { const nv = addVoucher({ ...body, kind: st.base.kind, seq: st.base.seq, no: st.no.trim() }); updateVoucher(nv.id, { check: st.flags.check, fusen: st.flags.fusen }); ids.push(nv.id); }
@@ -392,7 +415,7 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
       { key: 'V', label: '証憑（伝票）', group: '伝票の操作', run: () => st && setFlags({ shohyo: !st.flags.shohyo }), disabled: !editable },
     ],
     'modal',
-    !!voucher && !!st && !delOpen,
+    !!voucher && !!st && !delOpen && !calOpen && askNav == null,
   );
 
   if (!voucher || !st) return null;
@@ -406,8 +429,13 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
   /** 行の下段：予備入力1・予備入力2 は行ごと（確認メモ #198）。振替伝票形式は摘要・取引先、振替単一形式は行ごとの内部取引と相手区分も置く */
   const SUB_GRID = isTr ? 'minmax(0,1.3fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,.8fr)' : isTs ? 'minmax(0,1fr) minmax(0,1fr) 112px minmax(0,1fr)' : 'minmax(0,1fr) minmax(0,1fr)';
   const afterHead = () => focusId(st.shared ? 'ed-kari' : firstField(0));
-  const rowNext = (i: number) => (i + 1 < st.rows.length ? focusId(firstField(i + 1)) : focusId('ed-save'));
-  const smallBtn: CSSProperties = { ...btn('#5b6773', false, true), padding: '3px 7px' };
+  /** 行の最後の欄で Enter：次の行へ。最後の行なら新しい行を追加する（仕訳伝票形式と同じ。確認メモ #264）。何も入力していない行なら「伝票登録」へ */
+  const rowNext = (i: number) => {
+    if (i + 1 < st.rows.length) { setActive(i + 1); focusId(firstField(i + 1)); return; }
+    if (canRow && !blankRow(st.rows[i])) { addRow(i + 1); return; }
+    focusId('ed-save');
+  };
+  const smallBtn: CSSProperties = { ...btn('#5b6773', false, true), padding: '3px 9px' };
   const subLab: CSSProperties = { fontSize: 12, fontWeight: 700, color: '#8290a0', flex: 'none', whiteSpace: 'nowrap' };
   const subWrap: CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 };
   const subInput: CSSProperties = { ...input, padding: '5px 8px', fontSize: 14, minWidth: 0, flex: 1 };
@@ -449,10 +477,10 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <span style={{ padding: '4px 10px', borderRadius: 8, background: c.bg, color: c.fg, fontSize: 14, fontWeight: 800 }}>{j.kind}{j.reason ? `（${j.reason}）` : ''}</span>
             <span style={{ fontSize: 14, color: '#7a8794' }}>{st.multi ? `この伝票の ${st.rows.length} 行をまとめて編集します。` : '1伝票1行の形式です。'}</span>
-            <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 4, alignItems: 'center' }}>
-              <span style={{ fontSize: 12, color: '#8290a0', fontWeight: 700 }}>伝票の表示順（同じ日の中）</span>
-              <button type="button" className="ef-act" disabled={!canReorder(sess)} title={canReorder(sess) ? '同じ日の伝票の中で、この伝票を1つ上へ' : reason} onClick={() => moveGroup(-1)} style={btn('#5b6773', false, true)}>▲ 上へ</button>
-              <button type="button" className="ef-act" disabled={!canReorder(sess)} title={canReorder(sess) ? '同じ日の伝票の中で、この伝票を1つ下へ' : reason} onClick={() => moveGroup(1)} style={btn('#5b6773', false, true)}>▼ 下へ</button>
+            <span data-voucher-nav style={{ marginLeft: 'auto', display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+              <button type="button" className="ef-act" data-nav="prev" disabled={!prevG} title={prevG ? `前の伝票（${prevG.head.date}　伝票No ${prevG.head.no}）を開きます` : '前の伝票はありません'} onClick={() => prevG && goNav(prevG.head.id)} style={btn('#5b6773', false, true)}>‹ 前の伝票</button>
+              <span style={{ fontSize: 12, color: '#8290a0', fontWeight: 700, fontVariantNumeric: 'tabular-nums', minWidth: 64, textAlign: 'center' }}>{gi + 1} ／ {groups.length}</span>
+              <button type="button" className="ef-act" data-nav="next" disabled={!nextG} title={nextG ? `次の伝票（${nextG.head.date}　伝票No ${nextG.head.no}）を開きます` : '次の伝票はありません'} onClick={() => nextG && goNav(nextG.head.id)} style={btn('#5b6773', false, true)}>次の伝票 ›</button>
             </span>
           </div>
 
@@ -461,11 +489,17 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
             <div className="ef-field">
               <FieldLabel>年月日</FieldLabel>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, color: '#5b6773' }}>
-                <span>令和8年</span>
-                <input id="ed-month" className="ef-input" disabled={ro} value={st.month} onChange={(e) => set({ month: e.target.value.replace(/[^0-9]/g, '').slice(0, 2) })} onKeyDown={onEnter(() => focusId('ed-day'))} inputMode="numeric" style={{ ...cell, width: 44, textAlign: 'center', padding: '7px 2px' }} />
+                <span>令和{entryYearOf(st.month)}年</span>
+                <input id="ed-month" className="ef-input" disabled={ro} value={st.month} onChange={(e) => set({ month: e.target.value.normalize('NFKC').replace(/[^0-9]/g, '').slice(0, 2) })} onKeyDown={onEnter(() => { if (parseEntryMonth(st.month).term === '決算' && !st.day) set({ day: '31' }); focusId('ed-day'); })} onFocus={(e) => e.currentTarget.select()} title="月は 1〜12 で入力します。決算月は 99、翌年度の予備月（4〜6月）は 13〜15" inputMode="numeric" style={{ ...cell, width: 44, textAlign: 'center', padding: '7px 2px' }} />
                 <span>月</span>
-                <input id="ed-day" className="ef-input" disabled={ro} value={st.day} onChange={(e) => set({ day: e.target.value.replace(/[^0-9]/g, '').slice(0, 2) })} onKeyDown={onEnter(() => focusId('ed-no'))} inputMode="numeric" style={{ ...cell, width: 44, textAlign: 'center', padding: '7px 2px' }} />
+                <input id="ed-day" className="ef-input" disabled={ro} value={st.day} onChange={(e) => set({ day: e.target.value.normalize('NFKC').replace(/[^0-9]/g, '').slice(0, 2) })} onKeyDown={onEnter(() => focusId('ed-no'))} onFocus={(e) => e.currentTarget.select()} inputMode="numeric" style={{ ...cell, width: 44, textAlign: 'center', padding: '7px 2px' }} />
                 <span>日</span>
+                {!viewOnly && (
+                  <button type="button" tabIndex={-1} data-calendar-btn disabled={ro} onClick={() => setCalOpen(true)} aria-label="カレンダーから日付を選ぶ" title={ro ? reason : 'カレンダーから日付を選びます'} style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, padding: 0, border: '1px solid #cfd8e0', borderRadius: 8, background: '#fff', color: ro ? '#a3adb8' : accent, cursor: ro ? 'not-allowed' : 'pointer' }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="4.5" width="18" height="16.5" rx="2.5" /><path d="M3 9.5h18M8 2.5v4M16 2.5v4" /><path d="M7.5 13.5h2M11 13.5h2M14.5 13.5h2M7.5 17h2M11 17h2" /></svg>
+                  </button>
+                )}
+                <EntryMonthNote month={st.month} />
               </div>
             </div>
             <div className="ef-field"><FieldLabel>伝票No</FieldLabel><input id="ed-no" className="ef-input" disabled={ro} value={st.no} onChange={(e) => set({ no: e.target.value })} onKeyDown={onEnter(afterHead)} style={cell} /></div>
@@ -485,10 +519,14 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
               </div>
             </div>
           )}
-          {partner && (
-            <div className="ef-field" style={{ maxWidth: 360 }}>
-              <FieldLabel color="#b45309">内部取引相手区分（内部取引科目のため必要）</FieldLabel>
-              <ComboField id="ed-aite" kind="service" value={st.aite} onChange={(v) => set({ aite: v })} onCommit={() => focusId(st.shared ? (st.kashi ? firstField(0) : 'ed-kashi') : firstField(0))} placeholder="相手先の区分" disabled={ro} invalid={fieldState(allIssues, 'aite')} />
+          {/* 内部取引のオン／オフ（確認メモ #265）。振替単一形式は行ごとに持つので、各行の下段で切り替える */}
+          {!isTs && (
+            <div data-internal-area data-on={partner ? '1' : '0'} style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0,340px)', gap: 16, alignItems: 'center', padding: '8px 14px', border: '1px solid ' + (partner ? '#e0d6f3' : '#e2e8ee'), background: partner ? '#faf7ff' : '#f6f8fa', borderRadius: 10, justifySelf: 'start' }}>
+              {viewOnly ? <span style={{ fontSize: 14, fontWeight: 700, color: partner ? '#6b3fb5' : '#8895a3' }}>内部取引 {partner ? 'オン' : 'オフ'}</span> : <InternalSwitch on={partner} locked={internalLocked} disabled={ro} title={ro ? reason : undefined} onToggle={() => set(st.internal ? { internal: false, aite: '' } : { internal: true })} />}
+              <div style={{ opacity: partner ? 1 : 0.5 }}>
+                <FieldLabel color={partner ? '#6b3fb5' : '#8895a3'}>内部取引相手区分{partner ? '（必須）' : ''}</FieldLabel>
+                <ComboField id="ed-aite" kind="service" value={st.aite} onChange={(v) => set({ aite: v })} onCommit={() => focusId(st.shared ? (st.kashi ? firstField(0) : 'ed-kashi') : firstField(0))} placeholder={partner ? '相手先の区分' : '内部取引をオンにすると入力できます'} disabled={ro || !partner} invalid={partner ? fieldState(allIssues, 'aite') : undefined} />
+              </div>
             </div>
           )}
           {st.shared && <IssueList issues={pairIssues} onConfirm={ro ? undefined : () => save(true)} confirmId="ed-confirm" />}
@@ -497,15 +535,9 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
             {/* 伝票に付けた付箋：入力画面と同じく枠の右端に貼る */}
             <FusenTab color={st.flags.fusen} offset={-12} top={22} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', borderBottom: '1px solid #eef2f5', background: '#fbfcfd', borderRadius: '10px 10px 0 0', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12, fontWeight: 800, color: '#8290a0', letterSpacing: '.05em' }}>行の操作</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: accent }}>対象：{act + 1}行目</span>
-              {!viewOnly && <><ActButton label="行追加" k="N" accent={accent} disabled={!canRow} title={!editable ? reason : !st.multi ? '1伝票1行の形式のため行は追加できません' : '最後に1行追加'} onClick={() => addRow(st.rows.length)} />
-              <ActButton label="行挿入" k="I" accent={accent} disabled={!canRow} title={!editable ? reason : !st.multi ? '1伝票1行の形式のため行は挿入できません' : `${act + 1}行目の上に1行挿入`} onClick={() => addRow(act)} />
-              <ActButton label="行削除" k="D" accent={accent} disabled={!canRow} title={!editable ? reason : !st.multi ? '1伝票1行の形式のため行は削除できません' : `${act + 1}行目を削除`} onClick={() => delRow(act)} />
-              <span style={{ width: 1, height: 18, background: '#dde4ea', margin: '0 4px' }} />
               <span style={{ fontSize: 12, fontWeight: 800, color: '#8290a0', letterSpacing: '.05em' }}>伝票の印</span>
-              <FlagButtons shohyo={st.flags.shohyo} check={st.flags.check} fusen={st.flags.fusen} disabled={ro} onChange={(p) => setFlags(p)} /></>}
-              {viewOnly && <><span style={{ width: 1, height: 18, background: '#dde4ea', margin: '0 4px' }} /><span style={{ fontSize: 12, fontWeight: 800, color: '#8290a0', letterSpacing: '.05em' }}>伝票の印</span><FlagCell v={{ ...voucher!, ...st.flags }} compact /></>}
+              {!viewOnly && <FlagButtons shohyo={st.flags.shohyo} check={st.flags.check} fusen={st.flags.fusen} disabled={ro} onChange={(p) => setFlags(p)} />}
+              {viewOnly && <FlagCell v={{ ...target!, ...st.flags }} compact />}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 8, padding: '7px 10px', background: '#f6f8fa', fontSize: 12, fontWeight: 700, color: '#8290a0' }}>
               <div>行</div>
@@ -513,7 +545,7 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
               {!st.shared && <div style={{ color: BLUE }}>借方科目</div>}
               {!st.shared && <div style={{ color: PINK }}>貸方科目</div>}
               {isTr ? <div style={{ color: PINK, textAlign: 'right' }}>貸方金額</div> : <><div>摘要</div><div>取引先</div><div style={{ textAlign: 'right' }}>金額</div></>}
-              <div>並べ替え／削除</div>
+              <div style={{ textAlign: 'center' }}>行の操作<span style={{ fontWeight: 500, marginLeft: 4 }}>挿入／削除</span></div>
             </div>
             {st.rows.map((r, i) => {
               const ri = issuesOfRow(r);
@@ -532,11 +564,10 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
                     {!isTr && <ComboField id={`ed-r${i}-tekiyo`} kind="summary" freeText value={r.tekiyo} onChange={(v) => setRow(i, { tekiyo: v })} onCommit={() => focusId(`ed-r${i}-gyosha`)} placeholder="摘要" disabled={ro} fontSize={14} padY={7} listWidth={340} />}
                     {!isTr && <ComboField id={`ed-r${i}-gyosha`} kind="vendor" value={r.gyosha} onChange={(v) => setRow(i, { gyosha: v })} onCommit={() => focusId(`ed-r${i}-amount`)} placeholder="取引先" disabled={ro} fontSize={14} padY={7} listWidth={300} />}
                     {!isTr && <input id={`ed-r${i}-amount`} className="ef-input" disabled={ro} value={fmtNum(r.amount)} onChange={(e) => setRow(i, { amount: e.target.value.replace(/[^0-9]/g, '') })} onKeyDown={onEnter(() => rowNext(i))} inputMode="numeric" placeholder="0" style={amountInput(!!rowErr[r.key]?.startsWith('金額'))} />}
-                    {!viewOnly && <div style={{ display: 'flex', gap: 3 }}>
-                      <button type="button" className="ef-act" disabled={ro || i === 0} title="この行を1つ上へ" onClick={() => moveRow(i, -1)} style={smallBtn}>▲</button>
-                      <button type="button" className="ef-act" disabled={ro || i === st.rows.length - 1} title="この行を1つ下へ" onClick={() => moveRow(i, 1)} style={smallBtn}>▼</button>
-                      <button type="button" className="ef-act" disabled={!canRow} title={canRow ? 'この行を削除' : !editable ? reason : '1伝票1行の形式です'} onClick={() => delRow(i)} style={{ ...smallBtn, color: '#c0392b', marginLeft: 6 }}>行削除</button>
-                    </div>}
+                    {!viewOnly ? <div data-row-ops={i} style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                      <button type="button" className="ef-act" tabIndex={-1} disabled={!canRow} title={canRow ? `${i + 1}行目の上に1行挿入` : !editable ? reason : '1伝票1行の形式のため行は挿入できません'} onClick={() => addRow(i)} style={smallBtn}>挿入</button>
+                      <button type="button" className="ef-act" tabIndex={-1} disabled={!canRow} title={canRow ? `${i + 1}行目を削除` : !editable ? reason : '1伝票1行の形式のため行は削除できません'} onClick={() => delRow(i)} style={{ ...smallBtn, color: '#c0392b', borderColor: '#f2c9c2' }}>削除</button>
+                    </div> : <div />}
                   </div>
                   {/* 行の下段：予備入力1・予備入力2 は行ごと（確認メモ #198）。振替伝票形式は摘要・取引先、振替単一形式は行ごとの内部取引と相手区分もここに置く */}
                   <div data-row-sub={i} style={{ display: 'grid', gridTemplateColumns: SUB_GRID, gap: 8, alignItems: 'center', margin: '6px 140px 0 42px' }}>
@@ -567,6 +598,7 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
               );
             })}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 12px', borderTop: '2px solid #e2e8ee', background: '#fbfcfd', borderRadius: '0 0 10px 10px' }}>
+              {!viewOnly && st.multi && <button type="button" className="ef-act" tabIndex={-1} data-row-add disabled={!canRow} onClick={() => addRow(st.rows.length)} title={canRow ? '最後に1行追加します（最後の行の金額欄で Enter を押しても追加できます）' : reason} style={{ padding: '4px 11px', borderRadius: 7, border: '1px dashed #b9c4cf', background: '#fff', color: '#48565f', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: canRow ? 'pointer' : 'not-allowed' }}>＋ 行追加</button>}
               <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>合計（{st.rows.length} 行）</span>
               {isTr ? (
                 <span data-totals style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'baseline', gap: 14, fontVariantNumeric: 'tabular-nums' }}>
@@ -604,6 +636,10 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
         </div>
       </div>
       <DeleteVoucherModal rows={delOpen ? all.filter((r) => st.ids.includes(r.id)) : null} onClose={() => setDelOpen(false)} onDeleted={onClose} />
+      {calOpen && <CalendarModal open extended onClose={() => setCalOpen(false)} accent={accent} entries={all} month={parseEntryMonth(st.month).ok ? String(parseInt(st.month, 10)) : '8'} day={st.day} onPick={(m, d) => { set({ month: m, day: d }); setCalOpen(false); focusId('ed-no'); }} />}
+      <ConfirmModal open={askNav != null} title="訂正内容の破棄の確認" okLabel="破棄して移動する" danger accent={accent} cancelLabel="訂正に戻る" onClose={() => setAskNav(null)} onOk={() => askNav != null && goNav(askNav, true)}>
+        この伝票の訂正内容は、まだ登録していません。<b>移動すると訂正内容は破棄されます。</b><br />登録してから移動する場合は「訂正に戻る」を押し、伝票登録を行ってください。
+      </ConfirmModal>
     </Modal>
   );
 }
@@ -630,7 +666,7 @@ export function applyCond(rows: Voucher[], c: SearchCond): Voucher[] {
     if (c.check !== '両方' && r.check !== (c.check === '有')) return false;
     if (!c.normal && !r.migrated) return false;
     if (!c.migrated && r.migrated) return false;
-    if (c.internalOnly && !r.internal) return false;
+    if (c.internalOnly && !(r.internal || r.internalSide || needsPartner({ kari: r.kari, kashi: r.kashi }))) return false;
     if (c.fusen.size && !c.fusen.has(r.fusen)) return false;
     if (c.special && r.amount < 100000) return false;
     if (c.dept && r.service !== c.dept) return false;

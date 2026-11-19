@@ -13,6 +13,7 @@
 //   資産の部のみサンプルデータあり。他の部は「サンプル未作成」。
 
 import type { CSSProperties, ReactNode } from 'react';
+import { rowClick } from './ui';
 import { useState } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { FISCAL_MONTHS, lastDayOf, periodLabel as periodText, type Period } from '../lib/period';
@@ -376,7 +377,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
       asideWidth={drawer.asideWidth}
       extraTools={printActions ? <ScreenPrintMenu page={KEY} actions={printActions} accent={accent} /> : <ScreenPrintMenu page={KEY} accent={accent} />}
       title={displayName(KEY)}
-      subtitle={<>{isClosing ? '当年度末（決算）の残高を一覧します。' : '前月繰越・当月の借方／貸方・残高を一覧します。'}科目の行の「元帳」ボタン（または行のダブルクリック）で、右側に総勘定元帳を表示します。別の行を押すと差し替わり、全画面で見たいときはパネルの「元帳の画面で開く」を使います。</>}
+      subtitle={<>{isClosing ? '当年度末（決算）の残高を一覧します。' : '前月繰越・当月の借方／貸方・残高を一覧します。'}科目の行をクリック（または「元帳」ボタン）で、右側に総勘定元帳を表示します。別の行を押すと差し替わり、全画面で見たいときはパネルの「元帳の画面で開く」を使います。</>}
       tools={isClosing ? [
         { label: '残高グラフ', onClick: () => setGraph(true) },
         { label: '充実残額', onClick: () => onNavigate('充実残額') },
@@ -472,7 +473,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
               {rows.map((r, i) => {
                 const bold = r.level === 0;
                 return (
-                  <tr key={r.name + ':' + r.level + ':' + i} data-account={r.name} onDoubleClick={() => { if (r.leaf) openLedger(r.name); }} title={r.leaf ? 'ダブルクリックで元帳を開く' : undefined} data-picked={picked(r.name) || undefined} data-pattern-hit={toned(r) || undefined} style={{ background: picked(r.name) ? '#eaf5ef' : hit(r.name) ? '#fff8d6' : rowBg(r), boxShadow: picked(r.name) ? `inset 3px 0 0 ${accent}` : undefined, cursor: r.leaf ? 'pointer' : 'default' }}>
+                  <tr key={r.name + ':' + r.level + ':' + i} data-account={r.name} className={r.leaf ? 'row-hover' : undefined} onClick={rowClick(() => { if (r.leaf) openLedger(r.name); })} title={r.leaf ? 'クリックで元帳を開く' : undefined} data-picked={picked(r.name) || undefined} data-pattern-hit={toned(r) || undefined} style={{ background: picked(r.name) ? '#eaf5ef' : hit(r.name) ? '#fff8d6' : rowBg(r), boxShadow: picked(r.name) ? `inset 3px 0 0 ${accent}` : undefined, cursor: r.leaf ? 'pointer' : 'default' }}>
                     <td style={{ ...TD, paddingLeft: 12 + r.level * 18, fontWeight: bold || picked(r.name) ? 700 : r.level === 1 ? 600 : 400, whiteSpace: 'nowrap' }}>
                       {r.name}
                       {r.leaf && <button type="button" className="btn-outline" data-action="元帳" onClick={(e) => { e.stopPropagation(); openLedger(r.name); }} style={linkBtn}>元帳 ›</button>}

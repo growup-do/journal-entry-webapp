@@ -204,3 +204,20 @@ tr[data-dark-row] > td *:not(button):not(button *):not(input):not(select):not([d
 
 /* 帳票の印刷：選んでいないタブにマウスを載せたときだけ少し明るくする */
 .print-cat-tab[aria-selected="false"]:hover { background: #f4f6f8 !important; color: #3d4a56 !important; }
+
+/* ===========================================================
+   一覧の行：ホバーの色（確認メモ #271）と、ホバー時だけ出す操作（確認メモ #267）
+   =========================================================== */
+tr.row-hover { cursor: pointer; }
+tr.row-hover:hover > td,
+tr.row-hover:focus-within > td {
+  background-image: linear-gradient(rgba(44, 95, 158, 0.08), rgba(44, 95, 158, 0.08));
+}
+tr.row-hover:hover > td:first-child { box-shadow: inset 3px 0 0 rgba(44, 95, 158, 0.55); }
+.ra-row .ra-hover { visibility: hidden; }
+.ra-row:hover .ra-hover,
+.ra-row:focus-within .ra-hover,
+.ra-row[data-dragging] .ra-hover { visibility: visible; }
+.ra-row[data-dragging] > td { opacity: 0.45; }
+.ra-row[data-drop='before'] > td { box-shadow: inset 0 3px 0 #2c5f9e; }
+.ra-row[data-drop='after'] > td { box-shadow: inset 0 -3px 0 #2c5f9e; }
