@@ -201,3 +201,6 @@ a:hover {
 /* 濃い区分色の行は文字を白にする（確認メモ #73）。ボタン・入力欄と、自分の背景色を持つタグ（data-keep-color）はそのまま */
 tr[data-dark-row] > td,
 tr[data-dark-row] > td *:not(button):not(button *):not(input):not(select):not([data-keep-color]):not([data-keep-color] *) { color: #ffffff !important; }
+
+/* 帳票の印刷：選んでいないタブにマウスを載せたときだけ少し明るくする */
+.print-cat-tab[aria-selected="false"]:hover { background: #f4f6f8 !important; color: #3d4a56 !important; }

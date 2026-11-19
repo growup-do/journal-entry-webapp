@@ -68,8 +68,6 @@ const GROUPS: Group[] = ['計算書類に対する注記', '附属明細書', '�
 const sheetOk = (x: Sheet, s: Session) => !x.na && (!x.form || formEnabled(s.print.forms, x.form, s.tree));
 /** 表示条件の説明 */
 const condText = (x: Sheet) => x.cond ?? (x.form ? formCond(x.form).label : '');
-/** 一覧に出す別紙の数（帳票の印刷の中区分タブの件数） */
-export const appendixCount = (s: Session) => SHEETS.filter((x) => x.editor !== 'merge' && sheetOk(x, s)).length;
 
 /** 明細入力の列と初期データ（num＝金額の列） */
 const KURIIRE_COLS = ['繰入元の区分', '繰入先の区分', '繰入金の財源', '金額', '使用目的等'];

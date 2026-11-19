@@ -7,7 +7,7 @@
 
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { AppendixPrintPage, appendixCount } from './AppendixPrintPage';
+import { AppendixPrintPage } from './AppendixPrintPage';
 import { Modal } from './Modal';
 import { OUTPUTS, PreviewModal, PrintFlow, sampleReportData } from './PrintCenter';
 import { PrintOutDialog } from './PrintOutDialog';
@@ -39,7 +39,6 @@ export function PrintCenterPage({ variant, accent, onNavigate, initialCat }: { v
   const list = inCat.filter((r) => showAll || ok(r));
   const hidden = inCat.filter((r) => !ok(r)).length;
   const cur = list.find((r) => r.id === curOf[cat]) ?? list.find(ok) ?? list[0];
-  const countOf = (c: string) => (c === '別紙' ? appendixCount(s) : REPORTS.filter((r) => r.cat === c && ok(r)).length);
   const go = (label: string) => onNavigate?.(label);
 
   const batchPool = REPORTS.filter((r) => !r.wamnet && ok(r));
@@ -54,13 +53,13 @@ export function PrintCenterPage({ variant, accent, onNavigate, initialCat }: { v
     </>}>
       <ToastView msg={toast.msg} />
       {/* 中区分 */}
-      {/* 中区分はタブ（画面内の他のタブと同じ下線式）。幅が足りないときは横にスクロール */}
-      <div role="tablist" aria-label="帳票の分類" data-print-cats style={{ display: 'flex', gap: 0, padding: '0 8px', borderBottom: '1px solid #e2e8ee', overflowX: 'auto', scrollbarWidth: 'thin' }}>
+      {/* 中区分はタブ。選んでいるタブは白い見出しで下の内容とつなげ、ほかはグレーにする。幅が足りないときは横にスクロール */}
+      <div role="tablist" aria-label="帳票の分類" data-print-cats style={{ display: 'flex', alignItems: 'flex-end', gap: 3, padding: '10px 12px 0', borderBottom: '1px solid #cfd8e0', background: '#f3f5f7', overflowX: 'auto', scrollbarWidth: 'thin' }}>
         {CATS.map((c) => {
           const on = c === cat;
           return (
-            <button key={c} type="button" role="tab" aria-selected={on} className="tab" data-print-cat={c} onClick={() => setCat(c)} style={{ flex: 'none', display: 'inline-flex', alignItems: 'baseline', gap: 5, padding: '12px 10px 10px', border: 'none', borderBottom: '3px solid ' + (on ? accent : 'transparent'), background: 'transparent', color: on ? accent : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', marginBottom: -1 }}>
-              {c}<span style={{ fontSize: 12, fontWeight: 600, color: on ? accent : '#9aa5b1', fontVariantNumeric: 'tabular-nums' }}>{countOf(c)}</span>
+            <button key={c} type="button" role="tab" aria-selected={on} className="print-cat-tab" data-print-cat={c} onClick={() => setCat(c)} style={{ flex: 'none', position: 'relative', padding: on ? '9px 14px 10px' : '7px 12px 7px', border: '1px solid ' + (on ? '#cfd8e0' : '#e2e8ee'), borderBottom: 'none', borderRadius: '8px 8px 0 0', background: on ? '#fff' : '#e8ecf0', color: on ? accent : '#7d8995', boxShadow: on ? `inset 0 3px 0 ${accent}` : 'none', fontSize: 14, fontWeight: on ? 800 : 600, fontFamily: 'inherit', cursor: on ? 'default' : 'pointer', whiteSpace: 'nowrap', marginBottom: -1, zIndex: on ? 1 : 0 }}>
+              {c}
             </button>
           );
         })}
