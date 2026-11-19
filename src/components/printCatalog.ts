@@ -395,7 +395,7 @@ export const REPORTS: ReportDef[] = [
   ]),
   ...group('WAMNET連携出力', 'WAMNET連携出力', ['WAMNET連携設定', 'WAMNET連携科目チェック', 'WAMNET連携ファイル出力', 'WAMNET連携注記出力（PDF）', 'WAMNET連携注記出力（Excel）', 'WAMNET連携附属明細書出力（PDF）', 'WAMNET連携附属明細書出力（Excel）'].map((name, i): R => ({ id: 'w' + (i + 1), name, wamnet: true, note: i < 2 ? '設定・確認' : '出力', detail: [] }))),
   ...group('その他', 'その他', [
-    { id: 'o1', name: '決算書 表紙', note: '現行は表紙の Word ファイル（決算書表紙.doc）を開く', noZero: true, detail: [] },
+    { id: 'o1', name: '決算書 表紙', noZero: true, detail: [] },
     { id: 'o2', name: '収支分析表', note: '［設定］で科目名称・金額の決定方法・背景色・文字色を指定', noZero: true, outs: ['print', 'excel'], detail: [{ title: '印刷項目', items: [chk('thousand', '金額を千円単位で表示する', true)] }] },
     { id: 'o3', name: '自動按分出力', cond: C.belowSite, detail: [{ title: '出力条件', items: [rad('kind', '出力種類', ['貸借対照表', '事業活動計算書', '資金収支計算書']), rad('cols', '出力する列', ['当年度末', '前年度末', '増減']), rad('round', '端数の加算区分', ['按分率の最も大きい区分', '最後の区分'])] }, { title: '印刷項目', items: [chk('sum', '合計値を印刷する', true)] }] },
     { id: 'o4', name: '取引先内訳表', note: '旧 業者内訳表', cond: C.belowSite, detail: [{ title: '印刷項目', items: [chk('vsub', '取引先コード小計'), chk('zeroV', '0円の取引先を印刷しない', true), chk('area', '区分名を印刷する', true)] }] },
