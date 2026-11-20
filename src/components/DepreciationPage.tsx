@@ -428,9 +428,9 @@ function RoundingModal({ value, onClose, onSave, accent }: { value: Rounding; on
   );
 }
 
-/** 補助金設定（複数の補助金の内訳） */
+/** 補助金設定（複数の補助金の内訳）。行は会計の国庫補助金の伝票を選んで追加する（手入力の行追加はしない。確認メモ #277） */
 function SubsidyModal({ rows, cost, onClose, onSave, accent, toast }: { rows: SubsidyRow[]; cost: number; onClose: () => void; onSave: (rows: SubsidyRow[]) => void; accent: string; toast: (m: string) => void }) {
-  const [rs, setRs] = useState<SubsidyRow[]>(rows.length ? rows : [{ name: '', amount: 0, redeem: 0, date: waToday() }]);
+  const [rs, setRs] = useState<SubsidyRow[]>(rows);
   const [pick, setPick] = useState(false);
   const upd = (i: number, p: Partial<SubsidyRow>) => setRs((a) => a.map((r, k) => (k === i ? { ...r, ...p } : r)));
   const total = rs.reduce((s, r) => s + r.amount, 0);
@@ -443,21 +443,21 @@ function SubsidyModal({ rows, cost, onClose, onSave, accent, toast }: { rows: Su
             <thead><tr><th style={TH}>補助金名称</th><th style={{ ...TH, textAlign: 'right' }}>国庫補助金等の額</th><th style={{ ...TH, textAlign: 'right' }}>うち償還補助金額</th><th style={TH}>交付年月日</th><th style={{ ...TH, width: 60 }} /></tr></thead>
             <tbody>
               {rs.map((r, i) => <tr key={i}>
-                <td style={{ ...TD, minWidth: 300 }}><input className="field-input" value={r.name} onChange={(e) => upd(i, { name: e.target.value })} placeholder="例：施設整備費補助金" style={IN} />{r.src && <div data-sub-src style={{ fontSize: 12, color: '#7a8794', marginTop: 2 }}>伝票 {r.src} から（伝票の金額 {yen(r.max ?? 0)}）</div>}</td>
+                <td style={{ ...TD, minWidth: 300 }}>{r.src ? <><div style={{ fontSize: 14, fontWeight: 700 }}>{r.name}</div><div data-sub-src style={{ fontSize: 12, color: '#7a8794', marginTop: 2 }}>伝票 {r.src} から（伝票の金額 {yen(r.max ?? 0)}）</div></> : <input className="field-input" value={r.name} onChange={(e) => upd(i, { name: e.target.value })} style={IN} />}</td>
                 <td style={TD}><input className="field-input" data-sub-amount value={r.amount ? yen(r.amount) : ''} onChange={(e) => { const a = Math.min(numOf(e.target.value), r.max ?? Infinity); upd(i, { amount: a, redeem: Math.min(r.redeem, a) }); }} inputMode="numeric" placeholder="0" style={{ ...IN_NUM, width: 130 }} /></td>
                 <td style={TD}><input className="field-input" data-sub-redeem value={r.redeem ? yen(r.redeem) : ''} onChange={(e) => upd(i, { redeem: Math.min(numOf(e.target.value), r.amount) })} inputMode="numeric" placeholder="0" title="国庫補助金等の額のうち、償還補助金にあたる額（国庫補助金等の額を超えては入力できません）" style={{ ...IN_NUM, width: 130 }} /></td>
-                <td style={TD}><input className="field-input" value={r.date} onChange={(e) => upd(i, { date: e.target.value })} style={{ ...IN, width: 140 }} /></td>
+                <td style={{ ...TD, whiteSpace: 'nowrap' }}>{r.src ? <span style={{ fontSize: 14 }}>{r.date}</span> : <input className="field-input" value={r.date} onChange={(e) => upd(i, { date: e.target.value })} style={{ ...IN, width: 140 }} />}</td>
                 <td style={TD}><button type="button" className="btn-outline" onClick={() => setRs((a) => a.filter((_, k) => k !== i))} style={{ ...BTN('#c0392b'), padding: '4px 8px', fontSize: 12 }}>削除</button></td>
               </tr>)}
+              {rs.length === 0 && <tr><td colSpan={5} data-sub-empty style={{ ...TD, textAlign: 'center', color: '#7a8794', padding: '22px 10px' }}>補助金はまだありません。「国庫補助金の伝票から選ぶ」で会計の伝票を選ぶと、ここに行が追加されます。</td></tr>}
             </tbody>
           </table>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14 }}>
           <button type="button" className="btn-outline" data-subsidy-pick onClick={() => setPick(true)} style={BTN()}>国庫補助金の伝票から選ぶ</button>
-          <button type="button" className="btn-outline" onClick={() => setRs((a) => [...a, { name: '', amount: 0, redeem: 0, date: waToday() }])} style={BTN()}>＋ 手入力で行を追加</button>
           <span style={{ marginLeft: 'auto' }}>補助金総合計 <b style={{ fontSize: 14 }} data-sub-total>{yen(total)}</b>　（うち償還補助金 <b data-sub-redeem-total>{yen(redeem)}</b>）</span>
         </div>
-        <div style={{ fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>補助金総合計は「国庫補助金等の額」の合計です。償還補助金は国庫補助金等の内訳のため、総合計には加算しません。</div>
+        <div style={{ fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>補助金は会計の国庫補助金の伝票を選んで追加します。金額は伝票の金額までの範囲で一部に変えられます。補助金総合計は「国庫補助金等の額」の合計です。償還補助金は国庫補助金等の内訳のため、総合計には加算しません。</div>
         {pick && <SubsidyVoucherPicker accent={accent} toast={toast} used={rs.map((r) => r.src ?? '').filter(Boolean)} onClose={() => setPick(false)} onAdd={(add) => setRs((a) => [...a.filter((r) => r.amount > 0 || r.name || r.src), ...add])} />}
         {cost > 0 && total > cost && <Notice tone="warn">補助金の合計が取得価額（{yen(cost)}）を超えています。</Notice>}
         <div style={FOOT}><button type="button" onClick={onClose} style={BTN()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { if (cost > 0 && total > cost) return toast('補助金の合計が取得価額を超えています'); onSave(rs.filter((r) => r.amount > 0 || r.name).map((r) => ({ ...r, redeem: Math.min(r.redeem, r.amount) }))); onClose(); }} style={BTN(accent, true)}>設定</button></div>
