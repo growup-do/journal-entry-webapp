@@ -5,7 +5,7 @@
 // 置いたときの画面の状態（開いていたモーダル・タブ・パネル）を覚え、同じ状態のときだけ番号を表示する。
 // 一覧から番号を選ぶと、その状態になるまでの操作を再生してから表示する（uiContext.ts）。全閲覧者にリアルタイム同期。
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, MouseEvent } from 'react';
 import { useMemos, type Memo } from './useMemos';
 import { anchorAt, anchorPos, ctxMatches, currentPath, describeCtx, readCtx, resetHistory, restoreCtx, subscribeCtx, type MemoAnchor, type UiCtx } from './uiContext';
@@ -73,7 +73,18 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
   const [draftText, setDraftText] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
   const [replyDraft, setReplyDraft] = useState('');
-  const [showResolved, setShowResolved] = useState(false);
+  /** 「解決済みも表示」は次に開いたときも引き継ぐ */
+  const [showResolved, setShowResolved] = useState(() => {
+    try {
+      return localStorage.getItem('memo-show-resolved') === '1';
+    } catch {
+      return false;
+    }
+  });
+  /** 一覧のスクロール欄。スクロール位置を覚えて、次に一覧を開いたとき（画面を移っても）同じ位置から出す */
+  const listRef = useRef<HTMLDivElement>(null);
+  /** 位置を戻し終えた一覧（未解決のみ／解決済みも）。閉じると空に戻す */
+  const scrollDone = useRef('');
   const [author, setAuthor] = useState(() => {
     try {
       return localStorage.getItem('memo-author') || AUTHORS[0];
@@ -146,6 +157,41 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
   const openMemo = numbered.find((m) => m.id === openId) ?? null;
   const openPos = openMemo && pinsHere.includes(openMemo) ? pinPos(openMemo) : null;
   const listed = numbered.filter((m) => showResolved || m.status === 'open');
+  const scrollKey = `memo-list-scroll:${showResolved ? 'all' : 'open'}`;
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('memo-show-resolved', showResolved ? '1' : '0');
+    } catch {
+      /* 保存できない環境は無視 */
+    }
+  }, [showResolved]);
+  // 一覧を開いたとき・表示を切り替えたときは、覚えた位置へ戻す（メモの読込が済んで一覧が出てから1回だけ）
+  useLayoutEffect(() => {
+    const el = listRef.current;
+    if (!panelOpen || !el) {
+      scrollDone.current = '';
+      return;
+    }
+    if (scrollDone.current === scrollKey || listed.length === 0) return;
+    scrollDone.current = scrollKey;
+    let top = 0;
+    try {
+      top = Number(localStorage.getItem(scrollKey)) || 0;
+    } catch {
+      /* ignore */
+    }
+    el.scrollTop = top;
+  });
+  const saveScroll = () => {
+    const el = listRef.current;
+    if (!el || scrollDone.current !== scrollKey) return;
+    try {
+      localStorage.setItem(scrollKey, String(Math.round(el.scrollTop)));
+    } catch {
+      /* ignore */
+    }
+  };
 
   // ポップオーバーを開いたとき、回答欄に既存の回答を読み込む
   useEffect(() => {
@@ -406,7 +452,7 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
               解決済みも表示
             </label>
           </div>
-          <div style={{ overflowY: 'auto', flex: 1 }}>
+          <div ref={listRef} data-memo-list onScroll={saveScroll} style={{ overflowY: 'auto', flex: 1 }}>
             {listed.length === 0 && <div style={{ padding: '28px 14px', textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>{showResolved ? 'メモはありません。' : '未解決のメモはありません。'}</div>}
             {listed.map((m) => {
               const resolved = m.status === 'resolved';
