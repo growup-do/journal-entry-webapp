@@ -155,7 +155,7 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
             {extraTools}
             {tools.map((t) => t.icon && t.iconOnly ? (
               <span key={t.label} data-tip={t.disabled ? t.title : undefined} style={{ display: 'inline-flex' }}>
-                <IconButton icon={t.icon} label={t.label} title={t.title ? `${t.label}：${t.title}` : t.label} disabled={t.disabled} color={t.primary ? accent : '#5b6773'} size={42} onClick={t.onClick ?? (() => toast.show(NOT_IMPL))} />
+                <IconButton icon={t.icon} label={t.label} disabled={t.disabled} color={t.primary ? accent : '#5b6773'} size={42} onClick={t.onClick ?? (() => toast.show(NOT_IMPL))} />
               </span>
             ) : (
               <span key={t.label} title={t.disabled ? undefined : t.title} data-tip={t.disabled ? t.title : undefined} style={{ display: 'inline-flex' }}>

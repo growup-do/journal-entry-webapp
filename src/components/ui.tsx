@@ -147,18 +147,18 @@ export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
 /** 印刷ボタンのアイコン（全画面の印刷ボタンで同じものを使う） */
 export const PrintIcon = () => <Icon name="print" size={14} />;
 
-/** アイコンだけのボタン。名前はマウスを載せたときの表示（title）と読み上げ（aria-label）で示す。
+/** アイコンだけのボタン。マウスを載せたときの表示（title）と読み上げ（aria-label）は、メニュー名だけにする。
  *  大きさは右上の機能ボタン（btn の通常の大きさ）と同じ高さの正方形 */
-export function IconButton({ icon, label, color = '#5b6773', solid = false, size = 42, badge, style, ...rest }: { icon: IconName; label: string; color?: string; solid?: boolean; size?: number; /** 右上の赤い数字（承認待ちの件数など）。0 は出さない */ badge?: number } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'color'>) {
+export function IconButton({ icon, label, color = '#5b6773', solid = false, size = 42, badge, style, ...rest }: { icon: IconName; label: string; color?: string; solid?: boolean; size?: number; /** 右上の赤い数字（承認待ちの件数など）。0 は出さない */ badge?: number } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'color' | 'title'>) {
   return (
     <button
       type="button"
       className="icon-btn"
-      aria-label={label}
-      title={rest.title ?? label}
       data-icon-btn={label}
       data-solid={solid || undefined}
       {...rest}
+      aria-label={label}
+      title={label}
       style={{ position: 'relative', width: size, height: size, flex: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0, borderRadius: 8, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, cursor: rest.disabled ? 'not-allowed' : 'pointer', opacity: rest.disabled ? 0.45 : 1, fontFamily: 'inherit', ...style }}
     >
       <Icon name={icon} size={size >= 40 ? 19 : 16} />

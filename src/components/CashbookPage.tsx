@@ -858,13 +858,13 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {isPetty ? (
               <>
-                <IconButton icon="import" label="AI自動仕訳 インポート" title="AI自動仕訳 インポート：AI自動仕訳システムの判定結果を取り込みます" size={42} onClick={() => { setAiLines([]); setAiFileName(''); setAiOpen(true); }} />
-                <IconButton icon="approve" label="AI自動仕訳 会計確認" title={`AI自動仕訳 会計確認：取り込んだ明細を確認して承認します${aiPending.length ? `（承認待ち ${aiPending.length} 件）` : ''}`} size={42} badge={aiPending.length} onClick={() => setAiConfirmOpen(true)} />
+                <IconButton icon="import" label="AI自動仕訳 インポート" size={42} onClick={() => { setAiLines([]); setAiFileName(''); setAiOpen(true); }} />
+                <IconButton icon="approve" label="AI自動仕訳 会計確認" size={42} badge={aiPending.length} onClick={() => setAiConfirmOpen(true)} />
               </>
             ) : (
               <>
-                <IconButton icon="import" label="銀行CSV インポート" title="銀行CSV インポート：銀行の入出金明細（CSV）を取り込みます" size={42} onClick={() => setCsvOpen(true)} />
-                <IconButton icon="trash" label="インポート一括削除" title="インポート一括削除：取り込んだ明細を取込単位でまとめて削除します" size={42} color="#c0392b" onClick={() => setBulkOpen(true)} />
+                <IconButton icon="import" label="銀行CSV インポート" size={42} onClick={() => setCsvOpen(true)} />
+                <IconButton icon="trash" label="インポート一括削除" size={42} color="#c0392b" onClick={() => setBulkOpen(true)} />
               </>
             )}
           </div>
