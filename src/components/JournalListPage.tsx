@@ -107,7 +107,7 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
       subtitle="指定月の仕訳を伝票順に一覧します。行をクリックすると伝票を訂正できます。証憑・チェック・付箋は行の右端で切り替えます。"
       returnTo={boot ? { from: boot.from, onBack: () => onNavigate(boot.from), here: `${boot.month}月${boot.day}日の伝票`, hint: '伝票を訂正したら戻り、「検査継続」で再検査します' } : null}
       tools={[
-        { label: '検索条件', onClick: () => setSearchOpen(true), primary: true },
+        { label: '検索条件', onClick: () => setSearchOpen(true), primary: true, icon: 'search', iconOnly: true, title: '科目・金額・摘要などで絞り込みます' },
       ]}
       extraTools={<ScreenPrintMenu page="仕訳一覧" accent={accent} data={table} />}
       period={

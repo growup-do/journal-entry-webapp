@@ -1,6 +1,6 @@
 // 追加画面で共通に使う小さな部品（ボタン／入力／ラベル／タブ／トグル／カード）
 
-import type { CSSProperties, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from 'react';
 import { UNSAVED_BG } from '../store/unsaved';
 
 export const btn = (color = '#5b6773', solid = false, small = false): CSSProperties => ({
@@ -67,11 +67,11 @@ export function Notice({ children, tone = 'info' }: { children: ReactNode; tone?
 
 /** 設定系画面の共通シェル（SettingsPages の Shell と同じ見た目）。
  *  unsaved … 変更したのに保存していないあいだ true にすると、画面の色を薄い暖色に変える（確認メモ #224・#225） */
-export function SettingsShell({ variant, title, desc, badge = '設定', draft = false, actions, unsaved = false, children }: { variant: 'form' | 'sheet'; title: string; desc: ReactNode; badge?: string; draft?: boolean; actions?: ReactNode; unsaved?: boolean; children: ReactNode }) {
+export function SettingsShell({ variant, title, desc, badge = '設定', draft = false, actions, unsaved = false, editing = false, children }: { variant: 'form' | 'sheet'; title: string; desc: ReactNode; badge?: string; draft?: boolean; actions?: ReactNode; unsaved?: boolean; /** 入力中：画面の枠を光らせる */ editing?: boolean; children: ReactNode }) {
   const isSheet = variant === 'sheet';
   return (
     <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
-      <div data-unsaved={unsaved || undefined} style={{ width: '100%', maxWidth: isSheet ? 'none' : 1240, background: unsaved ? UNSAVED_BG : '#fff', border: '1px solid ' + (unsaved ? '#ecd9b4' : '#dde4ea'), borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'hidden', transition: 'background .15s, border-color .15s' }}>
+      <div data-unsaved={unsaved || undefined} data-editing={editing || undefined} className={editing ? 'edit-glow' : undefined} style={{ width: '100%', maxWidth: isSheet ? 'none' : 1240, background: unsaved ? UNSAVED_BG : '#fff', border: '1px solid ' + (unsaved ? '#ecd9b4' : '#dde4ea'), borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'hidden', transition: 'background .15s, border-color .15s' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '22px 24px 16px', borderBottom: '1px solid ' + (unsaved ? '#f0e2c6' : '#eef2f5'), flexWrap: 'wrap' }}>
           <div>
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21 }}>
@@ -116,3 +116,53 @@ export const rowClick = (fn: () => void) => () => {
   if (String(window.getSelection?.() ?? '').trim()) return;
   fn();
 };
+
+/* ------------------------------------------------------------------ */
+/* アイコン・アイコンだけのボタン（右上の機能ボタンを文字なしにそろえる）                    */
+/* ------------------------------------------------------------------ */
+export type IconName = 'print' | 'gear' | 'log' | 'search' | 'recalc' | 'link' | 'switch' | 'sliders' | 'sum' | 'undo' | 'count' | 'import' | 'approve' | 'trash';
+const ICON_PATHS: Record<IconName, ReactNode> = {
+  print: <><path d="M6 9V3h12v6" /><rect x="3" y="9" width="18" height="9" rx="2" /><path d="M7 14h10v7H7z" /></>,
+  gear: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></>,
+  log: <><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l3 2" /></>,
+  search: <><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></>,
+  recalc: <><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16" /><path d="M3 21v-5h5" /><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8" /><path d="M21 3v5h-5" /></>,
+  link: <><path d="M8 3L4 7l4 4" /><path d="M4 7h16" /><path d="M16 21l4-4-4-4" /><path d="M20 17H4" /></>,
+  switch: <><path d="M12 2l10 5-10 5L2 7z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" /></>,
+  sliders: <><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" /></>,
+  sum: <><path d="M18 7V4H6l6 8-6 8h12v-3" /></>,
+  undo: <><path d="M9 14L4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" /></>,
+  import: <><path d="M12 3v12" /><path d="M7 10l5 5 5-5" /><path d="M5 21h14" /></>,
+  approve: <><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></>,
+  trash: <><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /></>,
+  count: <><rect x="8" y="2" width="8" height="4" rx="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="M9 12h6M9 16h4" /></>,
+};
+export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flex: 'none' }}>
+      {ICON_PATHS[name]}
+    </svg>
+  );
+}
+/** 印刷ボタンのアイコン（全画面の印刷ボタンで同じものを使う） */
+export const PrintIcon = () => <Icon name="print" size={14} />;
+
+/** アイコンだけのボタン。名前はマウスを載せたときの表示（title）と読み上げ（aria-label）で示す。
+ *  大きさは右上の機能ボタン（btn の通常の大きさ）と同じ高さの正方形 */
+export function IconButton({ icon, label, color = '#5b6773', solid = false, size = 42, badge, style, ...rest }: { icon: IconName; label: string; color?: string; solid?: boolean; size?: number; /** 右上の赤い数字（承認待ちの件数など）。0 は出さない */ badge?: number } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'color'>) {
+  return (
+    <button
+      type="button"
+      className="icon-btn"
+      aria-label={label}
+      title={rest.title ?? label}
+      data-icon-btn={label}
+      data-solid={solid || undefined}
+      {...rest}
+      style={{ position: 'relative', width: size, height: size, flex: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0, borderRadius: 8, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, cursor: rest.disabled ? 'not-allowed' : 'pointer', opacity: rest.disabled ? 0.45 : 1, fontFamily: 'inherit', ...style }}
+    >
+      <Icon name={icon} size={size >= 40 ? 19 : 16} />
+      {!!badge && <span aria-hidden="true" style={{ position: 'absolute', top: -7, right: -7, minWidth: 18, height: 18, padding: '0 5px', boxSizing: 'border-box', borderRadius: 9, background: '#c0392b', color: '#fff', fontSize: 12, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{badge}</span>}
+    </button>
+  );
+}

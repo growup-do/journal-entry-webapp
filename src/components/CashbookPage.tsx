@@ -31,6 +31,7 @@ import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
 import { LABEL, NUM, ReportShell, TD, TH } from './ReportShell';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
+import { IconButton, PrintIcon } from './ui';
 import { useAssist } from '../hooks/useAssist';
 import { addVoucher } from '../store/journalStore';
 import { useSession } from '../store/session';
@@ -826,11 +827,11 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
         ...(isPetty ? [{ label: '残高の確認', items: [{ name: '金銭残高金種別表', note: '日付ごとに紙幣・硬貨の枚数を入力', onClick: openDenom }] }] : []),
       ]} />}
       tools={[
-        { label: '会計連動', onClick: openLink },
-        { label: isPetty ? '小口区分の切替' : '区分の切替', onClick: openSwitch },
-        { label: prefsTitle(kind), onClick: () => openSetting(), title: '出納帳の画面・印刷・集計済明細行の色の設定（現行の「ユーザー設定」）' },
-        { label: '集計取消', onClick: openUnagg, title: '集計済みの明細の集計を取り消します（会計連動済みの明細は取り消せません）' },
-        { label: '集計', onClick: () => setAggOpen(true), primary: true },
+        { label: '会計連動', onClick: openLink, icon: 'link', iconOnly: true, title: '集計した仕訳を会計の伝票へ連動します' },
+        { label: isPetty ? '小口区分の切替' : '区分の切替', onClick: openSwitch, icon: 'switch', iconOnly: true },
+        { label: prefsTitle(kind), onClick: () => openSetting(), icon: 'sliders', iconOnly: true, title: '出納帳の画面・印刷・集計済明細行の色の設定（現行の「ユーザー設定」）' },
+        { label: '集計取消', onClick: openUnagg, icon: 'undo', iconOnly: true, title: '集計済みの明細の集計を取り消します（会計連動済みの明細は取り消せません）' },
+        { label: '集計', onClick: () => setAggOpen(true), primary: true, icon: 'sum', iconOnly: true, title: '明細を集計して仕訳を作ります' },
       ]}
       controls={
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -857,16 +858,13 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {isPetty ? (
               <>
-                <button type="button" className="btn-outline" onClick={() => { setAiLines([]); setAiFileName(''); setAiOpen(true); }} style={btn()}>AI自動仕訳 インポート</button>
-                <button type="button" className="btn-outline" onClick={() => setAiConfirmOpen(true)} style={{ ...btn(), position: 'relative' }}>
-                  AI自動仕訳 会計確認
-                  {aiPending.length > 0 && <span style={{ position: 'absolute', top: -7, right: -7, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9, background: '#c0392b', color: '#fff', fontSize: 12, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{aiPending.length}</span>}
-                </button>
+                <IconButton icon="import" label="AI自動仕訳 インポート" title="AI自動仕訳 インポート：AI自動仕訳システムの判定結果を取り込みます" size={42} onClick={() => { setAiLines([]); setAiFileName(''); setAiOpen(true); }} />
+                <IconButton icon="approve" label="AI自動仕訳 会計確認" title={`AI自動仕訳 会計確認：取り込んだ明細を確認して承認します${aiPending.length ? `（承認待ち ${aiPending.length} 件）` : ''}`} size={42} badge={aiPending.length} onClick={() => setAiConfirmOpen(true)} />
               </>
             ) : (
               <>
-                <button type="button" className="btn-outline" onClick={() => setCsvOpen(true)} style={btn()}>銀行CSV インポート</button>
-                <button type="button" className="btn-outline" onClick={() => setBulkOpen(true)} style={btn()}>インポート一括削除</button>
+                <IconButton icon="import" label="銀行CSV インポート" title="銀行CSV インポート：銀行の入出金明細（CSV）を取り込みます" size={42} onClick={() => setCsvOpen(true)} />
+                <IconButton icon="trash" label="インポート一括削除" title="インポート一括削除：取り込んだ明細を取込単位でまとめて削除します" size={42} color="#c0392b" onClick={() => setBulkOpen(true)} />
               </>
             )}
           </div>
@@ -1570,7 +1568,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
             {denomSaved && <button type="button" className="btn-outline" onClick={deleteDenom} style={{ ...btn(), color: '#c0392b', marginRight: 'auto' }}>この日付の表を削除</button>}
             <button type="button" className="submit-btn" onClick={saveDenom} style={btn(true)}>登録</button>
-            <button type="button" className="btn-outline" onClick={printDenom} style={btn()}>印刷</button>
+            <button type="button" className="btn-outline" onClick={printDenom} style={{ ...btn(), display: 'inline-flex', alignItems: 'center', gap: 6 }}><PrintIcon />印刷</button>
             <button type="button" onClick={() => setDenomOpen(false)} style={btn()}>閉じる</button>
           </div>
         </div>

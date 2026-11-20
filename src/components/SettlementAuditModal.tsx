@@ -9,7 +9,7 @@ import type { CSSProperties } from 'react';
 import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
 import { PrintOutDialog } from './PrintOutDialog';
-import { Notice, btn as uiBtn } from './ui';
+import { Notice, PrintIcon, btn as uiBtn } from './ui';
 import { AUDIT_EXPLANATIONS, AUDIT_ITEMS, displayName } from '../data';
 import { isViewOnly, setSession, useSession } from '../store/session';
 import { AuditChecklist, AuditItemDialog } from './AuditItemDialog';
@@ -197,7 +197,7 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
               {running ? '調査中…' : done ? (counts.要調査 > 0 ? <>要調査が <b style={{ color: '#c0392b' }}>{counts.要調査} 件</b> あります。行の「結果詳細」「説明」で内容を確認してください。</> : 'すべての項目が OK です。') : '「調査開始」で全項目を調査します（決算チェック設定で無効にした項目はスキップ）'}
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              <span title={done ? '' : '調査が終わると使えます'}><button type="button" className="btn-outline" disabled={!done} onClick={() => setPrint(true)} style={{ ...btn(), opacity: done ? 1 : 0.5 }}>結果印刷</button></span>
+              <span title={done ? '' : '調査が終わると使えます'}><button type="button" className="btn-outline" disabled={!done} onClick={() => setPrint(true)} style={{ ...btn(), display: 'inline-flex', alignItems: 'center', gap: 6, opacity: done ? 1 : 0.5 }}><PrintIcon />結果印刷</button></span>
               <span title={done ? '' : '調査が終わると使えます'}><button type="button" className="btn-outline" disabled={!done} onClick={() => setTrace('all')} style={{ ...btn(), opacity: done ? 1 : 0.5 }}>結果詳細表示（全項目）</button></span>
               {done && <button type="button" className="btn-outline" onClick={start} style={btn()}>再調査</button>}
               {done ? <button type="button" className="submit-btn" onClick={onClose} style={btn(true)}>調査終了</button> : <button type="button" className="submit-btn" onClick={start} disabled={running} style={{ ...btn(true), opacity: running ? 0.6 : 1 }}>調査開始</button>}

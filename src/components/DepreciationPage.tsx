@@ -16,7 +16,7 @@ import { PrintOutButton } from './PrintOutDialog';
 import { DepPrintModal, printMethod, type DepValues } from './DepPrintModal';
 import { PreviewModal } from './PrintCenter';
 import type { ExportSpec } from './ExportDialog';
-import { Notice, SelectionBar, btn as uiBtn } from './ui';
+import { IconButton, Notice, SelectionBar, btn as uiBtn } from './ui';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { ACCOUNT_META, accountMatches } from '../lib/accounts';
 import { SUMMARIES } from '../data';
@@ -732,8 +732,8 @@ export function DepreciationPage({ variant, accent }: Props) {
             <button type="button" className="btn-outline" onClick={() => setEquipModal(true)} style={btn()}>＋ 備品を登録</button>
             <span style={{ width: 1, background: '#e2e8ee', margin: '4px 4px' }} />
             <ScreenPrintMenu accent={accent} actions={[{ label: '固定資産・備品の帳票', items: PRINT_REPORTS.map((r) => ({ name: r, onClick: () => { addLog('システム', '', r, '帳票印刷'); openReport(r); } })) }]} />
-            <button type="button" className="btn-outline" onClick={() => setEnvOpen(true)} style={btn()}>環境設定</button>
-            <button type="button" className="btn-outline" onClick={() => openLog('資産')} style={btn()}>操作ログ</button>
+            <IconButton icon="gear" label="環境設定" title="環境設定：償却・端数処理・帳票などの既定" onClick={() => setEnvOpen(true)} />
+            <IconButton icon="log" label="操作ログ" title="操作ログ：登録・変更・印刷などの記録" onClick={() => openLog('資産')} />
           </div>
         </div>
 

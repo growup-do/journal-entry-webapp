@@ -7,7 +7,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { PreviewModal, PrintDialog, SCREEN_DETAIL, sampleReportData, type ReportDef, type TableData } from './PrintCenter';
 import { REPORTS, condOk } from './printCatalog';
 import { useSession } from '../store/session';
-import { Chevron, btn } from './ui';
+import { Chevron, PrintIcon, btn } from './ui';
 
 export interface PrintItem { name: string; /** 詳細設定の元にする帳票（REPORTS の名前）。'WAMNET' は WAMNET連携のダイアログで扱う */ base: string; note?: string; /** 画面に表示中の表を印刷データに使う */ screenData?: boolean; /** 決算書の様式（共通の印刷設定「様式設定」で省略にした様式はメニューに出さない） */ form?: string }
 export interface PrintGroup { label?: string; items: PrintItem[]; /** 次のグループとの区切りを点線にする（同じ種類の帳票の中の区切り） */ dashedBelow?: boolean }
@@ -80,7 +80,7 @@ export function ScreenPrintMenu({ page, groups, actions, accent, data, label = '
   const choose = (it: PrintItem | PrintAction) => { setOpen(false); if ('onClick' in it) it.onClick(); else setPicked(it); };
   const report = picked ? reportOf(picked) : null;
   const pdata = picked?.screenData ? data : undefined;
-  const icon = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9V3h12v6" /><rect x="3" y="9" width="18" height="9" rx="2" /><path d="M7 14h10v7H7z" /></svg>;
+  const icon = <PrintIcon />;
   return (
     <div ref={ref} data-screen-print={page ?? (actions ? 'actions' : 'custom')} style={{ position: 'relative', display: 'inline-flex' }}>
       <button type="button" className={tone === 'act' ? 'ef-act' : 'btn-outline'} aria-haspopup={single ? undefined : 'menu'} aria-expanded={single ? undefined : open} onClick={() => (single ? choose(items[0]) : setOpen((o) => !o))} title={single ? `${items[0].name} を印刷（期間・詳細設定・出力先を指定）` : 'この画面に関係する帳票を選んで印刷します'} style={{ ...(tone === 'act' ? { padding: '6px 10px', borderRadius: 8, border: '1px solid #cfd8e0', background: '#fff', color: '#48565f', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' } : btn(accent, false, small)), display: 'inline-flex', alignItems: 'center', gap: 6, ...style }}>

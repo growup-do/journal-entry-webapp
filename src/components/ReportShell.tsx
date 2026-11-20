@@ -9,6 +9,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { NOT_IMPL, ToastView, useToast } from './Toast';
 import { displayName } from '../data';
 import { startKindOf, useSession, type EnvSettings } from '../store/session';
+import { Icon, IconButton, type IconName } from './ui';
 
 export interface ToolButton {
   label: string;
@@ -17,6 +18,9 @@ export interface ToolButton {
   /** 無効表示（理由は title に） */
   disabled?: boolean;
   title?: string;
+  /** アイコン。iconOnly のときは文字を出さず、名前はマウスを載せたときに出す */
+  icon?: IconName;
+  iconOnly?: boolean;
 }
 
 /** 部の切替（資産の部／負債の部／事業活動／資金の部）。集計期間の行の右端に並べ、← → キーでも切り替える */
@@ -72,13 +76,15 @@ interface Props {
   org?: string;
   /** モーダルの中に置く（外側の余白・枠・影を付けない） */
   embedded?: boolean;
+  /** 入力中：画面の枠を光らせる（残高照合の通帳残高の設定など） */
+  editing?: boolean;
   /** 右側に元帳パネルを並べて表示しているときの、パネルの幅（本文の右余白をその分広げる） */
   asideWidth?: number;
 }
 
 const PART_COLORS = ['#e8791e', '#d9a400', '#d9a400', '#d9a400'];
 
-export function ReportShell({ variant, accent, title, subtitle, tools = [], extraTools, returnTo, period, periodAside, parts, target, targetLabel = '指定科目', switches, controls, notice, listNote, children, badge, org, embedded, asideWidth = 0 }: Props) {
+export function ReportShell({ variant, accent, title, subtitle, tools = [], extraTools, returnTo, period, periodAside, parts, target, targetLabel = '指定科目', switches, controls, notice, listNote, children, badge, org, embedded, asideWidth = 0, editing = false }: Props) {
   const toast = useToast();
   const s = useSession();
   const isSheet = variant === 'sheet';
@@ -115,7 +121,7 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
   return (
     <main style={embedded ? { minWidth: 0 } : { flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, paddingRight: (isSheet ? 24 : 28) + asideWidth, transition: 'padding-right .28s ease', display: 'flex', justifyContent: 'center' }}>
       <ToastView msg={toast.msg} />
-      <div style={embedded ? { width: '100%', background: '#fff', display: 'flex', flexDirection: 'column' } : { width: '100%', maxWidth: isSheet ? 'none' : 1280, background: '#fff', border: '1px solid #dde4ea', borderRadius: isSheet ? 14 : 16, boxShadow: '0 6px 26px rgba(30,50,70,.07)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <div data-editing={editing || undefined} className={editing && !embedded ? 'edit-glow' : undefined} style={embedded ? { width: '100%', background: '#fff', display: 'flex', flexDirection: 'column' } : { width: '100%', maxWidth: isSheet ? 'none' : 1280, background: '#fff', border: '1px solid #dde4ea', borderRadius: isSheet ? 14 : 16, boxShadow: '0 6px 26px rgba(30,50,70,.07)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {returnTo && (
           <div data-return-bar style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 22px', background: '#f3f6f9', borderBottom: '1px solid #e2e8ee', flexWrap: 'wrap' }}>
             <button type="button" className="btn-outline" onClick={returnTo.onBack} style={{ padding: '6px 14px', border: '1px solid ' + accent, borderRadius: 8, background: '#fff', color: accent, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
@@ -145,12 +151,16 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
             </div>
             {subtitle && <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>{subtitle}</div>}
           </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
             {extraTools}
-            {tools.map((t) => (
+            {tools.map((t) => t.icon && t.iconOnly ? (
+              <span key={t.label} data-tip={t.disabled ? t.title : undefined} style={{ display: 'inline-flex' }}>
+                <IconButton icon={t.icon} label={t.label} title={t.title ? `${t.label}：${t.title}` : t.label} disabled={t.disabled} color={t.primary ? accent : '#5b6773'} size={42} onClick={t.onClick ?? (() => toast.show(NOT_IMPL))} />
+              </span>
+            ) : (
               <span key={t.label} title={t.disabled ? undefined : t.title} data-tip={t.disabled ? t.title : undefined} style={{ display: 'inline-flex' }}>
-                <button type="button" className="btn-outline" disabled={t.disabled} onClick={t.onClick ?? (() => toast.show(NOT_IMPL))} style={{ ...toolStyle(t.primary ? accent : undefined), ...(t.disabled ? { opacity: 0.45, cursor: 'not-allowed', pointerEvents: 'none' } : {}) }}>
-                  {t.label}
+                <button type="button" className="btn-outline" disabled={t.disabled} onClick={t.onClick ?? (() => toast.show(NOT_IMPL))} style={{ ...toolStyle(t.primary ? accent : undefined), ...(t.icon ? { display: 'inline-flex', alignItems: 'center', gap: 6 } : {}), ...(t.icon === 'print' && !t.primary ? { color: accent } : {}), ...(t.disabled ? { opacity: 0.45, cursor: 'not-allowed', pointerEvents: 'none' } : {}) }}>
+                  {t.icon && <Icon name={t.icon} size={14} />}{t.label}
                 </button>
               </span>
             ))}
@@ -219,7 +229,9 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
 
 function toolStyle(bg?: string): CSSProperties {
   return {
-    padding: '9px 16px',
+    padding: '10px 16px',
+    boxSizing: 'border-box',
+    minHeight: 42,
     border: '1px solid ' + (bg ?? '#cfd8e0'),
     borderRadius: 8,
     background: bg ?? '#fff',

@@ -10,7 +10,7 @@ import { Modal } from './Modal';
 import { PreviewModal, type TableData } from './PrintCenter';
 import { PrintSteps, type OutKind } from './PrintSteps';
 import { ToastView, useToast } from './Toast';
-import { Field, Notice, btn, input } from './ui';
+import { Field, Notice, PrintIcon, btn, input } from './ui';
 
 export interface PrintOutProps {
   open: boolean;
@@ -93,8 +93,8 @@ export function PrintOutButton({ label = '印刷', style, disabled, disabledTip,
   return (
     <>
       <span data-tip={disabled ? disabledTip : undefined} style={{ display: 'inline-flex' }}>
-        <button type="button" className="btn-outline" data-print-out-btn={props.name} disabled={disabled} onClick={() => setOpen(true)} title={disabled ? undefined : `${props.name} を印刷（詳細設定・出力先を指定）`} style={{ ...btn(), display: 'inline-flex', alignItems: 'center', gap: 6, opacity: disabled ? 0.5 : 1, ...style }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9V3h12v6" /><rect x="3" y="9" width="18" height="9" rx="2" /><path d="M7 14h10v7H7z" /></svg>
+        <button type="button" className="btn-outline" data-print-out-btn={props.name} disabled={disabled} onClick={() => setOpen(true)} title={disabled ? undefined : `${props.name} を印刷（詳細設定・出力先を指定）`} style={{ ...btn(props.accent), display: 'inline-flex', alignItems: 'center', gap: 6, opacity: disabled ? 0.5 : 1, ...style }}>
+          <PrintIcon />
           {label}
         </button>
       </span>

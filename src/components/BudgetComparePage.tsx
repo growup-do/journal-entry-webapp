@@ -111,7 +111,7 @@ export function BudgetComparePage({ variant, accent, onNavigate }: Props) {
       title={displayName(KEY)}
       subtitle="現額予算と実績額を科目ごとに対比し、予算残高・達成率・構成比を表示します。表とグラフ（実績／達成率／構成比）を切り替えできます。表の科目の行をクリック（または「元帳」ボタン）で、右側に資金元帳を表示します。"
       extraTools={<ScreenPrintMenu page="予算対比" accent={accent} />}
-      tools={[{ label: '再計算' }]}
+      tools={[{ label: '再計算', icon: 'recalc', iconOnly: true, title: '予算と実績を集計し直します' }]}
       period={
         <>
           <FiscalMonthTabs current={view.month} accent={accent} onSelect={(m) => setView({ month: m ?? '10' })} />

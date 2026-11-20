@@ -249,6 +249,7 @@ export function BalanceCheckPage({ variant, accent }: { variant: 'form' | 'sheet
       accent={accent}
       title={displayName('残高照合')}
       subtitle="現預金科目ごとに、通帳（実残高）とシステム残高を突合して OK／NG を表示します。"
+      editing={editing}
       tools={[{ label: editing ? '設定を終了' : '通帳残高の設定', onClick: () => setEditing((e) => !e), primary: true }]}
       extraTools={<ScreenPrintMenu accent={accent} actions={[{ items: [{ name: '現預金残高推移表（残高照合）', onClick: openExport }] }]} />}
       period={

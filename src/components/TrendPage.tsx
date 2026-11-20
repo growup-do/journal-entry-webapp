@@ -121,7 +121,7 @@ export function TrendPage({ kind, variant, accent, onNavigate }: Props) {
       extraTools={isVendor ? <ScreenPrintMenu page="業者推移" accent={accent} /> : undefined}
       title={title}
       subtitle={<>{isVendor ? '指定した取引先' : '指定した科目'}の月ごとの推移を年度で一覧します。行は「当初」（期首）から各月、「決算月」の順です。月の行をクリック（または「元帳」ボタン）で、右側にその月の元帳を表示します。全画面で見たいときはパネルの「元帳の画面で開く」を使います。<span style={{ color: '#b7791f' }}>（表示中の値はサンプルです）</span></>}
-      tools={[{ label: isVendor ? '取引先検索' : '科目検索', onClick: () => document.getElementById('trend-target')?.focus() }, { label: 'グラフ作成', onClick: () => setGraphOpen(true), primary: true }]}
+      tools={[{ label: 'グラフ作成', onClick: () => setGraphOpen(true), primary: true }]}
       period={
         <>
           <span style={{ fontSize: 14, color: '#48565f' }}><b style={{ color: isPrev ? '#b7791f' : '#22303c' }}>{yearLabel}</b>（4月〜3月）</span>

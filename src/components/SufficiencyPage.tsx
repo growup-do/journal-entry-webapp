@@ -234,7 +234,6 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
             <button type="button" className="btn-outline" onClick={() => setStep('method')} style={btn()}>入力方式</button>
             <button type="button" className="btn-outline" onClick={() => { setYearsDraft(years); setYearsOpen(true); }} style={btn()}>過去年推移</button>
             <PrintOutButton name="簡易充実残額シミュレーター" accent={accent} defaultDest="excel" fileName="充実残額シミュレーション_令和8年度" meta={excelSpec().meta} data={() => { const x = excelSpec(); return { header: x.header ?? [], rows: x.rows ?? [] }; }} />
-            <button type="button" className="btn-outline" onClick={() => onNavigate('伝票入力')} style={btn()}>閉じる</button>
           </div>
         </div>
 

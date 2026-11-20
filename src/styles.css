@@ -221,3 +221,22 @@ tr.row-hover:hover > td:first-child { box-shadow: inset 3px 0 0 rgba(44, 95, 158
 .ra-row[data-dragging] > td { opacity: 0.45; }
 .ra-row[data-drop='before'] > td { box-shadow: inset 0 3px 0 #2c5f9e; }
 .ra-row[data-drop='after'] > td { box-shadow: inset 0 -3px 0 #2c5f9e; }
+
+/* 入力中の画面の枠を光らせる（残高照合の通帳残高の設定、決算書 共通印刷設定の未決定の変更など） */
+@keyframes edit-glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(31, 122, 82, 0.20), 0 0 18px rgba(31, 122, 82, 0.28); }
+  50% { box-shadow: 0 0 0 3px rgba(31, 122, 82, 0.34), 0 0 30px rgba(31, 122, 82, 0.45); }
+}
+.edit-glow {
+  border-color: #1f7a52 !important;
+  animation: edit-glow-pulse 2.4s ease-in-out infinite;
+}
+/* 動きを減らす設定では点滅させず、光った状態のままにする */
+@media (prefers-reduced-motion: reduce) {
+  .edit-glow { animation-duration: 0.01s; animation-iteration-count: 1; animation-fill-mode: forwards; }
+}
+
+/* アイコンだけのボタン */
+.icon-btn:hover:not(:disabled) { background: #f3f6f9 !important; }
+.icon-btn[data-solid]:hover:not(:disabled) { filter: brightness(1.08); background: inherit; }
+.icon-btn:focus-visible { outline: 2px solid #1f7a52; outline-offset: 2px; }
