@@ -31,7 +31,7 @@ import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
 import { SECTION_TAG, NUM, ReportShell, TD, TH } from './ReportShell';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
-import { IconButton, PrintIcon } from './ui';
+import { Icon, PrintIcon, type IconName } from './ui';
 import { useAssist } from '../hooks/useAssist';
 import { addVoucher } from '../store/journalStore';
 import { useSession } from '../store/session';
@@ -39,8 +39,16 @@ import { VENDORS, accountFlat } from '../data';
 import type { MonthFilter } from '../types';
 
 export type CashbookKind = 'petty' | 'bank';
-/** 小口現金の AI自動仕訳 のボタン（文字だけ。高さはアイコンのボタンと同じ 42px） */
-const AI_BTN: CSSProperties = { position: 'relative', height: 42, padding: '0 14px', borderRadius: 8, border: '1px solid #cfd8e0', background: '#fff', color: '#48565f', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' };
+/** 会計月の行の右に置く操作（AI自動仕訳・銀行CSV）。枠のない「アイコン＋小さな文字」のボタン */
+function MonthRowAction({ icon, label, onClick, danger, badge, ...rest }: { icon: IconName; label: string; onClick: () => void; danger?: boolean; /** 右上に重ねて出す件数（承認待ちなど）。0 は出さない */ badge?: number; [k: `data-${string}`]: unknown }) {
+  return (
+    <button type="button" className="month-row-act" data-danger={danger || undefined} onClick={onClick} {...rest} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 5px', border: 'none', borderRadius: 6, background: 'transparent', color: danger ? '#c0392b' : '#48565f', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+      <Icon name={icon} size={15} />
+      {label}
+      {!!badge && <span aria-label={`承認待ち ${badge} 件`} style={{ position: 'absolute', top: -8, right: -6, minWidth: 18, height: 18, padding: '0 5px', boxSizing: 'border-box', borderRadius: 9, background: '#c0392b', color: '#fff', fontSize: 12, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{badge}</span>}
+    </button>
+  );
+}
 
 const yen = (n: number) => n.toLocaleString('ja-JP');
 
@@ -270,7 +278,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
   const isPetty = kind === 'petty';
   const title = isPetty ? '小口現金出納帳' : '預金出納帳';
   /** 消費税を使う設定（消費税の処理方式が「通常モード」以外）のときは「消費税コード」「税額」の列を出す（確認メモ #216） */
-  const { taxEntry } = useSession();
+  const { taxEntry, env } = useSession();
   const [book, setBook] = useState(isPetty ? PETTY_BOOKS[0].name : '普通預金（保育園）');
   /** 出納帳の一覧（「区分の切替」の中の「＋出納帳追加」で増やせる。確認メモ #211／#215） */
   const [pettyBooks, setPettyBooks] = useState<PettyBook[]>(PETTY_BOOKS);
@@ -838,6 +846,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       ]}
       controlsFull
       controls={
+        <div data-cash-month style={{ display: 'grid', gap: 4 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <span style={{ ...SECTION_TAG, alignSelf: 'center' }} data-section="会計月">会計月</span>
           <FiscalMonthTabs
@@ -859,24 +868,28 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
               </span>
             ) : undefined}
           />
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {/* 会計月と同じ行の右端に、枠のない「アイコン＋小さな文字」のボタンを置く */}
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
             {isPetty ? (
               <>
-                {/* AI自動仕訳はアイコンなしの文字のボタン */}
-                <button type="button" className="btn-outline" data-ai-import onClick={() => { setAiLines([]); setAiFileName(''); setAiOpen(true); }} style={AI_BTN}>AI自動仕訳 インポート</button>
-                <button type="button" className="btn-outline" data-ai-confirm onClick={() => setAiConfirmOpen(true)} style={AI_BTN}>
-                  AI自動仕訳 会計確認
-                  {aiPending.length > 0 && <span aria-label={`承認待ち ${aiPending.length} 件`} style={{ position: 'absolute', top: -7, right: -7, minWidth: 18, height: 18, padding: '0 5px', boxSizing: 'border-box', borderRadius: 9, background: '#c0392b', color: '#fff', fontSize: 12, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{aiPending.length}</span>}
-                </button>
+                <MonthRowAction icon="import" label="AI自動仕訳 インポート" data-ai-import onClick={() => { setAiLines([]); setAiFileName(''); setAiOpen(true); }} />
+                <MonthRowAction icon="approve" label="AI自動仕訳 会計確認" data-ai-confirm badge={aiPending.length} onClick={() => setAiConfirmOpen(true)} />
               </>
             ) : (
               <>
-                {/* 銀行CSVの 2 つは枠を広げず、マウスを載せるとツールチップで名前を出す */}
-                <IconButton icon="import" label="銀行CSV インポート" size={42} tipOnly onClick={() => setCsvOpen(true)} />
-                <IconButton icon="trash" label="インポート一括削除" size={42} color="#c0392b" tipOnly onClick={() => setBulkOpen(true)} />
+                <MonthRowAction icon="import" label="CSVファイルの取り込み" data-csv-import onClick={() => setCsvOpen(true)} />
+                <MonthRowAction icon="trash" label="インポート伝票一括削除" data-bulk-delete danger onClick={() => setBulkOpen(true)} />
               </>
             )}
           </div>
+        </div>
+        {/* 月の範囲選択の案内と「4月〜○月の累計」は会計月の下の行に置く（会計月の行にボタンを収めるため） */}
+        {!range && (
+          <div style={{ paddingLeft: 84, display: 'flex', gap: 12, fontSize: 12 }}>
+            <span title="月タブの上を、開始月から終了月までドラッグすると範囲になります。開始月をクリックしてから、終了月を Shift＋クリックしても選べます" style={{ color: '#8290a0', cursor: 'help' }}>月はドラッグで範囲を選べます</span>
+            {env.termFromStart && FISCAL_MONTHS.indexOf(month as typeof FISCAL_MONTHS[number]) > 0 && <span title="環境設定（全区分共通）「月範囲の選択で、期首から月を選択する」が有効です" style={{ fontWeight: 700, color: accent }}>4月〜{month}月の累計</span>}
+          </div>
+        )}
         </div>
       }
     >

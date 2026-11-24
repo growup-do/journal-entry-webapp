@@ -322,3 +322,11 @@ tr.row-hover:hover > td:first-child { box-shadow: inset 3px 0 0 rgba(44, 95, 158
 /* 集計期間を見出しの行に置いたとき（試算表）：印刷などのボタンと同じ行に収めるため、月タブの横の案内は出さない。
    同じ説明は「期間を指定」ボタンにマウスを載せると出る */
 [data-period-row] [data-range-hint] { display: none !important; }
+
+/* 出納帳：会計月の行の操作（枠のないアイコン＋文字のボタン） */
+.month-row-act:hover { background: #eef3f0 !important; color: #1f7a52 !important; }
+.month-row-act[data-danger]:hover { background: #fbecea !important; color: #a93226 !important; }
+.month-row-act:focus-visible { outline: 2px solid #1f7a52; outline-offset: 1px; }
+/* 出納帳：月の範囲選択の案内と「4月〜○月の累計」は会計月の下の行に出すので、月タブの横には出さない */
+[data-cash-month] [data-range-hint],
+[data-cash-month] [data-from-start] { display: none !important; }
