@@ -164,7 +164,7 @@ export function IconButton({ icon, label, color = '#5b6773', solid = false, size
       style={{ position: 'relative', minWidth: size, height: size, boxSizing: 'border-box', flex: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: `0 ${(size - 2 - iconSize) / 2}px`, borderRadius: 8, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, cursor: rest.disabled ? 'not-allowed' : 'pointer', opacity: rest.disabled ? 0.45 : 1, fontFamily: 'inherit', ...style }}
     >
       <Icon name={icon} size={iconSize} />
-      <span className="icon-btn-label" aria-hidden="true">{label}</span>
+      <span className="icon-btn-label" aria-hidden="true"><span>{label}</span></span>
       {!!badge && <span aria-hidden="true" style={{ position: 'absolute', top: -7, right: -7, minWidth: 18, height: 18, padding: '0 5px', boxSizing: 'border-box', borderRadius: 9, background: '#c0392b', color: '#fff', fontSize: 12, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{badge}</span>}
     </button>
   );

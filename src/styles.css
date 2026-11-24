@@ -240,28 +240,43 @@ tr.row-hover:hover > td:first-child { box-shadow: inset 3px 0 0 rgba(44, 95, 158
 .icon-btn:hover:not(:disabled) { background: #f3f6f9 !important; }
 .icon-btn[data-solid]:hover:not(:disabled) { filter: brightness(1.08); background: inherit; }
 .icon-btn:focus-visible { outline: 2px solid #1f7a52; outline-offset: 2px; }
-/* アイコンボタン：マウスを載せる（キーボードで選ぶ）と枠の幅が広がり、アイコンの横にメニュー名を出す */
+/* アイコンボタン：マウスを載せる（キーボードで選ぶ）と枠の幅が広がり、アイコンの横にメニュー名を出す。
+   幅は 0fr から 1fr（実際の文字幅）へ動かすので、最初から最後まで同じ調子でなめらかに広がる。
+   開くときは幅が先に動き、文字は少し遅れてふわっと出る。閉じるときは文字が先に消えてから幅が縮む */
 .icon-btn-label {
-  display: inline-block;
-  max-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
+  display: inline-grid;
+  grid-template-columns: 0fr;
   opacity: 0;
   margin-left: 0;
   font-size: 14px;
   font-weight: 700;
   line-height: 1;
-  transition: max-width 0.18s ease, opacity 0.14s ease, margin-left 0.18s ease;
+  transition:
+    grid-template-columns 0.42s cubic-bezier(0.4, 0, 0.2, 1) 0.06s,
+    margin-left 0.42s cubic-bezier(0.4, 0, 0.2, 1) 0.06s,
+    opacity 0.2s ease;
+}
+.icon-btn-label > span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
 }
 .icon-btn:hover .icon-btn-label,
 .icon-btn:focus-visible .icon-btn-label {
-  max-width: 16em;
+  grid-template-columns: 1fr;
   opacity: 1;
   margin-left: 6px;
+  transition:
+    grid-template-columns 0.5s cubic-bezier(0.33, 0, 0.15, 1),
+    margin-left 0.5s cubic-bezier(0.33, 0, 0.15, 1),
+    opacity 0.36s ease 0.14s;
 }
 @media (prefers-reduced-motion: reduce) {
-  .icon-btn-label { transition: none; }
+  .icon-btn-label,
+  .icon-btn:hover .icon-btn-label,
+  .icon-btn:focus-visible .icon-btn-label { transition: none; }
 }
+
 
 /* 減価償却：Enter で移った先の欄が分かるように、選択中の欄をはっきり示す（確認メモ #278）。
    プルダウンもテキストの欄と同じ表示にする。和暦の年月日の欄（元号・年・月・日）も同じ */
