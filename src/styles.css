@@ -304,3 +304,11 @@ tr.row-hover:hover > td:first-child { box-shadow: inset 3px 0 0 rgba(44, 95, 158
 .toolbar-actions > :has(> [data-icon-btn="印刷"]) {
   order: 99;
 }
+
+/* 試算表などの部の切替タブ：選んでいないタブはマウスを載せると少し明るくする */
+.part-tab[aria-selected="false"]:hover { background: #e3e9ee !important; color: #22303c !important; }
+.part-tab:focus-visible { outline: 2px solid #1f7a52; outline-offset: -2px; }
+
+/* 集計期間を見出しの行に置いたとき（試算表）：印刷などのボタンと同じ行に収めるため、月タブの横の案内は出さない。
+   同じ説明は「期間を指定」ボタンにマウスを載せると出る */
+[data-period-row] [data-range-hint] { display: none !important; }

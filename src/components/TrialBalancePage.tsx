@@ -379,9 +379,10 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
       title={displayName(KEY)}
       subtitle={<>{isClosing ? '当年度末（決算）の残高を一覧します。' : '前月繰越・当月の借方／貸方・残高を一覧します。'}科目の行をクリック（または「元帳」ボタン）で、右側に総勘定元帳を表示します。別の行を押すと差し替わり、全画面で見たいときはパネルの「元帳の画面で開く」を使います。</>}
       tools={isClosing ? [
-        { label: '残高グラフ', onClick: () => setGraph(true) },
-        { label: '充実残額', onClick: () => onNavigate('充実残額') },
-        { label: '繰越判断', onClick: () => onNavigate('繰越判断'), title: '委託費の繰越・積立の判断（繰越判断の基準）を開きます（旧 F10 繰越）' },
+        // 集計期間と同じ行に収まるよう、ほかの画面と同じアイコンのボタンにする（マウスを載せると名前が出る）
+        { label: '残高グラフ', icon: 'bars', iconOnly: true, onClick: () => setGraph(true) },
+        { label: '充実残額', icon: 'sum', iconOnly: true, onClick: () => onNavigate('充実残額') },
+        { label: '繰越判断', icon: 'carry', iconOnly: true, onClick: () => onNavigate('繰越判断'), title: '委託費の繰越・積立の判断（繰越判断の基準）を開きます（旧 F10 繰越）' },
       ] : []}
       period={
         <>
@@ -390,6 +391,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
         </>
       }
       parts={{ items: PARTS, current: view.part, onChange: (i) => setView({ part: i }) }}
+      periodInHeader
       targetLabel="科目検索"
       target={
         <>

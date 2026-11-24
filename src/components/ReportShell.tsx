@@ -23,7 +23,7 @@ export interface ToolButton {
   iconOnly?: boolean;
 }
 
-/** 部の切替（資産の部／負債の部／事業活動／資金の部）。集計期間の行の右端にセグメンテッドコントロールで並べる（← → キーでも切り替わる） */
+/** 部の切替（資産の部／負債の部／事業活動／資金の部）。一覧表のすぐ上にタブで並べる（← → キーでも切り替わる） */
 export interface PartSpec {
   items: string[];
   current: number;
@@ -57,6 +57,8 @@ interface Props {
   periodAside?: ReactNode;
   /** 部の切替（右上のボタン） */
   parts?: PartSpec;
+  /** 集計期間を見出しの下の行に置き、印刷などのボタンと同じ行に並べる（試算表） */
+  periodInHeader?: boolean;
   /** 2) 指定科目 */
   target?: ReactNode;
   /** 指定科目の見出し（例：指定取引先／絞り込み／科目検索）。既定は「指定科目」 */
@@ -83,7 +85,7 @@ interface Props {
 }
 
 
-export function ReportShell({ variant, accent, title, subtitle, tools = [], extraTools, returnTo, period, periodAside, parts, target, targetLabel = '指定科目', switches, controls, notice, listNote, children, badge, org, embedded, asideWidth = 0, editing = false }: Props) {
+export function ReportShell({ variant, accent, title, subtitle, tools = [], extraTools, returnTo, period, periodAside, parts, periodInHeader = false, target, targetLabel = '指定科目', switches, controls, notice, listNote, children, badge, org, embedded, asideWidth = 0, editing = false }: Props) {
   const toast = useToast();
   const s = useSession();
   const isSheet = variant === 'sheet';
@@ -114,7 +116,8 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
     return () => window.removeEventListener('keydown', h);
   }, [hasParts]);
 
-  const hasConditions = !!(period || periodAside || parts || target || switches || controls);
+  const periodInConditions = !periodInHeader && !!(period || periodAside);
+  const hasConditions = !!(periodInConditions || target || switches || controls);
   const row: CSSProperties = { display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' };
 
   return (
@@ -133,7 +136,7 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
           </div>
         )}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '22px 24px 16px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
-          <div style={{ minWidth: 0 }}>
+          <div style={{ minWidth: 0, ...(periodInHeader ? { flexBasis: '100%' } : {}) }}>
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21 }}>
               {title} {badge}
               {org != null ? (
@@ -150,6 +153,14 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
             </div>
             {subtitle && <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>{subtitle}</div>}
           </div>
+          {/* 集計期間は印刷などのボタンと同じ行に置く（試算表） */}
+          {periodInHeader && (period || periodAside) && (
+            <div data-period-row style={{ ...row, gap: 10, minWidth: 0 }}>
+              <span style={SECTION_TAG} data-section="集計期間">集計期間</span>
+              {period}
+              {periodAside}
+            </div>
+          )}
           <div className="toolbar-actions" style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
             {/* 印刷はどの画面でも右端に置く：印刷以外のツール → 印刷のツール → 印刷メニュー（extraTools）の順 */}
             {[...tools.filter((t) => t.icon !== 'print'), ...tools.filter((t) => t.icon === 'print')].map((t) => t.icon && t.iconOnly ? (
@@ -169,27 +180,14 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
         {/* 問合せ画面の共通構成（依頼書 5.4.5／2.5）：① 集計期間の選択 → ② 指定科目 → ③ 表示切替 → ④ 一覧表。見出しは共通シェルが付ける */}
         {hasConditions && (
           <div data-conditions style={{ padding: '14px 22px', borderBottom: '1px solid #eef2f5', display: 'grid', gridTemplateColumns: '92px minmax(0,1fr)', columnGap: 14, rowGap: 10, alignItems: 'center' }}>
-            {(period || periodAside || parts) && (
+            {periodInConditions && (
               <>
                 <span style={SECTION_TAG} data-section="集計期間">集計期間</span>
                 <div style={row}>
                   {period}
-                  {(periodAside || parts) && (
+                  {periodAside && (
                     <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                       {periodAside}
-                      {parts && (
-                        // 部の切替はセグメンテッドコントロール（ほかの画面の表示切替と同じ形）
-                        <div role="tablist" aria-label="部の切替" data-parts style={{ display: 'inline-flex', border: '1px solid #cfd8e0', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
-                          {parts.items.map((p, i) => {
-                            const on = parts.current === i;
-                            return (
-                              <button key={p} type="button" role="tab" aria-selected={on} data-part={p} onClick={() => parts.onChange(i)} style={{ padding: '7px 16px', border: 'none', borderLeft: i ? '1px solid #e2e8ee' : 'none', background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                {p}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
@@ -216,6 +214,19 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
           </div>
         )}
         {notice && <div style={{ padding: '8px 22px', borderBottom: '1px solid #eef2f5', background: '#fffaf0', fontSize: 14, color: '#8a5a00', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>{notice}</div>}
+        {/* 部の切替はタブ。選んだタブは下の一覧表の見出しとつながって見える */}
+        {parts && (
+          <div role="tablist" aria-label="部の切替" data-parts style={{ display: 'flex', alignItems: 'flex-end', gap: 4, padding: '12px 22px 0', borderBottom: '1px solid #dde4ea', background: '#fff' }}>
+            {parts.items.map((p, i) => {
+              const on = parts.current === i;
+              return (
+                <button key={p} type="button" role="tab" aria-selected={on} data-part={p} className="part-tab" onClick={() => parts.onChange(i)} style={{ position: 'relative', marginBottom: -1, padding: on ? '9px 22px 10px' : '8px 20px', border: '1px solid ' + (on ? '#dde4ea' : 'transparent'), borderBottom: '1px solid ' + (on ? '#f8fafc' : 'transparent'), borderRadius: '9px 9px 0 0', background: on ? '#f8fafc' : '#eef2f5', color: on ? accent : '#5b6773', boxShadow: on ? `inset 0 3px 0 ${accent}` : 'none', fontSize: 14, fontWeight: on ? 800 : 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  {p}
+                </button>
+              );
+            })}
+          </div>
+        )}
         <div data-list-head style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 22px', background: '#f8fafc', borderBottom: '1px solid #eef2f5', fontSize: 14, color: '#48565f' }}>
           <span style={SECTION_TAG} data-section="一覧表">一覧表</span>
           {listNote}
