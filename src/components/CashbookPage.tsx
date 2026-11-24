@@ -39,6 +39,9 @@ import { VENDORS, accountFlat } from '../data';
 import type { MonthFilter } from '../types';
 
 export type CashbookKind = 'petty' | 'bank';
+/** 小口現金の AI自動仕訳 のボタン（文字だけ。高さはアイコンのボタンと同じ 42px） */
+const AI_BTN: CSSProperties = { position: 'relative', height: 42, padding: '0 14px', borderRadius: 8, border: '1px solid #cfd8e0', background: '#fff', color: '#48565f', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' };
+
 const yen = (n: number) => n.toLocaleString('ja-JP');
 
 interface Row {
@@ -833,6 +836,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
         { label: '集計取消', onClick: openUnagg, icon: 'undo', iconOnly: true, title: '集計済みの明細の集計を取り消します（会計連動済みの明細は取り消せません）' },
         { label: '集計', onClick: () => setAggOpen(true), primary: true, icon: 'sum', iconOnly: true, title: '明細を集計して仕訳を作ります' },
       ]}
+      controlsFull
       controls={
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <span style={LABEL}>会計月</span>
@@ -858,13 +862,18 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {isPetty ? (
               <>
-                <IconButton icon="import" label="AI自動仕訳 インポート" size={42} onClick={() => { setAiLines([]); setAiFileName(''); setAiOpen(true); }} />
-                <IconButton icon="approve" label="AI自動仕訳 会計確認" size={42} badge={aiPending.length} onClick={() => setAiConfirmOpen(true)} />
+                {/* AI自動仕訳はアイコンなしの文字のボタン */}
+                <button type="button" className="btn-outline" data-ai-import onClick={() => { setAiLines([]); setAiFileName(''); setAiOpen(true); }} style={AI_BTN}>AI自動仕訳 インポート</button>
+                <button type="button" className="btn-outline" data-ai-confirm onClick={() => setAiConfirmOpen(true)} style={AI_BTN}>
+                  AI自動仕訳 会計確認
+                  {aiPending.length > 0 && <span aria-label={`承認待ち ${aiPending.length} 件`} style={{ position: 'absolute', top: -7, right: -7, minWidth: 18, height: 18, padding: '0 5px', boxSizing: 'border-box', borderRadius: 9, background: '#c0392b', color: '#fff', fontSize: 12, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{aiPending.length}</span>}
+                </button>
               </>
             ) : (
               <>
-                <IconButton icon="import" label="銀行CSV インポート" size={42} onClick={() => setCsvOpen(true)} />
-                <IconButton icon="trash" label="インポート一括削除" size={42} color="#c0392b" onClick={() => setBulkOpen(true)} />
+                {/* 銀行CSVの 2 つは枠を広げず、マウスを載せるとツールチップで名前を出す */}
+                <IconButton icon="import" label="銀行CSV インポート" size={42} tipOnly onClick={() => setCsvOpen(true)} />
+                <IconButton icon="trash" label="インポート一括削除" size={42} color="#c0392b" tipOnly onClick={() => setBulkOpen(true)} />
               </>
             )}
           </div>

@@ -1,5 +1,5 @@
 // オプション：収入・支出調書 印刷（既存「AccUkagai」の再現）
-//   7種の伺（支出伺／収入伺／支出伺(振替)／支払伺／受入伺／他の伺／他の伺2）をスライド式の切替で選ぶ（10/13 鈴木さん指示）。
+//   7種の伺（支出伺／収入伺／支出伺(振替)／支払伺／受入伺／他の伺／他の伺2）を一覧表の上のタブで選ぶ（11/24。以前はスライド式の切替）。
 //   会計月の仕訳を抽出条件で絞り込み、対象にチェックした伝票を「印刷」から出力（出力済みに変わる）。
 //   「印刷」は出力先（プリンター／Excel／PDF）と、印刷／プレビューを選ぶ（確認メモ #213）。
 //   詳細設定（対象科目・決裁印影・タイトル／メッセージ）、未出力数（月別の集計）。
@@ -123,16 +123,11 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
       badge={badge}
       subtitle="伺書（支出伺・収入伺など）を出力する伝票を選び、「印刷」から出力先（プリンター／Excel／PDF）を選んで出力します。"
       tools={[{ label: '印刷', onClick: openPrint, icon: 'print', title: '収入・支出調書を印刷します' }, { label: '詳細設定', onClick: () => setDetailOpen(true), icon: 'sliders', iconOnly: true, title: '対象科目・決裁印影・タイトル／メッセージ' }, { label: '未出力数', onClick: () => setCountOpen(true), icon: 'count', iconOnly: true, title: 'まだ印刷していない伝票の数（月別）' }]}
+      // 伺の種類は一覧表のすぐ上のタブ（試算表の部の切替と同じ。← → キーでも切り替わる）
+      parts={{ items: KINDS.map((x) => x.label), current: Math.max(0, KINDS.findIndex((x) => x.key === kind)), onChange: (i) => setKind(KINDS[i].key) }}
+      controlsFull
       controls={
         <>
-          {/* 伺の種類：スライド式の切替（ダッシュボード表示オプションの「最初に表示する画面」と同じ見た目） */}
-          <div role="radiogroup" aria-label="伺の種類" data-kind-slider style={{ position: 'relative', display: 'grid', gridTemplateColumns: `repeat(${KINDS.length}, 1fr)`, padding: 4, background: '#e6ecf0', borderRadius: 13, maxWidth: 980, marginBottom: 14 }}>
-            <span aria-hidden style={{ position: 'absolute', top: 4, bottom: 4, left: 4, width: `calc((100% - 8px) / ${KINDS.length})`, borderRadius: 10, background: accent, boxShadow: '0 2px 8px rgba(30,50,70,.25)', transform: `translateX(${Math.max(0, KINDS.findIndex((x) => x.key === kind)) * 100}%)`, transition: 'transform .22s ease' }} />
-            {KINDS.map((x) => {
-              const on = kind === x.key;
-              return <button key={x.key} type="button" role="radio" aria-checked={on} data-kind={x.key} onClick={() => setKind(x.key)} style={{ position: 'relative', zIndex: 1, padding: '9px 6px', border: 'none', borderRadius: 10, background: 'transparent', color: on ? '#fff' : '#48565f', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'color .2s' }}>{x.label}</button>;
-            })}
-          </div>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={LABEL}>会計月</span>

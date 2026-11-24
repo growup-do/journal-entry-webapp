@@ -3,11 +3,11 @@
 
 import { useState } from 'react';
 import { Modal } from './Modal';
-import { Notice, btn, input } from './ui';
+import { Notice, btn, input, IconButton } from './ui';
 import { SERVICES } from '../data';
 import { useSession } from '../store/session';
 
-export function LoadDivisionSettings({ accent, kind, onDone, small }: { accent: string; /** 読み込む設定の種類（文言に使う） */ kind: '動作設定' | '印刷設定' | '動作設定・印刷設定'; onDone: (from: string) => void; small?: boolean }) {
+export function LoadDivisionSettings({ accent, kind, onDone, small, icon }: { accent: string; /** アイコンのボタンで出す */ icon?: boolean; /** 読み込む設定の種類（文言に使う） */ kind: '動作設定' | '印刷設定' | '動作設定・印刷設定'; onDone: (from: string) => void; small?: boolean }) {
   const s = useSession();
   const others = SERVICES.filter((x) => x !== s.division);
   const [open, setOpen] = useState(false);
@@ -16,7 +16,7 @@ export function LoadDivisionSettings({ accent, kind, onDone, small }: { accent: 
   const close = () => { setOpen(false); setConfirm(false); };
   return (
     <>
-      <button type="button" className="btn-outline" onClick={() => { setFrom(others[0] ?? ''); setOpen(true); }} style={btn('#5b6773', false, small)} data-load-division-settings>他の区分の設定を読み込む</button>
+      {icon ? <IconButton icon="copy" label="他の区分の設定を読み込む" data-load-division-settings onClick={() => { setFrom(others[0] ?? ''); setOpen(true); }} /> : <button type="button" className="btn-outline" onClick={() => { setFrom(others[0] ?? ''); setOpen(true); }} style={btn('#5b6773', false, small)} data-load-division-settings>他の区分の設定を読み込む</button>}
       <Modal open={open} onClose={close} width={560} title={`他の区分の${kind}を読み込む`}>
         <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
           {!confirm ? (

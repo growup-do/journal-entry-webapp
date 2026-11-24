@@ -15,7 +15,7 @@ import { FISCAL_MONTHS } from './FiscalMonthTabs';
 import { Modal } from './Modal';
 import { TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
-import { Field, Notice, SettingsShell, Toggle, btn, card, cardHead, input, lbl, numInput } from './ui';
+import { Field, IconButton, Notice, SettingsShell, Toggle, btn, card, cardHead, input, lbl, numInput } from './ui';
 import { ExportDialog, runExport, type ExportKind, type ExportSpec } from './ExportDialog';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { PrintSteps, type OutKind } from './PrintSteps';
@@ -629,17 +629,20 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
   const openFmt = () => setFmt({ widthName: p.widthName, widthAmount: p.widthAmount, fontHeader: p.fontHeader, fontHeaderItem: p.fontHeaderItem ?? STD_FORMAT.fontHeaderItem, fontName: p.fontName, fontAmount: p.fontAmount, fontRemark: p.fontRemark ?? STD_FORMAT.fontRemark });
 
   return (
-    <SettingsShell variant={variant} editing={dirty} title={displayName('共通の印刷設定')} badge="印刷" desc={<><ScopeBadge kind="決算書共通" />　決算書の印刷に使う共通の設定です（確認メモ #238。全帳票の共通設定ではありません）。各帳票の詳細設定にある「共通の印刷設定を反映」で、ここの値をその帳票に写します。</>} actions={<>
+    <SettingsShell variant={variant} editing={dirty} title={displayName('共通の印刷設定')} badge="印刷" desc={<><ScopeBadge kind="決算書共通" />　決算書の印刷に使う共通の設定です。各帳票の詳細設定にある「共通の印刷設定を反映」で、ここの値をその帳票に写します。</>} actions={<>
       <ScreenPrintMenu page="共通の印刷設定" accent={accent} label="備考・摘要の印刷" />
-      <button type="button" className="btn-outline" onClick={() => setPreview(true)} style={btn()}>プレビューで確認</button>
-      <LoadDivisionSettings accent={accent} kind="印刷設定" onDone={(from) => toast.show(`「${from}」の印刷設定を読み込みました`)} />
-      {dirty && <span data-common-dirty style={{ fontSize: 12, fontWeight: 700, padding: '3px 8px', borderRadius: 8, background: '#fff7e6', color: '#8a5a00', alignSelf: 'center' }}>決定していない変更があります</span>}
-      <button type="button" data-common-cancel disabled={!dirty} onClick={() => { setSession({ print: base }); toast.show('変更を取り消し、最後に決定した設定に戻しました'); }} style={{ ...btn(), opacity: dirty ? 1 : 0.45, cursor: dirty ? 'pointer' : 'default' }}>中止</button>
-      <button type="button" className="submit-btn" data-common-save onClick={() => { setBase(p); toast.show('決算書 共通印刷設定を保存しました'); }} style={btn(accent, true)}>決定</button>
+      <IconButton icon="eye" label="プレビューで確認" data-common-preview onClick={() => setPreview(true)} />
+      <LoadDivisionSettings icon accent={accent} kind="印刷設定" onDone={(from) => toast.show(`「${from}」の印刷設定を読み込みました`)} />
     </>}>
       <ToastView msg={toast.msg} />
       <div style={{ padding: '16px 22px 0' }}>
         <Notice>仕訳日記帳・元帳・試算表・予算書など、決算書以外の帳票は、それぞれの詳細設定だけで印刷の内容を決めます。決算書の帳票も、帳票ごとに変えたい項目は詳細設定で変更できます。「個別の設定を使う」にした項目は、各帳票の詳細設定のとおりに印刷します。</Notice>
+        {/* 中止・決定は説明文のすぐ下に置く */}
+        <div data-common-actions style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginTop: 12 }}>
+      {dirty && <span data-common-dirty style={{ fontSize: 12, fontWeight: 700, padding: '3px 8px', borderRadius: 8, background: '#fff7e6', color: '#8a5a00', alignSelf: 'center' }}>決定していない変更があります</span>}
+      <button type="button" data-common-cancel disabled={!dirty} onClick={() => { setSession({ print: base }); toast.show('変更を取り消し、最後に決定した設定に戻しました'); }} style={{ ...btn(), opacity: dirty ? 1 : 0.45, cursor: dirty ? 'pointer' : 'default' }}>中止</button>
+      <button type="button" className="submit-btn" data-common-save onClick={() => { setBase(p); toast.show('決算書 共通印刷設定を保存しました'); }} style={btn(accent, true)}>決定</button>
+        </div>
       </div>
       <div data-common-main style={{ padding: 22, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 18, alignItems: 'start' }}>
         <div style={{ display: 'grid', gap: 18 }}>

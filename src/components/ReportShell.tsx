@@ -69,6 +69,8 @@ interface Props {
   switches?: ReactNode;
   /** 画面固有の条件行（絞り込み・凡例など） */
   controls?: ReactNode;
+  /** controls を見出しの列の下にずらさず、左端から並べる */
+  controlsFull?: boolean;
   /** 一覧の直前に出す1行の注意書き */
   notice?: ReactNode;
   children: ReactNode;
@@ -85,7 +87,7 @@ interface Props {
 }
 
 
-export function ReportShell({ variant, accent, title, subtitle, tools = [], extraTools, returnTo, period, periodAside, parts, periodInHeader = false, target, targetLabel = '指定科目', switches, controls, notice, listNote, children, badge, org, embedded, asideWidth = 0, editing = false }: Props) {
+export function ReportShell({ variant, accent, title, subtitle, tools = [], extraTools, returnTo, period, periodAside, parts, periodInHeader = false, target, targetLabel = '指定科目', switches, controls, controlsFull = false, notice, listNote, children, badge, org, embedded, asideWidth = 0, editing = false }: Props) {
   const toast = useToast();
   const s = useSession();
   const isSheet = variant === 'sheet';
@@ -205,12 +207,14 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
                 <div data-switches style={{ ...row, gap: 10 }}>{switches}</div>
               </>
             )}
-            {controls && (
+            {controls && (controlsFull ? (
+              <div style={{ gridColumn: '1 / -1', minWidth: 0 }}>{controls}</div>
+            ) : (
               <>
                 <span />
                 <div style={{ minWidth: 0 }}>{controls}</div>
               </>
-            )}
+            ))}
           </div>
         )}
         {notice && <div style={{ padding: '8px 22px', borderBottom: '1px solid #eef2f5', background: '#fffaf0', fontSize: 14, color: '#8a5a00', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>{notice}</div>}
