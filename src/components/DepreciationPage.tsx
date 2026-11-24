@@ -1667,7 +1667,8 @@ function ClosingView({ accent, vouchers, setVouchers, onCreated, toast }: { acce
     setVouchers((vs) => vs.filter((_, k) => k !== i));
     toast(`「${x.name}」を削除しました`);
   };
-  const cellBtn = (label: string, changed: boolean, onClick: () => void) => <button type="button" className="btn-outline" onClick={onClick} title="クリックして選択" style={{ ...btn(), padding: '4px 10px', fontSize: 12, background: changed ? '#fff7dc' : '#eef0fa', borderColor: changed ? '#e6c76a' : '#cfd8e0' }}>{label}</button>;
+  // 科目・摘要のボタン：列の幅いっぱいに広げ、文字は 2 行まで。はみ出す分は「…」にしてツールチップで全文を出す（確認メモ #284）
+  const cellBtn = (label: string, changed: boolean, onClick: () => void) => <button type="button" className="btn-outline" data-closing-cell onClick={onClick} title={label} style={{ ...btn(), width: '100%', padding: '4px 8px', fontSize: 12, lineHeight: 1.35, textAlign: 'left', whiteSpace: 'normal', wordBreak: 'break-all', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', background: changed ? '#fff7dc' : '#eef0fa', borderColor: changed ? '#e6c76a' : '#cfd8e0' }}>{label}</button>;
 
   /* ---- 作成した伝票のプレビュー（確認メモ #245）。伝票を押すと、会計の伝票画面（伝票の訂正）で同じ内容を表示する ---- */
   if (step === 4 && doneIdx != null && vouchers[doneIdx]) {
@@ -1757,8 +1758,9 @@ function ClosingView({ accent, vouchers, setVouchers, onCreated, toast }: { acce
     <div style={{ padding: 18 }}>
       <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 10 }}>【決算処理】{v.name}　—　{v.proc}</div>
       <div style={{ overflow: 'auto', border: '1px solid #e2e8ee', borderRadius: 10 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1100 }}>
-          <thead><tr><th style={TH}>資産の種類または名称</th><th style={{ ...TH, textAlign: 'center' }}>伝票へ追加</th><th style={TH}>借方科目の設定</th><th style={TH}>貸方科目の設定</th><th style={TH}>摘要</th><th style={{ ...TH, textAlign: 'right' }}>期首帳簿価額 (A)</th><th style={{ ...TH, textAlign: 'right' }}>うち国庫補助金等</th><th style={{ ...TH, textAlign: 'right' }}>当期増加額 (B)</th><th style={{ ...TH, textAlign: 'right' }}>うち国庫補助金等</th><th style={{ ...TH, textAlign: 'right' }}>当期減価償却額 (C)</th><th style={{ ...TH, textAlign: 'right' }}>うち国庫補助金等</th></tr></thead>
+        <table data-closing-table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1100, tableLayout: 'fixed' }}>
+          <colgroup><col style={{ width: 150 }} /><col style={{ width: 64 }} /><col style={{ width: 150 }} /><col style={{ width: 150 }} /><col style={{ width: 150 }} /><col /><col /><col /><col /><col /><col /></colgroup>
+          <thead><tr>{['資産の種類\nまたは名称', '伝票へ\n追加', '借方科目の設定', '貸方科目の設定', '摘要', '期首帳簿価額\n(A)', 'うち国庫\n補助金等', '当期増加額\n(B)', 'うち国庫\n補助金等', '当期減価償却額\n(C)', 'うち国庫\n補助金等'].map((h, k) => <th key={k} style={{ ...TH, textAlign: k === 1 ? 'center' : k >= 5 ? 'right' : 'left', whiteSpace: 'pre', lineHeight: 1.35, verticalAlign: 'bottom', padding: '8px 10px' }}>{h}</th>)}</tr></thead>
           <tbody>
             {ROWS.map((r) => (
               <Fragment key={r.name}>
@@ -1766,10 +1768,10 @@ function ClosingView({ accent, vouchers, setVouchers, onCreated, toast }: { acce
                 <tr style={{ background: add.has(r.name) ? '#fff' : '#fafbfc', opacity: add.has(r.name) ? 1 : 0.6 }}>
                   <td style={{ ...TD, paddingLeft: 26 }}>{r.name}</td>
                   <td style={{ ...TD, textAlign: 'center' }}><input type="checkbox" checked={add.has(r.name)} onChange={() => setAdd((s) => { const n = new Set(s); n.has(r.name) ? n.delete(r.name) : n.add(r.name); return n; })} /></td>
-                  <td style={TD}>{cellBtn(kariOf(r.name), r.name in kari, () => setPick({ col: 'kari', name: r.name }))}</td>
-                  <td style={TD}>{cellBtn(kashiOf(r), r.name in kashi, () => setPick({ col: 'kashi', name: r.name }))}</td>
-                  <td style={TD}>{cellBtn(summOf(r.name), r.name in summ, () => setPick({ col: 'summ', name: r.name }))}</td>
-                  <td style={NUM}>{yen(r.A)}</td><td style={NUM}>{yen(r.As)}</td><td style={NUM}>{yen(r.B)}</td><td style={NUM}>{yen(r.Bs)}</td><td style={{ ...NUM, fontWeight: 700 }}>{yen(r.C)}</td><td style={NUM}>{yen(r.Cs)}</td>
+                  <td style={{ ...TD, padding: '5px 8px' }}>{cellBtn(kariOf(r.name), r.name in kari, () => setPick({ col: 'kari', name: r.name }))}</td>
+                  <td style={{ ...TD, padding: '5px 8px' }}>{cellBtn(kashiOf(r), r.name in kashi, () => setPick({ col: 'kashi', name: r.name }))}</td>
+                  <td style={{ ...TD, padding: '5px 8px' }}>{cellBtn(summOf(r.name), r.name in summ, () => setPick({ col: 'summ', name: r.name }))}</td>
+                  {[r.A, r.As, r.B, r.Bs, r.C, r.Cs].map((n, k) => <td key={k} style={{ ...NUM, whiteSpace: 'nowrap', fontWeight: k === 4 ? 700 : undefined }}>{yen(n)}</td>)}
                 </tr>
               </Fragment>
             ))}
@@ -1854,7 +1856,7 @@ function TransferView({ accent, assets, onRegister, toast }: { accent: string; a
 /* ================= 動作環境設定 ================= */
 function EnvSettings({ accent, dispCalc, onDispCalc, sortItems, onSortItems, onClose, onSaved, toast }: { accent: string; dispCalc: DispCalc; onDispCalc: (v: DispCalc) => void; sortItems: string[]; onSortItems: (items: string[]) => void; onClose: () => void; onSaved: (desc: string) => void; toast: (m: string) => void }) {
   const METHODS = ['定額法', '旧定額法(備忘価額まで)', '旧定額法(残存価額まで)', 'リース定額法'];
-  const [s, setS] = useState({ method: '定額法', dep: '償却率を乗ずる方法', sub: '償却率を乗ずる方法', byDate: false, disposal: dispCalc as string, zero: true, gengo: true, size: 100, shade: '#eef9fb', line: '#ff7a00' });
+  const [s, setS] = useState({ method: '定額法', dep: '償却率を乗ずる方法', sub: '償却率を乗ずる方法', byDate: false, disposal: dispCalc as string, zero: true, gengo: true, shade: '#eef9fb', line: '#ff7a00' });
   const [details, setDetails] = useState<Record<string, MethodDetail>>(() => Object.fromEntries(METHODS.map((m) => [m, DEFAULT_DETAIL(m)])));
   const [detailFor, setDetailFor] = useState<string | null>(null);
   const [sortOpen, setSortOpen] = useState(false);
@@ -1909,8 +1911,6 @@ function EnvSettings({ accent, dispCalc, onDispCalc, sortItems, onSortItems, onC
             <div style={{ padding: '3px 8px', borderBottom: `1px solid ${s.line}` }}>明細行</div>
             <div style={{ padding: '3px 8px' }}>明細行</div>
           </div>
-          <div style={{ fontSize: 14, fontWeight: 700, margin: '10px 0 4px' }}>画面サイズ</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><input type="range" min={80} max={150} value={s.size} onChange={(e) => setS({ ...s, size: Number(e.target.value) })} style={{ flex: 1 }} /><span style={{ fontSize: 14, width: 44 }}>{s.size}%</span><button type="button" className="btn-outline" onClick={() => setS({ ...s, size: 100 })} style={btn()}>100%に戻す</button></div>
         </div>
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
