@@ -112,7 +112,7 @@ export function GraphPage({ mode, variant, accent }: Props) {
           {isYearly && (
             <div role="tablist" aria-label="部の切替" style={{ ...TAB_BAR, padding: '0 14px' }}>
               {GRAPH_PARTS.map((p) => (
-                <button key={p.key} type="button" className="menu-item-h" role="tab" aria-selected={part === p.key} data-tab={p.key} onClick={() => setPart(p.key)} style={tabBtn(part === p.key, p.color)}>{p.key}</button>
+                <button key={p.key} type="button" className="tab-btn" role="tab" aria-selected={part === p.key} data-tab={p.key} onClick={() => setPart(p.key)} style={tabBtn(part === p.key, p.color)}>{p.key}</button>
               ))}
             </div>
           )}

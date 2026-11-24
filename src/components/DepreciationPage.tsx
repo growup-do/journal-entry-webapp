@@ -16,7 +16,7 @@ import { PrintOutButton } from './PrintOutDialog';
 import { DepPrintModal, printMethod, type DepValues } from './DepPrintModal';
 import { PreviewModal } from './PrintCenter';
 import type { ExportSpec } from './ExportDialog';
-import { IconButton, Notice, PrintIcon, SelectionBar, btn as uiBtn } from './ui';
+import { IconButton, Notice, PrintIcon, SelectionBar, TAB_BAR, btn as uiBtn, tabBtn } from './ui';
 import { WarekiDate, isWarekiComplete, parseWareki } from './WarekiDate';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { ACCOUNT_META, accountMatches } from '../lib/accounts';
@@ -833,11 +833,11 @@ export function DepreciationPage({ variant, accent }: Props) {
         </div>
 
         {/* タブ */}
-        <div style={{ display: 'flex', gap: 2, padding: '0 22px', borderBottom: '1px solid #eef2f5' }}>
+        <div role="tablist" aria-label="減価償却のメニュー" style={TAB_BAR}>
           {TABS.map((t) => {
             const on = tab === t.key;
             return (
-              <button key={t.key} type="button" role="tab" aria-selected={on} className="menu-item-h" data-tab={t.label} onClick={() => setTab(t.key)} title={t.hint} style={{ padding: '10px 14px', border: 'none', borderBottom: '2px solid ' + (on ? accent : 'transparent'), background: 'transparent', color: on ? accent : '#5b6773', fontSize: 14, fontWeight: on ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              <button key={t.key} type="button" role="tab" aria-selected={on} className="tab-btn" data-tab={t.label} onClick={() => setTab(t.key)} title={t.hint} style={tabBtn(on, accent)}>
                 {t.label}
                 {t.key === 'closing' && vouchers.length > 0 && <span style={{ marginLeft: 6, fontSize: 12, fontWeight: 800, color: '#fff', background: accent, borderRadius: 8, padding: '1px 6px' }}>{vouchers.length}</span>}
                 {t.key === 'disposal' && disposals.length > 0 && <span style={{ marginLeft: 6, fontSize: 12, fontWeight: 800, color: '#fff', background: '#8a6d00', borderRadius: 8, padding: '1px 6px' }}>{disposals.length}</span>}

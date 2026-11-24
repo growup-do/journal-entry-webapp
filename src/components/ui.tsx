@@ -16,11 +16,11 @@ export const cardHead: CSSProperties = { padding: '12px 16px', background: '#f6f
 export const yen = (n: number) => (n < 0 ? '△' + Math.abs(n).toLocaleString('ja-JP') : n.toLocaleString('ja-JP'));
 export const toInt = (v: string) => parseInt(v.replace(/[^0-9-]/g, ''), 10) || 0;
 
-/** タブの帯（減価償却ページのタブと同じ形。下に細い線を引き、選んだタブは下線と文字色で示す） */
-export const TAB_BAR: CSSProperties = { display: 'flex', gap: 2, padding: '0 22px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' };
-/** タブ 1 つ分の見た目（減価償却ページのタブと同じ）。className は "menu-item-h" を付ける */
+/** タブの帯（減価償却ページのタブと同じ形）。帯は薄い緑の背景で、ここがタブだと分かるようにする */
+export const TAB_BAR: CSSProperties = { display: 'flex', alignItems: 'flex-end', gap: 2, padding: '6px 22px 0', borderBottom: '1px solid #d5e6dc', background: '#eef6f1', flexWrap: 'wrap' };
+/** タブ 1 つ分の見た目。選んだタブは白地に下線と文字色で示す。className は "tab-btn" を付ける（マウスを載せたときの色） */
 export function tabBtn(on: boolean, accent: string): CSSProperties {
-  return { padding: '10px 14px', border: 'none', borderBottom: '2px solid ' + (on ? accent : 'transparent'), background: 'transparent', color: on ? accent : '#5b6773', fontSize: 14, fontWeight: on ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' };
+  return { padding: '9px 14px', border: 'none', borderRadius: '7px 7px 0 0', borderBottom: '2px solid ' + (on ? accent : 'transparent'), marginBottom: -1, background: on ? '#fff' : 'transparent', color: on ? accent : '#4f5d68', fontSize: 14, fontWeight: on ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' };
 }
 
 export function Tabs({ items, current, onChange, accent, marks }: { items: string[]; current: string; onChange: (v: string) => void; accent: string; small?: boolean; /** 保存されていない変更があるタブ（名称の右に印を付ける。確認メモ #225） */ marks?: string[] }) {
@@ -29,7 +29,7 @@ export function Tabs({ items, current, onChange, accent, marks }: { items: strin
       {items.map((t) => {
         const on = t === current;
         return (
-          <button key={t} type="button" role="tab" aria-selected={on} className="tab menu-item-h" data-tab={t} onClick={() => onChange(t)} style={tabBtn(on, accent)}>
+          <button key={t} type="button" role="tab" aria-selected={on} className="tab tab-btn" data-tab={t} onClick={() => onChange(t)} style={tabBtn(on, accent)}>
             {t}
             {marks?.includes(t) && <span data-tab-unsaved title="保存されていない変更があります" aria-label="保存されていない変更があります" style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#c2410c', marginLeft: 7, verticalAlign: 'middle' }} />}
           </button>

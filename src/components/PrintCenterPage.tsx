@@ -58,7 +58,7 @@ export function PrintCenterPage({ variant, accent, onNavigate, initialCat }: { v
         {CATS.map((c) => {
           const on = c === cat;
           return (
-            <button key={c} type="button" role="tab" aria-selected={on} className="menu-item-h" data-print-cat={c} onClick={() => setCat(c)} style={{ ...tabBtn(on, accent), flex: 'none' }}>
+            <button key={c} type="button" role="tab" aria-selected={on} className="tab-btn" data-print-cat={c} onClick={() => setCat(c)} style={{ ...tabBtn(on, accent), flex: 'none' }}>
               {c}
             </button>
           );

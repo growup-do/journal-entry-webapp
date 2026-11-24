@@ -224,7 +224,7 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
             {parts.items.map((p, i) => {
               const on = parts.current === i;
               return (
-                <button key={p} type="button" role="tab" aria-selected={on} data-part={p} className="menu-item-h" onClick={() => parts.onChange(i)} style={tabBtn(on, accent)}>
+                <button key={p} type="button" role="tab" aria-selected={on} data-part={p} className="tab-btn" onClick={() => parts.onChange(i)} style={tabBtn(on, accent)}>
                   {p}
                 </button>
               );
