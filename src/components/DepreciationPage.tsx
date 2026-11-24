@@ -1363,7 +1363,8 @@ function AssetForm({ accent, asset, manual, dispCalc, capexFor, onAddCapex, onRe
         {['個別固定資産管理台帳', '別紙３(⑧)', '固定資産管理台帳'].map((r) => <button key={r} type="button" className="btn-outline" onClick={() => { if (r !== '固定資産管理台帳' && !cost) return toast('取得価額を入力すると帳票を出力できます'); onReport(r, r === '固定資産管理台帳' ? undefined : current()); }} style={fbtn}>{r}</button>)}
         <span style={{ width: 1, height: 22, background: '#dde4ea', margin: '0 4px' }} />
         <button type="button" className="btn-outline" onClick={() => setDlg('calc')} title={calcChange ? `${calcChange.reason}（${calcChange.date}）${calcChange.note ? `：${calcChange.note}` : ''}` : '耐用年数・償却方法・取得価額などの変更'} style={fbtn}>計算変更{calcChange && '（適用済み）'}</button>
-        <button type="button" className="btn-outline" data-capex-open onClick={() => { if (!asset) return toast('資本的支出は、登録済みの固定資産を「変更」で開いてから行います'); setDlg('capexPick'); }} title="改良・増設などの資本的支出を登録します（登録済みの固定資産で行います）" style={{ ...fbtn, opacity: asset ? 1 : 0.55 }}>資本的支出</button>
+        {/* 資本的支出は登録済みの固定資産だけで使える。使えない新規の登録ではボタンを出さない */}
+        {asset && <button type="button" className="btn-outline" data-capex-open onClick={() => setDlg('capexPick')} title="改良・増設などの資本的支出を登録します" style={fbtn}>資本的支出</button>}
         </>}
         <button type="button" className="btn-outline" onClick={() => onLog(f.code)} style={fbtn}>操作ログ・詳細情報</button>
         <button type="button" className="btn-outline" onClick={() => onImage(f.code, f.name)} style={{ ...fbtn, display: 'inline-flex', alignItems: 'center', gap: 6 }}>{imageSrc && <img src={imageSrc} alt="" style={{ width: 18, height: 18, objectFit: 'cover', borderRadius: 3 }} />}資産画像</button>
