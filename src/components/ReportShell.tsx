@@ -23,7 +23,7 @@ export interface ToolButton {
   iconOnly?: boolean;
 }
 
-/** 部の切替（資産の部／負債の部／事業活動／資金の部）。集計期間の行の右端に並べ、← → キーでも切り替える */
+/** 部の切替（資産の部／負債の部／事業活動／資金の部）。集計期間の行の右端にセグメンテッドコントロールで並べる（← → キーでも切り替わる） */
 export interface PartSpec {
   items: string[];
   current: number;
@@ -82,7 +82,6 @@ interface Props {
   asideWidth?: number;
 }
 
-const PART_COLORS = ['#e8791e', '#d9a400', '#d9a400', '#d9a400'];
 
 export function ReportShell({ variant, accent, title, subtitle, tools = [], extraTools, returnTo, period, periodAside, parts, target, targetLabel = '指定科目', switches, controls, notice, listNote, children, badge, org, embedded, asideWidth = 0, editing = false }: Props) {
   const toast = useToast();
@@ -151,9 +150,9 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
             </div>
             {subtitle && <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>{subtitle}</div>}
           </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-            {extraTools}
-            {tools.map((t) => t.icon && t.iconOnly ? (
+          <div className="toolbar-actions" style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+            {/* 印刷はどの画面でも右端に置く：印刷以外のツール → 印刷のツール → 印刷メニュー（extraTools）の順 */}
+            {[...tools.filter((t) => t.icon !== 'print'), ...tools.filter((t) => t.icon === 'print')].map((t) => t.icon && t.iconOnly ? (
               <span key={t.label} data-tip={t.disabled ? t.title : undefined} style={{ display: 'inline-flex' }}>
                 <IconButton icon={t.icon} label={t.label} disabled={t.disabled} color={t.primary ? accent : '#5b6773'} size={42} onClick={t.onClick ?? (() => toast.show(NOT_IMPL))} />
               </span>
@@ -164,6 +163,7 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
                 </button>
               </span>
             ))}
+            {extraTools}
           </div>
         </div>
         {/* 問合せ画面の共通構成（依頼書 5.4.5／2.5）：① 集計期間の選択 → ② 指定科目 → ③ 表示切替 → ④ 一覧表。見出しは共通シェルが付ける */}
@@ -178,17 +178,16 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
                     <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                       {periodAside}
                       {parts && (
-                        <div role="tablist" aria-label="部の切替" title="← → キーでも切り替えできます" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        // 部の切替はセグメンテッドコントロール（ほかの画面の表示切替と同じ形）
+                        <div role="tablist" aria-label="部の切替" data-parts style={{ display: 'inline-flex', border: '1px solid #cfd8e0', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
                           {parts.items.map((p, i) => {
                             const on = parts.current === i;
-                            const color = PART_COLORS[i] ?? '#d9a400';
                             return (
-                              <button key={p} type="button" role="tab" aria-selected={on} className="chip" data-part={p} onClick={() => parts.onChange(i)} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: '1px solid ' + (on ? color : '#e2c86a'), background: on ? color : '#fff3c4', color: on ? '#fff' : '#7a5600' }}>
+                              <button key={p} type="button" role="tab" aria-selected={on} data-part={p} onClick={() => parts.onChange(i)} style={{ padding: '7px 16px', border: 'none', borderLeft: i ? '1px solid #e2e8ee' : 'none', background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                                 {p}
                               </button>
                             );
                           })}
-                          <span style={{ fontSize: 12, color: '#9aa5b1', whiteSpace: 'nowrap' }}>← → キーでも切替</span>
                         </div>
                       )}
                     </div>

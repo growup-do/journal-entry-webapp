@@ -129,10 +129,10 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
 
   return (
     <SettingsShell variant={variant} title={displayName('予算')} desc="資金収支計算書の予算と取引先別の予算を、年度（前年度／当年度／次年度）ごとのタブで入力します。予算月の「初」が当初予算、「4」〜「3」「決」がその月の補正予算です。収支差額と期末支払資金残高を確認しながら設定できます。" badge="予算" actions={<>
-      <ScreenPrintMenu page="予算" accent={accent} />
       {tab === '次年度予算' && <button type="button" className="btn-outline" onClick={() => setWizard(true)} style={btn(accent)}>次年度予算作成</button>}
       <button type="button" className="btn-outline" onClick={() => setExplainOpen(true)} style={btn()}>説明</button>
       <button type="button" className="submit-btn" onClick={() => toast.show('予算を保存しました（プロトタイプ）')} style={btn(accent, true)}>保存</button>
+      <ScreenPrintMenu page="予算" accent={accent} />
     </>}>
       <ToastView msg={toast.msg} />
       <ExplainModal open={explainOpen} onClose={() => setExplainOpen(false)} accent={accent} title="予算入力の説明" source="マニュアル 3.2 予算の入力（3.2.1 資金収支計算書の概要と設定／3.2.2 取引先別予算の概要と設定）" sections={[

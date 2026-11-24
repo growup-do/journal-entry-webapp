@@ -240,6 +240,28 @@ tr.row-hover:hover > td:first-child { box-shadow: inset 3px 0 0 rgba(44, 95, 158
 .icon-btn:hover:not(:disabled) { background: #f3f6f9 !important; }
 .icon-btn[data-solid]:hover:not(:disabled) { filter: brightness(1.08); background: inherit; }
 .icon-btn:focus-visible { outline: 2px solid #1f7a52; outline-offset: 2px; }
+/* アイコンボタン：マウスを載せる（キーボードで選ぶ）と枠の幅が広がり、アイコンの横にメニュー名を出す */
+.icon-btn-label {
+  display: inline-block;
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0;
+  margin-left: 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  transition: max-width 0.18s ease, opacity 0.14s ease, margin-left 0.18s ease;
+}
+.icon-btn:hover .icon-btn-label,
+.icon-btn:focus-visible .icon-btn-label {
+  max-width: 16em;
+  opacity: 1;
+  margin-left: 6px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .icon-btn-label { transition: none; }
+}
 
 /* 減価償却：Enter で移った先の欄が分かるように、選択中の欄をはっきり示す（確認メモ #278）。
    プルダウンもテキストの欄と同じ表示にする。和暦の年月日の欄（元号・年・月・日）も同じ */
@@ -259,3 +281,11 @@ tr.row-hover:hover > td:first-child { box-shadow: inset 3px 0 0 rgba(44, 95, 158
 }
 .capex-kind { transition: border-color 0.12s, box-shadow 0.12s; }
 .capex-kind:hover, .capex-kind:focus-visible { border-color: #b7791f !important; box-shadow: 0 0 0 3px rgba(183, 121, 31, 0.18); outline: none; }
+
+/* 画面上部のボタン列：印刷（印刷ボタン・印刷メニュー・まとめて印刷）はどの画面でも右端に置く */
+.toolbar-actions > [data-screen-print],
+.toolbar-actions > [data-print-batch],
+.toolbar-actions > :has(> [data-print-out-btn]),
+.toolbar-actions > :has(> [data-icon-btn="印刷"]) {
+  order: 99;
+}

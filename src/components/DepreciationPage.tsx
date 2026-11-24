@@ -826,9 +826,9 @@ export function DepreciationPage({ variant, accent }: Props) {
             <button type="button" className="btn-outline" data-manual-new onClick={() => setAssetModal({ open: true, asset: null, manual: true })} title="自動計算を行わず、償却を開始する年度からすべての年度の金額を手入力して登録します" style={{ ...btn(accent), borderColor: accent }}>＋ 全項目手入力で登録</button>
             <button type="button" className="btn-outline" onClick={() => setEquipModal(true)} style={btn()}>＋ 備品を登録</button>
             <span style={{ width: 1, background: '#e2e8ee', margin: '4px 4px' }} />
-            <ScreenPrintMenu accent={accent} actions={[{ label: '固定資産・備品の帳票', items: PRINT_REPORTS.map((r) => ({ name: r, onClick: () => { addLog('システム', '', r, '帳票印刷'); openReport(r); } })) }]} />
             <IconButton icon="gear" label="環境設定" onClick={() => setEnvOpen(true)} />
             <IconButton icon="log" label="操作ログ" onClick={() => openLog('資産')} />
+            <ScreenPrintMenu accent={accent} actions={[{ label: '固定資産・備品の帳票', items: PRINT_REPORTS.map((r) => ({ name: r, onClick: () => { addLog('システム', '', r, '帳票印刷'); openReport(r); } })) }]} />
           </div>
         </div>
 

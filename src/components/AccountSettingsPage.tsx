@@ -444,11 +444,11 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
   return (
     <SettingsShell variant={variant} title={displayName('勘定科目')} desc="科目の一覧（項目＝集計上の見出し／科目＝伝票に入力する科目）を縦に大きく表示し、行を選ぶと右側に詳細を表示します。項目か科目かは追加するときに選び（「＋ 項目を追加」「＋ 科目を追加」）、追加した後は変更できません。科目の追加は標準科目にチェックを入れるだけで、コードは自動設定されます。既存の【科目設定】【費目入力】【使用科目設定】に相当します。" actions={<>
       {/* 出力の形式（プリンター／PDF／Excel／CSV）は「印刷」を押してから「出力先」で選ぶ（確認メモ #84、確認事項「印刷の画面遷移の統一」） */}
-      <PrintOutButton name={fundTab ? '資金科目一覧' : '勘定科目一覧'} accent={accent} data={listData} meta={listMeta} />
       <button type="button" className="btn-outline" onClick={() => setCautionOpen(true)} style={btn()}>注意事項</button>
       <button type="button" className="btn-outline" onClick={() => { if (confirm('仕訳更新を開始します。1年分の全伝票を対象に、勘定科目と資金科目の連動を整理・更新します。途中で中断はできません。よろしいですか？')) runRecalc(); }} style={btn('#b7791f')}>仕訳の再集計</button>
       {listTab && !fundTab && <button type="button" className="btn-outline" onClick={openGroupAdd} style={btn(accent)} data-group-add>＋ 項目を追加</button>}
       {listTab && <button type="button" className="submit-btn" onClick={openAdd} style={btn(accent, true)}>＋ 科目を追加</button>}
+      <PrintOutButton name={fundTab ? '資金科目一覧' : '勘定科目一覧'} accent={accent} data={listData} meta={listMeta} />
     </>}>
       <ToastView msg={toast.msg} />
       {/* 勘定科目の設定で資金科目を指定するため、資金科目を先（左）に置く（確認メモ #82） */}

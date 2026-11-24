@@ -79,7 +79,7 @@ export function SettingsShell({ variant, title, desc, badge = '設定', draft = 
             </div>
             <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>{desc}{draft && <span style={{ color: '#b7791f' }}>（叩き台）</span>}</div>
           </div>
-          {actions && <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>{actions}</div>}
+          {actions && <div className="toolbar-actions" style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>{actions}</div>}
         </div>
         {children}
       </div>
@@ -120,10 +120,11 @@ export const rowClick = (fn: () => void) => () => {
 /* ------------------------------------------------------------------ */
 /* アイコン・アイコンだけのボタン（右上の機能ボタンを文字なしにそろえる）                    */
 /* ------------------------------------------------------------------ */
-export type IconName = 'print' | 'gear' | 'log' | 'search' | 'recalc' | 'link' | 'switch' | 'sliders' | 'sum' | 'undo' | 'count' | 'import' | 'approve' | 'trash';
+export type IconName = 'print' | 'gear' | 'log' | 'search' | 'recalc' | 'link' | 'switch' | 'sliders' | 'sum' | 'undo' | 'count' | 'import' | 'approve' | 'trash' | 'trend';
 const ICON_PATHS: Record<IconName, ReactNode> = {
   print: <><path d="M6 9V3h12v6" /><rect x="3" y="9" width="18" height="9" rx="2" /><path d="M7 14h10v7H7z" /></>,
   gear: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></>,
+  trend: <><path d="M3 3v18h18" /><path d="M7 15l4-4 3 3 6-7" /></>,
   log: <><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l3 2" /></>,
   search: <><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></>,
   recalc: <><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16" /><path d="M3 21v-5h5" /><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8" /><path d="M21 3v5h-5" /></>,
@@ -150,6 +151,8 @@ export const PrintIcon = () => <Icon name="print" size={14} />;
 /** アイコンだけのボタン。マウスを載せたときの表示（title）と読み上げ（aria-label）は、メニュー名だけにする。
  *  大きさは右上の機能ボタン（btn の通常の大きさ）と同じ高さの正方形 */
 export function IconButton({ icon, label, color = '#5b6773', solid = false, size = 42, badge, style, ...rest }: { icon: IconName; label: string; color?: string; solid?: boolean; size?: number; /** 右上の赤い数字（承認待ちの件数など）。0 は出さない */ badge?: number } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'color' | 'title'>) {
+  // ふだんはアイコンだけの正方形。マウスを載せると枠の幅が広がり、アイコンの横にメニュー名が出る（styles.css の .icon-btn-label）
+  const iconSize = size >= 40 ? 19 : 16;
   return (
     <button
       type="button"
@@ -158,10 +161,10 @@ export function IconButton({ icon, label, color = '#5b6773', solid = false, size
       data-solid={solid || undefined}
       {...rest}
       aria-label={label}
-      title={label}
-      style={{ position: 'relative', width: size, height: size, flex: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0, borderRadius: 8, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, cursor: rest.disabled ? 'not-allowed' : 'pointer', opacity: rest.disabled ? 0.45 : 1, fontFamily: 'inherit', ...style }}
+      style={{ position: 'relative', minWidth: size, height: size, boxSizing: 'border-box', flex: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: `0 ${(size - 2 - iconSize) / 2}px`, borderRadius: 8, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, cursor: rest.disabled ? 'not-allowed' : 'pointer', opacity: rest.disabled ? 0.45 : 1, fontFamily: 'inherit', ...style }}
     >
-      <Icon name={icon} size={size >= 40 ? 19 : 16} />
+      <Icon name={icon} size={iconSize} />
+      <span className="icon-btn-label" aria-hidden="true">{label}</span>
       {!!badge && <span aria-hidden="true" style={{ position: 'absolute', top: -7, right: -7, minWidth: 18, height: 18, padding: '0 5px', boxSizing: 'border-box', borderRadius: 9, background: '#c0392b', color: '#fff', fontSize: 12, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{badge}</span>}
     </button>
   );

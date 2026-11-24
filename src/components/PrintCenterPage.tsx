@@ -48,8 +48,8 @@ export function PrintCenterPage({ variant, accent, onNavigate, initialCat }: { v
 
   return (
     <SettingsShell variant={variant} title={displayName('印刷センター')} badge="印刷" desc="上のタブで帳票の分類を選び、左の一覧から帳票を選ぶと、右側でその帳票の詳細設定と印刷ができます。" actions={<>
-      <button type="button" className="btn-outline" data-print-batch onClick={() => setPickOpen(true)} title="分類をまたいで帳票を選び、一度に出力します（旧「一括印刷」）" style={{ ...btn(accent), display: 'inline-flex', alignItems: 'center', gap: 6 }}><PrintIcon />まとめて印刷</button>
       <button type="button" className="btn-outline" data-open-common-page onClick={() => go('共通の印刷設定')} style={btn()}>{displayName('共通の印刷設定')}</button>
+      <button type="button" className="btn-outline" data-print-batch onClick={() => setPickOpen(true)} title="分類をまたいで帳票を選び、一度に出力します（旧「一括印刷」）" style={{ ...btn(accent), display: 'inline-flex', alignItems: 'center', gap: 6 }}><PrintIcon />まとめて印刷</button>
     </>}>
       <ToastView msg={toast.msg} />
       {/* 中区分 */}

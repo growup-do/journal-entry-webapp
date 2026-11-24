@@ -8,6 +8,7 @@ import type { CSSProperties } from 'react';
 import { ExplainModal } from './ExplainModal';
 import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { PrintOutButton } from './PrintOutDialog';
+import { IconButton } from './ui';
 import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
 import { ACCOUNT_META } from '../lib/accounts';
@@ -227,12 +228,13 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
               入力方式：<b style={{ color: '#22303c' }}>{METHODS.find((m) => m.key === method)?.label.split('（')[0] ?? '未選択'}</b>　{direct ? '金額を編集すると予想額が再計算されます。' : '金額は実績から表示します（手入力できるのは直接入力方式のときだけです）。'}<span style={{ color: '#b7791f' }}>（値はサンプルです）</span>
             </div>
           </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            <button type="button" className="btn-outline" onClick={() => { setMapDraft(mapping); setMapOpen(true); }} style={btn()}>科目設定</button>
-            <button type="button" className="btn-outline" onClick={reset} style={btn()}>初期化</button>
+          {/* 科目設定・初期化・入力方式・過去年推移はアイコンのボタン（ほかの画面と同じ）。印刷は右端 */}
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+            <IconButton icon="link" label="科目設定" onClick={() => { setMapDraft(mapping); setMapOpen(true); }} />
+            <IconButton icon="undo" label="初期化" onClick={reset} />
             {direct && <button type="button" className="btn-outline" data-action="0円にする" onClick={zero} title="すべての金額を 0 円にして、一から入力します（直接入力方式のみ）" style={btn()}>0円にする</button>}
-            <button type="button" className="btn-outline" onClick={() => setStep('method')} style={btn()}>入力方式</button>
-            <button type="button" className="btn-outline" onClick={() => { setYearsDraft(years); setYearsOpen(true); }} style={btn()}>過去年推移</button>
+            <IconButton icon="switch" label="入力方式" onClick={() => setStep('method')} />
+            <IconButton icon="trend" label="過去年推移" onClick={() => { setYearsDraft(years); setYearsOpen(true); }} />
             <PrintOutButton name="簡易充実残額シミュレーター" accent={accent} defaultDest="excel" fileName="充実残額シミュレーション_令和8年度" meta={excelSpec().meta} data={() => { const x = excelSpec(); return { header: x.header ?? [], rows: x.rows ?? [] }; }} />
           </div>
         </div>

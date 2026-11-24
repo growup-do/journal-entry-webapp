@@ -220,11 +220,11 @@ function MasterPage({ variant, accent, label, tabs, title }: { variant: 'form' |
   return (
     <Shell variant={variant} title={title ?? displayName(cfg.title)} desc={cfg.desc} actions={<>
       {/* インポート／エクスポート（CSV）：部門は簡単に変更できない項目のため不要（チャイルド社回答 2026/10/2）。税区分は検討中のため暫定で表示 */}
-      {label === '税区分' && <ScreenPrintMenu page="税区分" accent={accent} />}
-      {isVendor && <PrintOutButton name={`${cfg.title}一覧表`} accent={accent} data={listTable} meta={`${label === '取引先' ? `${sess.division}　` : ''}${list.length} 件${q ? `　検索：${q}` : ''}`} disabled={list.length === 0} disabledTip="印刷する行がありません" />}
       {/* インポート／エクスポート：1 つのボタンから開き、画面でどちらかを選ぶ（確認事項「インポート・エクスポート処理の統一」）。インポートは内容を確かめてから取り込む */}
       {label !== '部門' && <ImportExportButton name={cfg.title} accent={accent} format="CSV" exportDesc={`表示中の ${list.length} 件を CSV ファイルに書き出します（取込と同じ列）。`} onExport={exportCsv} importDesc="CSV ファイルを選ぶと、取り込む内容の確認画面を開きます。" accept=".csv,text/csv" onImport={readFile} onSample={sampleCsv} />}
       <button type="button" className="submit-btn" onClick={() => setEdit(blank())} style={btn(accent, true)}>＋ {cfg.addLabel}</button>
+      {label === '税区分' && <ScreenPrintMenu page="税区分" accent={accent} />}
+      {isVendor && <PrintOutButton name={`${cfg.title}一覧表`} accent={accent} data={listTable} meta={`${label === '取引先' ? `${sess.division}　` : ''}${list.length} 件${q ? `　検索：${q}` : ''}`} disabled={list.length === 0} disabledTip="印刷する行がありません" />}
     </>}>
       <ToastView msg={toast.msg} />
       {tabs}
