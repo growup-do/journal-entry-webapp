@@ -238,6 +238,8 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
   const [acctView, setAcctView] = useState<'全科目' | '内部取引科目'>('全科目');
   const [divView, setDivView] = useState<'全区分' | '起動区分のみ'>('全区分');
   const [resetOpen, setResetOpen] = useState(false);
+  /** 使用科目設定（資金科目）：資金科目 × 区分 の使用可否。未設定は使用（確認メモ #288） */
+  const [fundUse, setFundUse] = useState<Record<string, boolean>>({});
   /** 複数科目を選んで関連する設定をまとめて変更する（確認メモ #30） */
   const [bulk, setBulk] = useState<number[]>([]);
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -321,6 +323,25 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
     const v = !groupUsed(g, svc);
     const svcs = link === '横一列' ? SERVICES : [svc];
     setUse((u) => { const n = { ...u }; svcs.forEach((sv) => { n['#' + g + '|' + sv] = v; rows.forEach((m) => { if (m.group === g) n[m.name + '|' + sv] = v; }); }); return n; });
+  };
+  /* ---- 使用科目設定（資金科目）（確認メモ #288）。資金科目は同じ名前が複数の勘定科目に対応するので、項目ごとに名前でまとめる ---- */
+  const useFundTab = tab === '使用科目設定（資金科目）';
+  const fundsOf = (g: string) => Array.from(new Set(useRows.filter((m) => m.group === g && m.fund !== '—' && m.fund !== '（支払資金）').map((m) => m.fund)));
+  const fundUsed = (f: string, svc: string) => fundUse[f + '|' + svc] ?? true;
+  const fundGroupUsed = (g: string, svc: string) => fundUse['#' + g + '|' + svc] ?? fundsOf(g).some((f) => fundUsed(f, svc));
+  const toggleFundUse = (f: string, svc: string) => {
+    const v = !fundUsed(f, svc);
+    setFundUse((u) => {
+      const n = { ...u, [f + '|' + svc]: v };
+      if (link === '区分内') GROUPS.forEach((g) => fundsOf(g.name).forEach((x) => { n[x + '|' + svc] = v; }));
+      if (link === '横一列') SERVICES.forEach((sv) => { n[f + '|' + sv] = v; });
+      return n;
+    });
+  };
+  const toggleFundGroupUse = (g: string, svc: string) => {
+    const v = !fundGroupUsed(g, svc);
+    const svcs = link === '横一列' ? SERVICES : [svc];
+    setFundUse((u) => { const n = { ...u }; svcs.forEach((sv) => { n['#' + g + '|' + sv] = v; fundsOf(g).forEach((f) => { n[f + '|' + sv] = v; }); }); return n; });
   };
   const openSwap = () => { if (!sel) return; const keys = rows.filter((r) => r.group === sel.group).map((r) => r.key); setSwap({ group: sel.group, keys, cur: keys.indexOf(sel.key), drag: null }); };
   const moveSwap = (from: number, to: number) => setSwap((sw) => { if (!sw || to < 0 || to >= sw.keys.length || from === to) return sw; const keys = [...sw.keys]; const [k] = keys.splice(from, 1); keys.splice(to, 0, k); return { ...sw, keys, cur: to }; });
@@ -431,7 +452,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
     </>}>
       <ToastView msg={toast.msg} />
       {/* 勘定科目の設定で資金科目を指定するため、資金科目を先（左）に置く（確認メモ #82） */}
-      <Tabs items={['資金科目', '勘定科目', '費目', '使用科目設定', '補助簿（明細表）']} current={tab} onChange={(t) => { setTab(t); pickGroup(null); }} accent={accent} />
+      <Tabs items={['資金科目', '勘定科目', '費目', '使用科目設定（資金科目）', '使用科目設定（勘定科目）', '補助簿（明細表）']} current={tab} onChange={(t) => { setTab(t); pickGroup(null); }} accent={accent} />
 
       {listTab && (
         <div style={{ display: 'grid', gridTemplateColumns: panelOpen ? 'minmax(0, 1fr) minmax(400px, 460px)' : 'minmax(0, 1fr)', minHeight: 520 }}>
@@ -596,7 +617,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px' }}>
                   <div style={{ flex: 1 }}><div style={{ fontSize: 14, fontWeight: 700 }}>使用科目設定</div><div style={{ fontSize: 12, color: '#8290a0' }}>区分ごとの使用／非使用</div></div>
                   <span style={{ fontSize: 14, fontWeight: 700, color: usedCount(sel) ? '#1f7a52' : '#9aa5b1' }}>{usedCount(sel) ? `${usedCount(sel)} / ${SERVICES.length} 区分で使用` : '非使用'}</span>
-                  <button type="button" onClick={() => setTab('使用科目設定')} style={btn('#5b6773', false, true)}>開く</button>
+                  <button type="button" onClick={() => setTab(fundTab ? '使用科目設定（資金科目）' : '使用科目設定（勘定科目）')} style={btn('#5b6773', false, true)}>開く</button>
                 </div>
               </section>
 
@@ -661,7 +682,8 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
         </div>
       )}
 
-      {tab === '使用科目設定' && (
+      {/* 使用科目設定は 資金科目 と 勘定科目 の 2 つに分ける（確認メモ #288） */}
+      {(tab === '使用科目設定（資金科目）' || tab === '使用科目設定（勘定科目）') && (
         <div style={{ padding: 22 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
             <span style={lbl}>科目</span>{(['全科目', '内部取引科目'] as const).map((l) => <label key={l} style={{ fontSize: 14, display: 'flex', gap: 4 }}><input type="radio" name="use-acct" checked={acctView === l} onChange={() => setAcctView(l)} data-use-view={l} />{l}</label>)}
@@ -669,7 +691,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
             <span style={lbl}>区分</span>{(['全区分', '起動区分のみ'] as const).map((l) => <label key={l} style={{ fontSize: 14, display: 'flex', gap: 4 }}><input type="radio" name="use-div" checked={divView === l} onChange={() => setDivView(l)} data-use-view={l} />{l}</label>)}
             <span style={{ width: 1, height: 18, background: '#dde4ea' }} />
             <span style={lbl}>チェック連動</span>{(['しない', '区分内', '横一列'] as const).map((l) => <label key={l} style={{ fontSize: 14, display: 'flex', gap: 4 }}><input type="radio" checked={link === l} onChange={() => setLink(l)} />{l}</label>)}
-            <button type="button" onClick={() => setUse(Object.fromEntries(Object.keys(use).map((k) => [k, true])))} style={{ ...btn('#5b6773', false, true), marginLeft: 8 }}>全て ON</button>
+            <button type="button" onClick={() => { if (useFundTab) setFundUse({}); else setUse(Object.fromEntries(Object.keys(use).map((k) => [k, true]))); }} style={{ ...btn('#5b6773', false, true), marginLeft: 8 }}>全て ON</button>
             <button type="button" onClick={() => setResetOpen(true)} title="表示中の区分の使用科目を、事業区分（事業種別）に応じた初期状態に戻します（旧【使用科目設定更新】）" style={btn('#5b6773', false, true)} data-use-reset>初期状態に戻す</button>
             <Modal open={resetOpen} onClose={() => setResetOpen(false)} width={520} title="使用科目を初期状態に戻す">
               <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
@@ -681,17 +703,27 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
           </div>
           <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 380px)' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead><tr><th style={TH}>項目・科目</th>{useCols.map((s) => <th key={s} style={{ ...TH, textAlign: 'center', width: 110 }}>{s}</th>)}</tr></thead>
-              <tbody>{useRows.length === 0 && <tr><td colSpan={useCols.length + 1} style={{ ...TD, color: '#9aa5b1', textAlign: 'center', padding: 28 }}>内部取引科目として設定された科目はありません。勘定科目タブで科目を選び「関連する設定 › 内部取引科目と相手区分」で指定します。</td></tr>}{GROUPS.filter((g) => useRows.some((m) => m.group === g.name)).flatMap((g) => [
+              <thead><tr><th style={TH}>{useFundTab ? '項目・資金科目' : '項目・科目'}</th>{useCols.map((s) => <th key={s} style={{ ...TH, textAlign: 'center', width: 110 }}>{s}</th>)}</tr></thead>
+              {useFundTab ? (
+                <tbody data-use-fund>{GROUPS.filter((g) => fundsOf(g.name).length > 0).flatMap((g) => [
+                  <tr key={'#' + g.name} data-use-group={g.name} style={{ background: '#f3f6f9' }}>
+                    <td style={{ ...TD, fontWeight: 800 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, verticalAlign: 'middle' }}><Badge kind="項目" />{gLabel(g)}</span><span style={{ fontSize: 12, fontWeight: 500, color: '#9aa5b1', marginLeft: 8 }}>{g.top}</span></td>
+                    {useCols.map((sv) => <td key={sv} style={{ ...TD, textAlign: 'center' }}><input type="checkbox" aria-label={`項目 ${gLabel(g)} を${sv}で使用`} checked={fundGroupUsed(g.name, sv)} onChange={() => toggleFundGroupUse(g.name, sv)} /></td>)}
+                  </tr>,
+                  ...fundsOf(g.name).map((f) => <tr key={g.name + '|' + f}><td style={{ ...TD, fontWeight: 500, paddingLeft: 30 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, verticalAlign: 'middle' }}><Badge kind="科目" />{f}</span></td>{useCols.map((sv) => <td key={sv} style={{ ...TD, textAlign: 'center' }}><input type="checkbox" aria-label={`${f}を${sv}で使用`} checked={fundUsed(f, sv)} onChange={() => toggleFundUse(f, sv)} /></td>)}</tr>),
+                ])}</tbody>
+              ) : <tbody>{useRows.length === 0 && <tr><td colSpan={useCols.length + 1} style={{ ...TD, color: '#9aa5b1', textAlign: 'center', padding: 28 }}>内部取引科目として設定された科目はありません。勘定科目タブで科目を選び「関連する設定 › 内部取引科目と相手区分」で指定します。</td></tr>}{GROUPS.filter((g) => useRows.some((m) => m.group === g.name)).flatMap((g) => [
                 <tr key={'#' + g.name} data-use-group={g.name} style={{ background: '#f3f6f9' }}>
                   <td style={{ ...TD, fontWeight: 800 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, verticalAlign: 'middle' }}><Badge kind="項目" />{gLabel(g)}</span><span style={{ fontSize: 12, fontWeight: 500, color: '#9aa5b1', marginLeft: 8 }}>{g.top}</span></td>
                   {useCols.map((sv) => <td key={sv} style={{ ...TD, textAlign: 'center' }}><input type="checkbox" aria-label={`項目 ${gLabel(g)} を${sv}で使用`} checked={groupUsed(g.name, sv)} onChange={() => toggleGroupUse(g.name, sv)} /></td>)}
                 </tr>,
                 ...useRows.filter((m) => m.group === g.name).map((m) => <tr key={m.key}><td style={{ ...TD, fontWeight: 500, paddingLeft: 30 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, verticalAlign: 'middle' }}><Badge kind="科目" />{m.dispName}</span>{!m.internal.startsWith('0') && <span style={{ fontSize: 12, fontWeight: 800, marginLeft: 6, padding: '0 5px', borderRadius: 4, background: '#eef2f6', color: '#3d4a56' }}>内部</span>}</td>{useCols.map((s) => <td key={s} style={{ ...TD, textAlign: 'center' }}><input type="checkbox" aria-label={`${m.dispName}を${s}で使用`} checked={!!use[m.name + '|' + s]} onChange={() => toggleUse(m.name, s)} /></td>)}</tr>),
-              ])}</tbody>
+              ])}</tbody>}
             </table>
           </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}><PrintOutButton label="印刷（資金科目）" name="資金科目（使用科目設定）" accent={accent} data={() => useData('fund')} meta={`${useMetas('fund').length} 科目 × ${SERVICES.length} 区分`} defaultDest="csv" /><PrintOutButton label="印刷（貸借・事業科目）" name="貸借・事業科目（使用科目設定）" accent={accent} data={() => useData('bs')} meta={`${useMetas('bs').length} 科目 × ${SERVICES.length} 区分`} defaultDest="csv" /><button type="button" className="submit-btn" onClick={() => toast.show('使用科目設定を保存しました')} style={{ ...btn(accent, true), marginLeft: 'auto' }}>OK</button></div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>{useFundTab
+            ? <PrintOutButton name="使用科目設定（資金科目）" accent={accent} data={() => { const fs = Array.from(new Set(GROUPS.flatMap((g) => fundsOf(g.name)))); return { header: ['資金科目', ...SERVICES], rows: fs.map((f) => [f, ...SERVICES.map((sv) => (fundUsed(f, sv) ? 1 : 0))]) }; }} meta={`${SERVICES.length} 区分`} defaultDest="csv" />
+            : <PrintOutButton name="使用科目設定（勘定科目）" accent={accent} data={() => useData('bs')} meta={`${useMetas('bs').length} 科目 × ${SERVICES.length} 区分`} defaultDest="csv" />}<button type="button" className="submit-btn" onClick={() => toast.show('使用科目設定を保存しました')} style={{ ...btn(accent, true), marginLeft: 'auto' }}>OK</button></div>
         </div>
       )}
 

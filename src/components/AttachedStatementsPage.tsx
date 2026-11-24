@@ -200,7 +200,7 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
   const resetSec = (sec: string, name: string) => {
     const d0 = defaultConf();
     const mine = <T,>(o: Record<string, T>) => Object.fromEntries(Object.entries(o).filter(([k]) => secOf(k) === sec));
-    setDraft((d) => ({ ...d, combo: { ...d.combo, ...mine(d0.combo) }, checks: { ...d.checks, ...mine(d0.checks) }, watch: { ...d.watch, ...mine(d0.watch) }, kihon2: sec === 'kihon' ? d0.kihon2 : d.kihon2 }));
+    setDraft((d) => ({ ...d, combo: { ...d.combo, ...mine(d0.combo) }, checks: { ...d.checks, ...mine(d0.checks) }, watch: { ...d.watch, ...mine(d0.watch) }, kihon2: sec === 'hojo' ? d0.kihon2 : d.kihon2 }));
     toast.show(`「${name}」をデフォルト設定にしました（未保存：保存で確定）`);
   };
   const saveAll = () => { setSaved(draft); toast.show(`${displayName('決算附属明細書')}を保存しました`); };
@@ -315,6 +315,14 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
               {/* 補助金事業等収益明細書 */}
               <SecCard title="補助金事業等収益明細書用" onReset={() => resetSec('hojo', '補助金事業等収益明細書')}>
                 <CheckList pool={HOJO_POOL} checked={draft.checks.hojo ?? []} saved={saved.checks.hojo ?? []} onToggle={(n, on) => toggleCheck('hojo', n, on)} />
+                {/* 集計方法と「○○事業」の置き換えは補助金事業等収益明細書の設定（確認メモ #289／#290） */}
+                <div role="radiogroup" aria-label="補助金事業等収益明細書の集計方法" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', padding: '4px 8px', borderRadius: 6, background: draft.kihon2 !== saved.kihon2 ? CHANGED_BG : '#f6f8fa', fontSize: 14 }}>
+                  <span style={{ color: '#8290a0', fontWeight: 700 }}>集計方法</span>
+                  {KIHON2_OPTS.map((o) => <label key={o} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}><input type="radio" name="kihon2" checked={draft.kihon2 === o} onChange={() => setDraft((d) => ({ ...d, kihon2: o }))} />{o}</label>)}
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, flexWrap: 'wrap' }}>明細書の「○○事業」を
+                  <input className="field-input" value={draft.kihonReplace} onChange={(e) => setDraft((d) => ({ ...d, kihonReplace: e.target.value }))} placeholder="例：保育事業" style={{ ...input, padding: '5px 10px', width: 180, background: draft.kihonReplace !== saved.kihonReplace ? CHANGED_BG : '#fff' }} />に置き換える
+                </label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                   {watchBox('hojo', '伝票入力時に補助金収益を監視する')}
                   <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ fontSize: 12, color: '#9aa5b1' }}>登録 {draft.grants.length} 件</span><button type="button" onClick={() => setGrantsDraft(draft.grants.map((g) => ({ ...g })))} style={btn('#5b6773', false, true)}>交付団体及び交付の目的の編集</button></span>
@@ -323,16 +331,8 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
 
               {/* 基本金明細書 */}
               <SecCard title={COMBO.kihon.title} onReset={() => resetSec('kihon', '基本金明細書')}>
-                {comboRows(COMBO.kihon, (i) => i === 1 && (
-                  <div role="radiogroup" aria-label="２号基本金の集計方法" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', padding: '4px 8px', borderRadius: 6, background: draft.kihon2 !== saved.kihon2 ? CHANGED_BG : '#f6f8fa', fontSize: 14 }}>
-                    <span style={{ color: '#8290a0', fontWeight: 700 }}>集計方法</span>
-                    {KIHON2_OPTS.map((o) => <label key={o} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}><input type="radio" name="kihon2" checked={draft.kihon2 === o} onChange={() => setDraft((d) => ({ ...d, kihon2: o }))} />{o}</label>)}
-                  </div>
-                ))}
+                {comboRows(COMBO.kihon)}
                 {watchBox('kihon', '伝票入力時に基本金を監視する')}
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, flexWrap: 'wrap' }}>明細書の「○○事業」を
-                  <input className="field-input" value={draft.kihonReplace} onChange={(e) => setDraft((d) => ({ ...d, kihonReplace: e.target.value }))} placeholder="例：保育事業" style={{ ...input, padding: '5px 10px', width: 180, background: draft.kihonReplace !== saved.kihonReplace ? CHANGED_BG : '#fff' }} />に置き換える
-                </label>
               </SecCard>
 
               {/* 引当金明細書 */}

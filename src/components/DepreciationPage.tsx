@@ -36,7 +36,7 @@ const stamp = () => { const d = new Date(); return `${d.getFullYear()}/${pad2(d.
 const waToday = () => { const d = new Date(); return `令和${d.getFullYear() - 2018}年 ${d.getMonth() + 1}月${String(d.getDate()).padStart(2, ' ')}日`; };
 const numOf = (s: string) => parseInt(String(s || '').replace(/[^0-9]/g, ''), 10) || 0;
 
-interface Asset { code: string; name: string; account: string; acquired: string; life: number; cost: number; status: '償却中' | '償却終了' | '対象外'; opening: number; subsidy: number; method: string; qty: number; place?: string; purpose?: string; transferIn?: boolean; depStart?: string; manualRows?: Record<YrTab, MRow[]>; /** 全項目手入力で登録した資産（確認メモ #281） */ manual?: boolean; /** 資本的支出として登録した資産の、元の固定資産の資産コード（確認メモ #279） */ capexOf?: string; capexKind?: CapexKind }
+interface Asset { code: string; name: string; account: string; acquired: string; life: number; cost: number; /** 移管取込＝移管取込で登録した資産、移管年度＝移管(元)として移管した資産（確認メモ #286） */ status: '償却中' | '償却終了' | '対象外' | '移管取込' | '移管年度'; opening: number; subsidy: number; method: string; qty: number; place?: string; purpose?: string; transferIn?: boolean; depStart?: string; manualRows?: Record<YrTab, MRow[]>; /** 全項目手入力で登録した資産（確認メモ #281） */ manual?: boolean; /** 資本的支出として登録した資産の、元の固定資産の資産コード（確認メモ #279） */ capexOf?: string; capexKind?: CapexKind }
 /** 資本的支出の方法（確認メモ #279。現行システムの「資本的支出の方法選択画面」と同じ 2 通り） */
 type CapexKind = '新たな固定資産' | '特例合算';
 const CAPEX_LABEL: Record<CapexKind, string> = { 新たな固定資産: '新たな固定資産として登録', 特例合算: '特例合算' };
@@ -139,7 +139,20 @@ const HOME_GROUPS: FunctionGroup[] = [
   { key: 'print', label: '帳票', note: '', danger: false, items: PRINT_REPORTS },
 ];
 const FA_ACCOUNTS = ['土地　－基本財産－', '建物　－基本財産－', '建物　－その他－', '構築物', '器具及び備品', '車両運搬具', 'ソフトウェア'];
-const DEFAULT_SORT_ITEMS = ['土地', '建物', '構築物', '器具及び備品', '車両運搬具', 'ソフトウェア'];
+/** 並び順項目（コード 100〜499 ＋ 名称）。100 の位：1＝基本財産、2＝有形固定資産、3＝無形固定資産、4＝備品（確認メモ #285） */
+interface SortItem { code: string; name: string }
+const DEFAULT_SORT_ITEMS: SortItem[] = [
+  ['101', '土地'], ['102', '建物'], ['201', '土地'], ['202', '建物'], ['203', '構築物'], ['204', '機械及び装置'], ['205', '車輌運搬具'], ['206', '器具及び備品'], ['207', '有形リース資産'],
+  ['301', '建設仮勘定'], ['302', '権利'], ['303', 'ソフトウエア'], ['304', '無形リース資産'], ['305', '投資有価証券'], ['306', '長期貸付金'], ['307', '事業区分間長期貸付金'], ['308', '拠点区分間長期貸付金'],
+  ['309', '退職給付引当資産'], ['310', '長期預り金積立資産'], ['311', '○○積立資産'], ['312', '差入保証金'], ['313', '長期前払費用'], ['314', 'その他の固定資産'], ['401', '備品'],
+].map(([code, name]) => ({ code, name }));
+const sortLabel = (it: SortItem) => `${it.code} ${it.name}`;
+/** 科目から並び順項目の初期値を選ぶ（基本財産の科目は 1＊＊、それ以外は 2＊＊・3＊＊ の同じ名称） */
+const sortFor = (items: SortItem[], account: string) => {
+  const base = account.split('　')[0].replace('ソフトウェア', 'ソフトウエア').replace('車両', '車輌');
+  const basic = account.includes('基本財産');
+  return (items.find((it) => it.name === base && (basic ? it.code.startsWith('1') : !it.code.startsWith('1'))) ?? items[0])?.code ?? '';
+};
 const CLOSING_ACCOUNTS = ['減価償却費', '国庫補助金等特別積立金取崩額', '国庫補助金等特別積立金', '固定資産除却・廃棄損', '固定資産売却損・処分損', '固定資産売却益', '固定資産受贈額', '建物減価償却累計額', '構築物減価償却累計額', '器具及び備品減価償却累計額', ...FA_ACCOUNTS];
 const PICK_ACCOUNTS = Array.from(new Set([...CLOSING_ACCOUNTS, ...ACCOUNT_META.map((m) => m.name)]));
 const CLOSING_SUMMARIES = ['当期減価償却', '国庫補助金等特別積立金取崩', '固定資産除却', '固定資産売却', '移管（元）による減少', '移管（先）による増加', ...SUMMARIES];
@@ -191,7 +204,8 @@ const TABS: { key: Tab; label: string; hint: string }[] = [
   { key: 'closing', label: '決算処理', hint: '減価償却の仕訳伝票を作成' },
   { key: 'transfer', label: '移管取込', hint: '移管（元）ファイルの読込' },
 ];
-const statusStyle = (st: Asset['status']): CSSProperties => ({ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: st === '償却中' ? '#eaf5ef' : st === '対象外' ? '#f1f4f6' : '#fff1b8', color: st === '償却中' ? '#1f7a52' : st === '対象外' ? '#7a8794' : '#8a6d00', whiteSpace: 'nowrap' });
+const STATUS_COLOR: Record<Asset['status'], [string, string]> = { 償却中: ['#eaf5ef', '#1f7a52'], 償却終了: ['#fff1b8', '#8a6d00'], 対象外: ['#f1f4f6', '#7a8794'], 移管取込: ['#e8f0fb', '#2c5f9e'], 移管年度: ['#f3e8fb', '#6b3fa0'] };
+const statusStyle = (st: Asset['status']): CSSProperties => ({ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: STATUS_COLOR[st][0], color: STATUS_COLOR[st][1], whiteSpace: 'nowrap' });
 /** 経年表示の切替。減価償却・国庫補助金は帳簿価額の推移、償還補助金は未入金額の推移（確認メモ #65） */
 const YR_TABS = ['数量／減価償却', '国庫補助金', '償還補助金'] as const;
 type YrTab = (typeof YR_TABS)[number];
@@ -596,21 +610,94 @@ function MethodDetailModal({ method, value, onClose, onSave, accent }: { method:
 }
 
 /** 並び順項目マスタ（台帳・帳票の並び順に使う項目の管理） */
-function SortMasterModal({ items, onClose, onSave, accent, toast }: { items: string[]; onClose: () => void; onSave: (items: string[]) => void; accent: string; toast: (m: string) => void }) {
-  const [list, setList] = useState<string[]>(items);
-  const [text, setText] = useState('');
-  const add = () => { const t = text.trim(); if (!t) return; if (list.includes(t)) return toast('同じ項目が既にあります'); setList((l) => [...l, t]); setText(''); };
-  const move = (i: number, d: -1 | 1) => setList((l) => { const n = [...l]; const j = i + d; if (j < 0 || j >= n.length) return l; [n[i], n[j]] = [n[j], n[i]]; return n; });
+function SortMasterModal({ items, onClose, onSave, accent, toast }: { items: SortItem[]; onClose: () => void; onSave: (items: SortItem[]) => void; accent: string; toast: (m: string) => void }) {
+  const byCode = (l: SortItem[]) => [...l].sort((x, y) => Number(x.code) - Number(y.code));
+  const [list, setList] = useState<SortItem[]>(byCode(items));
+  const [sel, setSel] = useState<string | null>(null);
+  const [code, setCode] = useState('');
+  const [name, setName] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
+  const pickRow = (it: SortItem) => { setSel(it.code); setCode(it.code); setName(it.name); };
+  const register = () => {
+    const n = Number(code);
+    if (!/^\d{3}$/.test(code) || n < 100 || n > 499) return toast('並順は 100〜499 の範囲のコードを入力してください');
+    if (!name.trim()) return toast('項目名称を入力してください');
+    const exists = list.some((it) => it.code === code);
+    setList((l) => byCode([...l.filter((it) => it.code !== code), { code, name: name.trim() }]));
+    setSel(code);
+    toast(exists ? `${code} の項目名称を変更しました` : `${code} ${name.trim()} を登録しました`);
+  };
+  const remove = () => {
+    if (!sel) return toast('削除する項目を一覧で選んでください');
+    setList((l) => l.filter((it) => it.code !== sel));
+    toast(`${sel} を削除しました`);
+    setSel(null); setCode(''); setName('');
+  };
+  const importStd = () => {
+    if (list.length && !confirm('一覧を標準設定の並び順項目に置き換えます。よろしいですか？')) return;
+    setList(byCode(DEFAULT_SORT_ITEMS)); setSel(null); setCode(''); setName('');
+    toast(`標準設定の並び順項目（${DEFAULT_SORT_ITEMS.length} 件）を読み込みました`);
+  };
+  const importCsv = async (file: File) => {
+    // 現行システムの CSV は「"コード","名称"」の 2 列（見出しなし・Shift-JIS）。UTF-8 の CSV も読める
+    const buf = await file.arrayBuffer();
+    let text = new TextDecoder('utf-8').decode(buf);
+    if (text.includes('�')) { try { text = new TextDecoder('shift_jis').decode(buf); } catch { /* そのまま */ } }
+    const rows = text.split(/\r?\n/).map((l) => l.split(',').map((c) => c.trim().replace(/^"|"$/g, ''))).filter((c) => /^\d{3}$/.test(c[0] ?? '') && Number(c[0]) >= 100 && Number(c[0]) <= 499 && c[1]);
+    if (!rows.length) return toast('読み込める並び順項目がありませんでした（「コード,名称」の CSV を選んでください）');
+    const m = new Map<string, string>(); rows.forEach(([c, n]) => m.set(c, n));
+    setList(byCode([...m].map(([c, n]) => ({ code: c, name: n })))); setSel(null); setCode(''); setName('');
+    toast(`CSV ファイルから ${m.size} 件の並び順項目を読み込みました`);
+  };
+  const exportCsv = () => {
+    const body = list.map((it) => `"${it.code}","${it.name}"`).join('\r\n') + '\r\n';
+    const url = URL.createObjectURL(new Blob(['﻿' + body], { type: 'text/csv' }));
+    const el = document.createElement('a'); el.href = url; el.download = '並び順マスタ.csv'; el.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast('並び順項目を CSV ファイルに出力しました');
+  };
+  const big: CSSProperties = { ...BTN(), whiteSpace: 'pre', lineHeight: 1.35, padding: '6px 10px', fontSize: 13, textAlign: 'center' };
   return (
-    <Modal open onClose={onClose} width={520} title="並び順項目マスタ">
-      <div style={{ padding: '12px 22px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ display: 'flex', gap: 8 }}><input className="field-input ring" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !noIme(e)) add(); }} placeholder="項目名を入力して Enter で追加" style={IN} /><button type="button" onClick={add} style={BTN(accent, true)}>追加</button></div>
-        <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: 320, overflow: 'auto' }}>
-          {list.map((it, i) => <div key={it} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderBottom: '1px solid #f1f4f6', fontSize: 14 }}><span style={{ width: 24, color: '#9aa5b1', fontVariantNumeric: 'tabular-nums' }}>{i + 1}</span><span style={{ flex: 1, fontWeight: 600 }}>{it}</span><button type="button" onClick={() => move(i, -1)} disabled={i === 0} style={{ ...BTN(), padding: '3px 8px', opacity: i === 0 ? 0.4 : 1 }}>↑</button><button type="button" onClick={() => move(i, 1)} disabled={i === list.length - 1} style={{ ...BTN(), padding: '3px 8px', opacity: i === list.length - 1 ? 0.4 : 1 }}>↓</button><button type="button" onClick={() => setList((l) => l.filter((x) => x !== it))} style={{ ...BTN('#c0392b'), padding: '3px 8px' }}>削除</button></div>)}
-          {list.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>項目がありません。</div>}
+    <Modal open onClose={onClose} width={820} title="並び順項目マスタ">
+      <div data-sort-master style={{ padding: '12px 22px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ fontSize: 14, color: '#48565f' }}>独自に並び順項目を作成しない場合は「並び順項目のインポート（標準設定を使う）」ボタンをクリックしてください</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 300px', gap: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+            <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'hidden' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '70px 1fr', background: '#f6f8fa', borderBottom: '1px solid #e2e8ee', fontSize: 12, fontWeight: 700, color: '#6b7783' }}><span style={{ padding: '6px 10px' }}>並順</span><span style={{ padding: '6px 10px' }}>項目名称</span></div>
+              <div style={{ maxHeight: 300, overflow: 'auto' }}>
+                {list.map((it) => { const on = it.code === sel; return <button key={it.code} type="button" data-sort-row={it.code} onClick={() => pickRow(it)} style={{ display: 'grid', gridTemplateColumns: '70px 1fr', width: '100%', border: 'none', borderBottom: '1px solid #f1f4f6', background: on ? accent : '#fff', color: on ? '#fff' : '#22303c', textAlign: 'left', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', padding: 0 }}><span style={{ padding: '5px 10px', fontVariantNumeric: 'tabular-nums' }}>{it.code}</span><span style={{ padding: '5px 10px', fontWeight: 600 }}>{it.name}</span></button>; })}
+                {list.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>項目がありません。</div>}
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '90px minmax(0,1fr) auto auto', gap: 6, alignItems: 'end' }}>
+              <label><span style={LBL}>並順</span><input className="field-input" data-sort-code value={code} onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} inputMode="numeric" placeholder="100〜499" style={{ ...IN, fontVariantNumeric: 'tabular-nums' }} /></label>
+              <label><span style={LBL}>項目名称</span><input className="field-input" data-sort-name value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !noIme(e)) register(); }} style={IN} /></label>
+              <button type="button" className="submit-btn" data-sort-register onClick={register} style={BTN(accent, true)}>登録</button>
+              <button type="button" className="btn-outline" onClick={remove} disabled={!sel} style={{ ...BTN('#c0392b'), opacity: sel ? 1 : 0.5 }}>削除</button>
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div data-sort-rule style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: '12px 14px', background: '#fbfcfd', fontSize: 14, lineHeight: 1.7, color: '#22303c' }}>
+              <div>登録可能なコードは</div>
+              <div style={{ fontWeight: 700 }}>１００～４９９</div>
+              <div>で、１００のくらいの数字</div>
+              <div>の意味は以下のとおりです。</div>
+              <div style={{ marginTop: 8, display: 'grid', gap: 2 }}>
+                {[['１＊＊', '基本財産'], ['２＊＊', '有形固定資産'], ['３＊＊', '無形固定資産'], ['４＊＊', '備品']].map(([c, n]) => <div key={c}><span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>{c}</span>　{n}</div>)}
+              </div>
+            </div>
+            <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: '10px 12px', display: 'grid', gap: 6 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#6b7783' }}>並び順項目のインポート／エクスポート</div>
+              <button type="button" className="btn-outline" data-sort-import-std onClick={importStd} style={big}>{'インポート１\n（標準設定を使う）'}</button>
+              <button type="button" className="btn-outline" onClick={() => fileRef.current?.click()} style={big}>{'インポート２\n（CSVファイルから設定）'}</button>
+              <button type="button" className="btn-outline" onClick={exportCsv} style={big}>{'エクスポート\n（CSVファイルを出力）'}</button>
+              <input ref={fileRef} type="file" accept=".csv,text/csv" style={{ display: 'none' }} onChange={(e) => { const fl = e.target.files?.[0]; if (fl) void importCsv(fl); e.target.value = ''; }} />
+            </div>
+          </div>
         </div>
-        <Notice>固定資産・備品の「並び順項目」の選択肢になります。帳票はこの順序で並べて印刷します。</Notice>
-        <div style={FOOT}><button type="button" onClick={onClose} style={BTN()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { onSave(list); onClose(); }} style={BTN(accent, true)}>登録</button></div>
+        <Notice>固定資産・備品の「並び順項目」の選択肢になります。帳票はこのコードの順に並べて印刷します。</Notice>
+        <div style={FOOT}><button type="button" onClick={onClose} style={BTN()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { onSave(list); onClose(); }} style={BTN(accent, true)}>保存して閉じる</button></div>
       </div>
     </Modal>
   );
@@ -634,7 +721,7 @@ export function DepreciationPage({ variant, accent }: Props) {
   const [disposals, setDisposals] = useState<Disposal[]>([]);
   const [images, setImages] = useState<Record<string, string>>({});
   const [imgTarget, setImgTarget] = useState<{ key: string; title: string } | null>(null);
-  const [sortItems, setSortItems] = useState<string[]>(DEFAULT_SORT_ITEMS);
+  const [sortItems, setSortItems] = useState<SortItem[]>(DEFAULT_SORT_ITEMS);
   const [exportSpec, setExportSpec] = useState<ExportSpec | null>(null);
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [dispCalc, setDispCalc] = useState<DispCalc>('除却月／移管月まで（月按分する）');
@@ -791,7 +878,7 @@ export function DepreciationPage({ variant, accent }: Props) {
                 {kpiTile('当期償却額（見込）', yen(kpi.annual), '定額法・年額')}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 22px 10px', flexWrap: 'wrap' }}>
-                {(['すべて', '償却中', '償却終了', '対象外'] as const).map((st) => <button key={st} type="button" className="chip" onClick={() => setStatusFilter(st)} style={{ padding: '5px 12px', borderRadius: 14, border: '1px solid ' + (statusFilter === st ? accent : '#d3dbe3'), background: statusFilter === st ? accent : '#fff', color: statusFilter === st ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{st}</button>)}
+                {(['すべて', '償却中', '償却終了', '対象外', '移管取込', '移管年度'] as const).map((st) => <button key={st} type="button" className="chip" onClick={() => setStatusFilter(st)} style={{ padding: '5px 12px', borderRadius: 14, border: '1px solid ' + (statusFilter === st ? accent : '#d3dbe3'), background: statusFilter === st ? accent : '#fff', color: statusFilter === st ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{st}</button>)}
                 <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="名称・コード・科目で検索" autoComplete="off" style={{ marginLeft: 'auto', width: 240, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
               </div>
               <SelectionBar count={sel.size} unit="件" hint="行頭のチェックで追加・解除" style={{ padding: '8px 22px', borderTop: '1px solid #f3e3a0' }} onClear={() => setSel(new Set())} actions={<><button type="button" onClick={() => { setTab('disposal'); }} style={uiBtn('#5b6773', false, true)}>除却・売却・移管へ</button><button type="button" onClick={deleteSel} style={uiBtn('#c0392b', true, true)}>削除</button></>} />
@@ -848,9 +935,9 @@ export function DepreciationPage({ variant, accent }: Props) {
           </div>
         )}
 
-        {tab === 'disposal' && <BatchView accent={accent} dispCalc={dispCalc} assets={assets} preselected={sel} disposals={disposals} onExport={setExportSpec} onDone={(entries) => { setDisposals((d) => [...d, ...entries]); entries.forEach((e) => addLog('資産', e.code, `${Number(e.code)}:${e.name}`, `${e.proc}${e.to ? `：${e.to}へ` : ''}（${e.date}）`)); setSel(new Set()); setTab('assets'); const to = entries[0]?.to; toast.show(to ? `${entries.length} 件の固定資産を「${to}」へ移管しました（移管先の固定資産台帳に登録されます）` : `${entries.length} 件の処理を登録しました`); }} toast={toast.show} />}
+        {tab === 'disposal' && <BatchView accent={accent} dispCalc={dispCalc} assets={assets} preselected={sel} disposals={disposals} onExport={setExportSpec} onDone={(entries) => { setDisposals((d) => [...d, ...entries]); const moved = new Set(entries.filter((e) => e.proc === '移管(元)').map((e) => e.code)); if (moved.size) setAssets((as) => as.map((a) => (moved.has(a.code) ? { ...a, status: '移管年度' } : a))); entries.forEach((e) => addLog('資産', e.code, `${Number(e.code)}:${e.name}`, `${e.proc}${e.to ? `：${e.to}へ` : ''}（${e.date}）`)); setSel(new Set()); setTab('assets'); const to = entries[0]?.to; toast.show(to ? `${entries.length} 件の固定資産を「${to}」へ移管しました（移管先の固定資産台帳に登録されます）` : `${entries.length} 件の処理を登録しました`); }} toast={toast.show} />}
         {tab === 'closing' && <ClosingView accent={accent} vouchers={vouchers} setVouchers={setVouchers} onCreated={(name, proc, n) => addLog('システム', '', name, `決算伝票作成（${proc}・${n}科目）`)} toast={toast.show} />}
-        {tab === 'transfer' && <TransferView accent={accent} assets={assets} onRegister={(rows) => { const added = rows.map((r): Asset => ({ code: r.code, name: r.name, account: '器具及び備品', acquired: r.date, life: 10, cost: r.cost, status: '償却中', opening: r.cost, subsidy: r.subsidy, method: '定額法', qty: r.inQty, place: `移管元：${r.from}`, transferIn: true })); setAssets((as) => [...as, ...added]); added.forEach((a) => addLog('資産', a.code, `${Number(a.code)}:${a.name}`, '移管(先)取込み')); setTab('assets'); toast.show(`移管資産 ${rows.length} 件を登録しました`); }} toast={toast.show} />}
+        {tab === 'transfer' && <TransferView accent={accent} assets={assets} onRegister={(rows) => { const added = rows.map((r): Asset => ({ code: r.code, name: r.name, account: '器具及び備品', acquired: r.date, life: 10, cost: r.cost, status: '移管取込', opening: r.cost, subsidy: r.subsidy, method: '定額法', qty: r.inQty, place: `移管元：${r.from}`, transferIn: true })); setAssets((as) => [...as, ...added]); added.forEach((a) => addLog('資産', a.code, `${Number(a.code)}:${a.name}`, '移管(先)取込み')); setTab('assets'); toast.show(`移管資産 ${rows.length} 件を登録しました`); }} toast={toast.show} />}
       </div>
 
       {/* 固定資産の登録／変更（モーダル） */}
@@ -986,10 +1073,10 @@ function AssetDetail({ accent, asset, imageSrc, onClose, onEdit, onPrint, onDele
 }
 
 /* ================= 固定資産登録 ================= */
-function AssetForm({ accent, asset, manual, dispCalc, capexFor, onAddCapex, onReset, sortItems, nextCode, imageSrc, onSave, onCancel, onReport, onLog, onImage, toast }: { accent: string; asset: Asset | null; manual: boolean; dispCalc: DispCalc; /** 資本的支出の登録画面として開く */ capexFor?: { kind: CapexKind; parent: Asset }; onAddCapex?: (a: Asset) => void; /** 変更リセット（資本的支出の登録画面） */ onReset?: () => void; sortItems: string[]; nextCode: string; imageSrc?: string; onSave: (a: Asset, note?: string, next?: boolean) => void; onCancel: () => void; onReport: (name: string, single?: Asset) => void; onLog: (code: string) => void; onImage: (code: string, name: string) => void; toast: (m: string) => void }) {
+function AssetForm({ accent, asset, manual, dispCalc, capexFor, onAddCapex, onReset, sortItems, nextCode, imageSrc, onSave, onCancel, onReport, onLog, onImage, toast }: { accent: string; asset: Asset | null; manual: boolean; dispCalc: DispCalc; /** 資本的支出の登録画面として開く */ capexFor?: { kind: CapexKind; parent: Asset }; onAddCapex?: (a: Asset) => void; /** 変更リセット（資本的支出の登録画面） */ onReset?: () => void; sortItems: SortItem[]; nextCode: string; imageSrc?: string; onSave: (a: Asset, note?: string, next?: boolean) => void; onCancel: () => void; onReport: (name: string, single?: Asset) => void; onLog: (code: string) => void; onImage: (code: string, name: string) => void; toast: (m: string) => void }) {
   const [f, setF] = useState({
     code: asset?.code ?? nextCode,
-    sort: sortItems[0] ?? '土地',
+    sort: sortFor(sortItems, asset?.account ?? capexFor?.parent.account ?? '器具及び備品'),
     account: asset?.account ?? capexFor?.parent.account ?? '器具及び備品',
     name: asset?.name ?? (capexFor ? capexFor.parent.name + 'の資本的支出' : ''),
     acquired: asset?.acquired ?? (capexFor ? waToday() : '令和8年 4月 1日'),
@@ -1160,7 +1247,7 @@ function AssetForm({ accent, asset, manual, dispCalc, capexFor, onAddCapex, onRe
   const box: CSSProperties = capexFor ? { border: '1px solid #e3c065', background: '#fff6d6', borderRadius: 10, padding: 10 } : { border: '1px solid #f0c8cc', background: '#fff5f6', borderRadius: 10, padding: 10 };
   const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '7px 12px', borderRadius: 7, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
   const tag = (t: string) => <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 6, background: '#e8f0fb', color: '#2c5f9e', whiteSpace: 'nowrap' }}>{t}</span>;
-  const current = (): Asset => ({ code: f.code, name: f.name.trim() || '（未入力）', account: f.account, acquired: f.acquired, life, cost: totalCost, status: f.method === '減価償却対象外' || !life ? '対象外' : E <= num(f.memo) ? '償却終了' : '償却中', opening: E, subsidy: sub, method: f.method, qty, place: f.place, purpose: f.purpose, transferIn: asset?.transferIn || f.transferNew, depStart: f.useStart && f.startDate.trim() ? f.startDate.trim() : undefined, manualRows: manual ? mRows : asset?.manualRows, manual: manual || asset?.manual || undefined, capexOf: capexFor?.parent.code ?? asset?.capexOf, capexKind: capexFor?.kind ?? asset?.capexKind });
+  const current = (): Asset => ({ code: f.code, name: f.name.trim() || '（未入力）', account: f.account, acquired: f.acquired, life, cost: totalCost, status: f.disposal === '移管(元)' || asset?.status === '移管年度' ? '移管年度' : asset?.status === '移管取込' ? '移管取込' : f.method === '減価償却対象外' || !life ? '対象外' : E <= num(f.memo) ? '償却終了' : '償却中', opening: E, subsidy: sub, method: f.method, qty, place: f.place, purpose: f.purpose, transferIn: asset?.transferIn || f.transferNew, depStart: f.useStart && f.startDate.trim() ? f.startDate.trim() : undefined, manualRows: manual ? mRows : asset?.manualRows, manual: manual || asset?.manual || undefined, capexOf: capexFor?.parent.code ?? asset?.capexOf, capexKind: capexFor?.kind ?? asset?.capexKind });
   const save = (next?: boolean) => {
     if (!f.name.trim()) return toast('資産名称を入力してください');
     if (!cost) return toast('取得価額（数量×単価）を入力してください');
@@ -1223,7 +1310,7 @@ function AssetForm({ accent, asset, manual, dispCalc, capexFor, onAddCapex, onRe
         <div style={box}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0,1fr))', gap: 8 }}>
             <div><span style={lbl}>資産コード</span><input className="field-input" value={f.code} onChange={(e) => set('code', e.target.value)} title="新規の登録では自動で採番します。手入力で変更できます" style={{ ...input, background: '#fff9c4', fontWeight: 700 }} /></div>
-            <div><span style={lbl}>並び順項目</span><select value={f.sort} onChange={(e) => set('sort', e.target.value)} style={input}>{sortItems.map((o) => <option key={o}>{o}</option>)}</select></div>
+            <div><span style={lbl}>並び順項目</span><select value={f.sort} onChange={(e) => set('sort', e.target.value)} style={input}>{sortItems.map((o) => <option key={o.code} value={o.code}>{sortLabel(o)}</option>)}</select></div>
             <div style={{ gridColumn: 'span 2' }}><span style={lbl}>科目</span><select value={f.account} onChange={(e) => set('account', e.target.value)} style={input}>{FA_ACCOUNTS.map((o) => <option key={o}>{o}</option>)}</select></div>
             <div style={{ gridColumn: 'span 2' }}><span style={lbl}>取得年月日</span><WarekiDate value={f.acquired} onChange={(v) => set('acquired', v)} accent={accent} /></div>
             <div style={{ gridColumn: 'span 2' }}><span style={lbl}>資産名称</span><input className="field-input ring" value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="例：調理室エアコン" style={input} /></div>
@@ -1283,7 +1370,10 @@ function AssetForm({ accent, asset, manual, dispCalc, capexFor, onAddCapex, onRe
             <span style={sec}>資産処分等</span>
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 6 }}>
               <select value={f.disposal} onChange={(e) => { set('disposal', e.target.value); if (e.target.value !== '設定なし') setPartial(null); }} style={input}>{['設定なし', '除却', '売却', '移管(元)'].map((o) => <option key={o}>{o}</option>)}</select>
-              <input className="field-input" value={f.disposalAmt ? yen(num(f.disposalAmt)) : ''} onChange={(e) => set('disposalAmt', e.target.value.replace(/[^0-9]/g, ''))} placeholder="除却／売却／移管(元)額" disabled={f.disposal === '設定なし'} inputMode="numeric" style={{ ...numIn, ...disabledBg(f.disposal !== '設定なし') }} />
+              {/* 除却・移管(元)は当期減少額を自動で入れる。売却は売却額を入力する（確認メモ #287） */}
+              {f.disposal === '除却' || f.disposal === '移管(元)'
+                ? <div data-disp-amt title={`${f.disposal}額：当期減少額（D）を自動で表示します`} style={{ ...numIn, background: '#f5f7f9', whiteSpace: 'nowrap', overflow: 'hidden' }}><span style={{ float: 'left', fontSize: 12, color: '#7a8794' }}>{f.disposal}額</span>{yen(D)}</div>
+                : <input className="field-input" data-disp-amt value={f.disposalAmt ? yen(num(f.disposalAmt)) : ''} onChange={(e) => set('disposalAmt', e.target.value.replace(/[^0-9]/g, ''))} placeholder={f.disposal === '売却' ? '売却額を入力' : '除却／売却／移管(元)額'} title={f.disposal === '売却' ? '売却額を入力します' : undefined} disabled={f.disposal === '設定なし'} inputMode="numeric" style={{ ...numIn, ...disabledBg(f.disposal !== '設定なし') }} />}
               <div style={{ gridColumn: '1 / -1' }}><WarekiDate value={f.disposalDate} onChange={(v) => set('disposalDate', v)} disabled={f.disposal === '設定なし'} title="処分年月日" accent={accent} /></div>
               <button type="button" className="btn-outline" title="一部 除却／売却／移管(元)（数量の一部を処分する）" onClick={() => { const replay = isMemoReplaying(); if (!cost && !replay) return toast('先に取得価額を入力してください'); if (f.disposal !== '設定なし' && !replay) return toast('全数量の処分が設定されています。一部処分は「設定なし」に戻してから行ってください'); setDlg('partial'); }} style={{ ...btn(), padding: '5px 10px' }}>一部処分</button>
             </div>
@@ -1393,8 +1483,8 @@ function AssetForm({ accent, asset, manual, dispCalc, capexFor, onAddCapex, onRe
 }
 
 /* ================= 備品登録 ================= */
-function EquipForm({ accent, equips, sortItems, imageSrc, onSave, onCancel, onReport, onLog, onImage, toast }: { accent: string; equips: Equip[]; sortItems: string[]; imageSrc: Record<string, string>; onSave: (e: Equip) => void; onCancel: () => void; onReport: (name: string) => void; onLog: (code: string) => void; onImage: (code: string, name: string) => void; toast: (m: string) => void }) {
-  const [f, setF] = useState({ code: String(equips.reduce((m, e) => Math.max(m, Number(e.code)), 0) + 1).padStart(5, '0'), sort: '（なし）', account: '', name: '', acquired: '令和8年 4月 1日', qty: '1', unit: '', subsidy: '0', disposal: '設定なし', disposalAmt: '', disposalDate: '' });
+function EquipForm({ accent, equips, sortItems, imageSrc, onSave, onCancel, onReport, onLog, onImage, toast }: { accent: string; equips: Equip[]; sortItems: SortItem[]; imageSrc: Record<string, string>; onSave: (e: Equip) => void; onCancel: () => void; onReport: (name: string) => void; onLog: (code: string) => void; onImage: (code: string, name: string) => void; toast: (m: string) => void }) {
+  const [f, setF] = useState({ code: String(equips.reduce((m, e) => Math.max(m, Number(e.code)), 0) + 1).padStart(5, '0'), sort: '', account: '', name: '', acquired: '令和8年 4月 1日', qty: '1', unit: '', subsidy: '0', disposal: '設定なし', disposalAmt: '', disposalDate: '' });
   const [subsidies, setSubsidies] = useState<SubsidyRow[]>([]);
   const [subOpen, setSubOpen] = useState(false);
   const num = numOf;
@@ -1408,7 +1498,7 @@ function EquipForm({ accent, equips, sortItems, imageSrc, onSave, onCancel, onRe
       <div style={{ padding: 18, borderRight: '1px solid #eef2f5', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ border: '1px solid #f0c8cc', background: '#fff5f6', borderRadius: 10, padding: 12, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
           <div><span style={lbl}>備品コード</span><input className="field-input" value={f.code} onChange={(e) => setF({ ...f, code: e.target.value })} style={{ ...input, fontWeight: 700 }} /></div>
-          <div><span style={lbl}>並び順項目</span><select value={f.sort} onChange={(e) => setF({ ...f, sort: e.target.value })} style={input}>{['（なし）', ...sortItems].map((o) => <option key={o}>{o}</option>)}</select></div>
+          <div><span style={lbl}>並び順項目</span><select value={f.sort} onChange={(e) => setF({ ...f, sort: e.target.value })} style={input}><option value="">（なし）</option>{sortItems.map((o) => <option key={o.code} value={o.code}>{sortLabel(o)}</option>)}</select></div>
           <div><span style={lbl}>科目</span><select value={f.account} onChange={(e) => setF({ ...f, account: e.target.value })} style={input}><option value="">選択</option><option>消耗器具備品費</option><option>器具及び備品</option></select></div>
           <div style={{ gridColumn: 'span 2' }}><span style={lbl}>備品名称</span><input className="field-input ring" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="例：ノートパソコン" style={input} /></div>
           <div><span style={lbl}>取得年月日</span><WarekiDate value={f.acquired} onChange={(v) => setF({ ...f, acquired: v })} accent={accent} /></div>
@@ -1854,7 +1944,7 @@ function TransferView({ accent, assets, onRegister, toast }: { accent: string; a
 }
 
 /* ================= 動作環境設定 ================= */
-function EnvSettings({ accent, dispCalc, onDispCalc, sortItems, onSortItems, onClose, onSaved, toast }: { accent: string; dispCalc: DispCalc; onDispCalc: (v: DispCalc) => void; sortItems: string[]; onSortItems: (items: string[]) => void; onClose: () => void; onSaved: (desc: string) => void; toast: (m: string) => void }) {
+function EnvSettings({ accent, dispCalc, onDispCalc, sortItems, onSortItems, onClose, onSaved, toast }: { accent: string; dispCalc: DispCalc; onDispCalc: (v: DispCalc) => void; sortItems: SortItem[]; onSortItems: (items: SortItem[]) => void; onClose: () => void; onSaved: (desc: string) => void; toast: (m: string) => void }) {
   const METHODS = ['定額法', '旧定額法(備忘価額まで)', '旧定額法(残存価額まで)', 'リース定額法'];
   const [s, setS] = useState({ method: '定額法', dep: '償却率を乗ずる方法', sub: '償却率を乗ずる方法', byDate: false, disposal: dispCalc as string, zero: true, gengo: true, shade: '#eef9fb', line: '#ff7a00' });
   const [details, setDetails] = useState<Record<string, MethodDetail>>(() => Object.fromEntries(METHODS.map((m) => [m, DEFAULT_DETAIL(m)])));
@@ -1887,7 +1977,7 @@ function EnvSettings({ accent, dispCalc, onDispCalc, sortItems, onSortItems, onC
         <div style={box}>
           <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>諸設定</div>
           <button type="button" className="btn-outline" onClick={() => setSortOpen(true)} style={btn()}>並び順項目マスタ</button>
-          <div style={{ fontSize: 12, color: '#7a8794', marginTop: 6, lineHeight: 1.6 }}>{sortItems.length} 項目：{sortItems.join('、')}</div>
+          <div style={{ fontSize: 12, color: '#7a8794', marginTop: 6, lineHeight: 1.6 }}>{sortItems.length} 項目：{sortItems.map(sortLabel).join('、')}</div>
         </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
