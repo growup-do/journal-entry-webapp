@@ -239,68 +239,46 @@ tr.row-hover:hover > td:first-child { box-shadow: inset 3px 0 0 rgba(44, 95, 158
 .icon-btn:hover:not(:disabled) { background: #f3f6f9 !important; }
 .icon-btn[data-solid]:hover:not(:disabled) { filter: brightness(1.08); background: inherit; }
 .icon-btn:focus-visible { outline: 2px solid #1f7a52; outline-offset: 2px; }
-/* アイコンボタン：マウスを載せる（キーボードで選ぶ）と枠が広がったように見せ、アイコンの横にメニュー名を出す。
-   名前の部分はボタンの上に重ねる（absolute）ので、ボタン自体の大きさは変わらず、並んでいるボタンも動かない。
-   名前の部分はマウスに反応しない（pointer-events: none）ので、その下にある隣のボタンへもそのまま移れる。
-   幅は 0fr から 1fr（実際の文字幅）へ動かす。開くときは幅が先に動き、文字は少し遅れてふわっと出る */
-.icon-btn:hover:not(:disabled),
-.icon-btn:focus-visible { z-index: 30; }
+/* アイコンボタン：マウスを載せる（キーボードで選ぶ）と枠の幅が広がり、アイコンの横にメニュー名を出す。
+   名前の分だけボタンが広がるので、並んでいるほかのボタンは動いて場所を空ける（重ならない）。
+   右寄せのボタン列では名前をアイコンの左に出し（data-expand="left"）、マウスを載せたボタン自体は動かない。
+   幅は名前の実際の幅（--ib-w。ui.tsx で測る）まで動かす。開くときは幅が先に動き、文字は少し遅れてふわっと出る */
 .icon-btn-label {
-  position: absolute;
-  top: -1px;
-  bottom: -1px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  box-sizing: border-box;
-  border: 1px solid var(--ib-border, #cfd8e0);
-  background: inherit;
-  color: inherit;
-  pointer-events: none;
   opacity: 0;
-  padding: 0;
+  margin: 0;
   font-size: 14px;
   font-weight: 700;
   line-height: 1;
   transition:
-    padding 0.42s cubic-bezier(0.4, 0, 0.2, 1) 0.06s,
-    opacity 0.12s ease 0.3s;
+    margin 0.42s cubic-bezier(0.4, 0, 0.2, 1) 0.06s,
+    opacity 0.2s ease;
 }
-.icon-btn[data-expand="right"] .icon-btn-label { left: calc(100% - 1px); border-left: none; border-radius: 0 8px 8px 0; }
-.icon-btn[data-expand="left"] .icon-btn-label { right: calc(100% - 1px); border-right: none; border-radius: 8px 0 0 8px; }
+.icon-btn[data-expand="left"] .icon-btn-label { order: -1; }
 .icon-btn-label > span {
   display: block;
   width: 0;
   overflow: hidden;
   white-space: nowrap;
-  opacity: 0;
-  transition:
-    width 0.42s cubic-bezier(0.4, 0, 0.2, 1) 0.06s,
-    opacity 0.2s ease;
+  transition: width 0.42s cubic-bezier(0.4, 0, 0.2, 1) 0.06s;
 }
 .icon-btn:hover .icon-btn-label,
 .icon-btn:focus-visible .icon-btn-label {
   opacity: 1;
   transition:
-    padding 0.5s cubic-bezier(0.33, 0, 0.15, 1),
-    opacity 0.08s ease;
+    margin 0.5s cubic-bezier(0.33, 0, 0.15, 1),
+    opacity 0.36s ease 0.14s;
 }
 .icon-btn[data-expand="right"]:hover .icon-btn-label,
-.icon-btn[data-expand="right"]:focus-visible .icon-btn-label { padding-right: 12px; }
+.icon-btn[data-expand="right"]:focus-visible .icon-btn-label { margin-left: 6px; }
 .icon-btn[data-expand="left"]:hover .icon-btn-label,
-.icon-btn[data-expand="left"]:focus-visible .icon-btn-label { padding-left: 12px; }
+.icon-btn[data-expand="left"]:focus-visible .icon-btn-label { margin-right: 6px; }
 .icon-btn:hover .icon-btn-label > span,
 .icon-btn:focus-visible .icon-btn-label > span {
   width: var(--ib-w, auto);
-  opacity: 1;
-  transition:
-    width 0.5s cubic-bezier(0.33, 0, 0.15, 1),
-    opacity 0.36s ease 0.14s;
+  transition: width 0.5s cubic-bezier(0.33, 0, 0.15, 1);
 }
-/* 名前の部分とつながって見えるよう、広がる側の角と枠線を消す */
-.icon-btn[data-expand="right"]:hover:not(:disabled),
-.icon-btn[data-expand="right"]:focus-visible { border-top-right-radius: 0 !important; border-bottom-right-radius: 0 !important; border-right-color: transparent !important; }
-.icon-btn[data-expand="left"]:hover:not(:disabled),
-.icon-btn[data-expand="left"]:focus-visible { border-top-left-radius: 0 !important; border-bottom-left-radius: 0 !important; border-left-color: transparent !important; }
 @media (prefers-reduced-motion: reduce) {
   .icon-btn-label,
   .icon-btn-label > span,
@@ -309,6 +287,7 @@ tr.row-hover:hover > td:first-child { box-shadow: inset 3px 0 0 rgba(44, 95, 158
   .icon-btn:focus-visible .icon-btn-label,
   .icon-btn:focus-visible .icon-btn-label > span { transition: none; }
 }
+
 
 
 

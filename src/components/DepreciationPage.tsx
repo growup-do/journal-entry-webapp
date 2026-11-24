@@ -16,7 +16,7 @@ import { PrintOutButton } from './PrintOutDialog';
 import { DepPrintModal, printMethod, type DepValues } from './DepPrintModal';
 import { PreviewModal } from './PrintCenter';
 import type { ExportSpec } from './ExportDialog';
-import { IconButton, Notice, SelectionBar, btn as uiBtn } from './ui';
+import { IconButton, Notice, PrintIcon, SelectionBar, btn as uiBtn } from './ui';
 import { WarekiDate, isWarekiComplete, parseWareki } from './WarekiDate';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { ACCOUNT_META, accountMatches } from '../lib/accounts';
@@ -1044,7 +1044,7 @@ function AssetDetail({ accent, asset, imageSrc, onClose, onEdit, onPrint, onDele
       </div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         <button type="button" className="submit-btn" onClick={onEdit} style={btn(accent, true)}>変更</button>
-        <button type="button" className="btn-outline" onClick={onPrint} style={btn()}>台帳を印刷</button>
+        <button type="button" className="btn-outline" onClick={onPrint} title="この資産の台帳を印刷します" style={{ ...btn(), display: 'inline-flex', alignItems: 'center', gap: 6 }}><PrintIcon />印刷</button>
         <button type="button" className="btn-outline" onClick={onDelete} style={{ ...btn('#c0392b'), marginLeft: 'auto' }}>削除</button>
       </div>
       <div>

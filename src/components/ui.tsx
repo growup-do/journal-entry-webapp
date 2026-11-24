@@ -163,30 +163,28 @@ export const PrintIcon = () => <Icon name="print" size={14} />;
 /** アイコンだけのボタン。マウスを載せたときの表示（title）と読み上げ（aria-label）は、メニュー名だけにする。
  *  大きさは右上の機能ボタン（btn の通常の大きさ）と同じ高さの正方形 */
 export function IconButton({ icon, label, color = '#5b6773', solid = false, size = 42, badge, tipOnly = false, style, onMouseEnter, onFocus, ...rest }: { icon: IconName; label: string; color?: string; solid?: boolean; size?: number; /** 右上の赤い数字（承認待ちの件数など）。0 は出さない */ badge?: number; /** 枠を広げず、マウスを載せたときにツールチップ（印刷ボタンと同じ小さな表記）で名前だけを出す */ tipOnly?: boolean } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'color' | 'title'>) {
-  // ふだんはアイコンだけの正方形。マウスを載せると枠が広がったように見せ、アイコンの横にメニュー名を出す（styles.css の .icon-btn-label）。
-  // 名前の部分はボタンの上に重ねて出すだけなので、ボタン自体の大きさは変わらず、並んでいるほかのボタンも動かない。
-  // 右に出す余白がない（画面や枠の右端に近い）ときは左側に出す
+  // ふだんはアイコンだけの正方形。マウスを載せると枠の幅が広がってアイコンの横にメニュー名が出て、並んでいるほかのボタンは動いて場所を空ける（styles.css の .icon-btn-label）。
+  // 右寄せのボタン列では名前をアイコンの左に出す。こうするとマウスを載せたボタン（アイコン）は動かず、左側のボタンが左へ動く
   const iconSize = size >= 40 ? 19 : 16;
   const ref = useRef<HTMLButtonElement>(null);
   const [toLeft, setToLeft] = useState(false);
-  useLayoutEffect(() => {
-    const b = ref.current;
-    const text = b?.querySelector('.icon-btn-label > span') as HTMLElement | null;
-    if (b && text) b.style.setProperty('--ib-w', text.scrollWidth + 'px');
-  }, [label]);
+  const measure = (b: HTMLButtonElement) => {
+    const text = b.querySelector('.icon-btn-label > span') as HTMLElement | null;
+    if (text) b.style.setProperty('--ib-w', text.scrollWidth + 'px');
+  };
+  useLayoutEffect(() => { if (ref.current) measure(ref.current); }, [label]);
   const pickSide = () => {
     const b = ref.current;
     if (!b || tipOnly) return;
-    const text = b.querySelector('.icon-btn-label > span') as HTMLElement | null;
-    // 名前の実際の幅を測り、その幅まで広げる（styles.css の --ib-w）
-    if (text) b.style.setProperty('--ib-w', text.scrollWidth + 'px');
-    const need = (text?.scrollWidth ?? 90) + 24;
-    let edge = window.innerWidth;
-    for (let p = b.parentElement; p; p = p.parentElement) {
-      const cs = getComputedStyle(p);
-      if (cs.overflowX !== 'visible') { edge = Math.min(edge, p.getBoundingClientRect().right); break; }
-    }
-    setToLeft(b.getBoundingClientRect().right + need > edge - 4);
+    measure(b);
+    // 右寄せの並び（margin-left: auto、または右詰め）かどうか。ボタンを包む要素があれば 1 つ上も見る
+    const rightAligned = (el: HTMLElement | null) => {
+      if (!el) return false;
+      const cs = getComputedStyle(el);
+      return el.style.marginLeft === 'auto' || cs.justifyContent === 'flex-end' || cs.justifyContent === 'end' || cs.justifyContent === 'right';
+    };
+    const p = b.parentElement;
+    setToLeft(rightAligned(p) || (!!p && p.children.length === 1 && rightAligned(p.parentElement)));
   };
   return (
     <button
@@ -201,11 +199,11 @@ export function IconButton({ icon, label, color = '#5b6773', solid = false, size
       onMouseEnter={(e) => { pickSide(); onMouseEnter?.(e); }}
       onFocus={(e) => { pickSide(); onFocus?.(e); }}
       aria-label={label}
-      style={{ position: 'relative', width: size, height: size, boxSizing: 'border-box', flex: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0, borderRadius: 8, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, cursor: rest.disabled ? 'not-allowed' : 'pointer', opacity: rest.disabled ? 0.45 : 1, fontFamily: 'inherit', ['--ib-border' as string]: solid ? color : '#cfd8e0', ...style } as CSSProperties}
+      style={{ position: 'relative', minWidth: size, height: size, boxSizing: 'border-box', flex: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: `0 ${(size - 2 - iconSize) / 2}px`, borderRadius: 8, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, cursor: rest.disabled ? 'not-allowed' : 'pointer', opacity: rest.disabled ? 0.45 : 1, fontFamily: 'inherit', ...style }}
     >
       <Icon name={icon} size={iconSize} />
       {!tipOnly && <span className="icon-btn-label" aria-hidden="true"><span>{label}</span></span>}
-      {!!badge && <span aria-hidden="true" style={{ position: 'absolute', top: -7, right: -7, zIndex: 2, minWidth: 18, height: 18, padding: '0 5px', boxSizing: 'border-box', borderRadius: 9, background: '#c0392b', color: '#fff', fontSize: 12, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{badge}</span>}
+      {!!badge && <span aria-hidden="true" style={{ position: 'absolute', top: -7, right: -7, minWidth: 18, height: 18, padding: '0 5px', boxSizing: 'border-box', borderRadius: 9, background: '#c0392b', color: '#fff', fontSize: 12, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{badge}</span>}
     </button>
   );
 }
