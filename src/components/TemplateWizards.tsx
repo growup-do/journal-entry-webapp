@@ -1,4 +1,5 @@
 // 連続定型仕訳ウィザード／自動按分仕訳登録（テンプレートの新規登録・訂正）
+//   連続定型仕訳ウィザードの明細は、予備１・予備２・消費税（貸借）も入力できる（確認メモ #292）。振替伝票式は借方金額・貸方金額を行ごとに分ける（#293）。0 行では登録できない（#294）。
 //   設定「仕訳辞書」と、伝票入力の「連続定型」「自動按分」ダイアログの両方から開く共通部品。
 
 import { Modal } from './Modal';
@@ -6,6 +7,7 @@ import { NUM, TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
 import { Field, Notice, Steps, btn, input, lbl, numInput, toInt, yen } from './ui';
 import { ACCOUNTS, SERVICES, VENDORS } from '../data';
+import { TAX_OPTS } from '../lib/transferTax';
 import { setSession, useSession, type AllocationLine, type AllocationTemplate, type JournalTemplate, type TemplateLine } from '../store/session';
 
 const ACCTS = ACCOUNTS.flatMap((g) => g.items).concat(['水道光熱費（事務）', '寄附金収益', '基本金組入額']);
@@ -26,6 +28,7 @@ export function TemplateWizardModal({ wiz, setWiz, accent, onSaved }: { wiz: Tem
   const saveT = () => {
     if (!wiz) return;
     if (!wiz.t.name.trim()) return toast.show('名称を入力してください（全角20文字まで）');
+    if (wiz.t.lines.length === 0) return toast.show('行がありません。「＋ 行追加」で 1 行以上追加してから登録してください');
     setSession({ templates: s.templates.some((x) => x.id === wiz.t.id) ? s.templates.map((x) => (x.id === wiz.t.id ? wiz.t : x)) : [...s.templates, wiz.t] });
     setWiz(null); toast.show('定型仕訳を登録しました'); onSaved?.(wiz.t);
   };
@@ -33,25 +36,59 @@ export function TemplateWizardModal({ wiz, setWiz, accent, onSaved }: { wiz: Tem
   return (
     <>
       <ToastView msg={toast.msg} />
-  <Modal open={!!wiz} onClose={() => setWiz(null)} width={760} title="連続定型仕訳ウィザード" strict>
+  <Modal open={!!wiz} onClose={() => setWiz(null)} width={wiz?.step === 2 ? 1180 : 760} title="連続定型仕訳ウィザード" strict>
     {wiz && (
       <>
         <Steps steps={['名称設定', '伝票の形式選択', '仕訳伝票（テンプレート）']} current={wiz.step} accent={accent} />
         <div style={{ padding: '18px 22px' }}>
           {wiz.step === 0 && <Field label="伝票（テンプレート）の名称（全角20文字まで）"><input className="field-input ring" value={wiz.t.name} onChange={(e) => setWiz({ ...wiz, t: { ...wiz.t, name: e.target.value.slice(0, 20) } })} style={input} autoFocus /></Field>}
           {wiz.step === 1 && <Field label="伝票の形式"><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>{FORMS.map((f) => <label key={f} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '10px 12px', border: '1px solid ' + (wiz.t.form === f ? accent : '#e2e8ee'), borderRadius: 10, fontSize: 14, cursor: 'pointer' }}><input type="radio" checked={wiz.t.form === f} onChange={() => setWiz({ ...wiz, t: { ...wiz.t, form: f } })} />{f}</label>)}</div></Field>}
-          {wiz.step === 2 && (
+          {wiz.step === 2 && (() => {
+            const split = wiz.t.form === '振替伝票式';
+            const amt = (v: string | undefined, on: (x: string) => void, ph: string, label: string) => <input className="field-input" aria-label={label} value={v ? yen(Number(v)) : ''} onChange={(e) => on(e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" placeholder={ph} style={{ ...numInput, padding: '5px 8px', fontSize: 14 }} />;
+            const txt = (v: string | undefined, on: (x: string) => void, label: string) => <input className="field-input" aria-label={label} value={v ?? ''} onChange={(e) => on(e.target.value)} style={{ ...input, padding: '5px 8px', fontSize: 14 }} />;
+            const tax = (v: string | undefined, on: (x: string) => void, label: string) => <select aria-label={label} value={v ?? ''} onChange={(e) => on(e.target.value)} style={{ ...input, padding: '3px 6px', fontSize: 12 }}><option value="">科目の既定</option>{TAX_OPTS.map((o) => <option key={o}>{o}</option>)}</select>;
+            return (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}><span style={lbl}>{wiz.t.name}（{wiz.t.form}）　日付・金額は未入力でも登録できます</span><button type="button" onClick={() => setWiz({ ...wiz, t: { ...wiz.t, lines: [...wiz.t.lines, { kari: '', kashi: '', tekiyo: '', amount: '' }] } })} style={{ ...btn(accent, false, true), marginLeft: 'auto' }}>＋ 行追加</button></div>
+              <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead><tr><th style={{ ...TH, width: 36 }}>#</th><th style={TH}>借方</th><th style={TH}>貸方</th><th style={TH}>摘要</th><th style={{ ...TH, width: 120 }}>取引先</th><th style={{ ...TH, width: 110, textAlign: 'right' }}>金額</th><th style={{ ...TH, width: 70 }} /></tr></thead>
-                <tbody>{wiz.t.lines.map((l, i) => <tr key={i}><td style={TD}>{i + 1}</td><td style={TD}>{sel(l.kari, (v) => updLine(i, { kari: v }), ACCTS)}</td><td style={TD}>{sel(l.kashi, (v) => updLine(i, { kashi: v }), ACCTS)}</td><td style={TD}><input className="field-input" value={l.tekiyo} onChange={(e) => updLine(i, { tekiyo: e.target.value })} style={{ ...input, padding: '5px 8px', fontSize: 14 }} /></td><td style={TD}>{sel(l.gyosha ?? '', (v) => updLine(i, { gyosha: v }), VENDORS.filter((x) => x !== '（なし）'), 'なし')}</td><td style={NUM}><input className="field-input" value={l.amount ? yen(Number(l.amount)) : ''} onChange={(e) => updLine(i, { amount: e.target.value.replace(/[^0-9]/g, '') })} inputMode="numeric" placeholder="呼出時に入力" style={{ ...numInput, padding: '5px 8px', fontSize: 14 }} /></td><td style={TD}><button type="button" onClick={() => setWiz({ ...wiz, t: { ...wiz.t, lines: wiz.t.lines.filter((_, k) => k !== i) } })} title="この行を削除" style={btn('#c0392b', false, true)}>行削除</button></td></tr>)}</tbody>
+                <thead><tr>
+                  <th style={{ ...TH, width: 30 }}>#</th><th style={TH}>借方</th><th style={TH}>貸方</th><th style={TH}>摘要</th><th style={{ ...TH, width: 120 }}>取引先</th>
+                  <th style={{ ...TH, width: 90 }}>予備１</th><th style={{ ...TH, width: 90 }}>予備２</th>
+                  <th style={{ ...TH, width: 128 }} title="消費税コード（上が借方、下が貸方。「科目の既定」は科目に設定した税区分）">消費税（借／貸）</th>
+                  {split ? <><th style={{ ...TH, width: 110, textAlign: 'right' }}>借方金額</th><th style={{ ...TH, width: 110, textAlign: 'right' }}>貸方金額</th></> : <th style={{ ...TH, width: 110, textAlign: 'right' }}>金額</th>}
+                  <th style={{ ...TH, width: 64 }} />
+                </tr></thead>
+                <tbody>
+                  {wiz.t.lines.length === 0 && <tr><td colSpan={split ? 11 : 10} style={{ ...TD, textAlign: 'center', color: '#c0392b', padding: 18 }}>行がありません。「＋ 行追加」で 1 行以上追加してください（0 行のままでは登録できません）。</td></tr>}
+                  {wiz.t.lines.map((l, i) => <tr key={i}>
+                    <td style={TD}>{i + 1}</td>
+                    <td style={TD}>{sel(l.kari, (v) => updLine(i, { kari: v }), ACCTS)}</td>
+                    <td style={TD}>{sel(l.kashi, (v) => updLine(i, { kashi: v }), ACCTS)}</td>
+                    <td style={TD}>{txt(l.tekiyo, (v) => updLine(i, { tekiyo: v }), `${i + 1}行目の摘要`)}</td>
+                    <td style={TD}>{sel(l.gyosha ?? '', (v) => updLine(i, { gyosha: v }), VENDORS.filter((x) => x !== '（なし）'), 'なし')}</td>
+                    <td style={TD}>{txt(l.spare1, (v) => updLine(i, { spare1: v }), `${i + 1}行目の予備１`)}</td>
+                    <td style={TD}>{txt(l.spare2, (v) => updLine(i, { spare2: v }), `${i + 1}行目の予備２`)}</td>
+                    <td style={TD}><div style={{ display: 'grid', gap: 3 }}>{tax(l.kariTax, (v) => updLine(i, { kariTax: v }), `${i + 1}行目の借方の消費税`)}{tax(l.kashiTax, (v) => updLine(i, { kashiTax: v }), `${i + 1}行目の貸方の消費税`)}</div></td>
+                    {split ? (
+                      <>
+                        <td style={NUM}>{amt(l.kariAmount ?? l.amount, (v) => updLine(i, { kariAmount: v, amount: v }), '呼出時', `${i + 1}行目の借方金額`)}</td>
+                        <td style={NUM}>{amt(l.kashiAmount ?? l.amount, (v) => updLine(i, { kashiAmount: v }), '呼出時', `${i + 1}行目の貸方金額`)}</td>
+                      </>
+                    ) : <td style={NUM}>{amt(l.amount, (v) => updLine(i, { amount: v }), '呼出時に入力', `${i + 1}行目の金額`)}</td>}
+                    <td style={TD}><button type="button" onClick={() => setWiz({ ...wiz, t: { ...wiz.t, lines: wiz.t.lines.filter((_, k) => k !== i) } })} title="この行を削除" style={btn('#c0392b', false, true)}>行削除</button></td>
+                  </tr>)}
+                </tbody>
               </table>
+              </div>
+              {split && <div style={{ marginTop: 8, fontSize: 12, color: '#7a8794' }}>振替伝票式は、行ごとに借方金額と貸方金額を分けて入力できます。</div>}
             </>
-          )}
+            );
+          })()}
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
             <button type="button" onClick={() => (wiz.step === 0 ? setWiz(null) : setWiz({ ...wiz, step: wiz.step - 1 }))} style={btn()}>{wiz.step === 0 ? '中止' : '戻る'}</button>
-            {wiz.step < 2 ? <button type="button" className="submit-btn" onClick={() => setWiz({ ...wiz, step: wiz.step + 1 })} style={btn(accent, true)}>次へ</button> : <button type="button" className="submit-btn" onClick={saveT} style={btn(accent, true)}>定型仕訳を登録</button>}
+            {wiz.step < 2 ? <button type="button" className="submit-btn" onClick={() => setWiz({ ...wiz, step: wiz.step + 1 })} style={btn(accent, true)}>次へ</button> : <span data-tip={wiz.t.lines.length === 0 ? '行が 0 行のため登録できません。「＋ 行追加」で行を追加してください' : undefined} style={{ display: 'inline-flex' }}><button type="button" className="submit-btn" data-template-save disabled={wiz.t.lines.length === 0} onClick={saveT} style={{ ...btn(accent, true), ...(wiz.t.lines.length === 0 ? { opacity: 0.45, cursor: 'not-allowed' } : {}) }}>定型仕訳を登録</button></span>}
           </div>
         </div>
       </>

@@ -137,7 +137,7 @@ export const DEFAULT_PRINT: PrintCommon = {
 };
 
 /* ---------- 定型仕訳・自動按分 ---------- */
-export interface TemplateLine { kari: string; kashi: string; tekiyo: string; amount: string; gyosha?: string }
+export interface TemplateLine { kari: string; kashi: string; tekiyo: string; amount: string; gyosha?: string; /** 入力予備１・２（確認メモ #292） */ spare1?: string; spare2?: string; /** 消費税コード（貸借それぞれ。空は科目からの既定。確認メモ #292） */ kariTax?: string; kashiTax?: string; /** 振替伝票式：行の借方金額・貸方金額（確認メモ #293。amount は借方金額と同じ） */ kariAmount?: string; kashiAmount?: string }
 export interface JournalTemplate { id: string; name: string; form: '単一式' | '伝票式' | '振替伝票式' | '振替単一式'; lines: TemplateLine[]; /** 連続定型で登録の対象にするか（未指定は有効。確認メモ #202） */ enabled?: boolean }
 export interface AllocationLine { division: string; kari: string; kashi: string; tekiyo: string; rate: number; mode: '％' | '分数' | '残り'; }
 export interface AllocationTemplate { id: string; name: string; form: '単一式' | '伝票式'; rounding: '切り捨て' | '四捨五入' | '切り上げ'; lines: AllocationLine[] }

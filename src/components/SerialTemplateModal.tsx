@@ -16,7 +16,7 @@ const FORMAT_LABEL: Record<EntryFormat, string> = { 伝票入力: '仕訳伝票�
 /** 連続定型に並べられるページ数の上限（現行を踏襲） */
 const MAX_PAGES = 50;
 
-interface PLine { id: number; kari: string; kashi: string; tekiyo: string; gyosha: string; amount: string }
+interface PLine { id: number; kari: string; kashi: string; tekiyo: string; gyosha: string; amount: string; /** 定型に登録した予備１・２、消費税（貸借）、振替伝票式の貸方金額（確認メモ #292／#293） */ spare1?: string; spare2?: string; kariTax?: string; kashiTax?: string; kashiAmount?: string }
 interface Page { id: number; name: string; enabled: boolean; kari: string; kashi: string; lines: PLine[]; aite: string }
 
 let uid = 1;
@@ -32,7 +32,7 @@ const isMulti = (f: EntryFormat) => f !== '単一入力';
 /** 保存してある定型を、ダイアログのページに直す（1 ページ＝伝票 1 枚） */
 function toPages(templates: JournalTemplate[], format: EntryFormat): Page[] {
   const out: Page[] = [];
-  const mk = (l: TemplateLine): PLine => ({ id: nid(), kari: l.kari, kashi: l.kashi, tekiyo: l.tekiyo, gyosha: l.gyosha ?? '', amount: l.amount });
+  const mk = (l: TemplateLine): PLine => ({ id: nid(), kari: l.kari, kashi: l.kashi, tekiyo: l.tekiyo, gyosha: l.gyosha ?? '', amount: l.kariAmount || l.amount, spare1: l.spare1, spare2: l.spare2, kariTax: l.kariTax, kashiTax: l.kashiTax, kashiAmount: l.kashiAmount });
   for (const t of templates.filter((x) => x.form === TEMPLATE_FORM[format])) {
     const enabled = t.enabled !== false;
     if (isPerLine(format)) {
@@ -147,7 +147,7 @@ export function SerialTemplateModal({ open, onClose, accent, format, service, ye
     const stamp = Date.now();
     const mine: JournalTemplate[] = pages.map((p, i) => ({
       id: `s${stamp}-${i}`, name: p.name.trim() || `定型 ${i + 1}`, form: TEMPLATE_FORM[format], enabled: p.enabled,
-      lines: p.lines.map((l) => ({ ...lineAccounts(p, l, perLine), tekiyo: l.tekiyo, amount: l.amount, gyosha: l.gyosha })),
+      lines: p.lines.map((l) => ({ ...lineAccounts(p, l, perLine), tekiyo: l.tekiyo, amount: l.amount, gyosha: l.gyosha, spare1: l.spare1, spare2: l.spare2, kariTax: l.kariTax, kashiTax: l.kashiTax, ...(format === '振替入力' ? { kariAmount: l.amount, kashiAmount: l.kashiAmount } : {}) })),
     }));
     setSession({ templates: [...sess.templates.filter((t) => t.form !== TEMPLATE_FORM[format]), ...mine] });
     toast(`${FORMAT_LABEL[format]}の定型を保存しました（${mine.length}ページ）`);
@@ -174,7 +174,8 @@ export function SerialTemplateModal({ open, onClose, accent, format, service, ye
         const side = autoInternalSide(kari, kashi);
         const v = addVoucher({
           kind: FORMAT_KIND[format], date, seq, no, kari, kashi, tekiyo: l.tekiyo, amount, service, gyosha: l.gyosha || undefined, shohyo: true,
-          ...(format === '振替入力' ? { kariAmount: amount, kashiAmount: amount } : {}),
+          ...(format === '振替入力' ? { kariAmount: amount, kashiAmount: l.kashiAmount ? toNum(l.kashiAmount) : amount } : {}),
+          spare1: l.spare1 || undefined, spare2: l.spare2 || undefined, kariTax: l.kariTax || undefined, kashiTax: l.kashiTax || undefined,
           internal: side ? true : undefined, internalSide: side || undefined, term: em.term,
         });
         if (side) setPartner(v.id, p.aite);
