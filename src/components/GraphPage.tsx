@@ -7,7 +7,7 @@
 //   値はサンプル（決定的な疑似乱数）。
 
 import { useState } from 'react';
-import { TAB_BAR, tabBtn } from './ui';
+import { TabStrip, tabBtn } from './ui';
 import { BarChart } from './BarChart';
 import { LABEL, ReportShell, Segmented, SwitchPill } from './ReportShell';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
@@ -110,11 +110,11 @@ export function GraphPage({ mode, variant, accent }: Props) {
         {/* 左：部タブ＋ツリー */}
         <div style={{ borderRight: '1px solid #eef2f5', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           {isYearly && (
-            <div role="tablist" aria-label="部の切替" style={{ ...TAB_BAR, padding: '0 14px' }}>
+            <TabStrip aria-label="部の切替" accent={GRAPH_PARTS.find((p) => p.key === part)?.color ?? accent} style={{ padding: '6px 14px 0' }}>
               {GRAPH_PARTS.map((p) => (
                 <button key={p.key} type="button" className="tab-btn" role="tab" aria-selected={part === p.key} data-tab={p.key} onClick={() => setPart(p.key)} style={tabBtn(part === p.key, p.color)}>{p.key}</button>
               ))}
-            </div>
+            </TabStrip>
           )}
           <div style={{ padding: '8px 14px 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={LABEL}>{isYearly ? '科目' : '指標'}</span>

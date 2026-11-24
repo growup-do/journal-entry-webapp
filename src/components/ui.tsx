@@ -1,7 +1,7 @@
 // 追加画面で共通に使う小さな部品（ボタン／入力／ラベル／タブ／トグル／カード）
 
-import { useLayoutEffect, useRef, useState } from 'react';
-import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { ButtonHTMLAttributes, CSSProperties, HTMLAttributes, ReactNode } from 'react';
 import { UNSAVED_BG } from '../store/unsaved';
 
 export const btn = (color = '#5b6773', solid = false, small = false): CSSProperties => ({
@@ -16,16 +16,59 @@ export const cardHead: CSSProperties = { padding: '12px 16px', background: '#f6f
 export const yen = (n: number) => (n < 0 ? '△' + Math.abs(n).toLocaleString('ja-JP') : n.toLocaleString('ja-JP'));
 export const toInt = (v: string) => parseInt(v.replace(/[^0-9-]/g, ''), 10) || 0;
 
-/** タブの帯（減価償却ページのタブと同じ形）。帯は薄い緑の背景で、ここがタブだと分かるようにする */
+/** タブの帯。薄い緑の背景で、ここがタブだと分かるようにする */
 export const TAB_BAR: CSSProperties = { display: 'flex', alignItems: 'flex-end', gap: 2, padding: '6px 22px 0', borderBottom: '1px solid #d5e6dc', background: '#eef6f1', flexWrap: 'wrap' };
-/** タブ 1 つ分の見た目。選んだタブは白地に下線と文字色で示す。className は "tab-btn" を付ける（マウスを載せたときの色） */
+/** タブ 1 つ分の見た目。選んだタブは文字色で示し、下線は TabStrip が描く。className は "tab-btn" を付ける */
 export function tabBtn(on: boolean, accent: string): CSSProperties {
-  return { padding: '9px 14px', border: 'none', borderRadius: '7px 7px 0 0', borderBottom: '2px solid ' + (on ? accent : 'transparent'), marginBottom: -1, background: on ? '#fff' : 'transparent', color: on ? accent : '#4f5d68', fontSize: 14, fontWeight: on ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' };
+  return { padding: '9px 14px 10px', border: 'none', background: 'transparent', color: on ? accent : '#4f5d68', fontSize: 14, fontWeight: on ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' };
+}
+
+/** タブの帯。中の role="tab" のボタンに下線を 1 本だけ引き、マウスを載せた（キーボードで選んだ）タブへすべるように動かす。
+ *  帯から外れると、選んでいるタブ（aria-selected）の下へ戻る */
+export function TabStrip({ accent, style, children, ...rest }: { accent: string; style?: CSSProperties; children: ReactNode } & Omit<HTMLAttributes<HTMLDivElement>, 'style' | 'children'>) {
+  const ref = useRef<HTMLDivElement>(null);
+  const hovering = useRef(false);
+  const [ink, setInk] = useState<{ left: number; width: number } | null>(null);
+  const [ready, setReady] = useState(false);
+  const place = (el: Element | null) => {
+    const t = el as HTMLElement | null;
+    if (!t) { setInk(null); return; }
+    const left = t.offsetLeft, width = t.offsetWidth;
+    setInk((p) => (p && p.left === left && p.width === width ? p : { left, width }));
+  };
+  const toSelected = () => place(ref.current?.querySelector('[role="tab"][aria-selected="true"]') ?? null);
+  // 選んでいるタブが変わったとき・描き直したときは、選んでいるタブの下へ
+  useLayoutEffect(() => { if (!hovering.current) toSelected(); });
+  // 最初の位置へは動かさずに置き、そのあとから動きを付ける
+  useEffect(() => { const id = requestAnimationFrame(() => setReady(true)); return () => cancelAnimationFrame(id); }, []);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => { if (!hovering.current) toSelected(); });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const tabOf = (e: { target: EventTarget }) => (e.target as HTMLElement).closest?.('[role="tab"]') ?? null;
+  return (
+    <div
+      ref={ref}
+      role="tablist"
+      {...rest}
+      onMouseOver={(e) => { const t = tabOf(e); if (t && ref.current?.contains(t)) { hovering.current = true; place(t); } }}
+      onMouseLeave={() => { hovering.current = false; toSelected(); }}
+      onFocus={(e) => { const t = tabOf(e); if (t) place(t); }}
+      onBlur={() => { if (!hovering.current) toSelected(); }}
+      style={{ ...TAB_BAR, position: 'relative', ...style }}
+    >
+      {children}
+      <span aria-hidden="true" className="tab-ink" style={{ position: 'absolute', bottom: -1, left: ink?.left ?? 0, width: ink?.width ?? 0, height: 2, borderRadius: 2, background: accent, opacity: ink ? 1 : 0, pointerEvents: 'none', transition: ready ? 'left .32s cubic-bezier(0.33, 0, 0.15, 1), width .32s cubic-bezier(0.33, 0, 0.15, 1), background-color .2s' : 'none' }} />
+    </div>
+  );
 }
 
 export function Tabs({ items, current, onChange, accent, marks }: { items: string[]; current: string; onChange: (v: string) => void; accent: string; small?: boolean; /** 保存されていない変更があるタブ（名称の右に印を付ける。確認メモ #225） */ marks?: string[] }) {
   return (
-    <div role="tablist" style={TAB_BAR}>
+    <TabStrip accent={accent}>
       {items.map((t) => {
         const on = t === current;
         return (
@@ -35,7 +78,7 @@ export function Tabs({ items, current, onChange, accent, marks }: { items: strin
           </button>
         );
       })}
-    </div>
+    </TabStrip>
   );
 }
 

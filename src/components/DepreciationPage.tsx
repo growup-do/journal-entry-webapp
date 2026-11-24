@@ -16,7 +16,7 @@ import { PrintOutButton } from './PrintOutDialog';
 import { DepPrintModal, printMethod, type DepValues } from './DepPrintModal';
 import { PreviewModal } from './PrintCenter';
 import type { ExportSpec } from './ExportDialog';
-import { IconButton, Notice, PrintIcon, SelectionBar, TAB_BAR, btn as uiBtn, tabBtn } from './ui';
+import { IconButton, Notice, PrintIcon, SelectionBar, TabStrip, btn as uiBtn, tabBtn } from './ui';
 import { WarekiDate, isWarekiComplete, parseWareki } from './WarekiDate';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { ACCOUNT_META, accountMatches } from '../lib/accounts';
@@ -833,7 +833,7 @@ export function DepreciationPage({ variant, accent }: Props) {
         </div>
 
         {/* タブ */}
-        <div role="tablist" aria-label="減価償却のメニュー" style={TAB_BAR}>
+        <TabStrip aria-label="減価償却のメニュー" accent={accent}>
           {TABS.map((t) => {
             const on = tab === t.key;
             return (
@@ -844,7 +844,7 @@ export function DepreciationPage({ variant, accent }: Props) {
               </button>
             );
           })}
-        </div>
+        </TabStrip>
 
         {/* ===== 機能一覧（旧 ホーム）：概要と機能の一覧（会計のホームと同じ形。確認メモ #244）。
              処理の 5 分類を 1 段に並べ、項目の多い帳票は下の段に横幅いっぱいで 5 列に並べる（見出しの形はほかの分類と同じ） ===== */}

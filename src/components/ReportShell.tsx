@@ -9,7 +9,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { NOT_IMPL, ToastView, useToast } from './Toast';
 import { displayName } from '../data';
 import { startKindOf, useSession, type EnvSettings } from '../store/session';
-import { Icon, IconButton, TAB_BAR, tabBtn, type IconName } from './ui';
+import { Icon, IconButton, TabStrip, tabBtn, type IconName } from './ui';
 
 export interface ToolButton {
   label: string;
@@ -220,7 +220,7 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
         {notice && <div style={{ padding: '8px 22px', borderBottom: '1px solid #eef2f5', background: '#fffaf0', fontSize: 14, color: '#8a5a00', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>{notice}</div>}
         {/* 部の切替はタブ（減価償却ページのタブと同じ形） */}
         {parts && (
-          <div role="tablist" aria-label="部の切替" data-parts style={TAB_BAR}>
+          <TabStrip aria-label="部の切替" data-parts accent={accent}>
             {parts.items.map((p, i) => {
               const on = parts.current === i;
               return (
@@ -229,7 +229,7 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
                 </button>
               );
             })}
-          </div>
+          </TabStrip>
         )}
         <div data-list-head style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 22px', background: '#f8fafc', borderBottom: '1px solid #eef2f5', fontSize: 14, color: '#48565f' }}>
           <span style={SECTION_TAG} data-section="一覧表">一覧表</span>

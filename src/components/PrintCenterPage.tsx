@@ -12,7 +12,7 @@ import { Modal } from './Modal';
 import { OUTPUTS, PreviewModal, PrintFlow, sampleReportData } from './PrintCenter';
 import { PrintOutDialog } from './PrintOutDialog';
 import { ToastView, useToast } from './Toast';
-import { Notice, PrintIcon, SettingsShell, TAB_BAR, btn, card, lbl, tabBtn } from './ui';
+import { Notice, PrintIcon, SettingsShell, TabStrip, btn, card, lbl, tabBtn } from './ui';
 import { WAMNET_ITEMS, WamnetDialog, type WamnetItem } from './WamnetDialog';
 import { CATS, REPORTS, condOk, subsOf, type ReportDef } from './printCatalog';
 import { displayName } from '../data';
@@ -54,7 +54,7 @@ export function PrintCenterPage({ variant, accent, onNavigate, initialCat }: { v
       <ToastView msg={toast.msg} />
       {/* 中区分 */}
       {/* 中区分はタブ（減価償却ページのタブと同じ形）。幅が足りないときは横にスクロール */}
-      <div role="tablist" aria-label="帳票の分類" data-print-cats style={{ ...TAB_BAR, flexWrap: 'nowrap', overflowX: 'auto', scrollbarWidth: 'thin' }}>
+      <TabStrip aria-label="帳票の分類" data-print-cats accent={accent} style={{ flexWrap: 'nowrap', overflowX: 'auto', scrollbarWidth: 'thin' }}>
         {CATS.map((c) => {
           const on = c === cat;
           return (
@@ -63,7 +63,7 @@ export function PrintCenterPage({ variant, accent, onNavigate, initialCat }: { v
             </button>
           );
         })}
-      </div>
+      </TabStrip>
 
       {cat === '別紙' ? <AppendixPrintPage embedded variant={variant} accent={accent} onNavigate={onNavigate} /> : (
         <div style={{ display: 'grid', gridTemplateColumns: '300px minmax(0,1fr)', minHeight: 520, alignItems: 'start' }}>
