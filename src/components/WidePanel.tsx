@@ -38,9 +38,9 @@ const setPushing = (v: boolean) => { if (pushing !== v) { pushing = v; pushSubs.
 export function usePanelPushing(): boolean {
   return useSyncExternalStore((f) => { pushSubs.add(f); return () => { pushSubs.delete(f); }; }, () => pushing);
 }
-/** 参照パネルを開いたときに本文を押し出すか。画面の幅が WIDE_PUSH_MIN 以上のとき。
+/** 参照パネル（試算表などの元帳パネルも同じ）を開いたときに本文を押し出すか。画面の幅が WIDE_PUSH_MIN 以上のとき。
  *  押し出すときは、左メニューを自動でたたむよう知らせる */
-export function usePanelPush(state: WidePanelState): boolean {
+export function usePanelPush(state: { collapsed: boolean }): boolean {
   const [wideScreen, setWideScreen] = useState(() => window.innerWidth >= WIDE_PUSH_MIN);
   useEffect(() => {
     const h = () => setWideScreen(window.innerWidth >= WIDE_PUSH_MIN);

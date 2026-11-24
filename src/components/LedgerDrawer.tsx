@@ -2,14 +2,14 @@
 //   科目（月）の行を押すと、画面遷移せずに右側へ元帳を出す。押した行と残高を見たまま内訳を確認でき、別の行を押すと差し替わる。
 //   期間は月タブのほか、元帳の画面と同じ「期間を指定」（月の範囲・日付の範囲）でも選べる（確認メモ #98）。
 //   長い期間の確認や印刷は「元帳の画面で開く」で全画面の元帳へ（そちらには「← 戻る」がある）。
-//   常に本文に重ねて表示する（本文を押し出さない。1600×768 の画面で収まるようにするため。11/10）。
+//   開くと、伝票入力の参照パネルと同じく本文を左に押し出し、左メニューを自動でたたむ（本文に重ねない。11/24）。画面の幅が狭いときだけ本文に重ねる。
 //   前年度を表示している画面では使えない（disabled。確認メモ #99）。
 
 import { useEffect, useState } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { ComboField, EntryStyles, scopeStyle } from './EntryCommon';
 import { EditVoucherModal } from './VoucherEdit';
-import { LedgerTable, WIDE_TAB_SPACE, ledgerLines } from './WidePanel';
+import { LedgerTable, WIDE_TAB_SPACE, ledgerLines, usePanelPush } from './WidePanel';
 import { displayName } from '../data';
 import { periodLabel, type Period } from '../lib/period';
 import { useVouchers, type Voucher } from '../store/journalStore';
@@ -30,7 +30,7 @@ export interface LedgerDrawerState {
   toggle: () => void;
   /** たたむ */
   close: () => void;
-  /** 本文の右余白に加える幅（開閉タブの分。パネル本体は本文に重ねるので含めない） */
+  /** 本文の右余白に加える幅（開閉タブの分。開いて本文を押し出すときはパネルの幅も足す） */
   asideWidth: number;
   /** 行を押す前に開いたときの元帳の種類・呼び出し元 */
   defaultKind: LedgerKind;
@@ -40,7 +40,9 @@ export interface LedgerDrawerState {
 export function useLedgerDrawer(defaultFrom: string, defaultKind: LedgerKind = 'account'): LedgerDrawerState {
   const [target, setTarget] = useState<LedgerDrawerTarget | null>(null);
   const [collapsed, setCollapsed] = useState(true);
-  return { target, collapsed, open: (t) => { setTarget(t); setCollapsed(false); }, toggle: () => setCollapsed((c) => !c), close: () => setCollapsed(true), asideWidth: WIDE_TAB_SPACE - 28, defaultKind, defaultFrom };
+  // 伝票入力の参照パネルと同じく、開いたら本文を押し出す（左メニューも自動でたたむ）
+  const push = usePanelPush({ collapsed });
+  return { target, collapsed, open: (t) => { setTarget(t); setCollapsed(false); }, toggle: () => setCollapsed((c) => !c), close: () => setCollapsed(true), asideWidth: (push ? LEDGER_DRAWER_WIDTH : 0) + WIDE_TAB_SPACE - 28, defaultKind, defaultFrom };
 }
 
 export function LedgerDrawer({ state, accent, onNavigate, disabled, disabledNote }: { state: LedgerDrawerState; accent: string; onNavigate: (label: string) => void; /** 使えない画面の状態（前年度の表示中など）。開いていれば閉じ、開閉タブも押せなくする */ disabled?: boolean; /** 使えない理由（開閉タブの説明に出す） */ disabledNote?: string }) {
