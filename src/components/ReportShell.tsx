@@ -9,7 +9,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { NOT_IMPL, ToastView, useToast } from './Toast';
 import { displayName } from '../data';
 import { startKindOf, useSession, type EnvSettings } from '../store/session';
-import { Icon, IconButton, type IconName } from './ui';
+import { Icon, IconButton, TAB_BAR, tabBtn, type IconName } from './ui';
 
 export interface ToolButton {
   label: string;
@@ -218,13 +218,13 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
           </div>
         )}
         {notice && <div style={{ padding: '8px 22px', borderBottom: '1px solid #eef2f5', background: '#fffaf0', fontSize: 14, color: '#8a5a00', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>{notice}</div>}
-        {/* 部の切替はタブ。選んだタブは下の一覧表の見出しとつながって見える */}
+        {/* 部の切替はタブ（減価償却ページのタブと同じ形） */}
         {parts && (
-          <div role="tablist" aria-label="部の切替" data-parts style={{ display: 'flex', alignItems: 'flex-end', gap: 4, padding: '12px 22px 0', borderBottom: '1px solid #dde4ea', background: '#fff' }}>
+          <div role="tablist" aria-label="部の切替" data-parts style={TAB_BAR}>
             {parts.items.map((p, i) => {
               const on = parts.current === i;
               return (
-                <button key={p} type="button" role="tab" aria-selected={on} data-part={p} className="part-tab" onClick={() => parts.onChange(i)} style={{ position: 'relative', marginBottom: -1, padding: on ? '9px 22px 10px' : '8px 20px', border: '1px solid ' + (on ? '#dde4ea' : 'transparent'), borderBottom: '1px solid ' + (on ? '#f8fafc' : 'transparent'), borderRadius: '9px 9px 0 0', background: on ? '#f8fafc' : '#eef2f5', color: on ? accent : '#5b6773', boxShadow: on ? `inset 0 3px 0 ${accent}` : 'none', fontSize: 14, fontWeight: on ? 800 : 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                <button key={p} type="button" role="tab" aria-selected={on} data-part={p} className="menu-item-h" onClick={() => parts.onChange(i)} style={tabBtn(on, accent)}>
                   {p}
                 </button>
               );
@@ -344,5 +344,5 @@ export const yen = (n: number) => (n < 0 ? '△' + Math.abs(n).toLocaleString('j
 export const pct = (n: number) => (isFinite(n) ? (n * 100).toFixed(1) + '%' : '');
 export const LABEL: CSSProperties = { fontSize: 14, fontWeight: 700, color: '#8290a0', flex: 'none' };
 /** 問合せ画面の共通構成の見出し（集計期間／指定科目／表示切替／一覧表） */
-const SECTION_TAG: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', alignSelf: 'start', minWidth: 72, padding: '4px 10px', borderRadius: 7, background: '#e9eef3', color: '#3d4a56', fontSize: 12, fontWeight: 800, letterSpacing: '.04em', whiteSpace: 'nowrap' };
+export const SECTION_TAG: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', alignSelf: 'start', minWidth: 72, padding: '4px 10px', borderRadius: 7, background: '#e9eef3', color: '#3d4a56', fontSize: 12, fontWeight: 800, letterSpacing: '.04em', whiteSpace: 'nowrap' };
 export const CHECK: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 14, color: '#5b6773', cursor: 'pointer' };

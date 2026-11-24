@@ -12,7 +12,7 @@ import { Modal } from './Modal';
 import { OUTPUTS, PreviewModal, PrintFlow, sampleReportData } from './PrintCenter';
 import { PrintOutDialog } from './PrintOutDialog';
 import { ToastView, useToast } from './Toast';
-import { Notice, PrintIcon, SettingsShell, btn, card, lbl } from './ui';
+import { Notice, PrintIcon, SettingsShell, TAB_BAR, btn, card, lbl, tabBtn } from './ui';
 import { WAMNET_ITEMS, WamnetDialog, type WamnetItem } from './WamnetDialog';
 import { CATS, REPORTS, condOk, subsOf, type ReportDef } from './printCatalog';
 import { displayName } from '../data';
@@ -53,12 +53,12 @@ export function PrintCenterPage({ variant, accent, onNavigate, initialCat }: { v
     </>}>
       <ToastView msg={toast.msg} />
       {/* 中区分 */}
-      {/* 中区分はタブ。選んでいるタブは白い見出しで下の内容とつなげ、ほかはグレーにする。幅が足りないときは横にスクロール */}
-      <div role="tablist" aria-label="帳票の分類" data-print-cats style={{ display: 'flex', alignItems: 'flex-end', gap: 3, padding: '10px 12px 0', borderBottom: '1px solid #cfd8e0', background: '#f3f5f7', overflowX: 'auto', scrollbarWidth: 'thin' }}>
+      {/* 中区分はタブ（減価償却ページのタブと同じ形）。幅が足りないときは横にスクロール */}
+      <div role="tablist" aria-label="帳票の分類" data-print-cats style={{ ...TAB_BAR, flexWrap: 'nowrap', overflowX: 'auto', scrollbarWidth: 'thin' }}>
         {CATS.map((c) => {
           const on = c === cat;
           return (
-            <button key={c} type="button" role="tab" aria-selected={on} className="print-cat-tab" data-print-cat={c} onClick={() => setCat(c)} style={{ flex: 'none', position: 'relative', padding: on ? '9px 14px 10px' : '7px 12px 7px', borderStyle: 'solid', borderWidth: '1px 1px 0', borderColor: on ? '#cfd8e0' : '#e2e8ee', borderRadius: '8px 8px 0 0', background: on ? '#fff' : '#e8ecf0', color: on ? accent : '#7d8995', boxShadow: on ? `inset 0 3px 0 ${accent}` : 'none', fontSize: 14, fontWeight: on ? 800 : 600, fontFamily: 'inherit', cursor: on ? 'default' : 'pointer', whiteSpace: 'nowrap', marginBottom: -1, zIndex: on ? 1 : 0 }}>
+            <button key={c} type="button" role="tab" aria-selected={on} className="menu-item-h" data-print-cat={c} onClick={() => setCat(c)} style={{ ...tabBtn(on, accent), flex: 'none' }}>
               {c}
             </button>
           );

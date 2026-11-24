@@ -1,5 +1,6 @@
 // 追加画面で共通に使う小さな部品（ボタン／入力／ラベル／タブ／トグル／カード）
 
+import { useLayoutEffect, useRef, useState } from 'react';
 import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from 'react';
 import { UNSAVED_BG } from '../store/unsaved';
 
@@ -15,13 +16,20 @@ export const cardHead: CSSProperties = { padding: '12px 16px', background: '#f6f
 export const yen = (n: number) => (n < 0 ? '△' + Math.abs(n).toLocaleString('ja-JP') : n.toLocaleString('ja-JP'));
 export const toInt = (v: string) => parseInt(v.replace(/[^0-9-]/g, ''), 10) || 0;
 
-export function Tabs({ items, current, onChange, accent, small, marks }: { items: string[]; current: string; onChange: (v: string) => void; accent: string; small?: boolean; /** 保存されていない変更があるタブ（名称の右に印を付ける。確認メモ #225） */ marks?: string[] }) {
+/** タブの帯（減価償却ページのタブと同じ形。下に細い線を引き、選んだタブは下線と文字色で示す） */
+export const TAB_BAR: CSSProperties = { display: 'flex', gap: 2, padding: '0 22px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' };
+/** タブ 1 つ分の見た目（減価償却ページのタブと同じ）。className は "menu-item-h" を付ける */
+export function tabBtn(on: boolean, accent: string): CSSProperties {
+  return { padding: '10px 14px', border: 'none', borderBottom: '2px solid ' + (on ? accent : 'transparent'), background: 'transparent', color: on ? accent : '#5b6773', fontSize: 14, fontWeight: on ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' };
+}
+
+export function Tabs({ items, current, onChange, accent, marks }: { items: string[]; current: string; onChange: (v: string) => void; accent: string; small?: boolean; /** 保存されていない変更があるタブ（名称の右に印を付ける。確認メモ #225） */ marks?: string[] }) {
   return (
-    <div style={{ display: 'flex', gap: 2, borderBottom: '1px solid #e2e8ee', padding: '0 22px', flexWrap: 'wrap' }}>
+    <div role="tablist" style={TAB_BAR}>
       {items.map((t) => {
         const on = t === current;
         return (
-          <button key={t} type="button" role="tab" aria-selected={on} className="tab" data-tab={t} onClick={() => onChange(t)} style={{ padding: small ? '10px 14px' : '13px 20px', border: 'none', borderBottom: '3px solid ' + (on ? accent : 'transparent'), background: 'transparent', color: on ? accent : '#5b6773', fontSize: small ? 14 : 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', marginBottom: -1 }}>
+          <button key={t} type="button" role="tab" aria-selected={on} className="tab menu-item-h" data-tab={t} onClick={() => onChange(t)} style={tabBtn(on, accent)}>
             {t}
             {marks?.includes(t) && <span data-tab-unsaved title="保存されていない変更があります" aria-label="保存されていない変更があります" style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#c2410c', marginLeft: 7, verticalAlign: 'middle' }} />}
           </button>
@@ -154,23 +162,50 @@ export const PrintIcon = () => <Icon name="print" size={14} />;
 
 /** アイコンだけのボタン。マウスを載せたときの表示（title）と読み上げ（aria-label）は、メニュー名だけにする。
  *  大きさは右上の機能ボタン（btn の通常の大きさ）と同じ高さの正方形 */
-export function IconButton({ icon, label, color = '#5b6773', solid = false, size = 42, badge, tipOnly = false, style, ...rest }: { icon: IconName; label: string; color?: string; solid?: boolean; size?: number; /** 右上の赤い数字（承認待ちの件数など）。0 は出さない */ badge?: number; /** 枠を広げず、マウスを載せたときにツールチップで名前だけを出す */ tipOnly?: boolean } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'color' | 'title'>) {
-  // ふだんはアイコンだけの正方形。マウスを載せると枠の幅が広がり、アイコンの横にメニュー名が出る（styles.css の .icon-btn-label）
+export function IconButton({ icon, label, color = '#5b6773', solid = false, size = 42, badge, tipOnly = false, style, onMouseEnter, onFocus, ...rest }: { icon: IconName; label: string; color?: string; solid?: boolean; size?: number; /** 右上の赤い数字（承認待ちの件数など）。0 は出さない */ badge?: number; /** 枠を広げず、マウスを載せたときにツールチップ（印刷ボタンと同じ小さな表記）で名前だけを出す */ tipOnly?: boolean } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'color' | 'title'>) {
+  // ふだんはアイコンだけの正方形。マウスを載せると枠が広がったように見せ、アイコンの横にメニュー名を出す（styles.css の .icon-btn-label）。
+  // 名前の部分はボタンの上に重ねて出すだけなので、ボタン自体の大きさは変わらず、並んでいるほかのボタンも動かない。
+  // 右に出す余白がない（画面や枠の右端に近い）ときは左側に出す
   const iconSize = size >= 40 ? 19 : 16;
+  const ref = useRef<HTMLButtonElement>(null);
+  const [toLeft, setToLeft] = useState(false);
+  useLayoutEffect(() => {
+    const b = ref.current;
+    const text = b?.querySelector('.icon-btn-label > span') as HTMLElement | null;
+    if (b && text) b.style.setProperty('--ib-w', text.scrollWidth + 'px');
+  }, [label]);
+  const pickSide = () => {
+    const b = ref.current;
+    if (!b || tipOnly) return;
+    const text = b.querySelector('.icon-btn-label > span') as HTMLElement | null;
+    // 名前の実際の幅を測り、その幅まで広げる（styles.css の --ib-w）
+    if (text) b.style.setProperty('--ib-w', text.scrollWidth + 'px');
+    const need = (text?.scrollWidth ?? 90) + 24;
+    let edge = window.innerWidth;
+    for (let p = b.parentElement; p; p = p.parentElement) {
+      const cs = getComputedStyle(p);
+      if (cs.overflowX !== 'visible') { edge = Math.min(edge, p.getBoundingClientRect().right); break; }
+    }
+    setToLeft(b.getBoundingClientRect().right + need > edge - 4);
+  };
   return (
     <button
+      ref={ref}
       type="button"
       className="icon-btn"
       data-icon-btn={label}
       data-solid={solid || undefined}
-      data-tip={tipOnly ? label : undefined}
+      data-expand={tipOnly ? undefined : toLeft ? 'left' : 'right'}
+      title={tipOnly ? label : undefined}
       {...rest}
+      onMouseEnter={(e) => { pickSide(); onMouseEnter?.(e); }}
+      onFocus={(e) => { pickSide(); onFocus?.(e); }}
       aria-label={label}
-      style={{ position: 'relative', minWidth: size, height: size, boxSizing: 'border-box', flex: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: `0 ${(size - 2 - iconSize) / 2}px`, borderRadius: 8, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, cursor: rest.disabled ? 'not-allowed' : 'pointer', opacity: rest.disabled ? 0.45 : 1, fontFamily: 'inherit', ...style }}
+      style={{ position: 'relative', width: size, height: size, boxSizing: 'border-box', flex: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0, borderRadius: 8, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, cursor: rest.disabled ? 'not-allowed' : 'pointer', opacity: rest.disabled ? 0.45 : 1, fontFamily: 'inherit', ['--ib-border' as string]: solid ? color : '#cfd8e0', ...style } as CSSProperties}
     >
       <Icon name={icon} size={iconSize} />
       {!tipOnly && <span className="icon-btn-label" aria-hidden="true"><span>{label}</span></span>}
-      {!!badge && <span aria-hidden="true" style={{ position: 'absolute', top: -7, right: -7, minWidth: 18, height: 18, padding: '0 5px', boxSizing: 'border-box', borderRadius: 9, background: '#c0392b', color: '#fff', fontSize: 12, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{badge}</span>}
+      {!!badge && <span aria-hidden="true" style={{ position: 'absolute', top: -7, right: -7, zIndex: 2, minWidth: 18, height: 18, padding: '0 5px', boxSizing: 'border-box', borderRadius: 9, background: '#c0392b', color: '#fff', fontSize: 12, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{badge}</span>}
     </button>
   );
 }

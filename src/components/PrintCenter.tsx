@@ -629,7 +629,7 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
   const openFmt = () => setFmt({ widthName: p.widthName, widthAmount: p.widthAmount, fontHeader: p.fontHeader, fontHeaderItem: p.fontHeaderItem ?? STD_FORMAT.fontHeaderItem, fontName: p.fontName, fontAmount: p.fontAmount, fontRemark: p.fontRemark ?? STD_FORMAT.fontRemark });
 
   return (
-    <SettingsShell variant={variant} editing={dirty} title={displayName('共通の印刷設定')} badge="印刷" desc={<><ScopeBadge kind="決算書共通" />　決算書の印刷に使う共通の設定です。各帳票の詳細設定にある「共通の印刷設定を反映」で、ここの値をその帳票に写します。</>} actions={<>
+    <SettingsShell variant={variant} editing={dirty} title={displayName('共通の印刷設定')} badge="印刷" desc={<>決算書の印刷に使う共通の設定です。各帳票の詳細設定にある「共通の印刷設定を反映」で、ここの値をその帳票に写します。</>} actions={<>
       <ScreenPrintMenu page="共通の印刷設定" accent={accent} label="備考・摘要の印刷" />
       <IconButton icon="eye" label="プレビューで確認" data-common-preview onClick={() => setPreview(true)} />
       <LoadDivisionSettings icon accent={accent} kind="印刷設定" onDone={(from) => toast.show(`「${from}」の印刷設定を読み込みました`)} />

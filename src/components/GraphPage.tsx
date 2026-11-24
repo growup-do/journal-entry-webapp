@@ -7,7 +7,7 @@
 //   値はサンプル（決定的な疑似乱数）。
 
 import { useState } from 'react';
-import type { CSSProperties } from 'react';
+import { TAB_BAR, tabBtn } from './ui';
 import { BarChart } from './BarChart';
 import { LABEL, ReportShell, Segmented, SwitchPill } from './ReportShell';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
@@ -68,7 +68,6 @@ export function GraphPage({ mode, variant, accent }: Props) {
     });
   const fmtOf = (u: string) => (v: number) => (u === '%' || u === '百万円' ? v.toLocaleString('ja-JP', { minimumFractionDigits: u === '百万円' ? 1 : 0, maximumFractionDigits: 1 }) : v.toLocaleString('ja-JP'));
 
-  const tabStyle = (on: boolean, color: string): CSSProperties => ({ padding: '6px 16px', borderRadius: 8, fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', background: on ? color : '#fff3c4', color: on ? '#fff' : '#7a5b00', border: '1px solid ' + (on ? color : '#f0d98a') });
 
   return (
     <ReportShell
@@ -111,9 +110,9 @@ export function GraphPage({ mode, variant, accent }: Props) {
         {/* 左：部タブ＋ツリー */}
         <div style={{ borderRight: '1px solid #eef2f5', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           {isYearly && (
-            <div style={{ display: 'flex', gap: 6, padding: '12px 14px', borderBottom: '1px solid #eef2f5' }}>
+            <div role="tablist" aria-label="部の切替" style={{ ...TAB_BAR, padding: '0 14px' }}>
               {GRAPH_PARTS.map((p) => (
-                <button key={p.key} type="button" className="chip" role="tab" aria-selected={part === p.key} data-tab={p.key} onClick={() => setPart(p.key)} style={tabStyle(part === p.key, p.color)}>{p.key}</button>
+                <button key={p.key} type="button" className="menu-item-h" role="tab" aria-selected={part === p.key} data-tab={p.key} onClick={() => setPart(p.key)} style={tabBtn(part === p.key, p.color)}>{p.key}</button>
               ))}
             </div>
           )}

@@ -12,7 +12,7 @@ import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { inPeriod, periodLabel, type Period } from '../lib/period';
 import { Modal } from './Modal';
 import { PreviewModal, type TableData } from './PrintCenter';
-import { LABEL, NUM, ReportShell, TD, TH, yen } from './ReportShell';
+import { SECTION_TAG, NUM, ReportShell, TD, TH, yen } from './ReportShell';
 import { ToastView, useToast } from './Toast';
 
 import { JOURNAL_COUNTS, JOURNAL_ROWS, type JournalRow } from '../data';
@@ -130,7 +130,7 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
         <>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={LABEL}>会計月</span>
+              <span style={{ ...SECTION_TAG, alignSelf: 'center' }} data-section="会計月">会計月</span>
               <FiscalMonthTabs current={month} accent={accent} onSelect={setMonth} withAll range={range} onRange={setRange} />
             </div>
             <div style={{ marginLeft: 'auto', padding: '8px 12px', background: '#fffbe6', border: '1px solid #f3e4a6', borderRadius: 8, fontSize: 14, color: '#0a7d6b', whiteSpace: 'pre-line', lineHeight: 1.5 }}>{k.rule}</div>

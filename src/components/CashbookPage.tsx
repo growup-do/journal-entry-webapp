@@ -29,7 +29,7 @@ import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { FISCAL_MONTHS, inPeriod, lastDayOf, parseMD, periodLabel as periodText, type Period } from '../lib/period';
 import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
-import { LABEL, NUM, ReportShell, TD, TH } from './ReportShell';
+import { SECTION_TAG, NUM, ReportShell, TD, TH } from './ReportShell';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { IconButton, PrintIcon } from './ui';
 import { useAssist } from '../hooks/useAssist';
@@ -839,7 +839,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       controlsFull
       controls={
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <span style={LABEL}>会計月</span>
+          <span style={{ ...SECTION_TAG, alignSelf: 'center' }} data-section="会計月">会計月</span>
           <FiscalMonthTabs
             current={month}
             accent={accent}
