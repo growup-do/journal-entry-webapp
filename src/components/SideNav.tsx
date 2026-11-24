@@ -82,7 +82,8 @@ function Favorites({ accent, active, onNavigate, compact }: { accent: string; ac
   const leave = () => { if (!compact) return; window.clearTimeout(timer.current); timer.current = window.setTimeout(() => setOpen(false), 160); };
   useEffect(() => () => window.clearTimeout(timer.current), []);
   useEffect(() => { setOpen(false); }, [compact]);
-  const star = <span aria-hidden style={{ color: '#d9a400', fontSize: compact ? 20 : 15, lineHeight: 1, flex: 'none' }}>★</span>;
+  // ほかの分類のアイコンと同じ線画・同じ色（#3d4a56）の星
+  const star = <svg aria-hidden width={compact ? 20 : 17} height={compact ? 20 : 17} viewBox="0 0 24 24" fill="none" stroke="#3d4a56" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none' }}><path d="M12 3.5l2.6 5.3 5.9.9-4.25 4.15 1 5.85L12 16.95l-5.25 2.75 1-5.85L3.5 9.7l5.9-.9z" /></svg>;
   const items = (
     <>
       {s.favorites.filter((l) => canOpen(l, s.access)).map((l) => <SubItem key={l} label={l} active={active === l} accent={accent} indent={!compact} onClick={() => { setOpen(false); onNavigate(l); }} />)}
