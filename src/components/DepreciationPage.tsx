@@ -6,7 +6,7 @@
 //   値はサンプル。定額法の年間償却額＝（取得価額－残存価額）÷耐用年数 で自動計算。
 //   帳票・ファイル出力は ExportDialog（印刷／CSV）で実際に出力する。各種設定ダイアログは画面内の状態を変更する。
 
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent } from 'react';
 import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
@@ -16,7 +16,10 @@ import { PrintOutButton } from './PrintOutDialog';
 import { DepPrintModal, printMethod, type DepValues } from './DepPrintModal';
 import { PreviewModal } from './PrintCenter';
 import type { ExportSpec } from './ExportDialog';
-import { IconButton, Notice, PrintIcon, SelectionBar, TabStrip, btn as uiBtn, tabBtn } from './ui';
+import { IconButton, ManualButton, Notice, PrintIcon, SelectionBar, TabStrip, btn as uiBtn, tabBtn } from './ui';
+import { askConfirm } from './ConfirmDialog';
+import { ExplainModal } from './ExplainModal';
+import { WIDE_TAB_SPACE, WIDE_WIDTH, usePanelPush } from './WidePanel';
 import { WarekiDate, isWarekiComplete, parseWareki } from './WarekiDate';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { ACCOUNT_META, accountMatches } from '../lib/accounts';
@@ -80,6 +83,116 @@ const SUBSIDY_VOUCHERS: SubsidyVoucher[] = [
 ];
 
 /** 国庫補助金の伝票から選ぶ。登録する金額は全額か一部を任意に入力する（確認メモ #255） */
+/* ---------- 一覧の並べ替え（確認メモ #296） ---------- */
+type SortDir = 1 | -1;
+type SortState = { key: string; dir: SortDir } | null;
+/** 和暦の年月日（「令和6年 4月10日」など）を並べ替え用の数値にする。読めないときは 0 */
+function warekiKey(s: string): number {
+  const m = s.normalize('NFKC').match(/(令和|平成|昭和)\s*(元|\d+)\s*年\s*(\d+)\s*月\s*(\d+)?/);
+  if (!m) return 0;
+  const base = m[1] === '令和' ? 2018 : m[1] === '平成' ? 1988 : 1925;
+  const y = base + (m[2] === '元' ? 1 : Number(m[2]));
+  return y * 10000 + Number(m[3]) * 100 + Number(m[4] ?? 0);
+}
+function sortRows<T>(rows: T[], sort: SortState, get: (r: T, key: string) => string | number): T[] {
+  if (!sort) return rows;
+  return [...rows].sort((a, b) => {
+    const x = get(a, sort.key), y = get(b, sort.key);
+    const c = typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'ja');
+    return c * sort.dir;
+  });
+}
+/** 見出しを押すごとに 昇順 → 降順 → 並べ替えなし */
+const nextSort = (cur: SortState, key: string): SortState => (!cur || cur.key !== key ? { key, dir: 1 } : cur.dir === 1 ? { key, dir: -1 } : null);
+function SortTh({ label, k, sort, onSort, right, style }: { label: string; k: string; sort: SortState; onSort: (s: SortState) => void; right?: boolean; style?: CSSProperties }) {
+  const on = sort?.key === k;
+  return (
+    <th className="sort-th" data-sort={k} aria-sort={on ? (sort!.dir === 1 ? 'ascending' : 'descending') : 'none'} onClick={() => onSort(nextSort(sort, k))} title={`「${label}」で並べ替え（押すたびに 昇順 → 降順 → 元の順）`} style={{ ...TH, textAlign: right ? 'right' : 'left', whiteSpace: 'nowrap', color: on ? '#1f7a52' : undefined, ...style }}>
+      {label}<span aria-hidden="true" style={{ display: 'inline-block', width: 12, marginLeft: 3, fontSize: 10, color: on ? '#1f7a52' : '#c3ccd5' }}>{on ? (sort!.dir === 1 ? '▲' : '▼') : '↕'}</span>
+    </th>
+  );
+}
+
+/* ---------- 固定資産の登録画面の右の一覧パネル（確認メモ #299。仕訳入力の参照パネルと同じ形） ---------- */
+const PANEL_KEY = 'dep-asset-panel';
+const readLS = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
+const writeLS = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* ignore */ } };
+function AssetListPanel({ accent, assets, equips, collapsed, onToggle, top, currentCode }: { accent: string; assets: Asset[]; equips: Equip[]; collapsed: boolean; onToggle: () => void; top: number; currentCode?: string }) {
+  const [view, setView] = useState<'固定資産' | '備品'>(() => (readLS(PANEL_KEY + ':view') === '備品' ? '備品' : '固定資産'));
+  const [q, setQ] = useState('');
+  const [sort, setSort] = useState<SortState>(null);
+  const pick = (v: '固定資産' | '備品') => { setView(v); setSort(null); writeLS(PANEL_KEY + ':view', v); };
+  const hit = (name: string, code: string, account?: string) => !q || name.includes(q) || code.includes(q) || (account ?? '').includes(q);
+  const aRows = sortRows(assets.filter((a) => hit(a.name, a.code, a.account)), sort, (a, k) => (k === 'acquired' ? warekiKey(a.acquired) : k === 'cost' ? a.cost : k === 'name' ? a.name : a.code));
+  const eRows = sortRows(equips.filter((e) => hit(e.name, e.code, e.account)), sort, (e, k) => (k === 'acquired' ? warekiKey(e.acquired) : k === 'cost' ? e.cost : k === 'name' ? e.name : e.code));
+  const td: CSSProperties = { ...TD, padding: '6px 8px', fontSize: 13 };
+  return (
+    <>
+      <button type="button" data-dep-panel-toggle aria-expanded={!collapsed} onClick={onToggle} title={collapsed ? '一覧パネル（登録済みの固定資産・備品）を開く' : '一覧パネルを折りたたむ'} style={{ position: 'fixed', top: top + 12, right: collapsed ? 0 : `min(${WIDE_WIDTH}px, 94vw)`, zIndex: 95, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, width: 32, boxSizing: 'border-box', padding: '12px 0', background: '#fff', border: '1px solid #dde4ea', borderRight: 'none', borderRadius: '10px 0 0 10px', boxShadow: '-3px 3px 12px rgba(30,50,70,.14)', cursor: 'pointer', color: '#48565f', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, transition: 'right .28s ease' }}>
+        <span aria-hidden>{collapsed ? '◀' : '▶'}</span>
+        <span style={{ display: 'grid', justifyItems: 'center', alignItems: 'center' }}>
+          <span aria-hidden={!collapsed} style={{ gridArea: '1 / 1', writingMode: 'vertical-rl', letterSpacing: '.1em', visibility: collapsed ? 'visible' : 'hidden' }}>一覧パネル（{view}）</span>
+          <span aria-hidden={collapsed} style={{ gridArea: '1 / 1', writingMode: 'vertical-rl', letterSpacing: '.1em', visibility: collapsed ? 'hidden' : 'visible' }}>たたむ</span>
+        </span>
+      </button>
+      <aside data-dep-panel aria-label="一覧パネル" aria-hidden={collapsed} data-memo-panel="一覧パネル" data-memo-anchor="一覧パネル" style={{ position: 'fixed', top, right: 0, bottom: 0, width: WIDE_WIDTH, maxWidth: '94vw', background: '#fff', borderLeft: '1px solid #dde4ea', boxShadow: '-14px 0 40px rgba(30,50,70,.22)', display: 'flex', flexDirection: 'column', zIndex: 90, transition: 'transform .28s ease', transform: collapsed ? `translateX(${WIDE_WIDTH + 20}px)` : 'translateX(0)', visibility: collapsed ? 'hidden' : 'visible' }}>
+        <div style={{ padding: '10px 14px 9px', borderBottom: '1px solid #eef2f5', display: 'grid', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16 }}>一覧パネル</span>
+            <span style={{ fontSize: 12, color: '#8290a0' }}>登録しながら、登録済みの資産を確認</span>
+          </div>
+          <div role="tablist" aria-label="一覧パネルの表示" style={{ display: 'flex', gap: 3, padding: 3, background: '#e9eef2', borderRadius: 9 }}>
+            {(['固定資産', '備品'] as const).map((v) => {
+              const on = v === view;
+              return <button key={v} type="button" role="tab" aria-selected={on} data-dep-panel-tab={v} onClick={() => pick(v)} style={{ flex: 1, padding: '5px 8px', borderRadius: 7, border: 'none', background: on ? '#fff' : 'transparent', boxShadow: on ? '0 1px 3px rgba(30,50,70,.15)' : 'none', color: on ? accent : '#5b6773', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{v}（{v === '固定資産' ? assets.length : equips.length}）</button>;
+            })}
+          </div>
+          <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="名称・コード・科目で検索" autoComplete="off" style={{ padding: '6px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', outline: 'none' }} />
+        </div>
+        <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}><tr>
+              <SortTh label="コード" k="code" sort={sort} onSort={setSort} style={{ padding: '6px 8px', fontSize: 12 }} />
+              <SortTh label="名称" k="name" sort={sort} onSort={setSort} style={{ padding: '6px 8px', fontSize: 12 }} />
+              <SortTh label="取得" k="acquired" sort={sort} onSort={setSort} style={{ padding: '6px 8px', fontSize: 12 }} />
+              <SortTh label="取得価額" k="cost" sort={sort} onSort={setSort} right style={{ padding: '6px 8px', fontSize: 12 }} />
+            </tr></thead>
+            <tbody>
+              {view === '固定資産' && aRows.map((a) => (
+                <tr key={a.code} data-dep-panel-row={a.code} style={{ background: a.code === currentCode ? '#eef4fb' : undefined }}>
+                  <td style={{ ...td, color: '#7a8794', fontVariantNumeric: 'tabular-nums' }}>{a.code}</td>
+                  <td style={{ ...td, fontWeight: 600 }}>{a.name}<div style={{ fontSize: 11, fontWeight: 400, color: '#8290a0' }}>{a.account}　<span style={{ color: a.status === '償却中' ? '#1f7a52' : '#8290a0' }}>{a.status}</span>{a.manual ? '　全項目手入力' : ''}</div></td>
+                  <td style={{ ...td, whiteSpace: 'nowrap', fontSize: 12 }}>{a.acquired}</td>
+                  <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{yen(a.cost)}</td>
+                </tr>
+              ))}
+              {view === '備品' && eRows.map((e) => (
+                <tr key={e.code} data-dep-panel-row={e.code}>
+                  <td style={{ ...td, color: '#7a8794', fontVariantNumeric: 'tabular-nums' }}>{e.code}</td>
+                  <td style={{ ...td, fontWeight: 600 }}>{e.name}<div style={{ fontSize: 11, fontWeight: 400, color: '#8290a0' }}>{e.account ?? ''}</div></td>
+                  <td style={{ ...td, whiteSpace: 'nowrap', fontSize: 12 }}>{e.acquired}</td>
+                  <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{yen(e.cost)}</td>
+                </tr>
+              ))}
+              {(view === '固定資産' ? aRows : eRows).length === 0 && <tr><td colSpan={4} style={{ ...td, textAlign: 'center', color: '#9aa5b1', padding: 30 }}>該当する{view}がありません。</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </aside>
+    </>
+  );
+}
+
+/** 減価償却のマニュアル（確認メモ #297。見出しの右の「マニュアル」から開く） */
+const DEP_MANUAL = [
+  { h: '概要', body: '固定資産・備品の台帳を管理し、毎年の減価償却費を計算して、決算処理で会計の仕訳伝票を作成します。会計の「減価償却との連動設定」で、固定資産の科目と会計の科目を結び付けます。' },
+  { h: '固定資産の登録', body: '「＋ 固定資産を登録」で登録画面を開き、資産コード・名称・科目・取得年月日・耐用年数・償却方法・取得価額などを入力します。右の「一覧パネル」で登録済みの固定資産・備品を確認しながら入力できます。過去の償却額をそのまま引き継ぐときは「＋ 全項目手入力で登録」を使います。' },
+  { h: '備品の登録', body: '減価償却の対象にならない備品は「＋ 備品を登録」で登録し、備品台帳で管理します。' },
+  { h: '台帳の見方', body: '固定資産台帳・備品台帳の一覧は、見出しを押すとその項目で並べ替えられます（押すたびに 昇順 → 降順 → 元の順）。行を押すと右に詳細を表示し、変更・削除・個別の台帳の印刷ができます。' },
+  { h: '除却・売却・移管', body: '処分した資産は「除却・売却・移管」タブで処理を登録します。一部だけを処分するときは、登録画面の「一部 除却／売却／移管(元)」を使います。移管先の区分では「移管取込」で取り込みます。' },
+  { h: '決算処理', body: '「決算処理」タブで当期の償却額を確認し、会計の仕訳伝票（減価償却費・国庫補助金等特別積立金取崩額など）を作成します。作成した伝票は会計の仕訳一覧から確認・訂正できます。' },
+];
+
 function SubsidyVoucherPicker({ used, onClose, onAdd, accent, toast }: { used: string[]; onClose: () => void; onAdd: (rows: SubsidyRow[]) => void; accent: string; toast: (m: string) => void }) {
   const [sel, setSel] = useState<Record<string, number>>({});
   const on = (v: SubsidyVoucher) => v.no in sel;
@@ -391,8 +504,8 @@ function ImageModal({ open, title, src, onClose, onChange, accent, toast }: { op
         {name && <div style={{ fontSize: 14, color: '#7a8794' }}>ファイル：{name}</div>}
         <Notice>画像はこの画面内でのみ保持します（本番ではサーバーに保存し、固定資産タックシール等に印字できます）。</Notice>
         <div style={FOOT}>
-          {src && <button type="button" className="btn-outline" onClick={() => { if (confirm('添付した画像を削除しますか？')) { onChange(null); setName(''); toast('画像を削除しました'); } }} style={{ ...BTN('#c0392b'), marginRight: 'auto' }}>削除</button>}
-          <button type="button" className="btn-outline" onClick={() => fileRef.current?.click()} style={BTN(accent, true)}>{src ? '画像を差し替え' : '画像を選択'}</button>
+          {src && <button type="button" className="btn-outline" onClick={async () => { if (await askConfirm({ title: '画像の削除', message: '添付した画像を削除しますか？', okLabel: '削除する', danger: true })) { onChange(null); setName(''); toast('画像を削除しました'); } }} style={{ ...BTN('#c0392b'), marginRight: 'auto' }}>削除</button>}
+          <button type="button" className="btn-outline" onClick={() => fileRef.current?.click()} style={BTN(accent, true)}>{src ? '画像を保存' : '画像を選択'}</button>
           <button type="button" onClick={onClose} style={BTN()}>閉じる</button>
         </div>
       </div>
@@ -633,8 +746,8 @@ function SortMasterModal({ items, onClose, onSave, accent, toast }: { items: Sor
     toast(`${sel} を削除しました`);
     setSel(null); setCode(''); setName('');
   };
-  const importStd = () => {
-    if (list.length && !confirm('一覧を標準設定の並び順項目に置き換えます。よろしいですか？')) return;
+  const importStd = async () => {
+    if (list.length && !(await askConfirm({ title: '標準設定に置き換え', message: '一覧を標準設定の並び順項目に置き換えます。よろしいですか？', okLabel: '置き換える', danger: true }))) return;
     setList(byCode(DEFAULT_SORT_ITEMS)); setSel(null); setCode(''); setName('');
     toast(`標準設定の並び順項目（${DEFAULT_SORT_ITEMS.length} 件）を読み込みました`);
   };
@@ -725,6 +838,24 @@ export function DepreciationPage({ variant, accent }: Props) {
   const [exportSpec, setExportSpec] = useState<ExportSpec | null>(null);
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [dispCalc, setDispCalc] = useState<DispCalc>('除却月／移管月まで（月按分する）');
+  // 一覧の並べ替え（確認メモ #296）
+  const [assetSort, setAssetSort] = useState<SortState>(null);
+  const [equipSort, setEquipSort] = useState<SortState>(null);
+  const [manualOpen, setManualOpen] = useState(false);
+  // 固定資産の登録画面の右の一覧パネル（確認メモ #299）。開閉は覚える（初期は折りたたみ。仕訳入力の参照パネルと同じ）
+  const [panelCollapsed, setPanelCollapsed] = useState(() => readLS(PANEL_KEY + ':collapsed') !== '0');
+  const togglePanel = () => setPanelCollapsed((c) => { writeLS(PANEL_KEY + ':collapsed', c ? '0' : '1'); return !c; });
+  const pushOut = usePanelPush({ collapsed: panelCollapsed || !assetModal.open });
+  // 画面の上端（アプリバーの下）。登録画面の高さと、右のパネルの上端に使う
+  const mainRef = useRef<HTMLElement>(null);
+  const [pageTop, setPageTop] = useState(52);
+  useLayoutEffect(() => {
+    if (!assetModal.open) return;
+    const t = mainRef.current ? Math.round(mainRef.current.getBoundingClientRect().top + window.scrollY) : 52;
+    setPageTop(t > 0 ? t : 52);
+    window.scrollTo(0, 0);
+  }, [assetModal.open]);
+  const closeAssetPage = () => setAssetModal({ open: false, asset: null, manual: false });
   const toast = useToast();
   const isSheet = variant === 'sheet';
 
@@ -738,7 +869,11 @@ export function DepreciationPage({ variant, accent }: Props) {
   const openReport = (name: string, single?: Asset) => setPrintReq({ name, single });
   const openLog = (kind: LogRow['kind'], code?: string) => { setLogTab(kind); setLogOpen({ open: true, code, kind }); };
 
-  const list = assets.filter((a) => (statusFilter === 'すべて' || a.status === statusFilter) && (!q || a.name.includes(q) || a.code.includes(q) || a.account.includes(q)));
+  const list = sortRows(assets.filter((a) => (statusFilter === 'すべて' || a.status === statusFilter) && (!q || a.name.includes(q) || a.code.includes(q) || a.account.includes(q))), assetSort, (a, k) => {
+    const dep = annualOf(a);
+    return k === 'status' ? a.status : k === 'name' ? a.name : k === 'account' ? a.account : k === 'acquired' ? warekiKey(a.acquired) : k === 'life' ? a.life : k === 'cost' ? a.cost : k === 'opening' ? a.opening : k === 'dep' ? dep : k === 'closing' ? a.opening - dep : a.code;
+  });
+  const equipList = sortRows(equips.filter((e) => !q || e.name.includes(q)), equipSort, (e, k) => (k === 'name' ? e.name : k === 'account' ? e.account ?? '' : k === 'acquired' ? warekiKey(e.acquired) : k === 'cost' ? e.cost : e.code));
   const kpi = {
     count: assets.length,
     active: assets.filter((a) => a.status === '償却中').length,
@@ -747,9 +882,9 @@ export function DepreciationPage({ variant, accent }: Props) {
     annual: assets.reduce((s, a) => s + annualOf(a), 0),
   };
   const toggleSel = (code: string) => setSel((s) => { const n = new Set(s); n.has(code) ? n.delete(code) : n.add(code); return n; });
-  const deleteSel = () => {
+  const deleteSel = async () => {
     if (sel.size === 0) return;
-    if (!confirm(`${sel.size} 件の固定資産を削除します。よろしいですか？（取り消せません）`)) return;
+    if (!(await askConfirm({ title: '固定資産の一括削除', message: <>選んだ <b>{sel.size} 件</b>の固定資産を削除します。よろしいですか？<br /><span style={{ color: '#c0392b' }}>削除すると取り消せません。</span></>, okLabel: `${sel.size} 件を削除する`, danger: true }))) return;
     assets.filter((a) => sel.has(a.code)).forEach((a) => addLog('資産', a.code, `${Number(a.code)}:${a.name}`, '削除'));
     setAssets((as) => as.filter((a) => !sel.has(a.code)));
     setSel(new Set());
@@ -808,15 +943,32 @@ export function DepreciationPage({ variant, accent }: Props) {
   const infoRow = (l: string, v: string) => <div key={l} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '4px 0', borderBottom: '1px solid #f1f4f6' }}><span style={{ color: '#7a8794' }}>{l}</span><span style={{ fontWeight: 600, textAlign: 'right' }}>{v}</span></div>;
 
   return (
-    <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
+    <main ref={mainRef} style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, paddingRight: assetModal.open ? (pushOut ? WIDE_WIDTH : 0) + WIDE_TAB_SPACE : undefined, display: 'flex', justifyContent: 'center', transition: 'padding-right .28s ease' }}>
       <ToastView msg={toast.msg} />
-      <div style={{ width: '100%', maxWidth: isSheet ? 'none' : 1320, ...card, display: 'flex', flexDirection: 'column' }}>
+      {/* 固定資産の登録／変更（確認メモ #299）。モーダルではなく画面として開き、右に一覧パネル（固定資産・備品）を付ける */}
+      {assetModal.open && (
+        <div data-asset-page style={{ width: '100%', ...card, display: 'flex', flexDirection: 'column', height: `calc(100vh - ${pageTop + (isSheet ? 44 : 56)}px)`, minHeight: 540 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 18px', borderBottom: '1px solid #eef2f5', flex: 'none' }}>
+            <button type="button" className="btn-outline" data-asset-back onClick={closeAssetPage} title="登録せずに固定資産台帳へ戻ります" style={{ ...btn(), padding: '6px 12px' }}>← 戻る</button>
+            <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 19 }}>
+              {assetModal.asset ? '固定資産の変更' : '固定資産の登録'}
+              {assetModal.manual && <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#fff1b8', color: '#8a6d00', verticalAlign: 'middle' }}>全項目手入力</span>}
+              <ManualButton onClick={() => setManualOpen(true)} title="減価償却のマニュアルを開きます" style={{ marginLeft: 8 }} />
+            </div>
+            <span style={{ marginLeft: 'auto', fontSize: 12, color: '#8290a0' }}>右の「一覧パネル」で、登録済みの固定資産・備品を確認できます</span>
+          </div>
+          <AssetForm key={assetFormKey} accent={accent} asset={assetModal.asset} manual={assetModal.manual} dispCalc={dispCalc} onAddCapex={addCapex} sortItems={sortItems} nextCode={String(assets.reduce((m, a) => Math.max(m, Number(a.code) < 10000 ? Number(a.code) : 0), 0) + 1).padStart(5, '0')} imageSrc={images['A:' + (assetModal.asset?.code ?? '')]} onSave={saveAsset} onCancel={closeAssetPage} onReport={openReport} onLog={(code) => openLog('資産', code)} onImage={(code, name) => setImgTarget({ key: 'A:' + code, title: `資産画像：${name || code}` })} toast={toast.show} />
+        </div>
+      )}
+      {assetModal.open && <AssetListPanel accent={accent} assets={assets} equips={equips} collapsed={panelCollapsed} onToggle={togglePanel} top={pageTop} currentCode={assetModal.asset?.code} />}
+      <div style={{ width: '100%', maxWidth: isSheet ? 'none' : 1320, ...card, display: assetModal.open ? 'none' : 'flex', flexDirection: 'column' }}>
         {/* 見出し＋主要アクション */}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '18px 22px 12px', flexWrap: 'wrap' }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21 }}>
               減価償却
               <span style={{ fontSize: 14, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>チャイルド保育園　令和8年度</span>
+              <ManualButton onClick={() => setManualOpen(true)} title="減価償却のマニュアルを開きます" style={{ marginLeft: 8 }} />
             </div>
             <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>固定資産・備品の台帳管理と、減価償却の決算処理。<span style={{ color: '#b7791f' }}>（値はサンプル）</span></div>
           </div>
@@ -884,7 +1036,7 @@ export function DepreciationPage({ variant, accent }: Props) {
               <SelectionBar count={sel.size} unit="件" hint="行頭のチェックで追加・解除" style={{ padding: '8px 22px', borderTop: '1px solid #f3e3a0' }} onClear={() => setSel(new Set())} actions={<><button type="button" onClick={() => { setTab('disposal'); }} style={uiBtn('#5b6773', false, true)}>除却・売却・移管へ</button><button type="button" onClick={deleteSel} style={uiBtn('#c0392b', true, true)}>削除</button></>} />
               <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 470px)' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead><tr><th style={{ ...TH, width: 36 }}><input type="checkbox" checked={list.length > 0 && list.every((a) => sel.has(a.code))} onChange={(e) => setSel(e.target.checked ? new Set(list.map((a) => a.code)) : new Set())} /></th><th style={TH}>状態</th><th style={TH}>コード</th><th style={TH}>固定資産名称</th><th style={TH}>科目</th><th style={TH}>取得年月日</th><th style={{ ...TH, textAlign: 'right' }}>耐用</th><th style={{ ...TH, textAlign: 'right' }}>取得価額</th><th style={{ ...TH, textAlign: 'right' }}>期首帳簿価額</th><th style={{ ...TH, textAlign: 'right' }}>当期償却額</th><th style={{ ...TH, textAlign: 'right' }}>期末帳簿価額</th></tr></thead>
+                  <thead><tr><th style={{ ...TH, width: 36 }}><input type="checkbox" checked={list.length > 0 && list.every((a) => sel.has(a.code))} onChange={(e) => setSel(e.target.checked ? new Set(list.map((a) => a.code)) : new Set())} /></th>{([['状態', 'status'], ['コード', 'code'], ['固定資産名称', 'name'], ['科目', 'account'], ['取得年月日', 'acquired']] as const).map(([l, k]) => <SortTh key={k} label={l} k={k} sort={assetSort} onSort={setAssetSort} />)}{([['耐用', 'life'], ['取得価額', 'cost'], ['期首帳簿価額', 'opening'], ['当期償却額', 'dep'], ['期末帳簿価額', 'closing']] as const).map(([l, k]) => <SortTh key={k} label={l} k={k} sort={assetSort} onSort={setAssetSort} right />)}</tr></thead>
                   <tbody>
                     {list.length === 0 && <tr><td colSpan={11} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>該当する固定資産がありません。</td></tr>}
                     {list.map((a) => {
@@ -911,7 +1063,7 @@ export function DepreciationPage({ variant, accent }: Props) {
               </div>
             </div>
             {detail && (
-              <AssetDetail accent={accent} asset={detail} imageSrc={images['A:' + detail.code]} onClose={() => setDetail(null)} onEdit={() => setAssetModal({ open: true, asset: detail, manual: !!detail.manual })} onPrint={() => openReport('個別固定資産管理台帳', detail)} onDelete={() => { if (confirm(`「${detail.name}」を削除しますか？（取り消せません）`)) { addLog('資産', detail.code, `${Number(detail.code)}:${detail.name}`, '削除'); setAssets((as) => as.filter((a) => a.code !== detail.code)); setDetail(null); toast.show('削除しました'); } }} />
+              <AssetDetail accent={accent} asset={detail} imageSrc={images['A:' + detail.code]} onClose={() => setDetail(null)} onEdit={() => setAssetModal({ open: true, asset: detail, manual: !!detail.manual })} onPrint={() => openReport('個別固定資産管理台帳', detail)} onDelete={async () => { if (await askConfirm({ title: '固定資産の削除', message: <>「<b>{detail.name}</b>」を削除しますか？<br /><span style={{ color: '#c0392b' }}>削除すると取り消せません。</span></>, okLabel: '削除する', danger: true })) { addLog('資産', detail.code, `${Number(detail.code)}:${detail.name}`, '削除'); setAssets((as) => as.filter((a) => a.code !== detail.code)); setDetail(null); toast.show('削除しました'); } }} />
             )}
           </div>
         )}
@@ -926,9 +1078,9 @@ export function DepreciationPage({ variant, accent }: Props) {
               <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="備品名で検索" autoComplete="off" style={{ marginLeft: 'auto', width: 240, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead><tr><th style={TH}>備品コード</th><th style={TH}>備品名称</th><th style={TH}>科目</th><th style={TH}>取得年月日</th><th style={{ ...TH, textAlign: 'right' }}>取得価額</th><th style={{ ...TH, width: 200 }} /></tr></thead>
+              <thead><tr>{([['備品コード', 'code'], ['備品名称', 'name'], ['科目', 'account'], ['取得年月日', 'acquired']] as const).map(([l, k]) => <SortTh key={k} label={l} k={k} sort={equipSort} onSort={setEquipSort} />)}<SortTh label="取得価額" k="cost" sort={equipSort} onSort={setEquipSort} right /><th style={{ ...TH, width: 200 }} /></tr></thead>
               <tbody>
-                {equips.filter((e) => !q || e.name.includes(q)).map((e) => <tr key={e.code}><td style={{ ...TD, color: '#7a8794' }}>{e.code}</td><td style={{ ...TD, fontWeight: 600 }}>{e.name}{images['E:' + e.code] && <span title="画像あり" style={{ marginLeft: 6, fontSize: 12 }}>📷</span>}</td><td style={{ ...TD, color: '#48565f' }}>{e.account ?? ''}</td><td style={TD}>{e.acquired}</td><td style={NUM}>{yen(e.cost)}</td><td style={{ ...TD, textAlign: 'right', whiteSpace: 'nowrap' }}><button type="button" className="btn-outline" onClick={() => setImgTarget({ key: 'E:' + e.code, title: `備品画像：${e.name}` })} style={{ ...btn(), padding: '4px 10px', fontSize: 12, marginRight: 4 }}>画像</button><button type="button" className="btn-outline" onClick={() => openLog('備品', e.code)} style={{ ...btn(), padding: '4px 10px', fontSize: 12, marginRight: 4 }}>ログ</button><button type="button" className="btn-outline" onClick={() => { if (confirm(`「${e.name}」を削除しますか？`)) { addLog('備品', e.code, `${Number(e.code)}:${e.name}`, '削除'); setEquips((es) => es.filter((x) => x.code !== e.code)); } }} style={{ ...btn('#c0392b'), padding: '4px 10px', fontSize: 12 }}>削除</button></td></tr>)}
+                {equipList.map((e) => <tr key={e.code}><td style={{ ...TD, color: '#7a8794' }}>{e.code}</td><td style={{ ...TD, fontWeight: 600 }}>{e.name}{images['E:' + e.code] && <span title="画像あり" style={{ marginLeft: 6, fontSize: 12 }}>📷</span>}</td><td style={{ ...TD, color: '#48565f' }}>{e.account ?? ''}</td><td style={TD}>{e.acquired}</td><td style={NUM}>{yen(e.cost)}</td><td style={{ ...TD, textAlign: 'right', whiteSpace: 'nowrap' }}><button type="button" className="btn-outline" onClick={() => setImgTarget({ key: 'E:' + e.code, title: `備品画像：${e.name}` })} style={{ ...btn(), padding: '4px 10px', fontSize: 12, marginRight: 4 }}>画像</button><button type="button" className="btn-outline" onClick={() => openLog('備品', e.code)} style={{ ...btn(), padding: '4px 10px', fontSize: 12, marginRight: 4 }}>ログ</button><button type="button" className="btn-outline" onClick={async () => { if (await askConfirm({ title: '備品の削除', message: <>「<b>{e.name}</b>」を削除しますか？<br /><span style={{ color: '#c0392b' }}>削除すると取り消せません。</span></>, okLabel: '削除する', danger: true })) { addLog('備品', e.code, `${Number(e.code)}:${e.name}`, '削除'); setEquips((es) => es.filter((x) => x.code !== e.code)); } }} style={{ ...btn('#c0392b'), padding: '4px 10px', fontSize: 12 }}>削除</button></td></tr>)}
                 {equips.length === 0 && <tr><td colSpan={6} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>備品は登録されていません。「＋ 備品を登録」から追加してください。</td></tr>}
               </tbody>
             </table>
@@ -940,10 +1092,7 @@ export function DepreciationPage({ variant, accent }: Props) {
         {tab === 'transfer' && <TransferView accent={accent} assets={assets} onRegister={(rows) => { const added = rows.map((r): Asset => ({ code: r.code, name: r.name, account: '器具及び備品', acquired: r.date, life: 10, cost: r.cost, status: '移管取込', opening: r.cost, subsidy: r.subsidy, method: '定額法', qty: r.inQty, place: `移管元：${r.from}`, transferIn: true })); setAssets((as) => [...as, ...added]); added.forEach((a) => addLog('資産', a.code, `${Number(a.code)}:${a.name}`, '移管(先)取込み')); setTab('assets'); toast.show(`移管資産 ${rows.length} 件を登録しました`); }} toast={toast.show} />}
       </div>
 
-      {/* 固定資産の登録／変更（モーダル） */}
-      <Modal open={assetModal.open} onClose={() => setAssetModal({ open: false, asset: null, manual: false })} width={1540} style={{ maxHeight: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} title={<>{assetModal.asset ? '固定資産の変更' : '固定資産の登録'}{assetModal.manual && <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#fff1b8', color: '#8a6d00' }}>全項目手入力</span>}</>}>
-        {assetModal.open && <AssetForm key={assetFormKey} accent={accent} asset={assetModal.asset} manual={assetModal.manual} dispCalc={dispCalc} onAddCapex={addCapex} sortItems={sortItems} nextCode={String(assets.reduce((m, a) => Math.max(m, Number(a.code) < 10000 ? Number(a.code) : 0), 0) + 1).padStart(5, '0')} imageSrc={images['A:' + (assetModal.asset?.code ?? '')]} onSave={saveAsset} onCancel={() => setAssetModal({ open: false, asset: null, manual: false })} onReport={openReport} onLog={(code) => openLog('資産', code)} onImage={(code, name) => setImgTarget({ key: 'A:' + code, title: `資産画像：${name || code}` })} toast={toast.show} />}
-      </Modal>
+      <ExplainModal open={manualOpen} onClose={() => setManualOpen(false)} accent={accent} title="減価償却のマニュアル" sections={DEP_MANUAL} source="減価償却システム 操作マニュアル（要約）" width={680} />
       <Modal open={equipModal} onClose={() => setEquipModal(false)} width={1000} title="備品の登録">
         {equipModal && <EquipForm accent={accent} equips={equips} sortItems={sortItems} imageSrc={images} onSave={(e) => { setEquips((es) => [...es, e]); addLog('備品', e.code, `${Number(e.code)}:${e.name}`, '登録'); toast.show(`備品「${e.name}」を登録しました`); }} onCancel={() => setEquipModal(false)} onReport={openReport} onLog={(code) => openLog('備品', code)} onImage={(code, name) => setImgTarget({ key: 'E:' + code, title: `備品画像：${name || code}` })} toast={toast.show} />}
       </Modal>
@@ -1581,12 +1730,12 @@ function BatchView({ accent, dispCalc, assets, preselected, disposals, onExport,
     setHistory((h) => [...h, { time: stamp(), file: file + '.csv', count: rows.length, user: USER, result: '正常終了' }]);
     onExport({ kind: 'csv', title: '移管(元)ファイル', fileName: file, meta: `移管先で「移管取込」に読み込むファイル（${rows.length} 件）`, header: ['資産コード', '移管元名称', '固定資産名称', '科目', '移管年月日', '数量', '単価', '取得移管価額', '期首帳簿価額', 'うち国庫補助金等', '耐用年数', '償却方法'], rows: rows.map((a) => [a.code, 'チャイルド保育園', a.name, a.account, done.get(a.code)?.date ?? dateOf(a.code), a.qty, Math.floor(a.cost / Math.max(1, a.qty)), a.cost, a.opening, a.subsidy, a.life, a.method]) });
   };
-  const register = () => {
+  const register = async () => {
     if (targets.length === 0) return toast('処理を設定した固定資産がありません');
     const noDate = targets.filter((a) => !dateOf(a.code));
     if (noDate.length) return toast(`処分年月日が入っていない固定資産が ${noDate.length} 件あります。一括セットするか、行ごとに入力してください`);
     if (targets.some((a) => proc[a.code] === '売却' && !num(amt[a.code]))) return toast('売却する固定資産の売却額を入力してください');
-    if (!confirm(`${targets.length} 件の固定資産に処理（除却・売却・移管）を登録します。よろしいですか？`)) return;
+    if (!(await askConfirm({ title: '除却・売却・移管の登録', message: `${targets.length} 件の固定資産に処理（除却・売却・移管）を登録します。よろしいですか？`, okLabel: '登録する' }))) return;
     onDone(targets.map((a) => ({ code: a.code, name: a.name, account: a.account, proc: proc[a.code], date: dateOf(a.code), amount: proc[a.code] === '売却' ? num(amt[a.code]) : 0, opening: a.opening, cost: a.cost, subsidy: a.subsidy })));
   };
   // 移管する固定資産：処理を「移管(元)」にしたもの。なければ、チェックしたもの（登録済みは除く）
@@ -1603,10 +1752,10 @@ function BatchView({ accent, dispCalc, assets, preselected, disposals, onExport,
     setMoveTo('');
     setMoveOpen(true);
   };
-  const runMove = () => {
+  const runMove = async () => {
     if (!moveTo) return toast('移管先の区分を選んでください');
     if (moveList.some((a) => !dateOf(a.code))) return toast('処分年月日（移管する日）を入力してください');
-    if (!confirm(`${moveList.length} 件の固定資産を「${moveTo}」へ移管します。よろしいですか？`)) return;
+    if (!(await askConfirm({ title: '移管', message: `${moveList.length} 件の固定資産を「${moveTo}」へ移管します。よろしいですか？`, okLabel: '移管する' }))) return;
     onDone(moveList.map((a) => ({ code: a.code, name: a.name, account: a.account, proc: '移管(元)', date: dateOf(a.code), amount: 0, opening: a.opening, cost: a.cost, subsidy: a.subsidy, to: moveTo })));
     setMoveOpen(false);
   };
@@ -1750,9 +1899,9 @@ function ClosingView({ accent, vouchers, setVouchers, onCreated, toast }: { acce
     setStep(4);
     setPreviewId(ids[0]);
   };
-  const removeVoucher = (i: number) => {
+  const removeVoucher = async (i: number) => {
     const x = vouchers[i];
-    if (!confirm(`「${x.name}」を削除します。会計の仕訳伝票からも削除されます。よろしいですか？`)) return;
+    if (!(await askConfirm({ title: '決算伝票の削除', message: <>「<b>{x.name}</b>」を削除します。会計の仕訳伝票からも削除されます。よろしいですか？</>, okLabel: '削除する', danger: true }))) return;
     if (x.ids?.length) deleteVouchers(x.ids);
     setVouchers((vs) => vs.filter((_, k) => k !== i));
     toast(`「${x.name}」を削除しました`);

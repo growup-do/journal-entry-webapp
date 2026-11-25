@@ -8,7 +8,7 @@ import type { CSSProperties } from 'react';
 import { ExplainModal } from './ExplainModal';
 import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { PrintOutButton } from './PrintOutDialog';
-import { IconButton } from './ui';
+import { IconButton, ManualButton } from './ui';
 import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
 import { ACCOUNT_META } from '../lib/accounts';
@@ -149,7 +149,7 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
       </Modal>
 
       {/* ② 入力方式選択 */}
-      <Modal open={step === 'method'} onClose={() => setStep('confirm')} width={640} strict title="入力方式選択画面">
+      <Modal open={step === 'method'} onClose={() => setStep('confirm')} width={640} strict title={<>入力方式選択画面<ManualButton onClick={() => setManualOpen(true)} style={{ marginLeft: 8 }} /></>}>
         <div style={{ padding: '18px 28px 22px' }}>
           <div style={{ border: '1px solid #c0392b', borderRadius: 10, padding: '14px 18px' }}>
             <div style={{ color: '#c0392b', fontWeight: 700, fontSize: 14, marginBottom: 8 }}>使用する金額入力方式を選択してください</div>
@@ -164,7 +164,7 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
             ))}
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 18 }}>
-            <button type="button" onClick={() => setManualOpen(true)} style={btn()}>ⓘ マニュアル</button>
+            <span />
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="button" onClick={() => onNavigate('伝票入力')} style={btn()}>キャンセル</button>
               <button type="button" disabled={!method} onClick={() => setStep(method === 'direct' ? 'main' : 'acctWarn')} style={{ ...btn(true), opacity: method ? 1 : 0.5 }} title={method && method !== 'direct' ? '実績を使う方式では、標準科目名と結び付かない科目があると科目警告画面を、実績の貸借が一致していないと警告画面を表示します' : undefined}>OK</button>
@@ -223,7 +223,7 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
       <div style={{ width: '100%', maxWidth: isSheet ? 'none' : 1100, background: '#fff', border: '1px solid #dde4ea', borderRadius: isSheet ? 14 : 16, boxShadow: '0 6px 26px rgba(30,50,70,.07)', overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '18px 22px 14px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
           <div>
-            <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21 }}>簡易充実残額シミュレーター</div>
+            <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21 }}>簡易充実残額シミュレーター<ManualButton onClick={() => setManualOpen(true)} style={{ marginLeft: 8 }} /></div>
             <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>
               入力方式：<b style={{ color: '#22303c' }}>{METHODS.find((m) => m.key === method)?.label.split('（')[0] ?? '未選択'}</b>　{direct ? '金額を編集すると予想額が再計算されます。' : '金額は実績から表示します（手入力できるのは直接入力方式のときだけです）。'}<span style={{ color: '#b7791f' }}>（値はサンプルです）</span>
             </div>

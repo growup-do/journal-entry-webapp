@@ -30,11 +30,15 @@ export function TabStrip({ accent, style, children, ...rest }: { accent: string;
   const hovering = useRef(false);
   const [ink, setInk] = useState<{ left: number; width: number } | null>(null);
   const [ready, setReady] = useState(false);
+  // 位置が変わったときだけ state を変える（毎回の描画のあとに呼ぶので、同じ値で set すると描き直しが止まらなくなる）
+  const inkRef = useRef<{ left: number; width: number } | null>(null);
   const place = (el: Element | null) => {
     const t = el as HTMLElement | null;
-    if (!t) { setInk(null); return; }
-    const left = t.offsetLeft, width = t.offsetWidth;
-    setInk((p) => (p && p.left === left && p.width === width ? p : { left, width }));
+    const next = t ? { left: t.offsetLeft, width: t.offsetWidth } : null;
+    const cur = inkRef.current;
+    if (cur === next || (cur && next && cur.left === next.left && cur.width === next.width)) return;
+    inkRef.current = next;
+    setInk(next);
   };
   const toSelected = () => place(ref.current?.querySelector('[role="tab"][aria-selected="true"]') ?? null);
   // 選んでいるタブが変わったとき・描き直したときは、選んでいるタブの下へ
@@ -118,7 +122,7 @@ export function Notice({ children, tone = 'info' }: { children: ReactNode; tone?
 
 /** 設定系画面の共通シェル（SettingsPages の Shell と同じ見た目）。
  *  unsaved … 変更したのに保存していないあいだ true にすると、画面の色を薄い暖色に変える（確認メモ #224・#225） */
-export function SettingsShell({ variant, title, desc, badge = '設定', draft = false, actions, unsaved = false, editing = false, children }: { variant: 'form' | 'sheet'; title: string; desc: ReactNode; badge?: string; draft?: boolean; actions?: ReactNode; unsaved?: boolean; /** 入力中：画面の枠を光らせる */ editing?: boolean; children: ReactNode }) {
+export function SettingsShell({ variant, title, desc, badge = '設定', draft = false, actions, manual, unsaved = false, editing = false, children }: { variant: 'form' | 'sheet'; title: string; desc: ReactNode; badge?: string; draft?: boolean; actions?: ReactNode; /** 見出しの右に置くマニュアルのボタン（ManualButton） */ manual?: ReactNode; unsaved?: boolean; /** 入力中：画面の枠を光らせる */ editing?: boolean; children: ReactNode }) {
   const isSheet = variant === 'sheet';
   return (
     <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
@@ -127,6 +131,7 @@ export function SettingsShell({ variant, title, desc, badge = '設定', draft = 
           <div>
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21 }}>
               {title} <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#eef2f6', color: '#3d4a56', verticalAlign: 'middle', marginLeft: 6 }}>{badge}</span>
+              {manual && <span style={{ marginLeft: 6 }}>{manual}</span>}
             </div>
             <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>{desc}{draft && <span style={{ color: '#b7791f' }}>（叩き台）</span>}</div>
           </div>
@@ -171,13 +176,15 @@ export const rowClick = (fn: () => void) => () => {
 /* ------------------------------------------------------------------ */
 /* アイコン・アイコンだけのボタン（右上の機能ボタンを文字なしにそろえる）                    */
 /* ------------------------------------------------------------------ */
-export type IconName = 'print' | 'gear' | 'log' | 'search' | 'recalc' | 'link' | 'switch' | 'sliders' | 'sum' | 'undo' | 'count' | 'import' | 'approve' | 'trash' | 'trend' | 'bars' | 'carry' | 'eye' | 'copy';
+export type IconName = 'print' | 'gear' | 'log' | 'search' | 'recalc' | 'link' | 'switch' | 'sliders' | 'sum' | 'undo' | 'count' | 'import' | 'approve' | 'trash' | 'trend' | 'bars' | 'carry' | 'eye' | 'copy' | 'book' | 'alert';
 const ICON_PATHS: Record<IconName, ReactNode> = {
   print: <><path d="M6 9V3h12v6" /><rect x="3" y="9" width="18" height="9" rx="2" /><path d="M7 14h10v7H7z" /></>,
   gear: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></>,
   bars: <><path d="M3 21h18" /><path d="M6 17v-6" /><path d="M11 17V5" /><path d="M16 17v-9" /><path d="M20 17v-3" /></>,
   carry: <><path d="M3 12h12" /><path d="M10 6l6 6-6 6" /><path d="M20 4v16" /></>,
   eye: <><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></>,
+  book: <><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5z" /><path d="M4 21.5A2.5 2.5 0 0 1 6.5 19H20v3H6.5" /><path d="M9 7h7M9 11h5" /></>,
+  alert: <><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /><path d="M12 9v4" /><path d="M12 17h.01" /></>,
   copy: <><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" /></>,
   trend: <><path d="M3 3v18h18" /><path d="M7 15l4-4 3 3 6-7" /></>,
   log: <><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l3 2" /></>,
@@ -198,6 +205,14 @@ export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flex: 'none' }}>
       {ICON_PATHS[name]}
     </svg>
+  );
+}
+/** マニュアル（説明）を開くボタン。見出しの右側に置く、枠のない小さな「アイコン＋文字」（確認メモ #297。全画面のマニュアルへのリンクで共通） */
+export function ManualButton({ label = 'マニュアル', onClick, title, style }: { label?: string; onClick: () => void; title?: string; style?: CSSProperties }) {
+  return (
+    <button type="button" className="manual-link" data-manual-link={label} onClick={onClick} title={title ?? `${label}を開きます`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 7px', border: 'none', borderRadius: 6, background: 'transparent', color: '#48565f', fontSize: 12, fontWeight: 700, fontFamily: "'Noto Sans JP', sans-serif", cursor: 'pointer', whiteSpace: 'nowrap', verticalAlign: 'middle', ...style }}>
+      <Icon name="book" size={14} />{label}
+    </button>
   );
 }
 /** 印刷ボタンのアイコン（全画面の印刷ボタンで同じものを使う） */

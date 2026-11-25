@@ -20,6 +20,7 @@ import { LegalPage } from './components/LegalPage';
 import { FlowMapPage } from './components/FlowMapPage';
 import { IssueBoardPage } from './components/IssueBoardPage';
 import { clearUnsaved, unsavedLabel } from './store/unsaved';
+import { ConfirmHost } from './components/ConfirmDialog';
 import { ACCESS_DENIED, FULL_ACCESS, canOpen, firstAllowed } from './store/access';
 import { Modal } from './components/Modal';
 import { btn } from './components/ui';
@@ -198,6 +199,7 @@ export default function App() {
     <>
       <FormScreen page={shown} onNavigate={selectMenu} onLogout={() => guard(logout)} />
       <RoleSwitchBar review={review} guard={guard} />
+      <ConfirmHost />
       <CorporatePrintModal open={corpPrintOpen} onClose={() => setCorpPrintOpen(false)} />
 
       <SettlementAuditModal open={auditOpen} onClose={() => setAuditOpen(false)} onNavigate={(p) => { if (alive(p) === shown) setAuditOpen(false); else guard(() => { setAuditOpen(false); setPage(p); }); }} />

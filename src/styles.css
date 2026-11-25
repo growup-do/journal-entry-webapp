@@ -336,3 +336,11 @@ tr.row-hover:hover > td:first-child { box-shadow: inset 3px 0 0 rgba(44, 95, 158
 .tab-btn[aria-selected="false"]:hover { color: #1f7a52 !important; }
 @media (prefers-reduced-motion: reduce) { .tab-ink { transition: none !important; } }
 .tab-btn:focus-visible { outline: 2px solid #1f7a52; outline-offset: -2px; }
+
+/* マニュアルのボタン（見出しの右の小さなアイコン＋文字。確認メモ #297） */
+.manual-link { transition: background .15s, color .15s; }
+.manual-link:hover { background: #eef3f0 !important; color: #1f7a52 !important; }
+.manual-link:focus-visible { outline: 2px solid #1f7a52; outline-offset: 1px; }
+/* 一覧の並べ替えができる見出し（確認メモ #296） */
+.sort-th { cursor: pointer; user-select: none; }
+.sort-th:hover { background: #e9f1ec !important; color: #1f7a52 !important; }

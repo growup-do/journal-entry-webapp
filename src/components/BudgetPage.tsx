@@ -9,7 +9,7 @@ import { NUM, TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
 import { ExplainModal } from './ExplainModal';
 import { FISCAL_MONTHS } from './FiscalMonthTabs';
-import { Field, Notice, SettingsShell, Tabs, btn, input, numInput, toInt, yen } from './ui';
+import { Field, ManualButton, Notice, SettingsShell, Tabs, btn, input, numInput, toInt, yen } from './ui';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { VENDORS, displayName } from '../data';
 import { ScopeBadge } from './PrintCenter';
@@ -128,9 +128,8 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
   const chip = (on: boolean): CSSProperties => ({ minWidth: 30, height: 26, padding: '0 8px', borderRadius: 6, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', border: '1px solid ' + (on ? accent : '#d3dbe3') });
 
   return (
-    <SettingsShell variant={variant} title={displayName('予算')} desc="資金収支計算書の予算と取引先別の予算を、年度（前年度／当年度／次年度）ごとのタブで入力します。予算月の「初」が当初予算、「4」〜「3」「決」がその月の補正予算です。収支差額と期末支払資金残高を確認しながら設定できます。" badge="予算" actions={<>
+    <SettingsShell variant={variant} title={displayName('予算')} manual={<ManualButton label="説明" onClick={() => setExplainOpen(true)} title="予算入力の説明（マニュアル 3.2）を開きます" />} desc="資金収支計算書の予算と取引先別の予算を、年度（前年度／当年度／次年度）ごとのタブで入力します。予算月の「初」が当初予算、「4」〜「3」「決」がその月の補正予算です。収支差額と期末支払資金残高を確認しながら設定できます。" badge="予算" actions={<>
       {tab === '次年度予算' && <button type="button" className="btn-outline" onClick={() => setWizard(true)} style={btn(accent)}>次年度予算作成</button>}
-      <button type="button" className="btn-outline" onClick={() => setExplainOpen(true)} style={btn()}>説明</button>
       <button type="button" className="submit-btn" onClick={() => toast.show('予算を保存しました（プロトタイプ）')} style={btn(accent, true)}>保存</button>
       <ScreenPrintMenu page="予算" accent={accent} />
     </>}>

@@ -8,7 +8,7 @@ import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode } fr
 import { ExplainModal } from './ExplainModal';
 import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
-import { Field, Notice, SettingsShell, Steps, Tabs, Toggle, btn, card, cardHead, input, lbl, numInput } from './ui';
+import { Field, ManualButton, Notice, SettingsShell, Steps, Tabs, Toggle, btn, card, cardHead, input, lbl, numInput } from './ui';
 import { ACCOUNT_META } from '../lib/accounts';
 import { AUDIT_ITEMS, SERVICES, displayName } from '../data';
 import { isViewOnly, setSession, useSession } from '../store/session';
@@ -309,7 +309,7 @@ export function FinancialAnalysisSettingsPage({ variant, accent, onNavigate }: M
                 <span aria-hidden="true" style={{ color: '#9aa5b1' }}>›</span>
                 <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>項目</span>
                 <span style={{ fontSize: 19, fontWeight: 700, fontFamily: "'Zen Kaku Gothic New', sans-serif" }}>{def.name}</span>
-                <button type="button" className="btn-outline" onClick={() => setGuide(true)} style={{ ...btn('#5b6773', false, true), marginLeft: 'auto' }}>ガイドを表示</button>
+                <ManualButton label="ガイド" onClick={() => setGuide(true)} title="この指標の計算式と科目の決め方（マニュアル 8.1.1）を開きます" style={{ marginLeft: 6 }} />
               </div>
               <div>
                 <span style={lbl}>算式</span>
@@ -440,8 +440,7 @@ export function AuditSettingsPage({ variant, accent, onNavigate }: MaintenancePa
   const onCount = AUDIT_ITEMS.filter((a) => isOn(a.no)).length;
 
   return (
-    <SettingsShell variant={variant} title="決算チェック設定" badge="保守・運用" draft={false} desc="決算チェック（決算調査）の 28 項目について、チェックする項目の有効／無効と、項目ごとの条件（対象科目など）を設定します。" actions={<>
-      <button type="button" className="btn-outline" onClick={() => setHelp(true)} style={btn()}>説明</button>
+    <SettingsShell variant={variant} title="決算チェック設定" badge="保守・運用" manual={<ManualButton label="説明" onClick={() => setHelp(true)} title="決算チェック設定の説明を開きます" />} draft={false} desc="決算チェック（決算調査）の 28 項目について、チェックする項目の有効／無効と、項目ごとの条件（対象科目など）を設定します。" actions={<>
       <button type="button" className="btn-outline" onClick={() => (onNavigate ? onNavigate('決算調査') : toast.show('メニューの「決算チェック（決算調査）」から開きます'))} style={btn()}>決算チェック（決算調査）を開く →</button>
     </>}>
       <ToastView msg={toast.msg} />
@@ -812,7 +811,7 @@ export function BackupPage({ variant, accent }: MaintenancePageProps) {
               )}
               {restore.step === 1 && (
                 <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={{ fontSize: 14, color: '#5b6773' }}>復元する項目にチェックを入れてください。チェックを外した項目は、現在のデータのまま残ります。</span><button type="button" onClick={() => setItemHelp(true)} style={{ ...btn('#5b6773', false, true), marginLeft: 'auto' }}>説明</button></div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={{ fontSize: 14, color: '#5b6773' }}>復元する項目にチェックを入れてください。チェックを外した項目は、現在のデータのまま残ります。</span><ManualButton label="説明" onClick={() => setItemHelp(true)} title="復元する項目の説明（マニュアル 4.4.2）を開きます" style={{ marginLeft: 'auto' }} /></div>
                   <div style={{ border: '1px solid #e2e8ee', borderRadius: 10 }}>
                     {RESTORE_ITEMS.map((it) => (
                       <label key={it.key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderBottom: '1px solid #f1f4f6', cursor: 'pointer', fontSize: 14 }}>

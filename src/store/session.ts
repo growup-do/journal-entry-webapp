@@ -164,6 +164,18 @@ const SLIP_TEMPLATES: JournalTemplate[] = ([
     { enabled: false, lines: [{ kari: '保育材料費', kashi: '普通預金（保育園）', tekiyo: '保育材料', amount: '', gyosha: '' }] },
   ] },
 ] as JournalTemplate[]).map((t) => (t.pages ? withPages(t, t.pages) : t));
+/** 制限付きのサンプルアカウント（小口・預金・資産 担当者）の「使える機能」を、一度だけ既定に戻す（確認メモ #298）。
+ *  以前の確認でユーザー設定から変えたままだと、資産 担当者でログインしても減価償却以外のメニューが出てしまうため。2 回目以降は保存した設定を使う */
+const ACCESS_REV = 2;
+const SAMPLE_LIMITED = ['koguchi', 'yokin', 'shisan'];
+function resetSampleAccess(saved: Partial<Session> & { accessRev?: number }): Pick<Session, 'access' | 'memberAccess'> & { accessRev: number } {
+  const access = { ...FULL_ACCESS, ...(saved.access ?? {}) };
+  const memberAccess: Session['memberAccess'] = { ...DEFAULT_MEMBER_ACCESS, me: access, ...(saved.memberAccess ?? {}) };
+  if ((saved.accessRev ?? 1) >= ACCESS_REV) return { access, memberAccess, accessRev: ACCESS_REV };
+  for (const id of SAMPLE_LIMITED) memberAccess[id] = DEFAULT_MEMBER_ACCESS[id];
+  const id = saved.accountId ?? 'me';
+  return { access: SAMPLE_LIMITED.includes(id) ? DEFAULT_MEMBER_ACCESS[id] : access, memberAccess, accessRev: ACCESS_REV };
+}
 /** 保存してある定型を読み込むときの置き換え。ページのない以前のサンプル（t5〜t7）は、ページを持つ新しいサンプルに差し替える（確認メモ #291） */
 function migrateTemplates(ts: JournalTemplate[]): JournalTemplate[] {
   const oldSample = ts.some((t) => t.id === 't5' && !t.pages);
@@ -277,7 +289,7 @@ let state: Session = (() => {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULT;
     const saved = JSON.parse(raw) as Partial<Session>;
-    return { ...DEFAULT, ...saved, tree: normalizeTree((saved.treeRev ?? 1) < TREE_REV && saved.tree ? addSampleDivisions(saved.tree) : saved.tree ?? DEFAULT.tree), treeRev: TREE_REV, env: { ...DEFAULT_ENV, ...(saved.env ?? {}) }, input: { ...DEFAULT_INPUT, ...(saved.input ?? {}) }, print: { ...DEFAULT_PRINT, ...(saved.print ?? {}) }, homeSections: { ...DEFAULT_HOME_SECTIONS, ...(saved.homeSections ?? {}) }, access: { ...FULL_ACCESS, ...(saved.access ?? {}) }, memberAccess: { ...DEFAULT_MEMBER_ACCESS, me: { ...FULL_ACCESS, ...(saved.access ?? {}) }, ...(saved.memberAccess ?? {}) }, ledgerTarget: null, journalTarget: null,
+    return { ...DEFAULT, ...saved, tree: normalizeTree((saved.treeRev ?? 1) < TREE_REV && saved.tree ? addSampleDivisions(saved.tree) : saved.tree ?? DEFAULT.tree), treeRev: TREE_REV, env: { ...DEFAULT_ENV, ...(saved.env ?? {}) }, input: { ...DEFAULT_INPUT, ...(saved.input ?? {}) }, print: { ...DEFAULT_PRINT, ...(saved.print ?? {}) }, homeSections: { ...DEFAULT_HOME_SECTIONS, ...(saved.homeSections ?? {}) }, ...resetSampleAccess(saved), ledgerTarget: null, journalTarget: null,
       // 以前の保存データ（消費税対応の On／Off だけ）には方式がないので、On は「簡易課税方式」として引き継ぐ（確認メモ #175）
       taxMode: saved.taxMode ?? (saved.taxEntry ? '簡易課税方式' : DEFAULT.taxMode),
       // 以前の保存データには仕訳伝票形式の定型がないので、サンプルを足す（確認メモ #202）

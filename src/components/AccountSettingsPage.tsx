@@ -13,7 +13,7 @@ import { ImportExportButton } from './ImportExportDialog';
 import { Modal } from './Modal';
 import { TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
-import { Field, Notice, SelectionBar, SettingsShell, Tabs, Toggle, btn, card, cardHead, input, lbl } from './ui';
+import { Field, ManualButton, Notice, SelectionBar, SettingsShell, Tabs, Toggle, btn, card, cardHead, input, lbl } from './ui';
 import { ACCOUNT_META, accountMatches, toKatakana, type AccountMeta } from '../lib/accounts';
 import { ACCOUNTS, SERVICES, SUMMARIES, displayName } from '../data';
 import { useSession } from '../store/session';
@@ -442,9 +442,8 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
   const scrollH = 'calc(100vh - 330px)';
 
   return (
-    <SettingsShell variant={variant} title={displayName('勘定科目')} desc="科目の一覧（項目＝集計上の見出し／科目＝伝票に入力する科目）を縦に大きく表示し、行を選ぶと右側に詳細を表示します。項目か科目かは追加するときに選び（「＋ 項目を追加」「＋ 科目を追加」）、追加した後は変更できません。科目の追加は標準科目にチェックを入れるだけで、コードは自動設定されます。既存の【科目設定】【費目入力】【使用科目設定】に相当します。" actions={<>
+    <SettingsShell variant={variant} title={displayName('勘定科目')} manual={<ManualButton label="注意事項" onClick={() => setCautionOpen(true)} title="勘定科目設定の注意事項（マニュアル）を開きます" />} desc="科目の一覧（項目＝集計上の見出し／科目＝伝票に入力する科目）を縦に大きく表示し、行を選ぶと右側に詳細を表示します。項目か科目かは追加するときに選び（「＋ 項目を追加」「＋ 科目を追加」）、追加した後は変更できません。科目の追加は標準科目にチェックを入れるだけで、コードは自動設定されます。既存の【科目設定】【費目入力】【使用科目設定】に相当します。" actions={<>
       {/* 出力の形式（プリンター／PDF／Excel／CSV）は「印刷」を押してから「出力先」で選ぶ（確認メモ #84、確認事項「印刷の画面遷移の統一」） */}
-      <button type="button" className="btn-outline" onClick={() => setCautionOpen(true)} style={btn()}>注意事項</button>
       <button type="button" className="btn-outline" onClick={() => { if (confirm('仕訳更新を開始します。1年分の全伝票を対象に、勘定科目と資金科目の連動を整理・更新します。途中で中断はできません。よろしいですか？')) runRecalc(); }} style={btn('#b7791f')}>仕訳の再集計</button>
       {listTab && !fundTab && <button type="button" className="btn-outline" onClick={openGroupAdd} style={btn(accent)} data-group-add>＋ 項目を追加</button>}
       {listTab && <button type="button" className="submit-btn" onClick={openAdd} style={btn(accent, true)}>＋ 科目を追加</button>}
