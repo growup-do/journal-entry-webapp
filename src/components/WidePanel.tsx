@@ -18,7 +18,7 @@ import { inPeriod, matchPeriod, type Period } from '../lib/period';
 import { BALANCE_DEFAULT_MONTH, balanceAsOf, systemBalances, useBookBalances } from '../lib/balanceCheck';
 import { FUSEN_COLORS, useVouchers, type Voucher } from '../store/journalStore';
 import { useSession } from '../store/session';
-import { canEnterVoucher } from '../lib/entryDivision';
+import { canEnterVoucher, entryDivisionsOf } from '../lib/entryDivision';
 import type { MonthFilter } from '../types';
 
 export const WIDE_VIEWS = ['日記帳', '前年度日記帳', '元帳１', '元帳２', '残高照合'] as const;
@@ -120,8 +120,10 @@ const NUM: CSSProperties = { ...TD, textAlign: 'right', fontVariantNumeric: 'tab
 const clip: CSSProperties = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
 
 export function WidePanel({ accent, layout, state, top = 0, highlightIds, returnTo, onNavigate }: Props) {
-  const all = useVouchers();
   const sess = useSession();
+  // いまの区分の伝票だけを出す。親区分で起動中は配下の入力区分の伝票（確認メモ #331）
+  const mine = entryDivisionsOf(sess);
+  const all = useVouchers().filter((r) => mine.includes(r.service));
   // 伝票入力の画面の中のパネルなので、親区分で起動中でも配下の入力区分の伝票を訂正できる（確認メモ #182）
   const editable = canEnterVoucher(sess);
   const [month, setMonth] = useState<MonthFilter>('8');

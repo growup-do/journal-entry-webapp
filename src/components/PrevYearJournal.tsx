@@ -6,6 +6,8 @@ import { NUM, TD, TH, yen } from './ReportShell';
 import { PREV_YEAR_ROWS } from '../data';
 import { monthsIn, type Period } from '../lib/period';
 import type { MonthFilter } from '../types';
+import { useSession } from '../store/session';
+import { entryDivisionsOf } from '../lib/entryDivision';
 
 interface Props {
   accent: string;
@@ -17,7 +19,9 @@ export function PrevYearJournal({ accent, compact }: Props) {
   const [month, setMonth] = useState<MonthFilter>('決');
   // 月の範囲（会計月の「全月」から端の月を外したとき・月タブのドラッグ）。あれば month より優先
   const [range, setRange] = useState<Period | null>(null);
-  const rows = PREV_YEAR_ROWS.filter((r) => (range ? monthsIn(range).includes(r.date) : month == null || r.date === month));
+  // いまの区分の伝票だけ（確認メモ #331。親区分では配下の入力区分）
+  const mine = entryDivisionsOf(useSession());
+  const rows = PREV_YEAR_ROWS.filter((r) => mine.includes(r.service)).filter((r) => (range ? monthsIn(range).includes(r.date) : month == null || r.date === month));
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
       <div style={{ padding: compact ? '12px 14px 10px' : '10px 22px', borderBottom: '1px solid #eef2f5', display: 'flex', flexDirection: 'column', gap: 8 }}>

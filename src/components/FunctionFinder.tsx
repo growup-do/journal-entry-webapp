@@ -12,6 +12,7 @@ import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import { HOME_CHECKS, MENU_GROUPS, SETTINGS_GROUPS, displayName, settingsMenuName } from '../data';
 import { setSession, startKindOf, useSession } from '../store/session';
 import { canOpen, type Access } from '../store/access';
+import { HomeOptionsModal } from './HomeOptionsModal';
 
 export interface FunctionGroup { key: string; label: string; note: string; danger: boolean; items: string[] }
 type Group = FunctionGroup;
@@ -21,11 +22,14 @@ function allGroups(a: Access): Group[] {
   return ([
     ...MENU_GROUPS.map((g) => ({ key: g.key, label: g.label, note: '', danger: false, items: g.items })),
     { key: 'audit', label: '調査・チェック', note: 'ヘッダーの区分名の横のボタンからも開けます', danger: false, items: HOME_CHECKS },
-    ...SETTINGS_GROUPS.filter((g) => g.key !== 'web').map((g) => ({ key: 's-' + g.key, label: '各種設定 › ' + g.label, note: g.note ?? '', danger: !!g.danger, items: g.items })),
+    ...SETTINGS_GROUPS.filter((g) => g.key !== 'web').map((g) => ({ key: 's-' + g.key, label: '各種設定 › ' + g.label, note: g.note ?? '', danger: !!g.danger, items: g.key === 'config' ? [...g.items, HOME_OPT] : g.items })),
   ] as Group[]).map((g) => ({ ...g, items: g.items.filter((l) => canOpen(l, a)) })).filter((g) => g.items.length > 0);
 }
+/** ダッシュボード表示オプション：画面ではなくモーダルで開く（ヘッダーの各種設定と同じ。確認メモ #332） */
+const HOME_OPT = 'ダッシュボード表示オプション';
 /** 旧名称・別名でも探せるようにする（サポートが口頭で案内しやすいように） */
 const ALIASES: Record<string, string[]> = {
+  [HOME_OPT]: ['ダッシュボード', '表示オプション', '最初に表示する画面'],
   伝票入力: ['仕訳伝票', '伝票', '仕訳'], 単一入力: ['単一式', '単一'], 振替入力: ['振替伝票', '振替'], 振替単一: ['振替単一式'],
   仕訳一覧: ['日記帳', '仕訳日記帳', '問合'], 勘定元帳: ['総勘定元帳', '元帳'], 資金元帳: ['元帳'], 業者元帳: ['取引先別支払一覧', '元帳', '業者元帳', '業者別支払一覧'], 業者推移: ['業者推移表'],
   月次試算: ['試算表', '試算'], 月次決算: ['決算書', '決算'], 予算対比: ['予算対比表', '予算'], 日次調査: ['同額', '不一致', '検索'], 決算調査: ['決算チェック', 'チェック'],
@@ -176,8 +180,10 @@ export function FunctionDirectory({ groups, onNavigate, first, minCol = 270, col
 const HOME_TOP = ['input', 'ledger', 'print'];
 export function FinderPanel({ accent, onNavigate, onSearch }: { accent: string; onNavigate: (label: string) => void; /** 検索で絞り込んでいるか（ホームは絞り込み中に FAQ・バナーを隠す） */ onSearch?: (searching: boolean) => void }) {
   const [q, setQ] = useState('');
+  const [homeOpt, setHomeOpt] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const s = useSession();
+  const go = (label: string) => { if (label === HOME_OPT) setHomeOpt(true); else onNavigate(label); };
   const groups = useMemo(() => filterGroups(q, s.access).filter((g) => g.key !== 's-update'), [q, s.access]);
   const total = groups.reduce((a, g) => a + g.items.length, 0);
   const searching = !!q.trim();
@@ -224,10 +230,11 @@ export function FinderPanel({ accent, onNavigate, onSearch }: { accent: string; 
       <section data-finder-search data-finder-panel style={{ ['--finder-accent' as string]: accent } as CSSProperties}>
       {/* 1 段目：伝票入力・日記帳・元帳・帳票・印刷（大きく）／2・3 段目：ほかの 8 分類（2 段×4 列） */}
       <div style={{ display: 'grid', gap: 14 }}>
-        {top.length > 0 && <FunctionDirectory groups={top} onNavigate={onNavigate} accent={accent} cols={3} big links fav cards extras={{ ledger: <BulkDeleteLauncher /> }} />}
-        {(rest.length > 0 || top.length === 0) && <FunctionDirectory groups={rest} onNavigate={onNavigate} accent={accent} cols={4} links fav cards />}
+        {top.length > 0 && <FunctionDirectory groups={top} onNavigate={go} accent={accent} cols={3} big links fav cards extras={{ ledger: <BulkDeleteLauncher /> }} />}
+        {(rest.length > 0 || top.length === 0) && <FunctionDirectory groups={rest} onNavigate={go} accent={accent} cols={4} links fav cards />}
       </div>
       </section>
+      <HomeOptionsModal open={homeOpt} onClose={() => setHomeOpt(false)} accent={accent} />
     </div>
   );
 }

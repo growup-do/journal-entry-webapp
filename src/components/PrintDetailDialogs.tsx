@@ -1,0 +1,197 @@
+// 印刷の詳細設定から開く小さな画面（Windows の現行画面で項目を確認。確認メモ #314・#338・#339・#342・#343・#345・#346）
+//   ・印刷書式設定 … 仕訳日記帳（フォントだけ）、試算表・予算管理表（印刷幅＋科目名・金額）、予算書（印刷幅＋科目名・金額・摘要）
+//   ・内訳書－印刷書式 … 予算内訳表（用紙・印刷幅・用紙方向・ヘッダーなど4行のフォント）
+//   ・表示区分選択 … 予算内訳表の「印刷区分を指定する」（No ごとに区分を選ぶ。1ページの区分数ごとに色を変える）
+//   ・摘要 … 予算書の科目ごとの備考（使えない文字は入力できない）
+//   ・科目毎の表示設定 … 印刷位置の「科目毎に指定」で使う（科目ごとに表示する／しない）
+//   入力画面なので、Esc や背景のクリックでは閉じない（Modal の既定）。
+
+import { useId, useState } from 'react';
+import { Modal } from './Modal';
+import { btn, input } from './ui';
+import { ACCOUNTS } from '../data';
+
+/** 書体（現行はパソコンに入っているフォントの一覧） */
+export const FORMAT_FACES = ['ＭＳ 明朝', 'ＭＳ Ｐ明朝', 'ＭＳ ゴシック', 'ＭＳ Ｐゴシック', '游明朝', '游ゴシック', 'メイリオ', 'BIZ UD明朝', 'BIZ UDゴシック', 'Noto Serif JP', 'Noto Sans JP'];
+const FORMAT_SIZES = ['4', '5', '6', '7', '8', '9', '10', '11', '12', '14', '16', '18', '20', '22', '24', '26', '28', '36', '48', '72'];
+const STD_FONT: [string, string] = ['ＭＳ 明朝', '9'];
+
+const box = { border: '1px solid #e2e8ee', borderRadius: 10, padding: '4px 14px 14px', margin: 0, display: 'grid', gap: 10 } as const;
+const legend = { fontSize: 12, fontWeight: 800, color: '#5b6773', padding: '0 6px' } as const;
+const note = { fontSize: 12, color: '#8290a0', lineHeight: 1.6 } as const;
+const mmInput = (v: string, on: (v: string) => void, label: string) => <input className="field-input" aria-label={label} value={v} onChange={(e) => on(e.target.value.replace(/[^0-9.]/g, ''))} inputMode="decimal" style={{ ...input, width: 80, padding: '6px 8px', textAlign: 'right' }} />;
+
+function FontRow({ label, value, onChange, listId }: { label: string; value: [string, string]; onChange: (v: [string, string]) => void; listId: string }) {
+  return (
+    <div data-format-row={label} style={{ display: 'grid', gridTemplateColumns: '210px 1fr 96px', gap: 8, alignItems: 'center' }}>
+      <span style={{ fontSize: 14 }}>{label}のフォントとサイズ</span>
+      <select aria-label={`${label}の書体`} value={value[0]} onChange={(e) => onChange([e.target.value, value[1]])} style={{ ...input, padding: '6px 8px' }}>{FORMAT_FACES.map((o) => <option key={o}>{o}</option>)}</select>
+      <input className="field-input" aria-label={`${label}のサイズ`} list={listId} value={value[1]} onChange={(e) => onChange([value[0], e.target.value.replace(/[^0-9.]/g, '')])} inputMode="decimal" style={{ ...input, padding: '6px 8px', textAlign: 'right' }} />
+    </div>
+  );
+}
+function Foot({ accent, onReset, onCancel, onOk }: { accent: string; onReset: () => void; onCancel: () => void; onOk: () => void }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <button type="button" data-format-reset onClick={onReset} style={btn()}>リセット</button>
+      <span style={note}>設定を標準に戻します。</span>
+      <span style={{ flex: 1 }} />
+      <button type="button" onClick={onCancel} style={btn()}>キャンセル</button>
+      <button type="button" className="submit-btn" onClick={onOk} style={btn(accent, true)}>OK</button>
+    </div>
+  );
+}
+
+/* ---------------- 印刷書式設定 ---------------- */
+export type FmtRow = 'name' | 'amount' | 'remark';
+const ROW_LABEL: Record<FmtRow, string> = { name: '科目名', amount: '金額', remark: '摘要' };
+export interface FormatSpec { widths?: [string, string]; rows: FmtRow[] }
+export interface PrintFormat { widths?: [string, string]; fonts: Partial<Record<FmtRow, [string, string]>> }
+export const stdFormat = (spec: FormatSpec): PrintFormat => ({ widths: spec.widths ? [...spec.widths] : undefined, fonts: Object.fromEntries(spec.rows.map((r) => [r, [...STD_FONT]])) });
+export const formatSummary = (spec: FormatSpec, f: PrintFormat) => [f.widths ? `印刷幅 科目名 ${f.widths[0]}mm／金額 ${f.widths[1]}mm` : '', spec.rows.map((r) => `${ROW_LABEL[r]} ${(f.fonts[r] ?? STD_FONT).join(' ')}`).join('／')].filter(Boolean).join('・');
+
+export function FormatDialog({ spec, value, accent, onCancel, onOk }: { spec: FormatSpec; value: PrintFormat; accent: string; onCancel: () => void; onOk: (f: PrintFormat) => void }) {
+  const [f, setF] = useState<PrintFormat>(value);
+  const listId = useId() + 'sizes';
+  return (
+    <Modal open onClose={onCancel} width={640} title="印刷書式設定">
+      <div data-format-dialog style={{ padding: '14px 22px 18px', display: 'grid', gap: 14 }}>
+        {f.widths && (
+          <fieldset style={box}>
+            <legend style={legend}>印刷幅</legend>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 14 }}>
+              科目名{mmInput(f.widths[0], (v) => setF({ ...f, widths: [v, f.widths![1]] }), '印刷幅 科目名（mm）')}mm
+              <span style={{ width: 12 }} />金額{mmInput(f.widths[1], (v) => setF({ ...f, widths: [f.widths![0], v] }), '印刷幅 金額（mm）')}mm
+            </div>
+          </fieldset>
+        )}
+        <fieldset style={box}>
+          <legend style={legend}>フォント</legend>
+          {spec.rows.map((r) => <FontRow key={r} label={ROW_LABEL[r]} value={f.fonts[r] ?? STD_FONT} onChange={(v) => setF({ ...f, fonts: { ...f.fonts, [r]: v } })} listId={listId} />)}
+          <datalist id={listId}>{FORMAT_SIZES.map((o) => <option key={o} value={o} />)}</datalist>
+          <div style={note}>サイズは一覧から選ぶか、数字を直接入力します。</div>
+        </fieldset>
+        <Foot accent={accent} onReset={() => setF(stdFormat(spec))} onCancel={onCancel} onOk={() => onOk({ widths: f.widths ? [f.widths[0] || spec.widths![0], f.widths[1] || spec.widths![1]] : undefined, fonts: Object.fromEntries(spec.rows.map((r) => { const v = f.fonts[r] ?? STD_FONT; return [r, [v[0], v[1] || '9']]; })) })} />
+      </div>
+    </Modal>
+  );
+}
+
+/* ---------------- 内訳書－印刷書式（予算内訳表） ---------------- */
+export interface InnerPrintFormat { paper: string; widths: [string, string]; orient: '縦' | '横'; header: [string, string]; headerItem: [string, string]; name: [string, string]; amount: [string, string] }
+export const STD_INNER_PRINT: InnerPrintFormat = { paper: 'A4', widths: ['75', '22'], orient: '縦', header: [...STD_FONT], headerItem: [...STD_FONT], name: [...STD_FONT], amount: [...STD_FONT] };
+export function InnerFormatDialog({ value, accent, onCancel, onOk }: { value: InnerPrintFormat; accent: string; onCancel: () => void; onOk: (f: InnerPrintFormat) => void }) {
+  const [f, setF] = useState(value);
+  const listId = useId() + 'sizes';
+  return (
+    <Modal open onClose={onCancel} width={660} title="内訳書－印刷書式">
+      <div data-inner-format-dialog style={{ padding: '14px 22px 18px', display: 'grid', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <fieldset style={box}>
+            <legend style={legend}>用紙サイズ・用紙方向</legend>
+            <select aria-label="用紙サイズ" value={f.paper} onChange={(e) => setF({ ...f, paper: e.target.value })} style={{ ...input, padding: '6px 8px' }}>{['A4', 'A3（A3対応プリンタのみ）'].map((o) => <option key={o}>{o}</option>)}</select>
+            <div role="radiogroup" aria-label="用紙方向" style={{ display: 'flex', gap: 14, fontSize: 14 }}>{(['縦', '横'] as const).map((o) => <label key={o} style={{ display: 'flex', gap: 5, alignItems: 'center', cursor: 'pointer' }}><input type="radio" checked={f.orient === o} onChange={() => setF({ ...f, orient: o })} />{o}</label>)}</div>
+          </fieldset>
+          <fieldset style={box}>
+            <legend style={legend}>印刷幅</legend>
+            <div style={{ display: 'grid', gap: 6, fontSize: 14 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>科目名{mmInput(f.widths[0], (v) => setF({ ...f, widths: [v, f.widths[1]] }), '印刷幅 科目名（mm）')}mm</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>金額　{mmInput(f.widths[1], (v) => setF({ ...f, widths: [f.widths[0], v] }), '印刷幅 金額（mm）')}mm</span>
+            </div>
+          </fieldset>
+        </div>
+        <fieldset style={box}>
+          <legend style={legend}>フォント</legend>
+          {([['header', 'ヘッダー'], ['headerItem', 'ヘッダー項目名'], ['name', '科目名'], ['amount', '金額']] as const).map(([k, l]) => <FontRow key={k} label={l} value={f[k]} onChange={(v) => setF({ ...f, [k]: v })} listId={listId} />)}
+          <datalist id={listId}>{FORMAT_SIZES.map((o) => <option key={o} value={o} />)}</datalist>
+        </fieldset>
+        <Foot accent={accent} onReset={() => setF({ ...STD_INNER_PRINT })} onCancel={onCancel} onOk={() => onOk(f)} />
+      </div>
+    </Modal>
+  );
+}
+
+/* ---------------- 表示区分選択（予算内訳表の印刷区分） ---------------- */
+const AREA_ROWS = 30;
+export function AreaPickDialog({ value, divisions, perPage, accent, onCancel, onOk }: { value: string[]; divisions: string[]; perPage: number; accent: string; onCancel: () => void; onOk: (v: string[]) => void }) {
+  const [rows, setRows] = useState<string[]>(() => Array.from({ length: AREA_ROWS }, (_, i) => value[i] ?? ''));
+  const per = Math.max(1, perPage);
+  return (
+    <Modal open onClose={onCancel} width={560} title="表示区分選択">
+      <div data-area-dialog style={{ padding: '14px 22px 18px', display: 'grid', gap: 10 }}>
+        <div style={{ fontSize: 14 }}>内訳表に表示する区分を設定してください。<span style={{ ...note, display: 'block' }}>No の順に左から印刷します。色の切れ目が 1 ページの区切り（1 ページ {per} 区分）です。空行は詰めずに空欄で印刷します。</span></div>
+        <div style={{ maxHeight: 360, overflowY: 'auto', border: '1px solid #e2e8ee', borderRadius: 8 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead><tr><th style={{ position: 'sticky', top: 0, background: '#f3f6f9', padding: '6px 10px', fontSize: 12, textAlign: 'right', width: 56 }}>No</th><th style={{ position: 'sticky', top: 0, background: '#f3f6f9', padding: '6px 10px', fontSize: 12, textAlign: 'left' }}>区分名</th></tr></thead>
+            <tbody>{rows.map((v, i) => (
+              <tr key={i} data-area-row={i + 1} style={{ background: Math.floor(i / per) % 2 ? '#fff8e1' : '#f4efff' }}>
+                <td style={{ padding: '3px 10px', textAlign: 'right', fontSize: 14, fontVariantNumeric: 'tabular-nums' }}>{i + 1}</td>
+                <td style={{ padding: '3px 10px' }}><select aria-label={`No ${i + 1} の区分`} value={v} onChange={(e) => setRows(rows.map((x, k) => (k === i ? e.target.value : x)))} style={{ ...input, padding: '4px 8px', background: '#fff' }}><option value="">（空行）</option>{divisions.map((d) => <option key={d}>{d}</option>)}</select></td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={note}>1ページに表示可能な区分数：{per}</span>
+          <span style={{ flex: 1 }} />
+          <button type="button" onClick={onCancel} style={btn()}>キャンセル</button>
+          <button type="button" className="submit-btn" onClick={() => onOk(rows)} style={btn(accent, true)}>OK</button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/* ---------------- 摘要（予算書の科目ごとの備考） ---------------- */
+const BAD_CHARS = /[&/?:*"><|]/g;
+export function RemarkDialog({ title, value, accent, onCancel, onOk }: { title: string; value: Record<string, string>; accent: string; onCancel: () => void; onOk: (v: Record<string, string>) => void }) {
+  const [v, setV] = useState(value);
+  return (
+    <Modal open onClose={onCancel} width={680} title={title}>
+      <div data-remark-dialog style={{ padding: '14px 22px 18px', display: 'grid', gap: 10 }}>
+        <div style={{ maxHeight: 380, overflowY: 'auto', border: '1px solid #e2e8ee', borderRadius: 8 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead><tr><th style={{ position: 'sticky', top: 0, background: '#f3f6f9', padding: '6px 10px', fontSize: 12, textAlign: 'left', width: '42%' }}>科目名</th><th style={{ position: 'sticky', top: 0, background: '#f3f6f9', padding: '6px 10px', fontSize: 12, textAlign: 'left' }}>備考</th></tr></thead>
+            <tbody>{ACCOUNTS.flatMap((g) => [
+              <tr key={'g:' + g.group} style={{ background: '#e8f4fb' }}><td style={{ padding: '5px 10px', fontSize: 14, fontWeight: 700 }}>{g.group}</td><td style={{ padding: '3px 10px' }}><input className="field-input" aria-label={`${g.group}の備考`} value={v[g.group] ?? ''} onChange={(e) => setV({ ...v, [g.group]: e.target.value.replace(BAD_CHARS, '') })} style={{ ...input, padding: '4px 8px' }} /></td></tr>,
+              ...g.items.map((a) => <tr key={a}><td style={{ padding: '5px 10px 5px 26px', fontSize: 14 }}>{a}</td><td style={{ padding: '3px 10px' }}><input className="field-input" aria-label={`${a}の備考`} value={v[a] ?? ''} onChange={(e) => setV({ ...v, [a]: e.target.value.replace(BAD_CHARS, '') })} style={{ ...input, padding: '4px 8px' }} /></td></tr>),
+            ])}</tbody>
+          </table>
+        </div>
+        <div style={note}>次に示す文字は備考に使用できません（入力しても入りません）。&amp; / ? : * &quot; &gt; &lt; |</div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button type="button" onClick={onCancel} style={btn()}>キャンセル</button>
+          <button type="button" className="submit-btn" onClick={() => onOk(Object.fromEntries(Object.entries(v).filter(([, x]) => x.trim())))} style={btn(accent, true)}>OK</button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/* ---------------- 科目毎の表示設定 ---------------- */
+export function DisplaySettingDialog({ value, accent, onCancel, onOk }: { value: Record<string, boolean>; accent: string; onCancel: () => void; onOk: (v: Record<string, boolean>) => void }) {
+  const [v, setV] = useState(value);
+  const on = (k: string) => v[k] !== false;
+  const [help, setHelp] = useState(false);
+  return (
+    <Modal open onClose={onCancel} width={520} title="科目毎の表示設定">
+      <div data-display-dialog style={{ padding: '14px 22px 18px', display: 'grid', gap: 10 }}>
+        <div style={{ maxHeight: 380, overflowY: 'auto', border: '1px solid #e2e8ee', borderRadius: 8, padding: '6px 10px' }}>
+          {ACCOUNTS.map((g) => (
+            <div key={g.group}>
+              <label style={{ display: 'flex', gap: 7, alignItems: 'center', fontSize: 14, fontWeight: 700, padding: '3px 0', cursor: 'pointer' }}><input type="checkbox" checked={on(g.group)} onChange={() => setV({ ...v, [g.group]: !on(g.group) })} style={{ accentColor: accent }} />{g.group}</label>
+              {g.items.map((a) => <label key={a} style={{ display: 'flex', gap: 7, alignItems: 'center', fontSize: 14, padding: '3px 0 3px 22px', cursor: 'pointer' }}><input type="checkbox" checked={on(a)} onChange={() => setV({ ...v, [a]: !on(a) })} style={{ accentColor: accent }} />{a}</label>)}
+            </div>
+          ))}
+        </div>
+        {help && <div style={{ ...note, padding: '8px 10px', background: '#f6f8fa', borderRadius: 8 }}>印刷位置で「科目毎に指定」を選んだとき、チェックを付けた項目・科目だけを印刷します。チェックを外した科目は、帳票に行を出しません（金額は上の項目の合計に含めたままです）。</div>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button type="button" onClick={() => setHelp(!help)} style={btn()}>説明</button>
+          <span style={{ flex: 1 }} />
+          <button type="button" onClick={onCancel} style={btn()}>キャンセル</button>
+          <button type="button" className="submit-btn" onClick={() => onOk(v)} style={btn(accent, true)}>OK</button>
+        </div>
+      </div>
+    </Modal>
+  );
+}

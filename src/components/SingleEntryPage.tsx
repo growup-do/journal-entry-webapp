@@ -423,7 +423,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
               </PaperBox>
             </div>
             {/* 内部取引相手区分（最初から表示。スイッチがオンのときだけ入力できる）。参照パネルで本文が狭くなったときは 280px まで縮める（確認メモ #243） */}
-            <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} data-side={side || 'なし'} style={{ display: 'flex', flex: '0 1 400px', minWidth: 280 }}>
+            {tools.internalShown && <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} data-side={side || 'なし'} style={{ display: 'flex', flex: '0 1 400px', minWidth: 280 }}>
               <PaperBox label={<span style={{ color: partner ? '#6b3fb5' : '#8895a3' }}>内部取引相手区分{partner ? `（${side}が内部取引）` : ''}</span>} grow muted={!partner}>
                 {/* 2行：上に 内部取引 のスイッチ、下に 相手先の区分 */}
                 <div style={{ display: 'grid', gap: 4, width: '100%', minWidth: 0, padding: '4px 0' }}>
@@ -433,7 +433,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
                   </div>
                 </div>
               </PaperBox>
-            </div>
+            </div>}
             {/* 上に 取引区分のバッジ＋資金モードの切替（1行）、その下に Seq No などの枠 */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'stretch', flex: 'none' }}>
               <TorihikiBadge kari={f.kariKamoku} kashi={f.kashiKamoku} force={fundMode === '強制資金'} blocked={blocked} right={tools.fundSwitch} />

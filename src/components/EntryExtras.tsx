@@ -9,7 +9,7 @@ import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
 import { Field, Notice, Toggle, btn, input, numInput, toInt, yen } from './ui';
-import { ActButton, ActionGroup, ConfirmModal, ENTRY_FORMATS, FORMAT_KIND, FUND_MODES, FUND_MODE_NOTE, FormatSwitcher, INTERNAL_SIDES, ReadOnlyBanner, ShortcutHelpModal, entryDateOfKey, entryMonthKey, nextFusen, openCandidatesOfFocused, parseEntryDate, parseEntryMonth, useShortcuts, type EntryFormat, type FundMode, type FusenColor, type InternalSide, type Shortcut } from './EntryCommon';
+import { ActButton, ActionGroup, ConfirmModal, ENTRY_FORMATS, FORMAT_KIND, FUND_MODES, FUND_MODE_NOTE, INTERNAL_SIDES, ReadOnlyBanner, ShortcutHelpModal, entryDateOfKey, entryMonthKey, nextFusen, openCandidatesOfFocused, parseEntryDate, parseEntryMonth, useShortcuts, type EntryFormat, type FundMode, type FusenColor, type InternalSide, type Shortcut } from './EntryCommon';
 import { AccountBalanceModal, CalendarModal, CashBalanceModal } from './SingleEntryTools';
 import { AllocationWizardModal, blankAllocation, type AllocationWiz } from './TemplateWizards';
 import type { TableData } from './PrintCenter';
@@ -97,9 +97,10 @@ export function InternalSwitch({ on, onToggle, disabled, locked, title, id, onNe
 /* ---------------- 内部取引の側（なし／借方／貸方。確認メモ #186） ---------------- */
 const SIDE_COLOR = '#6b3fb5';
 /** 貸借のどちらを内部取引にするかを選ぶ。両方を内部取引にすることはできない。←→ か Shift+Enter で切替、Enter で次の欄へ */
-export function InternalSideSwitch({ side, onChange, disabled, locked, title, id, onNext }: { side: InternalSide; onChange: (s: InternalSide) => void; disabled?: boolean; /** 内部取引科目を使っているため、その側に固定（切り替え不可） */ locked?: boolean; title?: string; id?: string; onNext?: () => void }) {
+export function InternalSideSwitch({ side, onChange, disabled, locked, title, id, onNext, noNone }: { side: InternalSide; onChange: (s: InternalSide) => void; disabled?: boolean; /** 内部取引科目を使っているため、その側に固定（切り替え不可） */ locked?: boolean; title?: string; id?: string; onNext?: () => void; /** 「なし」を出さない（入力補助の［内部取引］で欄を出したとき。確認メモ #330） */ noNone?: boolean }) {
   const off = disabled || locked;
-  const step = (d: 1 | -1) => { if (!off) onChange(INTERNAL_SIDES[(INTERNAL_SIDES.indexOf(side) + d + INTERNAL_SIDES.length) % INTERNAL_SIDES.length]); };
+  const opts = noNone ? INTERNAL_SIDES.filter(Boolean) : INTERNAL_SIDES;
+  const step = (d: 1 | -1) => { if (off) return; const i = opts.indexOf(side); onChange(opts[i < 0 ? 0 : (i + d + opts.length) % opts.length]); };
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.nativeEvent.isComposing || e.altKey) return;
     if (e.key === 'ArrowRight') { e.preventDefault(); step(1); return; }
@@ -114,7 +115,7 @@ export function InternalSideSwitch({ side, onChange, disabled, locked, title, id
     <div id={id} role="radiogroup" aria-label="内部取引" tabIndex={disabled ? -1 : 0} data-menu="内部取引" data-internal-side={side || 'なし'} className="ef-act" onKeyDown={onKey} title={tip} style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 7, padding: '3px 4px', borderRadius: 8, opacity: disabled ? 0.55 : 1 }}>
       <span style={{ fontSize: 14, fontWeight: 700, color: side ? SIDE_COLOR : '#5b6773', whiteSpace: 'nowrap' }}>内部取引</span>
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, padding: 2, border: '1px solid #cfd8e0', borderRadius: 8, background: '#eef2f5' }}>
-        {INTERNAL_SIDES.map((s) => {
+        {opts.map((s) => {
           const on = s === side;
           return <button key={s || 'none'} type="button" role="radio" aria-checked={on} tabIndex={-1} data-side={s || 'なし'} disabled={disabled} aria-disabled={off || undefined} onClick={() => { if (!off) onChange(s); }} style={{ padding: '3px 10px', borderRadius: 6, border: 'none', background: on ? (s ? SIDE_COLOR : '#7a8794') : 'transparent', color: on ? '#fff' : off ? '#a9b3bd' : '#48565f', fontSize: 14, fontWeight: on ? 800 : 600, fontFamily: 'inherit', cursor: off ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>{s || 'なし'}</button>;
         })}
@@ -492,6 +493,15 @@ export function useEntryTools(o: EntryToolsOptions) {
   const candidates = () => { if (!openCandidatesOfFocused()) o.toast('科目・摘要・取引先の入力欄で使えます（入力欄で文字を打つと候補が出ます）'); };
 
   const G1 = '伝票の操作', G2 = '行の操作', G3 = '入力補助', G4 = '参照';
+  // 内部取引の欄は、入力補助の［内部取引］で出す（確認メモ #330）。内部取引科目を使っているとき・側を選んであるときは出したまま
+  const [internalOpen, setInternalOpen] = useState(false);
+  const sideMode = !!o.onInternalSide;
+  const internalShown = !!o.internalLocked || (sideMode ? internalOpen || !!o.internalSide : o.internal);
+  const toggleInternalArea = () => {
+    if (o.internalLocked) return;
+    if (!sideMode) { o.onInternal(); return; }
+    if (internalShown) { setInternalOpen(false); o.onInternalSide?.(''); } else setInternalOpen(true);
+  };
   const shortcuts: Shortcut[] = [
     { key: 'S', label: '伝票登録', group: G1, run: o.onSubmit, disabled: ro || !!o.blocked },
     { key: 'O', label: '入力の変更（表示項目）', group: G1, run: () => setDlg('入力の変更') },
@@ -508,7 +518,7 @@ export function useEntryTools(o: EntryToolsOptions) {
     { key: 'K', label: 'カレンダー', group: G3, run: () => setDlg('カレンダー'), disabled: ro },
     { key: 'R', label: '連続定型（定型の伝票をまとめて登録）', group: G3, run: () => setDlg('連続'), disabled: ro },
     { key: 'A', label: '自動按分', group: G3, run: () => setDlg('按分'), disabled: ro },
-    { key: 'U', label: o.onInternalSide ? '内部取引の切替（なし→借方→貸方。欄の上では ←→ か Shift+Enter でも切替）' : '内部取引のオン／オフ（スイッチ上では Shift+Enter でも切替）', group: G3, run: o.onInternal, disabled: ro },
+    { key: 'U', label: '内部取引（入力補助のボタン。内部取引相手区分の欄を出す／しまう）', group: G3, run: () => toggleInternalArea(), disabled: ro || !!o.internalLocked },
     { key: 'M', label: '資金モードの切替（自動資金⇄強制資金）', group: G3, run: cycleFund, disabled: ro },
     { key: 'B', label: '科目別残高', group: G4, run: () => setDlg('科目別残') },
     { key: 'Z', label: '現預金残高', group: G4, run: () => setDlg('現預金残') },
@@ -516,13 +526,9 @@ export function useEntryTools(o: EntryToolsOptions) {
   ];
   useShortcuts(shortcuts, 'page');
 
-  const topBar: ReactNode = (
-    <FormatSwitcher
-      current={o.format}
-      accent={o.accent}
-      onSwitch={o.onNavigate ? (k) => go(k) : undefined}
-    />
-  );
+  /** 伝票の上部の「伝票の形式」の帯は出さない（縦の高さを減らし、スクロールせずに見える量を増やす。確認メモ #350）。
+   *  形式の切替は、左のメニューの伝票入力と、キーボードの 1〜4（形式の切替）で行う */
+  const topBar: ReactNode = null;
   /** 「入力の変更」「キーボード操作一覧」は、左下の入力補助に置く（確認メモ #156）。参照のみ権限では入力補助が出ないので、参照の並びに置く */
   const settingButtons: ReactNode = (
     <>
@@ -547,7 +553,7 @@ export function useEntryTools(o: EntryToolsOptions) {
     </span>
   );
   /** 内部取引スイッチ（相手区分の入力欄の中に置く） */
-  const internalSwitch: ReactNode = viewOnly ? null : o.onInternalSide ? <InternalSideSwitch side={o.internalSide ?? ''} onChange={o.onInternalSide} disabled={ro} locked={o.internalLocked} title={ro ? reason : undefined} id={o.internalId} onNext={o.onInternalNext} /> : <InternalSwitch on={o.internal} onToggle={o.onInternal} disabled={ro} locked={o.internalLocked} title={ro ? reason : undefined} id={o.internalId} onNext={o.onInternalNext} />;
+  const internalSwitch: ReactNode = viewOnly ? null : o.onInternalSide ? <InternalSideSwitch side={o.internalSide ?? ''} onChange={o.onInternalSide} disabled={ro} locked={o.internalLocked} title={ro ? reason : undefined} id={o.internalId} onNext={o.onInternalNext} noNone /> : <InternalSwitch on={o.internal} onToggle={o.onInternal} disabled={ro} locked={o.internalLocked} title={ro ? reason : undefined} id={o.internalId} onNext={o.onInternalNext} />;
   /** 伝票日付の横に置くカレンダーのアイコン（確認メモ #165：入力補助から日付の近くへ移した）。Enter 送りの順序には入れない（K キーでも開ける） */
   const calendarButton: ReactNode = viewOnly ? null : (
     <button type="button" tabIndex={-1} data-calendar-btn disabled={ro} onClick={() => setDlg('カレンダー')} aria-label="カレンダーから日付を選ぶ" title={ro ? reason : 'カレンダーから日付を選びます（K）'}
@@ -560,6 +566,7 @@ export function useEntryTools(o: EntryToolsOptions) {
       {!viewOnly && <ActionGroup caption="入力補助">
         <ActButton label="連続定型" k="R" accent={o.accent} disabled={ro} title={why('定型の伝票を一覧で開き、有効にしたものをまとめて登録します（内容の入力と有効／無効の切替もここで行います）')} onClick={() => setDlg('連続')} />
         <ActButton label="自動按分" k="A" accent={o.accent} disabled={ro} title={why('按分テンプレートで、複数の区分・科目に金額を配分します')} onClick={() => setDlg('按分')} />
+        <ActButton label={internalShown ? '内部取引：あり' : '内部取引'} k="U" menu="内部取引" active={internalShown} accent={o.accent} disabled={ro || !!o.internalLocked} title={o.internalLocked ? '内部取引科目（区分間繰入金など）を使っているため、内部取引の欄を表示しています' : why(internalShown ? '内部取引の欄をしまいます（内部取引なしに戻します）' : '内部取引相手区分の欄を出し、借方か貸方を選べるようにします')} onClick={toggleInternalArea} />
         {settingButtons}
       </ActionGroup>}
       <ActionGroup caption="参照">
@@ -643,5 +650,5 @@ export function useEntryTools(o: EntryToolsOptions) {
     </>
   );
 
-  return { topBar, banner, actionBar, calendarButton, submitButton, templateButton, fundSwitch, internalSwitch, dialogs, editable, reason, viewOnly, askRegister, openEdit: (v: Voucher) => setEdit(v), openDelete: (rows: Voucher[]) => { setBulk(false); setDel(rows); } };
+  return { internalShown, topBar, banner, actionBar, calendarButton, submitButton, templateButton, fundSwitch, internalSwitch, dialogs, editable, reason, viewOnly, askRegister, openEdit: (v: Voucher) => setEdit(v), openDelete: (rows: Voucher[]) => { setBulk(false); setDel(rows); } };
 }

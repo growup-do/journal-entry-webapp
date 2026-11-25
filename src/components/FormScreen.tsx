@@ -415,7 +415,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
           <PaperStyles />
           <style>{FE_CSS}</style>
           {/* 形式の切替（現在の形式を明示）。入力の変更・キーボード操作一覧は、下の入力補助に置く（確認メモ #156） */}
-          <div style={{ borderRadius: '15px 15px 0 0', overflow: 'hidden' }}>{tools.topBar}</div>
+          {tools.topBar && <div style={{ borderRadius: '15px 15px 0 0', overflow: 'hidden' }}>{tools.topBar}</div>}
           {tools.banner}
 
           <div style={{ padding: '18px 22px 8px', background: '#eef1ef', borderBottom: '1px solid #e2e8ee' }}>
@@ -499,13 +499,13 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
 
               {/* 内部取引相手区分の枠と、伝票の印（Seq No・チェック・証憑・付箋）の枠を横並びに置く（別々の枠。10/16 鈴木さん指示） */}
               <div style={{ display: 'flex', alignItems: 'stretch', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-              <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} data-side={side || 'なし'} style={{ flex: '1 1 480px', display: 'grid', gridTemplateColumns: 'auto minmax(0,320px)', gap: 16, alignItems: 'center', padding: '10px 14px', border: '1px solid ' + (partner ? '#e0d6f3' : '#e2e8ee'), background: partner ? '#faf7ff' : '#f1f3f5', borderRadius: 12, transition: 'background .15s, border-color .15s' }}>
+              {tools.internalShown && <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} data-side={side || 'なし'} style={{ flex: '1 1 480px', display: 'grid', gridTemplateColumns: 'auto minmax(0,320px)', gap: 16, alignItems: 'center', padding: '10px 14px', border: '1px solid ' + (partner ? '#e0d6f3' : '#e2e8ee'), background: partner ? '#faf7ff' : '#f1f3f5', borderRadius: 12, transition: 'background .15s, border-color .15s' }}>
                 <div style={{ alignSelf: 'center' }}>{tools.internalSwitch}</div>
                 <div style={{ opacity: partner ? 1 : 0.5, transition: 'opacity .15s' }}>
                   <FieldLabel color={partner ? '#6b3fb5' : '#8895a3'}>内部取引相手区分{partner ? `（${side}が内部取引・必須）` : ''}</FieldLabel>
                   <ComboField id="fe-aite" title={!partner ? '左の「内部取引」で借方か貸方を選ぶと入力できます（内部取引科目を選ぶと、その側に自動で決まります）' : undefined} kind="service" value={aite} onChange={setAite} onCommit={() => focusId('fe-tek-0')} disabled={!editable || !partner} invalid={partner ? fieldState(issues, 'aite') : undefined} message={partner ? fieldMessage(issues, 'aite') : undefined} placeholder="コード・区分名・フリガナ" />
                 </div>
-              </div>
+              </div>}
               <VoucherMarks variant="panel" seq={nextSeq} flags={flags} onChange={setFlags} disabled={!editable} viewOnly={tools.viewOnly} showShohyo={inp.shohyo} />
               </div>
 

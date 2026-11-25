@@ -488,7 +488,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                   </div>
                 )}
                 {/* 内部取引相手区分（振替伝票形式：伝票に1つ。最初から表示し、スイッチがオンのときだけ入力できる）。振替単一形式は行ごとに持つので、ここには出さない */}
-                {!single && (
+                {!single && tools.internalShown && (
                   <div className="ef-field" data-internal-area data-on={internalOn ? '1' : '0'} style={{ display: 'flex', width: 430 }}>
                     <PaperBox label={<span style={{ color: internalOn ? PURPLE : '#8895a3' }}>内部取引相手区分</span>} grow muted={!internalOn}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', minWidth: 0 }}>

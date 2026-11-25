@@ -91,6 +91,8 @@ function BUDGET(kind: BudgetKind): DetailSection[] {
       chk('shade', '費目行を網掛け、太字にする', true), chk('bold', '費目下を太線にする', true), chk('stamp', '捺印欄を印刷する', true),
       kind === '補正' ? chk('area', '区分名を印刷する', true) : chk('mergeName', '合算の名称を印刷する', true),
       chk('foot', '脚注、注記を印刷する'), chk('autofont', '科目名のフォントサイズを自動調整する', true), chk('tfont', '摘要のフォントサイズを自動調整する'),
+      // 所属区分の摘要を使用する：ON のとき使う区分を選ぶ。［摘要］は押せなくなる（確認メモ #348・#349）
+      chk('ownRemark', '所属区分の摘要を使用する'), { ...sel('ownDiv', '使用する区分', ['（選択してください）']), when: { k: 'ownRemark', v: true } },
       chk('page', 'ページ番号を印刷する'), chk('date', '印刷時の日付を印刷する'), chk('hline', '項目・科目毎に横線を印刷する'), chk('head2', '２ページ目以降も項目名を印刷する'),
       txt('pageStart', 'ページ番号の開始番号', '1', '1', 80),
     ] },
@@ -125,12 +127,15 @@ function CLOSING(kind: ClosingKind, o: { depth?: string; serial?: boolean } = {}
     POSITION('-8', '5'),
   ];
 }
+/** 予算内訳表：内部取引消去対応のときだけ押せる項目 */
+const IN = (it: DetailItem): DetailItem => ({ ...it, when: { k: 'innerMode', v: '内部取引消去対応' } });
 /** 資金収支予算内訳表（試算表系の項目＋内訳表の設定） */
 const BUDGET_INNER: DetailSection[] = (() => {
   const t = TRIAL({ head2: true, depth: '小区分までの印刷', stamp: false });
   return [t[0],
-    { title: '予算内訳表 内訳表の印刷区分設定方法', items: [rad('innerMode', '印刷区分設定方法', ['合算テーブル', '内部取引消去対応'])] },
-    { title: '内訳表', items: [chk('twoLine', '項目名を二行で印刷する'), chk('autoFontHead', '項目名のフォントサイズを自動調整する'), sel('perPage', '１ページの区分数', Array.from({ length: 20 }, (_, i) => String(i + 1)), '4'), chk('pickArea', '印刷区分を指定する')] },
+    { title: '予算内訳表 内訳表の印刷区分設定方法', items: [rad('innerMode', '印刷区分設定方法', ['合算テーブル', '内部取引消去対応'], '内部取引消去対応')] },
+    // 合算テーブルのときは押せない。印刷区分を指定する が ON で［印刷区分］（確認メモ #346）
+    { title: '内訳表', items: [IN(chk('twoLine', '項目名を二行で印刷する')), IN(chk('autoFontHead', '項目名のフォントサイズを自動調整する')), IN(sel('perPage', '１ページの区分数', Array.from({ length: 20 }, (_, i) => String(i + 1)), '5')), IN(chk('pickArea', '印刷区分を指定する'))] },
     ...t.slice(1)];
 })();
 
@@ -139,9 +144,9 @@ function LEDGER(kind: '総勘定元帳' | '資金元帳' | '取引先元帳'): D
   const gl = kind === '総勘定元帳';
   return [
     { title: '印刷項目', items: [
-      chk('balOnly', '残高のみも印刷する', kind !== '取引先元帳'),
-      // 残高のみも印刷する に付随（確認メモ #328）
-      ...(kind === '取引先元帳' ? [] : [{ ...chk('zeroBal', '残高 0 も印刷する'), when: { k: 'balOnly', v: true } }]),
+      // 残高のみも印刷する は 月計を印刷する のときだけ、残高 0 も印刷する は 残高のみも印刷する のときだけ（確認メモ #328。取引先元帳にもある）
+      { ...chk('balOnly', '残高のみも印刷する', kind !== '取引先元帳'), when: { k: 'month', v: true } },
+      { ...chk('zeroBal', '残高 0 も印刷する'), when: { k: 'balOnly', v: true } },
       chk('month', '月計を印刷する', true), chk('total', '合計を印刷する', gl), chk('totalYear', '合計の集計は年間でする', true),
       ...(gl ? [] : [chk('budgetRest', '合計印刷時に予算残を印刷する', true)]),
       chk('monthBreak', '月次で改頁する', kind === '取引先元帳'), chk('monthOnly', '月計だけ印刷する'),
@@ -152,13 +157,42 @@ function LEDGER(kind: '総勘定元帳' | '資金元帳' | '取引先元帳'): D
       chk('noElim', '内部取引消去を印字しない'), chk('tline', '摘要行も印刷する（伝票式・振替式）'),
       // 摘要行も印刷する に付随（確認メモ #324）
       { ...chk('noBlank', '空行は印刷しない'), when: { k: 'tline', v: true } },
-      chk('mergeName', '合算の名称を印刷する', true), chk('slipDiv', '伝票入力区分名を印刷する'),
+      // 入力区分で開いたときは「伝票入力区分名を印刷する」（現行は同じ欄の文言が変わる。確認メモ #329）
+      chk('mergeName', '合算の名称を印刷する', true),
       chk('page', 'ページ番号を印刷する', true), chk('tfont', '摘要のフォントサイズを自動調整する'), chk('date', '印刷時の日付を印刷する'), chk('match', '貸借の金額が一致する行を消し込む'), chk('stamp', '捺印欄を印刷する（白紙印刷時）'),
     ] },
     { title: '印刷科目', items: [rad('acct', '印刷科目', ['印刷用', '表示用'], '表示用')] },
     ...(gl ? [{ title: '印刷科目設定', items: [rad('special', '印刷科目設定', ['特殊摘要の項目のみ印刷する', '特殊摘要の科目のみ印刷する', '特殊摘要の科目項目両方印刷する'], '特殊摘要の科目項目両方印刷する')] }] : []),
     { title: 'カラー印刷時の基調色', items: [rad('color', '基調色', gl ? ['緑', '青', '動作環境の色指定'] : ['茶', '青', '動作環境の色指定'])] },
     POSITION('0', gl ? '2' : '0'),
+  ];
+}
+
+/** 仕訳伝票（伝票式）・振替伝票（振替式）の詳細設定（現行「振替式印刷 - 詳細設定」が基準。Windows の現行画面で確認）
+ *  捺印欄は項目ではなく［捺印欄］ボタン（常に押せる）。伝票式は 5 欄、振替式は 4 欄（確認メモ #322） */
+function VOUCHER(kind: '伝票式' | '振替式'): DetailSection[] {
+  const slip = kind === '伝票式';
+  return [
+    SLIP_NO,
+    { title: '科目欄', items: [
+      rad('acctCol', '科目欄', ['科目名を印刷する', '入力コード・科目名を印刷する', '科目名・資金科目名を印刷する'], '入力コード・科目名を印刷する'),
+      // 伝票式：科目名・資金科目名を印刷する のときだけ選べる（確認メモ #316）
+      ...(slip ? [{ ...chk('fundSpecial', '特摘行の資金科目名も印刷する'), when: { k: 'acctCol', v: '科目名・資金科目名を印刷する' } }] : []),
+    ] },
+    { title: '印刷項目', items: [
+      // 伝票式は 特摘行の資金科目名も印刷する が ON のとき、振替式は 科目名・資金科目名を印刷する のとき押せない（確認メモ #317）
+      slip ? { ...chk('vendor', '取引先名を印刷する'), when: { k: 'fundSpecial', v: true, not: true } } : { ...chk('vendor', '取引先名を印刷する'), when: { k: 'acctCol', v: '科目名・資金科目名を印刷する', not: true } },
+      // A4白紙と A5白紙はどちらか一方だけ（確認メモ #319・#320）。上下連続は A4白紙のときだけ
+      { ...chk('a4', 'A4白紙に印刷する', true), when: { k: 'a5', v: true, not: true } }, { ...chk('a4cont', 'A4白紙印刷時に上下連続印刷する', true), when: { k: 'a4', v: true } },
+      { ...chk('a5', 'A5白紙に印刷する'), when: { k: 'a4', v: true, not: true } }, chk('drcrHead', '借方・貸方のヘッダーを印刷する'),
+      // 伝票式だけの項目（確認メモ #318）
+      ...(slip ? [chk('copy', '複写の伝票を印刷する', true), chk('evid', '証憑の有無を印刷する', true), chk('spare1', '入力予備１を印刷する'), chk('spare2', '入力予備２を印刷する')] : []),
+      chk('tfont', '摘要のフォントサイズを自動調整する'), chk('era', '元号を印字する（標準伝票用紙のみ）'), sel('paper', '伝票用紙', ['標準', '日本保育協会'])] },
+    { title: '印刷順序', items: [rad('order', '印刷順序', ['入力順', '日付順'], '日付順')] },
+    { title: '印刷科目', items: [rad('acct', '印刷科目', ['印刷用', '表示用'], '表示用')] },
+    { title: '伝票種別', items: [chk('normal', '通常伝票', true), chk('opening', '移行伝票', true), chk('single', '単一式伝票を含める')] },
+    { title: 'カラー印刷時の基調色', items: [rad('color', '基調色', ['緑', '動作環境の色指定'])] },
+    POSITION('0', '0'),
   ];
 }
 
@@ -176,26 +210,8 @@ const D: Record<string, DetailSection[]> = {
     { title: '内部取引', items: [chk('internalOnly', '内部取引伝票のみ')] },
     POSITION('0', '0'),
   ],
-  voucher: [
-    SLIP_NO,
-    { title: '科目欄', items: [
-      rad('acctCol', '科目欄', ['科目名を印刷する', '入力コード・科目名を印刷する', '科目名・資金科目名を印刷する'], '入力コード・科目名を印刷する'),
-      // 科目名・資金科目名を印刷する のときだけ選べる（確認メモ #316）
-      { ...chk('fundSpecial', '特摘行の資金科目名も印刷する'), when: { k: 'acctCol', v: '科目名・資金科目名を印刷する' } },
-    ] },
-    { title: '印刷項目', items: [
-      // 特摘行の資金科目名も印刷する が ON のときは押せない（確認メモ #317）。A4白紙と A5白紙は片方だけ（確認メモ #319・#320）
-      { ...chk('vendor', '取引先名を印刷する'), when: { k: 'fundSpecial', v: true, not: true } },
-      { ...chk('a4', 'A4白紙に印刷する', true), when: { k: 'a5', v: true, not: true } }, { ...chk('a4cont', 'A4白紙印刷時に上下連続印刷する', true), when: { k: 'a4', v: true } },
-      { ...chk('a5', 'A5白紙に印刷する'), when: { k: 'a4', v: true, not: true } }, chk('drcrHead', '借方・貸方のヘッダーを印刷する'),
-      // 確認メモ #318
-      chk('copy', '複写の伝票を印刷する'), chk('evid', '証憑の有無を印刷する'), chk('stamp', '捺印欄を印刷する'), chk('spare1', '入力予備１を印刷する'), chk('spare2', '入力予備２を印刷する'), chk('tfont', '摘要のフォントサイズを自動調整する'), chk('era', '元号を印字する（標準伝票用紙のみ）'), sel('paper', '伝票用紙', ['標準', '日本保育協会'])] },
-    { title: '印刷順序', items: [rad('order', '印刷順序', ['入力順', '日付順'], '日付順')] },
-    { title: '印刷科目', items: [rad('acct', '印刷科目', ['印刷用', '表示用'], '表示用')] },
-    { title: '伝票種別', items: [chk('normal', '通常伝票', true), chk('opening', '移行伝票', true), chk('single', '単一式伝票を含める')] },
-    { title: 'カラー印刷時の基調色', items: [rad('color', '基調色', ['緑', '動作環境の色指定'])] },
-    POSITION('0', '0'),
-  ],
+  voucher: VOUCHER('伝票式'),
+  transfer: VOUCHER('振替式'),
   ledger: LEDGER('総勘定元帳'),
   fundLedger: LEDGER('資金元帳'),
   vendorLedger: LEDGER('取引先元帳'),
@@ -357,9 +373,9 @@ const FORM_NOTE: Record<string, string> = { 'c1-1': '第一号第一様式', 'c1
 
 export const REPORTS: ReportDef[] = [
   ...group('仕訳日記帳', '仕訳日記帳', [
-    { id: 'j1', name: '仕訳日記帳', detail: D.journal },
-    { id: 'j2', name: '仕訳伝票（伝票式）', detail: D.voucher },
-    { id: 'j3', name: '振替伝票（振替式）', detail: D.voucher },
+    { id: 'j1', name: '仕訳日記帳', detail: D.journal, noZero: true },
+    { id: 'j2', name: '仕訳伝票（伝票式）', detail: D.voucher, noZero: true },
+    { id: 'j3', name: '振替伝票（振替式）', detail: D.transfer, noZero: true },
   ]),
   ...group('元帳', '元帳', [
     { id: 'l1', name: '総勘定元帳', scope: true, detail: D.ledger },
