@@ -42,7 +42,7 @@ export type CashbookKind = 'petty' | 'bank';
 /** 会計月の行の右に置く操作（AI自動仕訳・銀行CSV）。枠のない「アイコン＋小さな文字」のボタン */
 function MonthRowAction({ icon, label, onClick, danger, badge, ...rest }: { icon: IconName; label: string; onClick: () => void; danger?: boolean; /** 右上に重ねて出す件数（承認待ちなど）。0 は出さない */ badge?: number; [k: `data-${string}`]: unknown }) {
   return (
-    <button type="button" className="month-row-act" data-danger={danger || undefined} onClick={onClick} {...rest} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 5px', border: 'none', borderRadius: 6, background: 'transparent', color: danger ? '#c0392b' : '#48565f', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+    <button type="button" className="month-row-act" data-danger={danger || undefined} onClick={onClick} {...rest} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 5px', border: 'none', borderRadius: 6, background: 'transparent', color: danger ? '#c0392b' : '#1f7a52', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
       <Icon name={icon} size={15} />
       {label}
       {!!badge && <span aria-label={`承認待ち ${badge} 件`} style={{ position: 'absolute', top: -8, right: -6, minWidth: 18, height: 18, padding: '0 5px', boxSizing: 'border-box', borderRadius: 9, background: '#c0392b', color: '#fff', fontSize: 12, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{badge}</span>}

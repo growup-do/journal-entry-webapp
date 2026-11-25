@@ -241,8 +241,11 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
       if (Date.now() - at > 20000) sessionStorage.removeItem(RESTORE_KEY);
       return;
     }
-    sessionStorage.removeItem(RESTORE_KEY);
-    const t = setTimeout(() => void restore(m, !!hard), hard ? 500 : 200);
+    // 待っている間に一覧が読み直されると、この処理はやり直しになる。予約は実際に開くときに消す（先に消すと開かずに終わる。確認メモ #308）
+    const t = setTimeout(() => {
+      try { sessionStorage.removeItem(RESTORE_KEY); } catch { /* ignore */ }
+      void restore(m, !!hard);
+    }, hard ? 500 : 200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, screenKey, numbered.length]);

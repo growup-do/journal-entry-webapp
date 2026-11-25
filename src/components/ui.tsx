@@ -210,7 +210,7 @@ export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
 /** マニュアル（説明）を開くボタン。見出しの右側に置く、枠のない小さな「アイコン＋文字」（確認メモ #297。全画面のマニュアルへのリンクで共通） */
 export function ManualButton({ label = 'マニュアル', onClick, title, style }: { label?: string; onClick: () => void; title?: string; style?: CSSProperties }) {
   return (
-    <button type="button" className="manual-link" data-manual-link={label} onClick={onClick} title={title ?? `${label}を開きます`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 7px', border: 'none', borderRadius: 6, background: 'transparent', color: '#48565f', fontSize: 12, fontWeight: 700, fontFamily: "'Noto Sans JP', sans-serif", cursor: 'pointer', whiteSpace: 'nowrap', verticalAlign: 'middle', ...style }}>
+    <button type="button" className="manual-link" data-manual-link={label} onClick={onClick} title={title ?? `${label}を開きます`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 7px', border: 'none', borderRadius: 6, background: 'transparent', color: '#1f7a52', fontSize: 12, fontWeight: 700, fontFamily: "'Noto Sans JP', sans-serif", cursor: 'pointer', whiteSpace: 'nowrap', verticalAlign: 'middle', ...style }}>
       <Icon name="book" size={14} />{label}
     </button>
   );

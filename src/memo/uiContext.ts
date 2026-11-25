@@ -309,7 +309,9 @@ async function waitFor<T>(fn: () => T | null, ms: number): Promise<T | null> {
 export async function restoreCtx(saved: UiCtx | undefined, path: string[] | undefined): Promise<boolean> {
   if (ctxMatches(saved, readCtx())) return true;
   const steps = path ?? [];
-  const ready = () => steps.length > 0 && !!findByKey(steps[0]);
+  // 操作の記録がないメモは、いまの画面を崩さない（モーダルを閉じると、仕訳数の問合せなどモーダルそのものが画面のメモを開けなくなる。確認メモ #308）
+  if (steps.length === 0) return false;
+  const ready = () => !!findByKey(steps[0]);
   for (let guard = 0; guard < 6 && !ready() && document.querySelector('[data-modal-root]'); guard++) {
     const roots = document.querySelectorAll('[data-modal-root]');
     const close = roots[roots.length - 1].querySelector<HTMLElement>('[data-modal-close]');

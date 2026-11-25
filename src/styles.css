@@ -324,7 +324,7 @@ tr.row-hover:hover > td:first-child { box-shadow: inset 3px 0 0 rgba(44, 95, 158
 [data-period-row] [data-range-hint] { display: none !important; }
 
 /* 出納帳：会計月の行の操作（枠のないアイコン＋文字のボタン） */
-.month-row-act:hover { background: #eef3f0 !important; color: #1f7a52 !important; }
+.month-row-act:hover { background: #e6f2eb !important; color: #17603f !important; }
 .month-row-act[data-danger]:hover { background: #fbecea !important; color: #a93226 !important; }
 .month-row-act:focus-visible { outline: 2px solid #1f7a52; outline-offset: 1px; }
 /* 出納帳：月の範囲選択の案内と「4月〜○月の累計」は会計月の下の行に出すので、月タブの横には出さない */
@@ -339,8 +339,11 @@ tr.row-hover:hover > td:first-child { box-shadow: inset 3px 0 0 rgba(44, 95, 158
 
 /* マニュアルのボタン（見出しの右の小さなアイコン＋文字。確認メモ #297） */
 .manual-link { transition: background .15s, color .15s; }
-.manual-link:hover { background: #eef3f0 !important; color: #1f7a52 !important; }
+.manual-link:hover { background: #e6f2eb !important; color: #17603f !important; }
 .manual-link:focus-visible { outline: 2px solid #1f7a52; outline-offset: 1px; }
 /* 一覧の並べ替えができる見出し（確認メモ #296） */
 .sort-th { cursor: pointer; user-select: none; }
 .sort-th:hover { background: #e9f1ec !important; color: #1f7a52 !important; }
+
+/* 固定資産台帳の一覧（確認メモ #305）。列が多いので左右の余白を詰め、詳細を出しても横スクロールしないようにする */
+.dense-table th, .dense-table td { padding-left: 8px !important; padding-right: 8px !important; }
