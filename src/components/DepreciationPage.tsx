@@ -39,7 +39,21 @@ const stamp = () => { const d = new Date(); return `${d.getFullYear()}/${pad2(d.
 const waToday = () => { const d = new Date(); return `令和${d.getFullYear() - 2018}年 ${d.getMonth() + 1}月${String(d.getDate()).padStart(2, ' ')}日`; };
 const numOf = (s: string) => parseInt(String(s || '').replace(/[^0-9]/g, ''), 10) || 0;
 
-interface Asset { code: string; name: string; account: string; acquired: string; life: number; cost: number; /** 移管取込＝移管取込で登録した資産、移管年度＝移管(元)として移管した資産（確認メモ #286） */ status: '償却中' | '償却終了' | '対象外' | '移管取込' | '移管年度'; opening: number; subsidy: number; method: string; qty: number; place?: string; purpose?: string; transferIn?: boolean; depStart?: string; manualRows?: Record<YrTab, MRow[]>; /** 全項目手入力で登録した資産（確認メモ #281） */ manual?: boolean; /** 資本的支出として登録した資産の、元の固定資産の資産コード（確認メモ #279） */ capexOf?: string; capexKind?: CapexKind; /** 除却・売却・移管(元)の処理（一覧の状態に出す。確認メモ #306） */ disposal?: { proc: string; date: string } }
+/** 全項目手入力で登録した固定資産のアイコン（一覧の名称の前に付ける。確認メモ #304） */
+function ManualEntryIcon({ size = 18, bare }: { size?: number; bare?: boolean }) {
+  const svg = (
+    <svg width={bare ? size : size - 6} height={bare ? size : size - 6} viewBox="0 0 16 16" fill="none" stroke="#8a6d00" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M10.6 2.4l3 3L6 13H3v-3z" />
+      <path d="M9 4l3 3" />
+    </svg>
+  );
+  if (bare) return svg;
+  return (
+    <span data-manual-icon role="img" aria-label="全項目手入力" title="全項目手入力で登録した固定資産です（自動計算をしません）" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: size, height: size, borderRadius: 5, background: '#fff1b8', border: '1px solid #ecd27a', marginRight: 5, verticalAlign: '-3px', flex: 'none' }}>{svg}</span>
+  );
+}
+
+interface Asset { code: string; name: string; account: string; acquired: string; life: number; cost: number; /** 移管取込＝移管取込で登録した資産、移管年度＝移管(元)として移管した資産（確認メモ #286） */ status: '償却中' | '償却終了' | '対象外' | '移管取込' | '移管年度'; opening: number; subsidy: number; method: string; qty: number; place?: string; purpose?: string; transferIn?: boolean; depStart?: string; manualRows?: Record<YrTab, MRow[]>; /** 全項目手入力で登録した資産（確認メモ #281） */ manual?: boolean; /** 資本的支出として登録した資産の、元の固定資産の資産コード（確認メモ #279） */ capexOf?: string; capexKind?: CapexKind; /** 除却・売却・移管(元)の処理（一覧の状態に出す。確認メモ #306） */ disposal?: { proc: string; date: string }; /** 全項目手入力で入力した償却率（確認メモ #302） */ rate?: string }
 /** 資本的支出の方法（確認メモ #279。現行システムの「資本的支出の方法選択画面」と同じ 2 通り） */
 type CapexKind = '新たな固定資産' | '特例合算';
 const CAPEX_LABEL: Record<CapexKind, string> = { 新たな固定資産: '新たな固定資産として登録', 特例合算: '特例合算' };
@@ -888,7 +902,7 @@ export function DepreciationPage({ variant, accent }: Props) {
 
   const list = nestCapex(sortRows(assets.filter((a) => (statusFilter === 'すべて' || shownStatus(a) === statusFilter) && (!q || a.name.includes(q) || a.code.includes(q) || a.account.includes(q))), assetSort, (a, k) => {
     const dep = annualOf(a);
-    return k === 'status' ? shownStatus(a) : k === 'input' ? (a.manual ? 1 : 0) : k === 'name' ? a.name : k === 'account' ? a.account : k === 'acquired' ? warekiKey(a.acquired) : k === 'life' ? a.life : k === 'cost' ? a.cost : k === 'opening' ? a.opening : k === 'dep' ? dep : k === 'closing' ? a.opening - dep : a.code;
+    return k === 'status' ? shownStatus(a) : k === 'name' ? a.name : k === 'account' ? a.account : k === 'acquired' ? warekiKey(a.acquired) : k === 'life' ? a.life : k === 'cost' ? a.cost : k === 'opening' ? a.opening : k === 'dep' ? dep : k === 'closing' ? a.opening - dep : a.code;
   }));
   const equipList = sortRows(equips.filter((e) => !q || e.name.includes(q)), equipSort, (e, k) => (k === 'name' ? e.name : k === 'account' ? e.account ?? '' : k === 'acquired' ? warekiKey(e.acquired) : k === 'cost' ? e.cost : e.code));
   const kpi = {
@@ -1053,9 +1067,9 @@ export function DepreciationPage({ variant, accent }: Props) {
               <SelectionBar count={sel.size} unit="件" hint="行頭のチェックで追加・解除" style={{ padding: '8px 22px', borderTop: '1px solid #f3e3a0' }} onClear={() => setSel(new Set())} actions={<><button type="button" onClick={() => { setTab('disposal'); }} style={uiBtn('#5b6773', false, true)}>除却・売却・移管へ</button><button type="button" onClick={deleteSel} style={uiBtn('#c0392b', true, true)}>削除</button></>} />
               <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 470px)' }}>
                 <table className="dense-table" data-asset-table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead><tr><th style={{ ...TH, width: 36 }}><input type="checkbox" checked={list.length > 0 && list.every((a) => sel.has(a.code))} onChange={(e) => setSel(e.target.checked ? new Set(list.map((a) => a.code)) : new Set())} /></th>{([['状態', 'status'], ['コード', 'code'], ['入力方式', 'input'], ['固定資産名称', 'name'], ['科目', 'account'], ['取得年月日', 'acquired']] as const).map(([l, k]) => <SortTh key={k} label={l} k={k} sort={assetSort} onSort={setAssetSort} />)}{([['耐用', 'life'], ['取得価額', 'cost'], ['期首帳簿価額', 'opening'], ['当期償却額', 'dep'], ['期末帳簿価額', 'closing']] as const).map(([l, k]) => <SortTh key={k} label={l} k={k} sort={assetSort} onSort={setAssetSort} right />)}</tr></thead>
+                  <thead><tr><th style={{ ...TH, width: 36 }}><input type="checkbox" checked={list.length > 0 && list.every((a) => sel.has(a.code))} onChange={(e) => setSel(e.target.checked ? new Set(list.map((a) => a.code)) : new Set())} /></th>{([['状態', 'status'], ['コード', 'code'], ['固定資産名称', 'name'], ['科目', 'account'], ['取得年月日', 'acquired']] as const).map(([l, k]) => <SortTh key={k} label={l} k={k} sort={assetSort} onSort={setAssetSort} />)}{([['耐用', 'life'], ['取得価額', 'cost'], ['期首帳簿価額', 'opening'], ['当期償却額', 'dep'], ['期末帳簿価額', 'closing']] as const).map(([l, k]) => <SortTh key={k} label={l} k={k} sort={assetSort} onSort={setAssetSort} right />)}</tr></thead>
                   <tbody>
-                    {list.length === 0 && <tr><td colSpan={12} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>該当する固定資産がありません。</td></tr>}
+                    {list.length === 0 && <tr><td colSpan={11} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>該当する固定資産がありません。</td></tr>}
                     {list.map((a) => {
                       const dep = annualOf(a);
                       const on = detail?.code === a.code;
@@ -1064,17 +1078,16 @@ export function DepreciationPage({ variant, accent }: Props) {
                           <td style={TD} onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={sel.has(a.code)} onChange={() => toggleSel(a.code)} /></td>
                           <td style={TD}><span data-asset-status={shownStatus(a)} title={statusTitle(a)} style={statusStyle(shownStatus(a))}>{shownStatus(a)}</span></td>
                           <td style={{ ...TD, fontVariantNumeric: 'tabular-nums', color: '#7a8794' }}>{a.code}</td>
-                          <td style={TD}>{a.manual ? <span data-input-kind="manual" title="全項目手入力で登録した固定資産です（自動計算をしません）" style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#fff1b8', color: '#8a6d00', whiteSpace: 'nowrap' }}>全項目手入力</span> : <span data-input-kind="normal" style={{ fontSize: 12, color: '#9aa5b1' }}>通常</span>}</td>
                           <td style={{ ...TD, fontWeight: 600 }}>
                             {(() => {
                               const parent = a.capexOf ? list.find((x) => x.code === a.capexOf) : undefined;
                               return parent ? (
                                 <span data-capex-child={a.capexOf} title={`${a.capexOf} ${parent.name} の資本的支出（${a.capexKind ? CAPEX_LABEL[a.capexKind] : ''}）`} style={{ display: 'inline-flex', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 4, rowGap: 2, paddingLeft: 14 }}>
-                                  <span aria-hidden="true" style={{ color: '#b4bfca', fontWeight: 400 }}>└</span>{a.name}
-                                  <span style={{ fontSize: 12, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: '#fff1b8', color: '#8a6d00', whiteSpace: 'nowrap' }}>{a.capexOf} の資本的支出</span>
+                                  <span aria-hidden="true" style={{ color: '#b4bfca', fontWeight: 400 }}>└</span>{a.manual && <ManualEntryIcon />}{a.name}
+                                  <span style={{ fontSize: 12, fontWeight: 600, padding: '1px 6px', borderRadius: 6, background: '#eef1f4', color: '#6b7785', whiteSpace: 'nowrap' }}>{a.capexOf} の資本的支出</span>
                                 </span>
                               ) : (
-                                <>{a.name}{a.capexOf && <span title={`元の固定資産：${a.capexOf}（${a.capexKind ? CAPEX_LABEL[a.capexKind] : ''}）`} style={{ marginLeft: 6, fontSize: 12, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: '#fff1b8', color: '#8a6d00', whiteSpace: 'nowrap' }}>{a.capexOf} の資本的支出</span>}</>
+                                <>{a.manual && <ManualEntryIcon />}{a.name}{a.capexOf && <span title={`元の固定資産：${a.capexOf}（${a.capexKind ? CAPEX_LABEL[a.capexKind] : ''}）`} style={{ marginLeft: 6, fontSize: 12, fontWeight: 600, padding: '1px 6px', borderRadius: 6, background: '#eef1f4', color: '#6b7785', whiteSpace: 'nowrap' }}>{a.capexOf} の資本的支出</span>}</>
                               );
                             })()}
                             {a.transferIn && <span style={{ marginLeft: 6, fontSize: 12, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: '#e8f0fb', color: '#2c5f9e' }}>移管(先)</span>}
@@ -1217,7 +1230,7 @@ function AssetDetail({ accent, asset, imageSrc, onClose, onEdit, onPrint, onDele
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
         {imageSrc && <img src={imageSrc} alt="" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8ee', flex: 'none' }} />}
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 12, color: '#7a8794', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>{asset.code}<span title={statusTitle(asset)} style={statusStyle(shownStatus(asset))}>{shownStatus(asset)}</span>{asset.manual && <span data-manual-badge title="全項目手入力で登録した固定資産です。「変更」も全項目手入力で開きます" style={{ fontSize: 12, fontWeight: 700, padding: '1px 7px', borderRadius: 6, background: '#fff1b8', color: '#8a6d00' }}>全項目手入力</span>}{asset.capexOf && <span style={{ fontSize: 12, fontWeight: 700, padding: '1px 7px', borderRadius: 6, background: '#fff1b8', color: '#8a6d00' }}>資本的支出</span>}</div>
+          <div style={{ fontSize: 12, color: '#7a8794', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>{asset.code}<span title={statusTitle(asset)} style={statusStyle(shownStatus(asset))}>{shownStatus(asset)}</span>{asset.manual && <span data-manual-badge title="全項目手入力で登録した固定資産です。「変更」も全項目手入力で開きます" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, padding: '1px 7px 1px 3px', borderRadius: 6, background: '#fff1b8', color: '#8a6d00' }}><ManualEntryIcon size={15} bare />全項目手入力</span>}{asset.capexOf && <span style={{ fontSize: 12, fontWeight: 700, padding: '1px 7px', borderRadius: 6, background: '#fff1b8', color: '#8a6d00' }}>資本的支出</span>}</div>
           <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16, marginTop: 4 }}>{asset.name}</div>
           <div style={{ fontSize: 14, color: '#48565f' }}>{asset.account}</div>
         </div>
@@ -1232,7 +1245,7 @@ function AssetDetail({ accent, asset, imageSrc, onClose, onEdit, onPrint, onDele
         {row('取得年月日', asset.acquired)}
         {asset.depStart && row('償却開始年月日', asset.depStart)}
         {asset.capexOf && row('資本的支出', `${asset.capexKind ? CAPEX_LABEL[asset.capexKind] : ''}（元の固定資産 ${asset.capexOf}）`)}
-        {row('耐用年数 ／ 償却方法', `${asset.life || '—'}年 ／ ${asset.method}`)}
+        {row('耐用年数 ／ 償却方法', `${asset.life || '—'}年 ／ ${asset.method}${asset.manual && asset.rate ? `（償却率 ${asset.rate}）` : ''}`)}
         {row('取得価額', yen(asset.cost))}
         {row('うち国庫補助金等', yen(asset.subsidy))}
         {row('期首帳簿価額', yen(asset.opening))}
@@ -1263,6 +1276,8 @@ function AssetForm({ accent, asset, manual, dispCalc, capexFor, onAddCapex, onRe
     acquired: asset?.acquired ?? (capexFor ? waToday() : '令和8年 4月 1日'),
     life: asset ? String(asset.life) : capexFor ? String(capexFor.parent.life) : '',
     method: asset?.method ?? capexFor?.parent.method ?? '定額法',
+    /** 全項目手入力の償却率（自由入力。確認メモ #302） */
+    rate: asset?.rate ?? '',
     qty: asset ? String(asset.qty) : '1',
     unit: asset ? String(Math.floor(asset.cost / Math.max(1, asset.qty))) : '',
     memo: '1',
@@ -1428,7 +1443,7 @@ function AssetForm({ accent, asset, manual, dispCalc, capexFor, onAddCapex, onRe
   const box: CSSProperties = capexFor ? { border: '1px solid #e3c065', background: '#fff6d6', borderRadius: 10, padding: 10 } : { border: '1px solid #f0c8cc', background: '#fff5f6', borderRadius: 10, padding: 10 };
   const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '7px 12px', borderRadius: 7, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
   const tag = (t: string) => <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 6, background: '#e8f0fb', color: '#2c5f9e', whiteSpace: 'nowrap' }}>{t}</span>;
-  const current = (): Asset => ({ code: f.code, name: f.name.trim() || '（未入力）', account: f.account, acquired: f.acquired, life, cost: totalCost, status: f.disposal === '移管(元)' || asset?.status === '移管年度' ? '移管年度' : asset?.status === '移管取込' ? '移管取込' : f.method === '減価償却対象外' || !life ? '対象外' : E <= num(f.memo) ? '償却終了' : '償却中', opening: E, subsidy: sub, method: f.method, qty, place: f.place, purpose: f.purpose, transferIn: asset?.transferIn || f.transferNew, depStart: f.useStart && f.startDate.trim() ? f.startDate.trim() : undefined, manualRows: manual ? mRows : asset?.manualRows, manual: manual || asset?.manual || undefined, capexOf: capexFor?.parent.code ?? asset?.capexOf, capexKind: capexFor?.kind ?? asset?.capexKind, disposal: f.disposal !== '設定なし' ? { proc: f.disposal, date: f.disposalDate } : undefined });
+  const current = (): Asset => ({ code: f.code, name: f.name.trim() || '（未入力）', account: f.account, acquired: f.acquired, life, cost: totalCost, status: f.disposal === '移管(元)' || asset?.status === '移管年度' ? '移管年度' : asset?.status === '移管取込' ? '移管取込' : f.method === '減価償却対象外' || !life ? '対象外' : E <= num(f.memo) ? '償却終了' : '償却中', opening: E, subsidy: sub, method: f.method, qty, place: f.place, purpose: f.purpose, transferIn: asset?.transferIn || f.transferNew, depStart: f.useStart && f.startDate.trim() ? f.startDate.trim() : undefined, manualRows: manual ? mRows : asset?.manualRows, manual: manual || asset?.manual || undefined, capexOf: capexFor?.parent.code ?? asset?.capexOf, capexKind: capexFor?.kind ?? asset?.capexKind, rate: manual ? f.rate.trim() || undefined : asset?.rate, disposal: f.disposal !== '設定なし' ? { proc: f.disposal, date: f.disposalDate } : undefined });
   const save = (next?: boolean) => {
     if (!f.name.trim()) return toast('資産名称を入力してください');
     if (!cost) return toast('取得価額（数量×単価）を入力してください');
@@ -1503,8 +1518,14 @@ function AssetForm({ accent, asset, manual, dispCalc, capexFor, onAddCapex, onRe
                 : <div style={{ ...input, background: '#f5f7f9', color: '#9aa5b1', whiteSpace: 'nowrap', overflow: 'hidden' }}>取得年月日と同じ</div>}
             </div>
             <div><span style={lbl}>耐用年数</span><div style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input className="field-input" value={f.life} onChange={(e) => set('life', e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" style={{ ...numIn, minWidth: 0, flex: 1 }} /><span style={{ fontSize: 14 }}>年</span><button type="button" className="btn-outline" onClick={() => setDlg('life')} style={{ ...btn(), padding: '5px 10px' }}>辞書</button></div></div>
+            {manual ? <>
+              {/* 全項目手入力：償却方法は自由入力、償却率は数値を自由入力（確認メモ #302） */}
+              <div><span style={lbl}>償却方法</span><input className="field-input" data-manual-method value={f.method} onChange={(e) => set('method', e.target.value)} placeholder="例：定額法" maxLength={20} style={input} /></div>
+              <div style={{ gridColumn: 'span 2' }}><span style={lbl}>償却率</span><input className="field-input" data-manual-rate value={f.rate} onChange={(e) => set('rate', e.target.value.replace(/[^0-9.]/g, ''))} placeholder="例：0.125" inputMode="decimal" style={{ ...input, textAlign: 'right' }} /></div>
+            </> : <>
             <div><span style={lbl}>償却方法</span><select value={f.method} onChange={(e) => set('method', e.target.value)} style={input}>{METHODS.map((o) => <option key={o}>{o}</option>)}</select></div>
             <div style={{ gridColumn: 'span 2' }}><span style={lbl}>償却率</span><div style={{ ...input, background: '#f5f7f9', textAlign: 'right', whiteSpace: 'nowrap', overflow: 'hidden' }}>{f.method} {life}年　<b>{rate}</b></div></div>
+            </>}
             <div style={{ gridColumn: 'span 2' }}><span style={lbl}>場所・物量等</span><input className="field-input" value={f.place} onChange={(e) => set('place', e.target.value)} style={input} /></div>
             <div style={{ gridColumn: 'span 2' }}><span style={lbl}>使用目的</span><input className="field-input" value={f.purpose} onChange={(e) => set('purpose', e.target.value)} style={input} /></div>
             <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 14, fontSize: 14, flexWrap: 'wrap' }}>

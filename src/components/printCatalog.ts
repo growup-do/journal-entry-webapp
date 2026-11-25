@@ -8,11 +8,13 @@
 import { divisionLabel, flattenDivisions, startKindOf, type DivisionNode, type PrintCommon, type Session } from '../store/session';
 
 /* ---------------- 詳細設定の項目 ---------------- */
+/** 別の項目がこの値のときだけ選べる（それ以外は灰色で押せない。現行どおり） */
+export interface DetailWhen { k: string; v: DetailValue; /** true＝その値のときは押せない */ not?: boolean }
 export type DetailItem =
-  | { k: string; t: 'check'; label: string; on?: boolean; note?: string }
-  | { k: string; t: 'radio'; label: string; options: string[]; def?: string; note?: string }
-  | { k: string; t: 'select'; label: string; options: string[]; def?: string; note?: string }
-  | { k: string; t: 'text'; label: string; def?: string; placeholder?: string; width?: number; note?: string };
+  | { k: string; t: 'check'; label: string; on?: boolean; note?: string; when?: DetailWhen }
+  | { k: string; t: 'radio'; label: string; options: string[]; def?: string; note?: string; when?: DetailWhen }
+  | { k: string; t: 'select'; label: string; options: string[]; def?: string; note?: string; when?: DetailWhen }
+  | { k: string; t: 'text'; label: string; def?: string; placeholder?: string; width?: number; note?: string; when?: DetailWhen };
 /** 詳細設定のまとまり（現行の画面の枠に相当） */
 export interface DetailSection { title: string; items: DetailItem[] }
 export type DetailValue = boolean | string;
@@ -47,6 +49,8 @@ const SLIP_NO: DetailSection = { title: '伝票番号', items: [
   rad('slipNo', '伝票番号', ['入力番号', '自動連番 番号指定', '自動連番 Seq-No', 'Seq指定']),
   txt('slipStart', '開始番号（自動連番 番号指定のとき）', '1', '1', 100),
   { ...txt('seqList', 'Seq指定（1,3,6 のようにカンマで区切るか、4-8 のように範囲を指定。全ての月で有効）', '', '例：1,3,6 または 4-8', 260) },
+  // Seq指定の番号を、入力番号と SeqNo. のどちらとして扱うか（Seq指定のときだけ選べる。確認メモ #311）
+  { ...rad('seqNoKind', '伝票番号は', ['入力番号', 'SeqNo.'], '入力番号'), when: { k: 'slipNo', v: 'Seq指定' } },
 ] };
 /** 印刷位置調整（上方向・右方向への移動量） */
 const POSITION = (up: string, right: string): DetailSection => ({ title: '印刷位置調整', items: [txt('offsetUp', '上方向への移動量（mm）', up, '0', 100), txt('offsetRight', '右方向への移動量（mm）', right, '0', 100)] });
@@ -135,15 +139,20 @@ function LEDGER(kind: '総勘定元帳' | '資金元帳' | '取引先元帳'): D
   const gl = kind === '総勘定元帳';
   return [
     { title: '印刷項目', items: [
-      chk('balOnly', '残高のみも印刷する', kind !== '取引先元帳'), chk('month', '月計を印刷する', true), chk('total', '合計を印刷する', gl), chk('totalYear', '合計の集計は年間でする', true),
+      chk('balOnly', '残高のみも印刷する', kind !== '取引先元帳'),
+      // 残高のみも印刷する に付随（確認メモ #328）
+      ...(kind === '取引先元帳' ? [] : [{ ...chk('zeroBal', '残高 0 も印刷する'), when: { k: 'balOnly', v: true } }]),
+      chk('month', '月計を印刷する', true), chk('total', '合計を印刷する', gl), chk('totalYear', '合計の集計は年間でする', true),
       ...(gl ? [] : [chk('budgetRest', '合計印刷時に予算残を印刷する', true)]),
       chk('monthBreak', '月次で改頁する', kind === '取引先元帳'), chk('monthOnly', '月計だけ印刷する'),
       ...(gl ? [chk('dispCode', '表示コードを印刷する')] : []),
       chk('dayBal', '残高を日計で印刷する', true), chk('seq', 'Seq番号を印刷する'),
       ...(gl ? [chk('cashTitle', '現金・預金の表題を変更する')] : []),
-      ...(kind === '取引先元帳' ? [] : [chk('zeroBal', '残高 0 も印刷する')]),
       chk('evid', '証憑の有無を印刷する', true), chk('spare1', '入力予備１を印刷する'), chk('spare2', '入力予備２を印刷する'), chk('a4', 'A4白紙に印刷する'),
-      chk('noElim', '内部取引消去を印字しない'), chk('tline', '摘要行も印刷する（伝票式・振替式）'), chk('mergeName', '合算の名称を印刷する', true),
+      chk('noElim', '内部取引消去を印字しない'), chk('tline', '摘要行も印刷する（伝票式・振替式）'),
+      // 摘要行も印刷する に付随（確認メモ #324）
+      { ...chk('noBlank', '空行は印刷しない'), when: { k: 'tline', v: true } },
+      chk('mergeName', '合算の名称を印刷する', true), chk('slipDiv', '伝票入力区分名を印刷する'),
       chk('page', 'ページ番号を印刷する', true), chk('tfont', '摘要のフォントサイズを自動調整する'), chk('date', '印刷時の日付を印刷する'), chk('match', '貸借の金額が一致する行を消し込む'), chk('stamp', '捺印欄を印刷する（白紙印刷時）'),
     ] },
     { title: '印刷科目', items: [rad('acct', '印刷科目', ['印刷用', '表示用'], '表示用')] },
@@ -159,7 +168,7 @@ const TAX_SHORT = ['014:課売　１種（8%軽減）', '015:課売　２種（8
 const D: Record<string, DetailSection[]> = {
   // 仕訳日記帳・伝票・元帳は現行の［詳細設定］の項目・種類・初期値に合わせた（Windows の現行画面で確認。確認メモ #238）
   journal: [
-    { title: '印刷項目', items: [chk('mergeName', '合算の名称を印刷する', true), chk('code', '科目コードを印刷する', true), chk('stamp', '捺印欄を印刷する'), chk('stamp2', '2ページ目以降も捺印欄を印刷する'), chk('spare1', '入力予備１を印刷する'), chk('spare2', '入力予備２を印刷する'), chk('a4v', 'Ａ４縦に印刷する'), chk('tfont', '摘要のフォントサイズを自動調整する')] },
+    { title: '印刷項目', items: [chk('mergeName', '合算の名称を印刷する', true), chk('code', '科目コードを印刷する', true), chk('stamp', '捺印欄を印刷する'), { ...chk('stamp2', '2ページ目以降も捺印欄を印刷する'), when: { k: 'stamp', v: true } }, chk('spare1', '入力予備１を印刷する'), chk('spare2', '入力予備２を印刷する'), chk('a4v', 'Ａ４縦に印刷する'), chk('tfont', '摘要のフォントサイズを自動調整する')] },
     SLIP_NO,
     { title: '印刷順序', items: [rad('order', '印刷順序', ['入力順', '日付順'], '日付順')] },
     { title: '印刷科目', items: [rad('acct', '印刷科目', ['印刷用', '表示用'], '印刷用')] },
@@ -169,8 +178,18 @@ const D: Record<string, DetailSection[]> = {
   ],
   voucher: [
     SLIP_NO,
-    { title: '科目欄', items: [rad('acctCol', '科目欄', ['科目名を印刷する', '入力コード・科目名を印刷する', '科目名・資金科目名を印刷する'], '入力コード・科目名を印刷する')] },
-    { title: '印刷項目', items: [chk('vendor', '取引先名を印刷する'), chk('a4', 'A4白紙に印刷する', true), chk('a4cont', 'A4白紙印刷時に上下連続印刷する', true), chk('a5', 'A5白紙に印刷する'), chk('drcrHead', '借方・貸方のヘッダーを印刷する'), chk('tfont', '摘要のフォントサイズを自動調整する'), chk('era', '元号を印字する（標準伝票用紙のみ）'), sel('paper', '伝票用紙', ['標準', '日本保育協会'])] },
+    { title: '科目欄', items: [
+      rad('acctCol', '科目欄', ['科目名を印刷する', '入力コード・科目名を印刷する', '科目名・資金科目名を印刷する'], '入力コード・科目名を印刷する'),
+      // 科目名・資金科目名を印刷する のときだけ選べる（確認メモ #316）
+      { ...chk('fundSpecial', '特摘行の資金科目名も印刷する'), when: { k: 'acctCol', v: '科目名・資金科目名を印刷する' } },
+    ] },
+    { title: '印刷項目', items: [
+      // 特摘行の資金科目名も印刷する が ON のときは押せない（確認メモ #317）。A4白紙と A5白紙は片方だけ（確認メモ #319・#320）
+      { ...chk('vendor', '取引先名を印刷する'), when: { k: 'fundSpecial', v: true, not: true } },
+      { ...chk('a4', 'A4白紙に印刷する', true), when: { k: 'a5', v: true, not: true } }, { ...chk('a4cont', 'A4白紙印刷時に上下連続印刷する', true), when: { k: 'a4', v: true } },
+      { ...chk('a5', 'A5白紙に印刷する'), when: { k: 'a4', v: true, not: true } }, chk('drcrHead', '借方・貸方のヘッダーを印刷する'),
+      // 確認メモ #318
+      chk('copy', '複写の伝票を印刷する'), chk('evid', '証憑の有無を印刷する'), chk('stamp', '捺印欄を印刷する'), chk('spare1', '入力予備１を印刷する'), chk('spare2', '入力予備２を印刷する'), chk('tfont', '摘要のフォントサイズを自動調整する'), chk('era', '元号を印字する（標準伝票用紙のみ）'), sel('paper', '伝票用紙', ['標準', '日本保育協会'])] },
     { title: '印刷順序', items: [rad('order', '印刷順序', ['入力順', '日付順'], '日付順')] },
     { title: '印刷科目', items: [rad('acct', '印刷科目', ['印刷用', '表示用'], '表示用')] },
     { title: '伝票種別', items: [chk('normal', '通常伝票', true), chk('opening', '移行伝票', true), chk('single', '単一式伝票を含める')] },

@@ -18,6 +18,7 @@ import { ToastView, useToast } from './Toast';
 import { Field, IconButton, Notice, SettingsShell, Toggle, btn, card, cardHead, input, lbl, numInput } from './ui';
 import { ExportDialog, runExport, type ExportKind, type ExportSpec } from './ExportDialog';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
+import { TargetCombo } from './TargetCombo';
 import { PrintSteps, type OutKind } from './PrintSteps';
 import { LoadDivisionSettings } from './DivisionSettingsLoad';
 import { COMMON_LINK, FORM_GROUPS, REPORTS, formEnabled, omittable, type DetailItem, type DetailSection, type DetailValue, type ReportDef } from './printCatalog';
@@ -154,6 +155,29 @@ interface FlowPrefs {
   months: string[]; from: string; to: string; range: string; scope: string; target: string;
   checks: { check: boolean; red: boolean; blue: boolean; yellow: boolean; green: boolean };
   output: string; zeroHide: boolean; title: string; detail: Record<string, DetailValue>;
+  /** 科目指定（取引先元帳は取引先指定）の開始・終了（確認メモ #323・#327） */
+  scopeFrom?: string; scopeTo?: string;
+  /** 捺印欄に印刷する名前（最大4欄。確認メモ #310） */
+  stamps?: string[];
+  /** 印刷書式（科目名・金額・摘要のフォントとサイズ。確認メモ #314） */
+  fmt?: JournalFormat;
+}
+/** 仕訳日記帳の印刷書式（現行「印刷書式設定」：フォントの枠だけ） */
+export interface JournalFormat { name: [string, string]; amount: [string, string]; remark: [string, string] }
+const STD_JOURNAL_FORMAT: JournalFormat = { name: ['ＭＳ 明朝', '9'], amount: ['ＭＳ 明朝', '9'], remark: ['ＭＳ 明朝', '9'] };
+/** 書体（現行はパソコンに入っているフォントの一覧） */
+const FORMAT_FACES = ['ＭＳ 明朝', 'ＭＳ Ｐ明朝', 'ＭＳ ゴシック', 'ＭＳ Ｐゴシック', '游明朝', '游ゴシック', 'メイリオ', 'BIZ UD明朝', 'BIZ UDゴシック', 'Noto Serif JP', 'Noto Sans JP'];
+const FORMAT_SIZES = ['4', '5', '6', '7', '8', '9', '10', '11', '12', '14', '16', '18', '20', '22', '24', '26', '28', '36', '48', '72'];
+/** 捺印欄の欄の数：仕訳伝票（伝票式）は 5 欄、そのほかは 4 欄（確認メモ #322） */
+const stampMaxOf = (r: ReportDef) => (r.id === 'j2' ? 5 : 4);
+/** 捺印欄 1欄の文字数（現行は 6 バイト＝全角 3 文字） */
+const STAMP_LEN = 3;
+const STAMP_KEYS = ['stamp'];
+/** 半角1・全角2 で数えて max バイトまでに切る（現行の入力欄の文字数制限） */
+function clipBytes(v: string, max: number): string {
+  let n = 0, out = '';
+  for (const ch of v) { n += /[ -~｡-ﾟ]/.test(ch) ? 1 : 2; if (n > max) break; out += ch; }
+  return out;
 }
 /** 帳票ごとの印刷条件（この帳票の詳細設定）。開き直しても前回の条件を引き継ぐ */
 const PREFS = new Map<string, FlowPrefs>();
@@ -172,9 +196,15 @@ const defaultPrefs = (r: ReportDef, fy: number, common: PrintCommon): FlowPrefs 
 });
 
 /** 詳細設定の項目（現行の画面の枠ごとに、チェック・ラジオ・選択・入力を描き分ける。確認メモ #238） */
-export function DetailSections({ sections, values, onChange, accent }: { sections: DetailSection[]; values: Record<string, DetailValue>; onChange: (k: string, v: DetailValue) => void; accent: string }) {
+export function DetailSections({ sections, values, onChange, accent, labelOf, onStamp, stampNote }: { sections: DetailSection[]; values: Record<string, DetailValue>; onChange: (k: string, v: DetailValue) => void; accent: string; /** 起動中の区分などで文言を変える項目 */ labelOf?: (it: DetailItem) => string; /** 「捺印欄を印刷する」の右の［捺印欄］ボタン（確認メモ #310） */ onStamp?: () => void; stampNote?: string }) {
   const uid = useId();
-  const head = (it: DetailItem) => <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: '#8290a0' }}>{it.label}</span>;
+  const label = (it: DetailItem) => labelOf?.(it) ?? it.label;
+  const head = (it: DetailItem, dis?: boolean) => <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: dis ? '#b4bfca' : '#8290a0' }}>{label(it)}</span>;
+  const byKey = new Map(sections.flatMap((sec) => sec.items.map((it): [string, DetailItem] => [it.k, it])));
+  // 押せない項目の値は、ほかの項目の条件では「OFF」として扱う（例：科目欄を変えたあとの 特摘行の資金科目名）
+  //   A4白紙と A5白紙のような「お互いに押せなくなる」組（not）は、たどると循環するので値をそのまま使う
+  const eff = (k: string): DetailValue | undefined => { const c = byKey.get(k); return c?.when && !c.when.not && off(c) ? undefined : values[k]; };
+  function off(it: DetailItem): boolean { return !!it.when && (it.when.not ? !!eff(it.when.k) === !!it.when.v : eff(it.when.k) !== it.when.v); }
   return (
     <div data-detail-sections style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 10, alignItems: 'start' }}>
       {sections.map((sec) => {
@@ -183,29 +213,38 @@ export function DetailSections({ sections, values, onChange, accent }: { section
         return (
         <fieldset key={sec.title} data-detail-section={sec.title} style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: '4px 12px 12px', margin: 0, minWidth: 0, background: '#fff', gridColumn: wide ? '1 / -1' : undefined }}>
           <legend style={{ fontSize: 12, fontWeight: 800, color: '#5b6773', padding: '0 6px', letterSpacing: '.04em' }}>{sec.title}</legend>
+          {/* 枠の見出しと同じ名前の小見出しは出さない（重複のため。確認メモ #312・#313） */}
           <div style={{ display: 'grid', gap: wide ? '7px 16px' : 9, gridTemplateColumns: wide ? 'repeat(auto-fill, minmax(260px, 1fr))' : undefined }}>
             {sec.items.map((it) => {
               const v = values[it.k];
-              if (it.t === 'check') return (
-                <label key={it.k} data-detail-item={it.k} data-type="check" style={{ display: 'flex', gap: 7, alignItems: 'flex-start', fontSize: 14, cursor: 'pointer', lineHeight: 1.5 }}>
-                  <input type="checkbox" checked={!!v} onChange={() => onChange(it.k, !v)} style={{ marginTop: 4, accentColor: accent }} /><span style={{ flex: 1 }}>{it.label}</span>
-                </label>
-              );
+              const dis = off(it);
+              const dup = sec.title.endsWith(label(it));
+              if (it.t === 'check') {
+                const stampBtn = !!onStamp && STAMP_KEYS.includes(it.k);
+                return (
+                <div key={it.k} data-detail-item={it.k} data-type="check" style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap', paddingLeft: it.when && !it.when.not ? 20 : 0 }}>
+                  <label style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7, alignItems: 'flex-start', fontSize: 14, cursor: dis ? 'default' : 'pointer', lineHeight: 1.5, color: dis ? '#9aa5b1' : undefined }}>
+                    <input type="checkbox" checked={!!v} disabled={dis} onChange={() => onChange(it.k, !v)} style={{ marginTop: 4, accentColor: accent }} /><span style={{ flex: 1 }}>{label(it)}{stampBtn && v && <span data-stamp-note style={{ display: 'block', fontSize: 12, color: '#8290a0' }}>{stampNote || '名前が未入力です'}</span>}</span>
+                  </label>
+                  {stampBtn && <button type="button" data-open-stamp disabled={!v} onClick={onStamp} title={v ? '捺印欄に印刷する名前を入力します' : '「捺印欄を印刷する」を選ぶと入力できます'} style={{ ...btn(v ? accent : '#9aa5b1', false, true), opacity: v ? 1 : 0.55, cursor: v ? 'pointer' : 'default', whiteSpace: 'nowrap' }}>捺印欄</button>}
+                </div>
+                );
+              }
               if (it.t === 'radio') return (
-                <div key={it.k} role="radiogroup" aria-label={it.label} data-detail-item={it.k} data-type="radio" style={{ display: 'grid', gap: 3 }}>
-                  {head(it)}
-                  <div style={{ display: 'flex', gap: '2px 14px', flexWrap: 'wrap' }}>{it.options.map((o) => <label key={o} style={{ display: 'flex', gap: 5, alignItems: 'center', fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' }}><input type="radio" name={uid + it.k} checked={v === o} onChange={() => onChange(it.k, o)} style={{ accentColor: accent }} />{o}</label>)}</div>
+                <div key={it.k} role="radiogroup" aria-label={label(it)} aria-disabled={dis || undefined} data-detail-item={it.k} data-type="radio" style={{ display: dup ? 'block' : 'grid', gap: 3 }}>
+                  {!dup && head(it, dis)}
+                  <div style={{ display: 'flex', gap: '2px 14px', flexWrap: 'wrap' }}>{it.options.map((o) => <label key={o} style={{ display: 'flex', gap: 5, alignItems: 'center', fontSize: 14, cursor: dis ? 'default' : 'pointer', whiteSpace: 'nowrap', color: dis ? '#9aa5b1' : undefined }}><input type="radio" name={uid + it.k} checked={v === o} disabled={dis} onChange={() => onChange(it.k, o)} style={{ accentColor: accent }} />{o}</label>)}</div>
                 </div>
               );
               if (it.t === 'select') return (
                 <label key={it.k} data-detail-item={it.k} data-type="select" style={{ display: 'grid', gap: 3 }}>
-                  {head(it)}
+                  {!dup && head(it, dis)}
                   <select value={String(v ?? '')} onChange={(e) => onChange(it.k, e.target.value)} style={{ ...input, padding: '6px 8px' }}>{it.options.map((o) => <option key={o}>{o}</option>)}</select>
                 </label>
               );
               return (
                 <label key={it.k} data-detail-item={it.k} data-type="text" style={{ display: 'grid', gap: 3 }}>
-                  {head(it)}
+                  {!dup && head(it, dis)}
                   <input className="field-input" value={String(v ?? '')} placeholder={it.placeholder} onChange={(e) => onChange(it.k, e.target.value)} style={{ ...input, padding: '6px 8px', width: it.width ?? '100%', maxWidth: '100%' }} />
                 </label>
               );
@@ -230,16 +269,26 @@ export interface PrintFlowProps {
 
 export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlowProps) {
   const s = useSession();
+  const uidFmt = useId();
   const toast = useToast();
   const fy = eraYear(s.fiscalYear);
   const [p, setP] = useState<FlowPrefs>(() => PREFS.get(report.id) ?? defaultPrefs(report, fy, s.print));
   const [exp, setExp] = useState<ExportSpec | null>(null);
   const [unit, setUnit] = useState(() => remarkUnitOf(s));
+  const [stampEdit, setStampEdit] = useState<string[] | null>(null);
+  const [fmtEdit, setFmtEdit] = useState<JournalFormat | null>(null);
+  const STAMP_MAX = stampMaxOf(report);
+  const stamps = p.stamps ?? (report.common ? [...s.print.stamps, '', '', '', ''].slice(0, STAMP_MAX) : Array<string>(STAMP_MAX).fill(''));
+  const fmt = p.fmt ?? STD_JOURNAL_FORMAT;
+  /** 印刷書式（仕訳日記帳の詳細設定の左下。確認メモ #314） */
+  const hasFormat = report.cat === '仕訳日記帳' && report.detail.some((sec) => sec.items.some((it) => it.k === 'mergeName'));
   useEffect(() => { PREFS.set(report.id, p); }, [report.id, p]);
   const set = (patch: Partial<FlowPrefs>) => setP((x) => ({ ...x, ...patch }));
   const pr = s.print;
   const setCommon = (patch: Partial<PrintCommon>) => setSession({ print: { ...pr, ...patch } });
   const kind = startKindOf(s);
+  // 入力区分で開いたときは「伝票入力区分名を印刷する」（確認メモ #309）
+  const labelOf = (it: DetailItem) => (it.k === 'mergeName' && kind === '入力区分' && report.cat === '仕訳日記帳' && !report.detail.some((sec) => sec.items.some((x) => x.k === 'slipDiv')) ? '伝票入力区分名を印刷する' : it.label);
   const myUnit = remarkUnitOf(s);
   const destKind = kindOfOut(p.output);
   const onCount = itemsOf(report).filter((it) => it.t === 'check' && p.detail[it.k]).length;
@@ -315,9 +364,22 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
                 </div>
               </div>
             )}
-            {report.scope && (
-              <div><span style={lbl}>科目の範囲</span><div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>{['全て', '科目指定'].map((o) => <label key={o} style={radio(p.scope === o)}><input type="radio" checked={p.scope === o} onChange={() => set({ scope: o })} />{o}</label>)}{p.scope === '科目指定' && <span style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 14 }}><input className="field-input" placeholder="開始科目" style={{ ...input, width: 150 }} /><span>〜</span><input className="field-input" placeholder="終了科目" style={{ ...input, width: 150 }} /></span>}</div></div>
-            )}
+            {report.scope && (() => {
+              // 科目の範囲：他画面と同じ科目検索（コード・名称・フリガナで絞り込む）。取引先元帳は「取引先の指定」（確認メモ #323・#327）
+              const vend = /取引先元帳/.test(report.name);
+              const pick = vend ? '取引先指定' : '科目指定';
+              const on = p.scope === pick || p.scope === '科目指定';
+              return (
+              <div data-print-scope={vend ? 'vendor' : 'account'}><span style={lbl}>{vend ? '取引先の指定' : '科目の範囲'}</span><div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>{['全て', pick].map((o) => <label key={o} style={radio(o === '全て' ? !on : on)}><input type="radio" checked={o === '全て' ? !on : on} onChange={() => set({ scope: o })} />{o}</label>)}</div>
+                {on && <div data-scope-range style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 8, fontSize: 14 }}>
+                  <TargetCombo id={uidFmt + 'scopeFrom'} kind={vend ? 'vendor' : 'account'} value={p.scopeFrom ?? ''} onChange={(v) => set({ scopeFrom: v })} accent={accent} placeholder={vend ? '開始の取引先（コード・名称）' : '開始科目（コード・科目名・フリガナ）'} width={300} hint={false} />
+                  <span>〜</span>
+                  <TargetCombo id={uidFmt + 'scopeTo'} kind={vend ? 'vendor' : 'account'} value={p.scopeTo ?? ''} onChange={(v) => set({ scopeTo: v })} accent={accent} placeholder={vend ? '終了の取引先（コード・名称）' : '終了科目（コード・科目名・フリガナ）'} width={300} hint={false} />
+                  <span style={{ fontSize: 12, color: '#8290a0', flexBasis: '100%' }}>コードを入力するか、候補から選びます（ほかの画面の{vend ? '取引先' : '科目'}検索と同じ操作です）。</span>
+                </div>}
+              </div>
+              );
+            })()}
             {report.range && (
               <div><span style={lbl}>範囲指定の種類</span><div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>{(report.rangeSumOnly ? ['範囲指定の合計を印刷'] : ['範囲指定の合計を印刷', '範囲指定の月を連続で印刷']).map((o) => <label key={o} style={radio(p.range === o)}><input type="radio" checked={p.range === o} onChange={() => set({ range: o })} />{o}</label>)}</div></div>
             )}
@@ -342,7 +404,13 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
                   </div>}
                   <Field label="タイトル（印刷様式）"><input className="field-input" value={p.title} onChange={(e) => set({ title: e.target.value })} style={input} /></Field>
                 </div>
-                {report.detail.length > 0 && <DetailSections sections={report.detail} values={p.detail} onChange={(k, v) => set({ detail: { ...p.detail, [k]: v } })} accent={accent} />}
+                {report.detail.length > 0 && <DetailSections sections={report.detail} values={p.detail} onChange={(k, v) => set({ detail: { ...p.detail, [k]: v } })} accent={accent} labelOf={labelOf} onStamp={() => setStampEdit([...stamps])} stampNote={stamps.filter(Boolean).join('・')} />}
+                {hasFormat && (
+                  <div data-journal-format style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <button type="button" data-open-journal-format onClick={() => setFmtEdit({ ...fmt })} style={btn('#5b6773', false, true)}>印刷書式</button>
+                    <span style={{ fontSize: 12, color: '#8290a0' }}>科目名 {fmt.name.join(' ')}／金額 {fmt.amount.join(' ')}／摘要 {fmt.remark.join(' ')}</span>
+                  </div>
+                )}
                 {usesRemark(report) && (
                   <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: 10, display: 'grid', gap: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}><b style={{ fontSize: 14 }}>備考・摘要</b><span style={{ fontSize: 12, fontWeight: 800, padding: '2px 8px', borderRadius: 8, background: '#eef2f6', color: '#3d4a56' }}>単位ごとに保持</span><span style={{ fontSize: 12, color: '#8290a0' }}>法人・拠点・サービス区分で内容が異なる場合があるため、単位ごとに別々に保存します。</span></div>
@@ -367,6 +435,38 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
             </ScopeBlock>
         </>}
       />
+      {/* 捺印欄（現行「捺印欄」：最大4欄、1欄 全角3文字。確認メモ #310） */}
+      <Modal open={!!stampEdit} onClose={() => setStampEdit(null)} width={520} title="捺印欄">
+        {stampEdit && <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
+          <div style={{ fontSize: 14, color: '#48565f' }}>捺印欄に印刷する名前を入力してください。<span style={{ display: 'block', fontSize: 12, color: '#8290a0' }}>最大 {STAMP_MAX} 欄、1欄は全角 {STAMP_LEN} 文字（半角 {STAMP_LEN * 2} 文字）まで。左の欄から順に印刷します。</span></div>
+          <div data-stamp-inputs style={{ display: 'grid', gridTemplateColumns: `repeat(${STAMP_MAX}, 1fr)`, gap: 8 }}>{stampEdit.map((v, i) => <Field key={i} label={`捺印欄 ${i + 1}`}><input className="field-input" value={v} maxLength={STAMP_LEN * 2} onChange={(e) => setStampEdit(stampEdit.map((x, k) => (k === i ? clipBytes(e.target.value, STAMP_LEN * 2) : x)))} style={{ ...input, textAlign: 'center' }} /></Field>)}</div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setStampEdit(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { set({ stamps: stampEdit.map((x) => x.trim()) }); setStampEdit(null); }} style={btn(accent, true)}>OK</button></div>
+        </div>}
+      </Modal>
+      {/* 印刷書式設定（現行：フォントの枠だけ。科目名・金額・摘要の書体とサイズ。確認メモ #314） */}
+      <Modal open={!!fmtEdit} onClose={() => setFmtEdit(null)} width={620} title="印刷書式設定">
+        {fmtEdit && <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 14 }}>
+          <fieldset style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: '4px 14px 14px', margin: 0, display: 'grid', gap: 10 }}>
+            <legend style={{ fontSize: 12, fontWeight: 800, color: '#5b6773', padding: '0 6px' }}>フォント</legend>
+            {(([['name', '科目名'], ['amount', '金額'], ['remark', '摘要']]) as const).map(([k, l]) => (
+              <div key={k} data-format-row={k} style={{ display: 'grid', gridTemplateColumns: '190px 1fr 96px', gap: 8, alignItems: 'center' }}>
+                <span style={{ fontSize: 14 }}>{l}のフォントとサイズ</span>
+                <select aria-label={`${l}の書体`} value={fmtEdit[k][0]} onChange={(e) => setFmtEdit({ ...fmtEdit, [k]: [e.target.value, fmtEdit[k][1]] })} style={{ ...input, padding: '6px 8px' }}>{FORMAT_FACES.map((o) => <option key={o}>{o}</option>)}</select>
+                <input className="field-input" aria-label={`${l}のサイズ`} list={uidFmt + 'sizes'} value={fmtEdit[k][1]} onChange={(e) => setFmtEdit({ ...fmtEdit, [k]: [fmtEdit[k][0], e.target.value.replace(/[^0-9.]/g, '')] })} inputMode="decimal" style={{ ...input, padding: '6px 8px', textAlign: 'right' }} />
+              </div>
+            ))}
+            <datalist id={uidFmt + 'sizes'}>{FORMAT_SIZES.map((o) => <option key={o} value={o} />)}</datalist>
+            <div style={{ fontSize: 12, color: '#8290a0' }}>サイズは一覧から選ぶか、数字を直接入力します。</div>
+          </fieldset>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button type="button" data-format-reset onClick={() => setFmtEdit({ ...STD_JOURNAL_FORMAT })} style={btn()}>リセット</button>
+            <span style={{ fontSize: 12, color: '#8290a0' }}>設定を標準に戻します。</span>
+            <span style={{ flex: 1 }} />
+            <button type="button" onClick={() => setFmtEdit(null)} style={btn()}>キャンセル</button>
+            <button type="button" className="submit-btn" onClick={() => { set({ fmt: { name: [fmtEdit.name[0], fmtEdit.name[1] || '9'], amount: [fmtEdit.amount[0], fmtEdit.amount[1] || '9'], remark: [fmtEdit.remark[0], fmtEdit.remark[1] || '9'] } }); setFmtEdit(null); }} style={btn(accent, true)}>OK</button>
+          </div>
+        </div>}
+      </Modal>
       {/* 【名前を付けて保存】は印刷の流れの上に重ねる（DOM 上で後に置く） */}
       <ExportDialog spec={exp} onClose={() => { setExp(null); onClose?.(); }} accent={accent} />
     </div>
