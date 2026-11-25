@@ -8,8 +8,7 @@ import { ToastView, useToast } from './Toast';
 import { Field, Notice, SettingsShell, Tabs, btn, input, numInput, toInt, yen } from './ui';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { ACCOUNTS, SERVICES } from '../data';
-import { setSession, specialRatesOf, splitSpecialAmount, templatePages, useSession, type AllocationTemplate, type JournalTemplate } from '../store/session';
-import { allocate } from './EntryExtras';
+import { allocate, allocationPages, setSession, shareText, specialRatesOf, splitSpecialAmount, templatePages, useSession, type AllocationTemplate, type JournalTemplate } from '../store/session';
 import { AllocationWizardModal, TemplateWizardModal, blankAllocation, blankTemplate } from './TemplateWizards';
 
 /* 自動按分出力（7.6）：科目ごとの区分別按分率（サンプル）。本番では設定ダイアログで科目単位に登録する */
@@ -127,12 +126,12 @@ export function TemplateJournalPage({ variant, accent }: { variant: 'form' | 'sh
         <div style={{ padding: 22 }}>
           <Notice>水道代・ガス代などを、あらかじめ設定した比率で複数の区分（事務費／事業費など）の伝票に分けて登録します。伝票入力の「自動按分」で総金額と日付を入れると、1回の操作で複数枚の伝票を登録できます。</Notice>
           <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
-            <thead><tr><th style={TH}>名称</th><th style={{ ...TH, width: 90 }}>形式</th><th style={TH}>按分（区分：率）</th><th style={{ ...TH, width: 90 }}>端数処理</th><th style={{ ...TH, width: 200, textAlign: 'right' }}>操作</th></tr></thead>
+            <thead><tr><th style={TH}>名称</th><th style={{ ...TH, width: 90 }}>形式</th><th style={TH}>伝票（区分：按分率）</th><th style={{ ...TH, width: 90 }}>端数処理</th><th style={{ ...TH, width: 200, textAlign: 'right' }}>操作</th></tr></thead>
             <tbody>
               {s.allocations.map((a) => (
                 <tr key={a.id}>
                   <td style={{ ...TD, fontWeight: 700 }}>{a.name}</td><td style={TD}>{a.form}</td>
-                  <td style={{ ...TD, fontSize: 14, color: '#5b6773' }}>{a.lines.map((l) => `${l.division}：${l.mode === '残り' ? '残り' : l.rate + '%'}（${l.kari}）`).join('　')}</td>
+                  <td style={{ ...TD, fontSize: 14, color: '#5b6773' }}>{allocationPages(a).map((p, k) => <span key={k} style={{ display: 'inline-block', marginRight: 12 }}><b style={{ color: '#22303c' }}>{k + 1}枚目</b> {p.division}：{p.entries.map((e) => `${shareText(e.share)}${e.kashiShare ? `／貸方 ${shareText(e.kashiShare)}` : ''}（${e.kari || e.kashi}）`).join('、')}</span>)}</td>
                   <td style={TD}>{a.rounding}</td>
                   <td style={{ ...TD, textAlign: 'right' }}><div style={{ display: 'inline-flex', gap: 6 }}><button type="button" onClick={() => setAwiz({ step: 3, t: JSON.parse(JSON.stringify(a)) })} style={btn('#5b6773', false, true)}>訂正</button><button type="button" onClick={() => { if (confirm(`「${a.name}」を削除しますか？`)) setSession({ allocations: s.allocations.filter((x) => x.id !== a.id) }); }} style={btn('#c0392b', false, true)}>削除</button></div></td>
                 </tr>
@@ -141,7 +140,7 @@ export function TemplateJournalPage({ variant, accent }: { variant: 'form' | 'sh
           </table>
           <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: '#5b6773' }}>
             <span>計算例：</span><input className="field-input" value={yen(toInt(testAmount))} onChange={(e) => setTestAmount(e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" style={{ ...numInput, width: 120, padding: '5px 8px' }} /><span>円を「{s.allocations[0]?.name}」で按分 →</span>
-            {s.allocations[0] && allocate(s.allocations[0], toInt(testAmount)).map((r, i) => <span key={i} style={{ padding: '3px 8px', background: '#eef2f6', borderRadius: 6 }}>{r.division.split(' ')[1]} {yen(r.amount)}</span>)}
+            {s.allocations[0] && allocate(s.allocations[0], toInt(testAmount)).map((v, i) => <span key={i} style={{ padding: '3px 8px', background: '#eef2f6', borderRadius: 6 }}>{i + 1}枚目 {v.division.split(' ')[1]} {yen(v.rows.reduce((a, r) => a + (r.kari ? r.amount : 0), 0))}</span>)}
           </div>
         </div>
       )}

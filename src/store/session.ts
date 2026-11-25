@@ -151,8 +151,110 @@ export function templatePages(t: JournalTemplate): TemplatePage[] {
 }
 /** ページを差し替えた定型（lines も合わせる） */
 export const withPages = (t: JournalTemplate, pages: TemplatePage[]): JournalTemplate => ({ ...t, pages, lines: pages.flatMap((p) => p.lines), enabled: undefined });
+/** 以前の自動按分の行（1 行＝伝票 1 枚）。読み込みの互換だけに使う */
 export interface AllocationLine { division: string; kari: string; kashi: string; tekiyo: string; rate: number; mode: '％' | '分数' | '残り'; }
-export interface AllocationTemplate { id: string; name: string; form: '単一式' | '伝票式'; rounding: '切り捨て' | '四捨五入' | '切り上げ'; lines: AllocationLine[] }
+/** 金額欄に適用する按分率（現行の「按分率設定」。確認メモ #295）
+ *  ％＝パーセントで指定、分数＝分子／分母で指定、残り＝残りの按分率を適用する、按分元金＝入力される按分元金（総金額）をそのまま適用する */
+export type AllocMode = '％' | '分数' | '残り' | '按分元金';
+export interface AllocShare { mode: AllocMode; rate: number; num?: number; den?: number }
+/** 伝票の明細 1 行。振替の 2 形式は借方・貸方それぞれに按分率を持つ（kashiShare がなければ借方と同じ率） */
+export interface AllocationEntry { kari: string; kashi: string; tekiyo: string; gyosha?: string; share: AllocShare; kashiShare?: AllocShare }
+/** 伝票 1 枚（ページ）。伝票ごとに伝票入力区分を選べる */
+export interface AllocationPage { division: string; entries: AllocationEntry[] }
+export interface AllocationTemplate { id: string; name: string; form: JournalTemplate['form']; rounding: '切り捨て' | '四捨五入' | '切り上げ'; /** 以前の形式（読み込みの互換） */ lines: AllocationLine[]; pages?: AllocationPage[] }
+/** 自動按分の伝票の上限（現行「50枚を超えて伝票登録はできません。」） */
+export const MAX_ALLOCATION_PAGES = 50;
+export const isTransferForm = (f: JournalTemplate['form']) => f === '振替伝票式' || f === '振替単一式';
+/** 自動按分仕訳の伝票（ページ）。以前の形式は 1 行を伝票 1 枚にする */
+export function allocationPages(t: AllocationTemplate): AllocationPage[] {
+  if (t.pages) return t.pages;
+  return t.lines.map((l) => ({ division: l.division, entries: [{ kari: l.kari, kashi: l.kashi, tekiyo: l.tekiyo, share: l.mode === '分数' ? { mode: '分数', rate: l.rate, num: l.rate, den: 100 } : { mode: l.mode, rate: l.rate } }] }));
+}
+/** 按分率をパーセントにした値 */
+export const sharePct = (s: AllocShare) => (s.mode === '分数' ? (s.den ? ((s.num ?? 0) / s.den) * 100 : 0) : s.mode === '％' ? s.rate : 0);
+export const shareText = (s: AllocShare) => (s.mode === '残り' ? '残り' : s.mode === '按分元金' ? '按分元金' : s.mode === '分数' ? `${s.num ?? 0}/${s.den ?? 0}` : `${s.rate}%`);
+/** 行の借方（side 0）・貸方（side 1）に適用する按分率。科目がない側は null（振替の 2 形式だけ。ほかの形式は貸方も借方と同じ金額） */
+export function entryShare(t: AllocationTemplate, e: AllocationEntry, side: 0 | 1): AllocShare | null {
+  if (!isTransferForm(t.form)) return e.share;
+  if (side === 0) return e.kari ? e.share : null;
+  return e.kashi ? e.kashiShare ?? e.share : null;
+}
+export interface AllocatedRow { kari: string; kashi: string; tekiyo: string; gyosha?: string; amount: number; kashiAmount: number; note: string; kashiNote: string }
+export interface AllocatedVoucher { division: string; rows: AllocatedRow[] }
+/** 自動按分の実行。総金額を、借方・貸方それぞれ伝票の順・行の順に按分率で分ける。
+ *  按分の並びの最後（最後の伝票、振替伝票では最終行）は残りを適用し、合計が総金額と一致するようにする */
+export function allocate(t: AllocationTemplate, total: number): AllocatedVoucher[] {
+  const round = (v: number) => (t.rounding === '切り捨て' ? Math.floor(v) : t.rounding === '切り上げ' ? Math.ceil(v) : Math.round(v));
+  const pages = allocationPages(t);
+  const res = pages.map((p) => p.entries.map(() => [{ amt: 0, note: '' }, { amt: 0, note: '' }]));
+  const sides: (0 | 1)[] = isTransferForm(t.form) ? [0, 1] : [0];
+  for (const side of sides) {
+    const seq: [number, number, AllocShare][] = [];
+    pages.forEach((p, pi) => p.entries.forEach((e, ei) => {
+      const sh = entryShare(t, e, side);
+      if (!sh) return;
+      if (sh.mode === '按分元金') res[pi][ei][side] = { amt: total, note: '按分元金' };
+      else seq.push([pi, ei, sh]);
+    }));
+    let used = 0;
+    let usedPct = 0;
+    seq.forEach(([pi, ei, sh], k) => {
+      const last = k === seq.length - 1 || sh.mode === '残り';
+      const pct = last ? Math.max(0, 100 - usedPct) : sharePct(sh);
+      const amt = last ? total - used : round((total * pct) / 100);
+      used += amt; usedPct += pct;
+      res[pi][ei][side] = { amt, note: `${last ? '按分残' : '按分率'} ${pct.toFixed(2)}%` };
+    });
+  }
+  return pages.map((p, pi) => ({
+    division: p.division,
+    rows: p.entries.map((e, ei) => {
+      const [d, c] = res[pi][ei];
+      const cr = sides.length === 2 ? c : d;
+      return { kari: e.kari, kashi: e.kashi, tekiyo: e.tekiyo, gyosha: e.gyosha, amount: d.amt, kashiAmount: cr.amt, note: d.note, kashiNote: cr.note };
+    }),
+  }));
+}
+/** 登録できない理由（なければ空）。現行の入力チェックの文言にそろえる（確認メモ #295） */
+export function allocationError(t: AllocationTemplate): string {
+  if (!t.name.trim()) return '自動按分仕訳の名称を入力してください';
+  const pages = allocationPages(t);
+  const transfer = isTransferForm(t.form);
+  if (pages.length === 0) return '伝票がありません。「伝票追加」で伝票を追加してください';
+  if (pages.length > MAX_ALLOCATION_PAGES) return `${MAX_ALLOCATION_PAGES}枚を超えて伝票登録はできません`;
+  const badShare = (sh: AllocShare) => (sh.mode === '％' && !(sh.rate > 0)) || (sh.mode === '分数' && !((sh.num ?? 0) > 0 && (sh.den ?? 0) > 0 && (sh.num ?? 0) <= (sh.den ?? 0)));
+  for (let pi = 0; pi < pages.length; pi++) {
+    const p = pages[pi];
+    if (!p.division) return `${pi + 1}枚目：伝票入力区分を選んでください`;
+    if (p.entries.length === 0) return `${pi + 1}枚目の行が 0 行です。行を追加するか、伝票を削除してください`;
+    for (let ei = 0; ei < p.entries.length; ei++) {
+      const e = p.entries[ei];
+      const at = `${pi + 1}枚目 ${ei + 1}行目`;
+      if (transfer ? !e.kari && !e.kashi : !e.kari || !e.kashi) return `${at}：${transfer ? '借方か貸方の科目' : '借方・貸方の科目'}を選んでください`;
+      if (e.kari && e.kari === e.kashi) return `${at}：借方と貸方に同じ科目は選べません`;
+      for (const side of [0, 1] as const) {
+        const sh = entryShare(t, e, side);
+        if (sh && badShare(sh)) return `${at}：${transfer ? (side === 0 ? '借方' : '貸方') : ''}按分率が設定されていません`;
+      }
+    }
+  }
+  for (const side of (transfer ? [0, 1] : [0]) as (0 | 1)[]) {
+    const seq = pages.flatMap((p) => p.entries.map((e) => entryShare(t, e, side)).filter((sh): sh is AllocShare => !!sh && sh.mode !== '按分元金'));
+    const name = transfer ? (side === 0 ? '借方の' : '貸方の') : '';
+    if (seq.length === 0) continue;
+    if (seq.slice(0, -1).some((sh) => sh.mode === '残り')) return `${name}「残り」は、最後の伝票（振替伝票では最終行）でだけ選べます`;
+    if (seq[seq.length - 1].mode !== '残り') return `最後の伝票（振替伝票では最終行）の${name}按分率は「残りの按分率を適用する」にしてください`;
+    if (seq.slice(0, -1).reduce((a, sh) => a + sharePct(sh), 0) > 100) return `${name}按分率の合計が 100% を超えています`;
+  }
+  if (transfer) {
+    // 伝票ごとに貸借が一致すること（現行「貸借それぞれの '按分率' は、一枚の伝票毎に同じ率になるように設定してください」）
+    for (const total of [1000003, 999]) {
+      const bad = allocate(t, total).findIndex((v) => v.rows.reduce((a, r) => a + (r.kari ? r.amount : 0), 0) !== v.rows.reduce((a, r) => a + (r.kashi ? r.kashiAmount : 0), 0));
+      if (bad >= 0) return `${bad + 1}枚目：借方と貸方の金額が一致しません。貸借それぞれの按分率は、一枚の伝票ごとに同じ率になるように設定してください`;
+    }
+  }
+  return '';
+}
 
 /** 仕訳伝票形式のサンプル（連続定型のダイアログで有効／無効を切り替えて登録する。確認メモ #202） */
 const SLIP_TEMPLATES: JournalTemplate[] = ([
@@ -189,10 +291,30 @@ export const DEFAULT_TEMPLATES: JournalTemplate[] = [
   { id: 't4', name: 'コピー機リース', form: '単一式', lines: [{ kari: '賃借料（事業）', kashi: '普通預金（保育園）', tekiyo: 'コピー機リース代', amount: '10995', gyosha: '中央リース' }] },
   ...SLIP_TEMPLATES,
 ];
+const pct = (rate: number): AllocShare => ({ mode: '％', rate });
+const REST: AllocShare = { mode: '残り', rate: 0 };
 export const DEFAULT_ALLOCATIONS: AllocationTemplate[] = [
-  { id: 'a1', name: '水道代（事務費／事業費）', form: '単一式', rounding: '切り捨て', lines: [{ division: '001 本部', kari: '水道光熱費（事務）', kashi: '普通預金（保育園）', tekiyo: '水道代', rate: 30, mode: '％' }, { division: '002 保育事業', kari: '水道光熱費（事業）', kashi: '普通預金（保育園）', tekiyo: '水道代', rate: 70, mode: '残り' }] },
-  { id: 'a2', name: 'ガス代（本部／保育園／一時預かり）', form: '単一式', rounding: '四捨五入', lines: [{ division: '001 本部', kari: '水道光熱費（事務）', kashi: '当座預金（保育園）', tekiyo: 'ガス代', rate: 10, mode: '％' }, { division: '002 保育事業', kari: '水道光熱費（事業）', kashi: '当座預金（保育園）', tekiyo: 'ガス代', rate: 80, mode: '％' }, { division: '004 一時預かり', kari: '水道光熱費（事業）', kashi: '当座預金（保育園）', tekiyo: 'ガス代', rate: 10, mode: '残り' }] },
+  { id: 'a1', name: '水道代（事務費／事業費）', form: '単一式', rounding: '切り捨て', lines: [], pages: [
+    { division: '001 本部', entries: [{ kari: '水道光熱費（事務）', kashi: '普通預金（保育園）', tekiyo: '水道代', share: pct(30) }] },
+    { division: '002 保育事業', entries: [{ kari: '水道光熱費（事業）', kashi: '普通預金（保育園）', tekiyo: '水道代', share: REST }] },
+  ] },
+  { id: 'a2', name: 'ガス代（本部／保育園／一時預かり）', form: '単一式', rounding: '四捨五入', lines: [], pages: [
+    { division: '001 本部', entries: [{ kari: '水道光熱費（事務）', kashi: '当座預金（保育園）', tekiyo: 'ガス代', share: pct(10) }] },
+    { division: '002 保育事業', entries: [{ kari: '水道光熱費（事業）', kashi: '当座預金（保育園）', tekiyo: 'ガス代', share: pct(80) }] },
+    { division: '004 一時預かり', entries: [{ kari: '水道光熱費（事業）', kashi: '当座預金（保育園）', tekiyo: 'ガス代', share: REST }] },
+  ] },
+  // 振替伝票形式：1 枚の伝票の中で、借方を事務費・事業費に分け、貸方は按分元金のまま（確認メモ #295）
+  { id: 'a3', name: '電気代（振替・事務費／事業費）', form: '振替伝票式', rounding: '四捨五入', lines: [], pages: [
+    { division: '002 保育事業', entries: [
+      { kari: '水道光熱費（事務）', kashi: '普通預金（保育園）', tekiyo: '電気代', gyosha: '東京電力', share: pct(20), kashiShare: { mode: '按分元金', rate: 0 } },
+      { kari: '水道光熱費（事業）', kashi: '', tekiyo: '電気代', gyosha: '東京電力', share: REST },
+    ] },
+  ] },
 ];
+/** 保存してある自動按分仕訳を読み込むときの置き換え。振替形式のサンプルがなければ足す（確認メモ #295） */
+function migrateAllocations(list: AllocationTemplate[]): AllocationTemplate[] {
+  return list.some((a) => a.id === 'a3' || isTransferForm(a.form)) ? list : [...list, DEFAULT_ALLOCATIONS[2]];
+}
 /** 特殊金額入力の按分率（集合区分で起動したときの区分別配分） */
 export const DEFAULT_SPECIAL_RATES: { division: string; rate: number }[] = [{ division: '001 本部', rate: 20 }, { division: '002 保育事業', rate: 60 }, { division: '003 子育て支援', rate: 10 }, { division: '004 一時預かり', rate: 10 }];
 /** 特殊金額入力の按分率（科目ごと。確認メモ #179）：科目ごとに各区分の按分率と、端数の加算先区分を持つ。設定のない科目は共通の按分率（specialRates）を使う */
@@ -293,7 +415,8 @@ let state: Session = (() => {
       // 以前の保存データ（消費税対応の On／Off だけ）には方式がないので、On は「簡易課税方式」として引き継ぐ（確認メモ #175）
       taxMode: saved.taxMode ?? (saved.taxEntry ? '簡易課税方式' : DEFAULT.taxMode),
       // 以前の保存データには仕訳伝票形式の定型がないので、サンプルを足す（確認メモ #202）
-      templates: saved.templates ? migrateTemplates(saved.templates) : DEFAULT_TEMPLATES };
+      templates: saved.templates ? migrateTemplates(saved.templates) : DEFAULT_TEMPLATES,
+      allocations: saved.allocations ? migrateAllocations(saved.allocations) : DEFAULT_ALLOCATIONS };
   } catch {
     return DEFAULT;
   }

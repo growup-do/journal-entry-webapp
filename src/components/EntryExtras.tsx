@@ -22,6 +22,7 @@ import { displayName } from '../data';
 import { TORIHIKI_COLOR, budgetSample, judgeTorihiki, type Torihiki7 } from '../lib/accounts';
 import { addVoucher, getVouchers, useVouchers, type Voucher } from '../store/journalStore';
 import { canEnterVoucher, entryBlockReason, entryDivisionsOf, type EntryDivisionCtl } from '../lib/entryDivision';
+import { allocate, allocationPages, isTransferForm, shareText, type AllocatedVoucher, type JournalTemplate } from '../store/session';
 import { isViewOnly, setSession, specialRatesOf, splitSpecialAmount, useSession, type AllocationTemplate, type InputSettings, type TemplateLine } from '../store/session';
 
 export { WATCHED, watchedStatement } from './EntryCommon';
@@ -226,58 +227,71 @@ export function BudgetGraphModal({ open, onClose, account }: { open: boolean; on
 }
 
 /* ---------------- 自動按分仕訳の実行 ---------------- */
-export interface AllocatedVoucher { division: string; kari: string; kashi: string; tekiyo: string; amount: number }
-export function allocate(t: AllocationTemplate, total: number): AllocatedVoucher[] {
-  const round = (v: number) => (t.rounding === '切り捨て' ? Math.floor(v) : t.rounding === '切り上げ' ? Math.ceil(v) : Math.round(v));
-  let rest = total;
-  const out: AllocatedVoucher[] = [];
-  t.lines.forEach((l, i) => {
-    const last = i === t.lines.length - 1 || l.mode === '残り';
-    const amount = last ? rest : round((total * l.rate) / 100);
-    rest -= amount;
-    out.push({ division: l.division, kari: l.kari, kashi: l.kashi, tekiyo: l.tekiyo, amount });
-  });
-  return out;
-}
-export function AllocationRunModal({ open, onClose, accent, onRegister, onNew }: { open: boolean; onClose: () => void; accent: string; onRegister: (rows: AllocatedVoucher[], date: string) => void; onNew?: () => void }) {
+// 現行の［F7 自動按分］（マニュアル p.108）に合わせる（確認メモ #295）。
+//   按分元の金額入力（自動按分仕訳の選択・年月日・総金額）→ 伝票確認画面（1 枚ずつ。金額欄に「按分率 20.00%」「按分残 80.00%」）→［終わり］で登録
+/** 自動按分仕訳の形式から、登録する伝票の形式 */
+export const ALLOC_FORMAT: Record<JournalTemplate['form'], EntryFormat> = { 伝票式: '伝票入力', 単一式: '単一入力', 振替伝票式: '振替入力', 振替単一式: '振替単一' };
+const pageShares = (t: AllocationTemplate) => allocationPages(t).map((p) => `${p.division.split(' ')[1] ?? p.division} ${p.entries.map((e) => shareText(e.share)).join('・')}`).join('／');
+export function AllocationRunModal({ open, onClose, accent, onRegister, onNew }: { open: boolean; onClose: () => void; accent: string; onRegister: (vs: AllocatedVoucher[], date: string, t: AllocationTemplate) => void; onNew?: () => void }) {
   const s = useSession();
   const [step, setStep] = useState(0);
   const [tid, setTid] = useState(s.allocations[0]?.id ?? '');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState('8/20');
+  const [skip, setSkip] = useState(false);
   const t = s.allocations.find((x) => x.id === tid);
-  const rows = t && amount ? allocate(t, toInt(amount)) : [];
+  const vs = t && amount ? allocate(t, toInt(amount)) : [];
+  const transfer = t ? isTransferForm(t.form) : false;
   const [idx, setIdx] = useState(0);
+  const v = vs[idx];
   const reset = () => { setStep(0); setAmount(''); setIdx(0); };
+  const finish = () => { if (t) onRegister(vs, date, t); reset(); onClose(); };
+  const amt = (n: number, note: string, color: string) => <div style={{ textAlign: 'right' }}><div style={{ fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{yen(n)}</div><div style={{ fontSize: 11.5, color, fontWeight: 700 }}>{note}</div></div>;
   return (
-    <Modal open={open} onClose={() => { reset(); onClose(); }} width={640} title="自動按分仕訳 ― 按分元の金額入力" strict>
+    <Modal open={open} onClose={() => { reset(); onClose(); }} width={step === 0 ? 660 : 820} title={step === 0 ? '自動按分仕訳 ― 按分元の金額入力' : '自動按分仕訳 ― 伝票確認画面'} strict>
       <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
         {step === 0 ? (
           <>
-            <Field label="按分仕訳（テンプレート）"><div style={{ display: 'flex', gap: 8 }}><select value={tid} onChange={(e) => setTid(e.target.value)} style={input}>{s.allocations.map((a) => <option key={a.id} value={a.id}>{a.name}（{a.lines.map((l) => `${l.division.split(' ')[1]} ${l.mode === '残り' ? '残り' : l.rate + '%'}`).join('／')}）</option>)}</select>{onNew && <button type="button" className="btn-outline" onClick={onNew} style={{ ...btn(accent, false, true), flex: 'none' }}>＋ 新規登録</button>}</div></Field>
+            <Field label="自動按分仕訳の選択"><div style={{ display: 'flex', gap: 8 }}><select data-alloc-pick value={tid} onChange={(e) => setTid(e.target.value)} style={input}>{s.allocations.map((a) => <option key={a.id} value={a.id}>{a.name}（{a.form}・伝票 {allocationPages(a).length} 枚）</option>)}</select>{onNew && <button type="button" className="btn-outline" onClick={onNew} style={{ ...btn(accent, false, true), flex: 'none' }}>＋ 新規登録</button>}</div></Field>
+            {t && <div data-alloc-summary style={{ fontSize: 13, color: '#5b6773', lineHeight: 1.7 }}>按分：{pageShares(t)}</div>}
+            <div style={{ fontSize: 14, color: '#22303c' }}>自動按分する伝票の日付と、按分元となる金額（総金額）を入力してください。</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <Field label="按分元となる金額（総金額）"><input className="field-input ring" value={amount ? yen(toInt(amount)) : ''} onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" placeholder="0" style={{ ...numInput, fontSize: 18, fontWeight: 700 }} /></Field>
               <Field label="年月日（令和8年）"><input className="field-input" value={date} onChange={(e) => setDate(e.target.value)} style={input} /></Field>
+              <Field label="按分元となる金額（総金額）"><input className="field-input ring" data-alloc-amount value={amount ? yen(toInt(amount)) : ''} onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" placeholder="0" style={{ ...numInput, fontSize: 18, fontWeight: 700 }} /></Field>
             </div>
-            <Notice>OKを押すと、按分率に従って区分ごとの伝票を作成し、1枚ずつ金額を確認してから登録します（端数処理：{t?.rounding}）。</Notice>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => { reset(); onClose(); }} style={btn()}>中止</button><button type="button" className="submit-btn" disabled={!amount || !t} onClick={() => setStep(1)} style={{ ...btn(accent, true), opacity: amount && t ? 1 : 0.5 }}>OK</button></div>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, cursor: 'pointer' }}><input type="checkbox" data-alloc-skip checked={skip} onChange={(e) => setSkip(e.target.checked)} style={{ width: 16, height: 16 }} />確認画面を表示しないで実行する</label>
+            <Notice>OK を押すと、按分率に従って伝票を作成し、1 枚ずつ金額を確認してから登録します（端数処理：{t?.rounding}）。伝票は自動按分仕訳の形式（{t?.form}）で登録します。</Notice>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => { reset(); onClose(); }} style={btn()}>中止</button><button type="button" className="submit-btn" data-alloc-ok disabled={!amount || !t} onClick={() => (skip ? finish() : setStep(1))} style={{ ...btn(accent, true), opacity: amount && t ? 1 : 0.5 }}>OK</button></div>
           </>
         ) : (
           <>
-            <div style={{ fontSize: 14, color: '#5b6773' }}>作成された伝票の金額を確認してください（{idx + 1} ／ {rows.length} 枚目）</div>
-            <div style={{ border: '1px solid #e2e8ee', borderRadius: 12, padding: 16, background: '#fbfcfd' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#8290a0', marginBottom: 8 }}><span>伝票入力区分：<b style={{ color: '#22303c' }}>{rows[idx]?.division}</b></span><span>令和8年 {date}</span></div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div style={{ border: '1px solid #cfe0f2', borderRadius: 10, padding: '10px 12px' }}><div style={{ fontSize: 12, color: '#2c5f9e', fontWeight: 700 }}>借方</div><div style={{ fontSize: 14.5, fontWeight: 600 }}>{rows[idx]?.kari}</div></div>
-                <div style={{ border: '1px solid #f2d0dc', borderRadius: 10, padding: '10px 12px' }}><div style={{ fontSize: 12, color: '#b0426a', fontWeight: 700 }}>貸方</div><div style={{ fontSize: 14.5, fontWeight: 600 }}>{rows[idx]?.kashi}</div></div>
+            <div style={{ fontSize: 14, color: '#22303c' }}>自動按分により伝票 <b>{vs.length}</b> 枚を作成します。</div>
+            {v && (
+              <div data-alloc-confirm-page={idx + 1} style={{ border: '1px solid #e2e8ee', borderRadius: 12, padding: 16, background: '#fbfcfd' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#8290a0', marginBottom: 8 }}><span>伝票入力区分：<b style={{ color: '#22303c' }}>{v.division}</b>　{t?.form}</span><span>令和8年 {date}</span></div>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead><tr><th style={{ ...TH, width: 30 }}>#</th><th style={TH}>借方科目</th>{transfer && <th style={{ ...TH, width: 130, textAlign: 'right' }}>借方金額</th>}<th style={TH}>貸方科目</th>{transfer && <th style={{ ...TH, width: 130, textAlign: 'right' }}>貸方金額</th>}<th style={TH}>摘要</th>{!transfer && <th style={{ ...TH, width: 140, textAlign: 'right' }}>金額</th>}</tr></thead>
+                  <tbody>{v.rows.map((r, i) => (
+                    <tr key={i}>
+                      <td style={TD}>{i + 1}</td>
+                      <td style={TD}>{r.kari || <span style={{ color: '#9aa5b1' }}>―</span>}</td>
+                      {transfer && <td style={TD}>{r.kari ? amt(r.amount, r.note, '#2c5f9e') : null}</td>}
+                      <td style={TD}>{r.kashi || <span style={{ color: '#9aa5b1' }}>―</span>}</td>
+                      {transfer && <td style={TD}>{r.kashi ? amt(r.kashiAmount, r.kashiNote, '#b0426a') : null}</td>}
+                      <td style={{ ...TD, fontSize: 14 }}>{r.tekiyo}{r.gyosha && <span style={{ color: '#8290a0' }}>　{r.gyosha}</span>}</td>
+                      {!transfer && <td style={TD}>{amt(r.amount, r.note, '#2c5f9e')}</td>}
+                    </tr>
+                  ))}</tbody>
+                </table>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 10 }}><span style={{ fontSize: 14, color: '#5b6773' }}>摘要：{rows[idx]?.tekiyo}</span><span style={{ fontSize: 22, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>¥ {yen(rows[idx]?.amount ?? 0)}</span></div>
-            </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}><tbody>{rows.map((r, i) => <tr key={i} style={{ background: i === idx ? '#fff8d6' : 'transparent' }}><td style={{ ...TD, fontSize: 14 }}>{i + 1}</td><td style={{ ...TD, fontSize: 14 }}>{r.division}</td><td style={{ ...TD, fontSize: 14 }}>{r.kari}／{r.kashi}</td><td style={{ ...NUM, fontSize: 14 }}>{yen(r.amount)}</td></tr>)}<tr style={{ background: '#f3f6f9' }}><td style={{ ...TD, fontWeight: 700 }} colSpan={3}>合計</td><td style={{ ...NUM, fontWeight: 700 }}>{yen(rows.reduce((a, r) => a + r.amount, 0))}</td></tr></tbody></table>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-              <button type="button" onClick={() => setStep(0)} style={btn()}>戻る</button>
+            )}
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}><tbody>{vs.map((x, i) => <tr key={i} onClick={() => setIdx(i)} style={{ background: i === idx ? '#fff8d6' : 'transparent', cursor: 'pointer' }}><td style={{ ...TD, fontSize: 14 }}>{i + 1}枚目</td><td style={{ ...TD, fontSize: 14 }}>{x.division}</td><td style={{ ...TD, fontSize: 14 }}>{x.rows.map((r) => r.kari || r.kashi).join('、')}</td><td style={{ ...NUM, fontSize: 14 }}>{yen(x.rows.reduce((a, r) => a + (r.kari ? r.amount : 0), 0))}</td></tr>)}<tr style={{ background: '#f3f6f9' }}><td style={{ ...TD, fontWeight: 700 }} colSpan={3}>借方の合計</td><td style={{ ...NUM, fontWeight: 700 }}>{yen(vs.reduce((a, x) => a + x.rows.reduce((b, r) => b + (r.kari ? r.amount : 0), 0), 0))}</td></tr></tbody></table>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+              <button type="button" data-alloc-prev onClick={() => (idx > 0 ? setIdx(idx - 1) : setStep(0))} style={btn()}>＜ 戻る</button>
+              <span data-alloc-confirm-no style={{ fontSize: 14, fontWeight: 700, color: '#5b6773', fontVariantNumeric: 'tabular-nums' }}>{idx + 1} ／ {vs.length}</span>
               <div style={{ display: 'flex', gap: 8 }}>
-                {idx < rows.length - 1 ? <button type="button" className="submit-btn" onClick={() => setIdx((i) => i + 1)} style={btn(accent, true)}>次へ</button> : <button type="button" className="submit-btn" onClick={() => { onRegister(rows, date); reset(); onClose(); }} style={btn(accent, true)}>終わり（{rows.length}枚を登録）</button>}
+                <button type="button" onClick={() => { reset(); onClose(); }} style={btn()}>キャンセル</button>
+                {idx < vs.length - 1 ? <button type="button" className="submit-btn" data-alloc-next onClick={() => setIdx((i) => i + 1)} style={btn(accent, true)}>次へ ＞</button> : <button type="button" className="submit-btn" data-alloc-finish onClick={finish} style={btn(accent, true)}>終わり（{vs.length}枚を登録）</button>}
               </div>
             </div>
           </>
@@ -580,12 +594,27 @@ export function useEntryTools(o: EntryToolsOptions) {
         open={dlg === '按分'}
         onClose={() => setDlg(null)}
         accent={o.accent}
-        onRegister={(rows, date) => {
+        onRegister={(vs, date, t) => {
           // 実行ごとに固有のID（既存の GUID に相当）。一括削除はこの単位で行う（確認メモ #56）
           const runId = 'alloc-' + Date.now().toString(36);
-          const ids = rows.map((r) => addVoucher({ kind: FORMAT_KIND[o.format], date, kari: r.kari, kashi: r.kashi, tekiyo: `${r.tekiyo}（${r.division.split(' ')[1] ?? r.division}）`, amount: r.amount, service: r.division, shohyo: true, source: '自動按分', from: '自動按分', batch: runId }).id);
+          // 伝票は自動按分仕訳の形式で作る。1 枚の伝票（ページ）の行は同じ伝票番号にまとめる（確認メモ #295）
+          const transfer = isTransferForm(t.form);
+          const month = date.split('/')[0];
+          let seq = getVouchers().reduce((m, r) => Math.max(m, r.seq), 0);
+          const ids: number[] = [];
+          for (const v of vs) {
+            seq += 1;
+            const no = transfer ? date.replace('/', '-') : `${month}-${seq}`;
+            const short = v.division.split(' ')[1] ?? v.division;
+            for (const r of v.rows) {
+              const kariAmount = r.kari ? r.amount : 0;
+              const kashiAmount = r.kashi ? r.kashiAmount : 0;
+              if (!kariAmount && !kashiAmount) continue;
+              ids.push(addVoucher({ kind: FORMAT_KIND[ALLOC_FORMAT[t.form]], date, seq, no, kari: r.kari, kashi: r.kashi, tekiyo: `${r.tekiyo}（${short}）`, amount: kariAmount || kashiAmount, gyosha: r.gyosha, ...(transfer ? { kariAmount, kashiAmount } : {}), service: v.division, shohyo: true, source: '自動按分', from: '自動按分', batch: runId }).id);
+            }
+          }
           o.onRegistered?.(ids);
-          o.toast(`自動按分：${rows.length} 枚の伝票を登録しました`);
+          o.toast(`自動按分：${vs.length} 枚の伝票を登録しました（${t.form}）`);
         }}
         onNew={() => { setDlg(null); setAwiz({ step: 0, t: blankAllocation({ kari: o.kari, kashi: o.kashi, tekiyo: o.lines[0]?.tekiyo ?? '' }) }); }}
       />
