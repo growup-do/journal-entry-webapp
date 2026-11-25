@@ -12,7 +12,7 @@
 import { useEffect, useId, useMemo, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { FISCAL_MONTHS, FiscalMonthTabs } from './FiscalMonthTabs';
-import { monthsIn, type Period } from '../lib/period';
+import { lastDayOf, monthsIn, type Period } from '../lib/period';
 import type { MonthFilter } from '../types';
 import { Modal } from './Modal';
 import { TD, TH } from './ReportShell';
@@ -21,7 +21,7 @@ import { Field, IconButton, Notice, SettingsShell, Toggle, btn, card, cardHead, 
 import { ExportDialog, runExport, type ExportKind, type ExportSpec } from './ExportDialog';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { TargetCombo } from './TargetCombo';
-import { AreaPickDialog, DisplaySettingDialog, FormatDialog, InnerFormatDialog, RemarkDialog, STD_INNER_PRINT, formatSummary, stdFormat, type FormatSpec, type InnerPrintFormat, type PrintFormat } from './PrintDetailDialogs';
+import { AreaPickDialog, DisplaySettingDialog, FUND_GROUPS, FormatDialog, InnerFormatDialog, RemarkDialog, STD_INNER_PRINT, formatSummary, stdFormat, type FormatSpec, type InnerPrintFormat, type PrintFormat } from './PrintDetailDialogs';
 import { PrintSteps, type OutKind } from './PrintSteps';
 import { LoadDivisionSettings } from './DivisionSettingsLoad';
 import { COMMON_LINK, FORM_GROUPS, REPORTS, formEnabled, omittable, type DetailItem, type DetailSection, type DetailValue, type ReportDef } from './printCatalog';
@@ -172,6 +172,8 @@ interface FlowPrefs {
   remarks?: Record<string, string>;
   /** 科目毎の表示設定（印刷位置の「科目毎に指定」。確認メモ #338） */
   disp?: Record<string, boolean>;
+  /** 科目別消費税区分別集計表：印刷する勘定科目・資金科目（false＝印刷しない。確認メモ #366） */
+  acctSel?: Record<string, boolean>; fundSel?: Record<string, boolean>;
 }
 /** 印刷書式の中身（現行「印刷書式設定」。帳票ごとに印刷幅の有無と初期値、フォントの行が違う） */
 function formatSpecOf(r: ReportDef): FormatSpec | null {
@@ -211,8 +213,11 @@ const initDetail = (r: ReportDef, common: PrintCommon): Record<string, DetailVal
   ...Object.fromEntries(itemsOf(r).map((it): [string, DetailValue] => [it.k, it.t === 'check' ? !!it.on : it.def ?? ''])),
   ...(r.common ? commonValues(r, common) : {}),
 });
+/** 決算書・準決算書：期間の最初の月は 4月で固定（確認メモ #352） */
+const fixedStart = (r: ReportDef) => r.cat === '決算書' || r.cat === '準決算書';
 const defaultPrefs = (r: ReportDef, fy: number, common: PrintCommon): FlowPrefs => ({
-  months: r.annual ? [] : ['8'], from: monthStart(fy, r.annual ? '4' : '8'), to: monthEnd(fy, r.annual ? '3' : '8'), range: '範囲指定の合計を印刷', scope: '全て', target: '起動中の区分',
+  ...(fixedStart(r) ? { mCur: '8', mRange: { from: '4/1', to: '8/31' } } : {}),
+  months: r.annual ? [] : fixedStart(r) ? monthsIn({ from: '4/1', to: '8/31' }) : ['8'], from: monthStart(fy, r.annual || fixedStart(r) ? '4' : '8'), to: monthEnd(fy, r.annual ? '3' : '8'), range: '範囲指定の合計を印刷', scope: '全て', target: '起動中の区分',
   checks: { check: false, red: false, blue: false, yellow: false, green: false },
   output: r.outs ? OUT_OF[r.outs[0]] : OUTPUTS[0], zeroHide: r.noZero ? false : r.zero ?? !!common.items.zero, title: r.title ?? r.name, detail: initDetail(r, common),
 });
@@ -226,7 +231,7 @@ export function DetailSections({ sections, values, onChange, accent, labelOf, op
   // 押せない項目の値は、ほかの項目の条件では「OFF」として扱う（例：科目欄を変えたあとの 特摘行の資金科目名）
   //   A4白紙と A5白紙のような「お互いに押せなくなる」組（not）は、たどると循環するので値をそのまま使う
   const eff = (k: string): DetailValue | undefined => { const c = byKey.get(k); return c?.when && !c.when.not && off(c) ? undefined : values[k]; };
-  function off(it: DetailItem): boolean { return !!it.when && (it.when.not ? !!eff(it.when.k) === !!it.when.v : eff(it.when.k) !== it.when.v); }
+  function off(it: DetailItem): boolean { return !!it.when && (it.when.not ? (typeof it.when.v === 'boolean' ? !!eff(it.when.k) === it.when.v : eff(it.when.k) === it.when.v) :eff(it.when.k) !== it.when.v); }
   return (
     <div data-detail-sections style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 10, alignItems: 'start' }}>
       {sections.map((sec) => {
@@ -306,7 +311,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
   const [exp, setExp] = useState<ExportSpec | null>(null);
   const [unit, setUnit] = useState(() => remarkUnitOf(s));
   const [stampEdit, setStampEdit] = useState<string[] | null>(null);
-  const [dlg, setDlg] = useState<'' | 'fmt' | 'inner' | 'areas' | 'remarks' | 'disp'>('');
+  const [dlg, setDlg] = useState<'' | 'fmt' | 'inner' | 'areas' | 'remarks' | 'disp' | 'acct' | 'fund'>('');
   const [footEdit, setFootEdit] = useState<string | null>(null);
   // 0データを表示しない は「印刷項目」の枠の先頭に置く（確認メモ #335）。仕訳日記帳・伝票は出さない（noZero。確認メモ #337）
   const zeroInItems = !report.noZero && report.detail.some((sec) => sec.title === '印刷項目');
@@ -324,9 +329,14 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
   const hasItem = (k: string) => report.detail.some((sec) => sec.items.some((it) => it.k === k));
   /** 予算内訳表：内訳書－印刷書式は「内部取引消去対応」のときだけ（確認メモ #345） */
   const hasInner = hasItem('innerMode');
-  const innerOn = p.detail.innerMode === '内部取引消去対応';
+  /** 決算書・準決算書の内訳表：［内訳書の印刷書式］（いつでも使える。確認メモ #354） */
+  const closingInner = fixedStart(report) && report.detail.some((sec) => sec.title === '内訳表');
+  const innerOn = closingInner || p.detail.innerMode === '内部取引消去対応';
   /** 予算書：［摘要］。「所属区分の摘要を使用する」のときは押せない（確認メモ #343・#348） */
-  const hasRemarks = hasItem('ownRemark');
+  const hasRemarks = hasItem('ownRemark') || !!report.remarkBtn;
+  /** 準決算書（C別紙6）は［備考］（確認メモ #364）、予算書は［摘要］ */
+  const remarkLabel = report.remarkBtn ?? '摘要';
+  const fixStart = fixedStart(report);
   const serviceNames = flattenDivisions(s.tree).filter((x) => x.node.kind === 'サービス区分').map((x) => divisionLabel(x.node));
   useEffect(() => { PREFS.set(report.id, p); }, [report.id, p]);
   const set = (patch: Partial<FlowPrefs>) => setP((x) => ({ ...x, ...patch }));
@@ -352,6 +362,12 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
   const md = (d: string) => { const [m, dd] = d.split('/'); return `令和${monthYear(fy, m)}年${m}月${dd}日`; };
   const ALL = FISCAL_MONTHS.filter((m) => m !== '決');
   const selectMonth = (m: MonthFilter) => setP((x) => {
+    // 決算書・準決算書：4月から押した月まで（確認メモ #352）
+    if (fixStart) {
+      if (m == null) return { ...x, mCur: null, mRange: null, months: [...ALL], from: monthStart(fy, ALL[0]), to: monthEnd(fy, ALL[ALL.length - 1]) };
+      const r = { from: '4/1', to: `${m}/${lastDayOf(m)}` };
+      return { ...x, mCur: m, mRange: r, months: monthsIn(r), from: monthStart(fy, '4'), to: monthEnd(fy, m) };
+    }
     if (x.mRange) return { ...x, mCur: m };
     if (m == null) return { ...x, mCur: null, months: [...ALL], from: monthStart(fy, ALL[0]), to: monthEnd(fy, ALL[ALL.length - 1]) };
     return { ...x, mCur: m, months: [m], from: monthStart(fy, m), to: monthEnd(fy, m) };
@@ -394,9 +410,9 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
           <ScopeBlock title="基本条件" desc="印刷する期間と区分です。">
             <div data-print-basic style={{ display: 'grid', gap: 14 }}>
             <div>
-              <span style={lbl}>{report.annual ? '期間（年次の帳票のため、会計年度の期首〜期末）' : '期間（月のボタンで1か月。ドラッグか Shift＋クリックで月の範囲、「全月」で年度全体）'}</span>
-              {!report.annual && <div data-print-months style={{ marginBottom: 8 }}><FiscalMonthTabs current={curMonth} accent={accent} onSelect={selectMonth} withAll range={p.mRange ?? null} onRange={selectRange} pickRange={false} /></div>}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}><input className="field-input" value={p.from} onChange={(e) => set({ from: e.target.value })} style={{ ...input, width: 170 }} aria-label="開始日" /><span>〜</span><input className="field-input" value={p.to} onChange={(e) => set({ to: e.target.value })} style={{ ...input, width: 170 }} aria-label="終了日" /><span style={{ fontSize: 12, color: '#8290a0' }}>会計年度：{s.fiscalYear}</span></div>
+              <span style={lbl}>{report.annual ? '期間（年次の帳票のため、会計年度の期首〜期末）' : fixStart ? '期間（最初の月は 4月で固定です。月のボタンで最後の月を選びます）' : '期間（月のボタンで1か月。ドラッグか Shift＋クリックで月の範囲、「全月」で年度全体）'}</span>
+              {!report.annual && <div data-print-months style={{ marginBottom: 8 }}><FiscalMonthTabs current={curMonth} accent={accent} onSelect={selectMonth} withAll range={p.mRange ?? null} onRange={fixStart ? undefined : selectRange} pickRange={false} /></div>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}><input className="field-input" value={p.from} readOnly={fixStart} title={fixStart ? '最初の月は 4月で固定です' : undefined} onChange={(e) => set({ from: e.target.value })} style={{ ...input, width: 170, ...(fixStart ? { background: '#f3f6f9', color: '#5b6773' } : {}) }} aria-label="開始日" /><span>〜</span><input className="field-input" value={p.to} onChange={(e) => set({ to: e.target.value })} style={{ ...input, width: 170 }} aria-label="終了日" /><span style={{ fontSize: 12, color: '#8290a0' }}>会計年度：{s.fiscalYear}</span></div>
             </div>
             <div>
               <span style={lbl}>区分</span>
@@ -460,6 +476,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
                   depth: { label: report.cat === '予算' && report.budget && !report.rangeSumOnly ? '表示科目' : '表示設定', always: true, onClick: () => setDlg('disp'), title: '科目毎の表示設定（「科目毎に指定」で印刷する科目）を開きます', note: Object.values(p.disp ?? {}).some((x) => x === false) ? `表示しない科目 ${Object.values(p.disp ?? {}).filter((x) => x === false).length} 件` : undefined },
                   pickArea: { label: '印刷区分', onClick: () => setDlg('areas'), title: '内訳表に表示する区分を選びます', note: (p.areas ?? []).filter(Boolean).length ? `${(p.areas ?? []).filter(Boolean).length} 区分を指定` : '区分が未指定です' },
                   stamp: { label: '捺印欄', onClick: () => setStampEdit([...stamps]), note: stamps.filter(Boolean).join('・') || '名前が未入力です', title: '捺印欄に印刷する名前を入力します' },
+                  note: { label: '脚注編集', onClick: () => setFootEdit(pr.footnotes[report.name] ?? ''), note: pr.footnotes[report.name] ? pr.footnotes[report.name].slice(0, 30) + (pr.footnotes[report.name].length > 30 ? '…' : '') : '脚注が未入力です', title: '（注）予備費の充当額等として印刷する脚注を入力します' },
                   foot: { label: '脚注編集', onClick: () => setFootEdit(pr.footnotes[report.name] ?? ''), note: pr.footnotes[report.name] ? pr.footnotes[report.name].slice(0, 30) + (pr.footnotes[report.name].length > 30 ? '…' : '') : '脚注が未入力です', title: 'この帳票の脚注を入力します' },
                 }} />}
                 {stampButtonOnly(report) && (
@@ -468,19 +485,24 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
                     <span style={{ fontSize: 12, color: '#8290a0' }}>{stamps.filter(Boolean).join('・') || '名前が未入力です'}（{STAMP_MAX} 欄）</span>
                   </div>
                 )}
-                {(fmtSpec || hasInner || hasRemarks) && (
+                {(fmtSpec || hasInner || closingInner || hasRemarks || report.acctPick) && (
                   <div data-detail-buttons style={{ display: 'grid', gap: 6 }}>
                     {fmtSpec && fmt && <div data-journal-format style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                       <button type="button" data-open-journal-format onClick={() => setDlg('fmt')} style={btn('#5b6773', false, true)}>印刷書式</button>
                       <span style={{ fontSize: 12, color: '#8290a0' }}>{formatSummary(fmtSpec, fmt)}</span>
                     </div>}
-                    {hasInner && <div data-inner-format style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                      <button type="button" data-open-inner-format disabled={!innerOn} onClick={() => setDlg('inner')} title={innerOn ? undefined : '「内部取引消去対応」を選ぶと使えます'} style={{ ...btn('#5b6773', false, true), opacity: innerOn ? 1 : 0.5, cursor: innerOn ? 'pointer' : 'default' }}>内訳表の印刷書式</button>
+                    {(hasInner || closingInner) && <div data-inner-format style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <button type="button" data-open-inner-format disabled={!innerOn} onClick={() => setDlg('inner')} title={innerOn ? undefined : '「内部取引消去対応」を選ぶと使えます'} style={{ ...btn('#5b6773', false, true), opacity: innerOn ? 1 : 0.5, cursor: innerOn ? 'pointer' : 'default' }}>{closingInner ? '内訳書の印刷書式' : '内訳表の印刷書式'}</button>
                       <span style={{ fontSize: 12, color: '#8290a0' }}>{innerOn ? (() => { const f = p.innerFmt ?? STD_INNER_PRINT; return `${f.paper}・${f.orient}／科目名 ${f.widths[0]}mm／金額 ${f.widths[1]}mm`; })() : '合算テーブルのときは使いません'}</span>
                     </div>}
                     {hasRemarks && <div data-remarks style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                      <button type="button" data-open-remarks disabled={!!p.detail.ownRemark} onClick={() => setDlg('remarks')} title={p.detail.ownRemark ? '「所属区分の摘要を使用する」のときは、選んだ区分の摘要を使います' : '科目ごとの摘要（備考）を入力します'} style={{ ...btn('#5b6773', false, true), opacity: p.detail.ownRemark ? 0.5 : 1, cursor: p.detail.ownRemark ? 'default' : 'pointer' }}>摘要</button>
+                      <button type="button" data-open-remarks disabled={!!p.detail.ownRemark} onClick={() => setDlg('remarks')} title={p.detail.ownRemark ? '「所属区分の摘要を使用する」のときは、選んだ区分の摘要を使います' : `科目ごとの${remarkLabel}を入力します`} style={{ ...btn('#5b6773', false, true), opacity: p.detail.ownRemark ? 0.5 : 1, cursor: p.detail.ownRemark ? 'default' : 'pointer' }}>{remarkLabel}</button>
                       <span style={{ fontSize: 12, color: '#8290a0' }}>{p.detail.ownRemark ? `所属区分の摘要を使用（${p.detail.ownDiv && p.detail.ownDiv !== '（選択してください）' ? p.detail.ownDiv : '区分が未選択'}）` : Object.keys(p.remarks ?? {}).length ? `${Object.keys(p.remarks ?? {}).length} 科目に入力済み` : '未入力'}</span>
+                    </div>}
+                    {report.acctPick && <div data-acct-pick style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <button type="button" data-open-acct onClick={() => setDlg('acct')} title="印刷する勘定科目を選びます" style={btn('#5b6773', false, true)}>勘定科目</button>
+                      <button type="button" data-open-fund onClick={() => setDlg('fund')} title="印刷する資金科目を選びます" style={btn('#5b6773', false, true)}>資金科目</button>
+                      <span style={{ fontSize: 12, color: '#8290a0' }}>{(() => { const off = (v?: Record<string, boolean>) => Object.values(v ?? {}).filter((x) => x === false).length; const a = off(p.acctSel), f = off(p.fundSel); return a || f ? `印刷しない科目：勘定科目 ${a} 件／資金科目 ${f} 件` : 'すべての科目を印刷します'; })()}</span>
                     </div>}
                   </div>
                 )}
@@ -527,7 +549,9 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
       {dlg === 'fmt' && fmtSpec && fmt && <FormatDialog spec={fmtSpec} value={fmt} accent={accent} onCancel={() => setDlg('')} onOk={(f) => { set({ fmt: f }); setDlg(''); }} />}
       {dlg === 'inner' && <InnerFormatDialog value={p.innerFmt ?? STD_INNER_PRINT} accent={accent} onCancel={() => setDlg('')} onOk={(f) => { set({ innerFmt: f }); setDlg(''); }} />}
       {dlg === 'areas' && <AreaPickDialog value={p.areas ?? []} divisions={serviceNames} perPage={Number(p.detail.perPage) || 5} accent={accent} onCancel={() => setDlg('')} onOk={(v) => { set({ areas: v }); setDlg(''); }} />}
-      {dlg === 'remarks' && <RemarkDialog title={report.name} value={p.remarks ?? {}} accent={accent} onCancel={() => setDlg('')} onOk={(v) => { set({ remarks: v }); setDlg(''); }} />}
+      {dlg === 'acct' && <DisplaySettingDialog title="科目設定（勘定科目）" help="チェックを付けた勘定科目だけを印刷します。" value={p.acctSel ?? {}} accent={accent} onCancel={() => setDlg('')} onOk={(v) => { set({ acctSel: v }); setDlg(''); }} />}
+      {dlg === 'fund' && <DisplaySettingDialog title="科目設定（資金科目）" help="チェックを付けた資金科目だけを印刷します。" groups={FUND_GROUPS} value={p.fundSel ?? {}} accent={accent} onCancel={() => setDlg('')} onOk={(v) => { set({ fundSel: v }); setDlg(''); }} />}
+      {dlg === 'remarks' && <RemarkDialog title={`${remarkLabel}：${report.name}`} column={remarkLabel === '摘要' ? '備考' : remarkLabel} value={p.remarks ?? {}} accent={accent} onCancel={() => setDlg('')} onOk={(v) => { set({ remarks: v }); setDlg(''); }} />}
       {dlg === 'disp' && <DisplaySettingDialog value={p.disp ?? {}} accent={accent} onCancel={() => setDlg('')} onOk={(v) => { set({ disp: v }); setDlg(''); }} />}
       {/* 【名前を付けて保存】は印刷の流れの上に重ねる（DOM 上で後に置く） */}
       <ExportDialog spec={exp} onClose={() => { setExp(null); onClose?.(); }} accent={accent} />

@@ -14,7 +14,7 @@ import { PrintOutDialog } from './PrintOutDialog';
 import { ToastView, useToast } from './Toast';
 import { Notice, PrintIcon, SettingsShell, TabStrip, btn, card, lbl, tabBtn } from './ui';
 import { WAMNET_ITEMS, WamnetDialog, type WamnetItem } from './WamnetDialog';
-import { CATS, REPORTS, condOk, subsOf, type ReportDef } from './printCatalog';
+import { CATS, condOk, localizeReports, subsOf, type ReportDef } from './printCatalog';
 import { displayName } from '../data';
 import { useSession } from '../store/session';
 
@@ -35,6 +35,8 @@ export function PrintCenterPage({ variant, accent, onNavigate, initialCat }: { v
   const [selected, setSelected] = useState<Set<string>>(new Set(['j1', 'l1', 't1', 't2', 't3']));
 
   const ok = (r: ReportDef) => condOk(r, s);
+  // 帳票名の「○○」は起動中の区分が属する区分の名前で埋め、補助簿（明細表）は設定した科目ごとに出す（確認メモ #355・#356・#361〜#363）
+  const REPORTS = localizeReports(s);
   const inCat = REPORTS.filter((r) => r.cat === cat);
   const list = inCat.filter((r) => showAll || ok(r));
   const hidden = inCat.filter((r) => !ok(r)).length;

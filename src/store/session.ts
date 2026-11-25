@@ -381,6 +381,10 @@ export interface Session {
   memberAccess: Record<string, Access>;
   /** ログイン中のアカウント（store/access.ts の ACCOUNTS の id）。access はこのアカウントの memberAccess と同じ内容 */
   accountId: string;
+  /** 補助簿（明細表）を作る科目（勘定科目の「補助簿（明細表）」タブ。印刷センターの「○○［科目名］明細表」に使う。確認メモ #361）
+   *  subLedger＝伝票を印刷時に明細として指定（科目名、項目は '#'+項目名）／subBlue＝項目以下の科目を明細とする（項目名） */
+  subLedger: Record<string, boolean>;
+  subBlue: Record<string, boolean>;
 }
 
 const KEY = 'proto-session-v2'; // v2：区分ツリーの見直し（入力区分／親区分）に伴い保存形式を更新
@@ -403,7 +407,7 @@ const DEFAULT: Session = {
   ledgerTarget: null, journalTarget: null, auditEnabled: {}, auditCorpEnabled: { 21: false, 22: false }, corpStartDate: '20240401', corpTax: '非課税',
   role: '入力可', startScreen: '伝票入力', homeSections: DEFAULT_HOME_SECTIONS, taxEntry: false,
   taxMode: '通常モード', specialRatesByAccount: DEFAULT_SPECIAL_RATES_BY_ACCOUNT, specialRoundTo: DEFAULT_SPECIAL_RATES[DEFAULT_SPECIAL_RATES.length - 1].division, openingMidTerm: false,
-  access: FULL_ACCESS, memberAccess: DEFAULT_MEMBER_ACCESS, accountId: 'me',
+  access: FULL_ACCESS, memberAccess: DEFAULT_MEMBER_ACCESS, accountId: 'me', subLedger: {}, subBlue: {},
 };
 
 let state: Session = (() => {

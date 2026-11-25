@@ -10,6 +10,12 @@ import { useId, useState } from 'react';
 import { Modal } from './Modal';
 import { btn, input } from './ui';
 import { ACCOUNTS } from '../data';
+import { ACCOUNT_META } from '../lib/accounts';
+/** 資金科目の一覧（科目設定の［資金科目］。確認メモ #366） */
+export const FUND_GROUPS: { group: string; items: string[] }[] = [
+  { group: '事業活動による収入', items: [...new Set(ACCOUNT_META.filter((m) => m.cls === '収益' && m.fund).map((m) => m.fund))] },
+  { group: '事業活動による支出', items: [...new Set(ACCOUNT_META.filter((m) => m.cls === '費用' && m.fund).map((m) => m.fund))] },
+];
 
 /** 書体（現行はパソコンに入っているフォントの一覧） */
 export const FORMAT_FACES = ['ＭＳ 明朝', 'ＭＳ Ｐ明朝', 'ＭＳ ゴシック', 'ＭＳ Ｐゴシック', '游明朝', '游ゴシック', 'メイリオ', 'BIZ UD明朝', 'BIZ UDゴシック', 'Noto Serif JP', 'Noto Sans JP'];
@@ -144,14 +150,14 @@ export function AreaPickDialog({ value, divisions, perPage, accent, onCancel, on
 
 /* ---------------- 摘要（予算書の科目ごとの備考） ---------------- */
 const BAD_CHARS = /[&/?:*"><|]/g;
-export function RemarkDialog({ title, value, accent, onCancel, onOk }: { title: string; value: Record<string, string>; accent: string; onCancel: () => void; onOk: (v: Record<string, string>) => void }) {
+export function RemarkDialog({ title, column = '備考', value, accent, onCancel, onOk }: { title: string; /** 入力欄の見出し（備考・摘要） */ column?: string; value: Record<string, string>; accent: string; onCancel: () => void; onOk: (v: Record<string, string>) => void }) {
   const [v, setV] = useState(value);
   return (
     <Modal open onClose={onCancel} width={680} title={title}>
       <div data-remark-dialog style={{ padding: '14px 22px 18px', display: 'grid', gap: 10 }}>
         <div style={{ maxHeight: 380, overflowY: 'auto', border: '1px solid #e2e8ee', borderRadius: 8 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr><th style={{ position: 'sticky', top: 0, background: '#f3f6f9', padding: '6px 10px', fontSize: 12, textAlign: 'left', width: '42%' }}>科目名</th><th style={{ position: 'sticky', top: 0, background: '#f3f6f9', padding: '6px 10px', fontSize: 12, textAlign: 'left' }}>備考</th></tr></thead>
+            <thead><tr><th style={{ position: 'sticky', top: 0, background: '#f3f6f9', padding: '6px 10px', fontSize: 12, textAlign: 'left', width: '42%' }}>科目名</th><th style={{ position: 'sticky', top: 0, background: '#f3f6f9', padding: '6px 10px', fontSize: 12, textAlign: 'left' }}>{column}</th></tr></thead>
             <tbody>{ACCOUNTS.flatMap((g) => [
               <tr key={'g:' + g.group} style={{ background: '#e8f4fb' }}><td style={{ padding: '5px 10px', fontSize: 14, fontWeight: 700 }}>{g.group}</td><td style={{ padding: '3px 10px' }}><input className="field-input" aria-label={`${g.group}の備考`} value={v[g.group] ?? ''} onChange={(e) => setV({ ...v, [g.group]: e.target.value.replace(BAD_CHARS, '') })} style={{ ...input, padding: '4px 8px' }} /></td></tr>,
               ...g.items.map((a) => <tr key={a}><td style={{ padding: '5px 10px 5px 26px', fontSize: 14 }}>{a}</td><td style={{ padding: '3px 10px' }}><input className="field-input" aria-label={`${a}の備考`} value={v[a] ?? ''} onChange={(e) => setV({ ...v, [a]: e.target.value.replace(BAD_CHARS, '') })} style={{ ...input, padding: '4px 8px' }} /></td></tr>),
@@ -169,22 +175,22 @@ export function RemarkDialog({ title, value, accent, onCancel, onOk }: { title: 
 }
 
 /* ---------------- 科目毎の表示設定 ---------------- */
-export function DisplaySettingDialog({ value, accent, onCancel, onOk }: { value: Record<string, boolean>; accent: string; onCancel: () => void; onOk: (v: Record<string, boolean>) => void }) {
+export function DisplaySettingDialog({ value, accent, onCancel, onOk, title = '科目毎の表示設定', groups = ACCOUNTS, help: helpText }: { value: Record<string, boolean>; accent: string; onCancel: () => void; onOk: (v: Record<string, boolean>) => void; /** 科目設定（勘定科目・資金科目）でも使う。確認メモ #366 */ title?: string; groups?: { group: string; items: string[] }[]; help?: string }) {
   const [v, setV] = useState(value);
   const on = (k: string) => v[k] !== false;
   const [help, setHelp] = useState(false);
   return (
-    <Modal open onClose={onCancel} width={520} title="科目毎の表示設定">
+    <Modal open onClose={onCancel} width={520} title={title}>
       <div data-display-dialog style={{ padding: '14px 22px 18px', display: 'grid', gap: 10 }}>
         <div style={{ maxHeight: 380, overflowY: 'auto', border: '1px solid #e2e8ee', borderRadius: 8, padding: '6px 10px' }}>
-          {ACCOUNTS.map((g) => (
+          {groups.map((g) => (
             <div key={g.group}>
               <label style={{ display: 'flex', gap: 7, alignItems: 'center', fontSize: 14, fontWeight: 700, padding: '3px 0', cursor: 'pointer' }}><input type="checkbox" checked={on(g.group)} onChange={() => setV({ ...v, [g.group]: !on(g.group) })} style={{ accentColor: accent }} />{g.group}</label>
               {g.items.map((a) => <label key={a} style={{ display: 'flex', gap: 7, alignItems: 'center', fontSize: 14, padding: '3px 0 3px 22px', cursor: 'pointer' }}><input type="checkbox" checked={on(a)} onChange={() => setV({ ...v, [a]: !on(a) })} style={{ accentColor: accent }} />{a}</label>)}
             </div>
           ))}
         </div>
-        {help && <div style={{ ...note, padding: '8px 10px', background: '#f6f8fa', borderRadius: 8 }}>印刷位置で「科目毎に指定」を選んだとき、チェックを付けた項目・科目だけを印刷します。チェックを外した科目は、帳票に行を出しません（金額は上の項目の合計に含めたままです）。</div>}
+        {help && <div style={{ ...note, padding: '8px 10px', background: '#f6f8fa', borderRadius: 8 }}>{helpText ?? <>印刷位置で「科目毎に指定」を選んだとき、チェックを付けた項目・科目だけを印刷します。チェックを外した科目は、帳票に行を出しません（金額は上の項目の合計に含めたままです）。</>}</div>}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button type="button" onClick={() => setHelp(!help)} style={btn()}>説明</button>
           <span style={{ flex: 1 }} />

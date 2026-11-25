@@ -5,8 +5,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { PreviewModal, PrintDialog, SCREEN_DETAIL, sampleReportData, type ReportDef, type TableData } from './PrintCenter';
-import { REPORTS, condOk } from './printCatalog';
-import { useSession } from '../store/session';
+import { REPORTS, condOk, fillReportName } from './printCatalog';
+import { useSession, type Session } from '../store/session';
 import { Chevron, PrintIcon, btn } from './ui';
 
 export interface PrintItem { name: string; /** 詳細設定の元にする帳票（REPORTS の名前）。'WAMNET' は WAMNET連携のダイアログで扱う */ base: string; note?: string; /** 画面に表示中の表を印刷データに使う */ screenData?: boolean; /** 決算書の様式（共通の印刷設定「様式設定」で省略にした様式はメニューに出さない） */ form?: string }
@@ -19,12 +19,13 @@ export interface PrintActionGroup { label?: string; items: (PrintAction | PrintI
 const JOURNAL = (screenData: boolean): PrintItem[] => [{ name: '日記帳', base: '仕訳日記帳', screenData }, { name: '伝票', base: '仕訳伝票（伝票式）' }, { name: '振替伝票', base: '振替伝票（振替式）' }];
 const BUDGET_KINDS = ['前年度', '当初', '補正', '次年度'];
 // 決算書の様式（第一〜第四様式）。第二様式（事業区分別の内訳表）も現行の印刷メニューにある（確認事項「【帳票・印刷】現行との差分について」）
-const CLOSING: PrintItem[] = REPORTS.filter((r) => r.cat === '決算書').map((r) => ({ name: r.name.replace('○○事業区分', '社会福祉事業区分').replace('○○拠点区分', '拠点区分'), base: r.name, note: r.note, form: r.form }));
+// 「○○」は表示するときに起動中の区分が属する区分の名前で埋める（fillReportName。確認メモ #355・#356）
+const CLOSING: PrintItem[] = REPORTS.filter((r) => r.cat === '決算書').map((r) => ({ name: r.name, base: r.name, note: r.note, form: r.form }));
 /** WAMNET連携出力（現行の印刷メニューの 7 項目）。選ぶと WAMNET連携のダイアログを開く */
 const WAMNET: PrintItem[] = ['WAMNET連携設定', 'WAMNET連携科目チェック', 'WAMNET連携ファイル出力', 'WAMNET連携注記出力（PDF）', 'WAMNET連携注記出力（Excel）', 'WAMNET連携附属明細書出力（PDF）', 'WAMNET連携附属明細書出力（Excel）'].map((name) => ({ name, base: 'WAMNET' }));
 const PRE_CLOSING: PrintItem[] = [
-  { name: '拠点区分 貸借対照表明細書', base: '○○拠点区分 貸借対照表明細書', note: 'C別紙6', form: 'pc6' },
-  ...['001 本部', '002 チャイルド保育園'].flatMap((d) => (['資金収支計算書', '事業活動計算書', '貸借対照表'] as const).map((r, i) => ({ name: `${d}サービス区分 ${r}`, base: `○○サービス区分 ${r}`, note: `C${i + 1}-5`, form: `pc${i + 1}-5` }))),
+  { name: '○○拠点区分 貸借対照表明細書', base: '○○拠点区分 貸借対照表明細書', note: 'C別紙6', form: 'pc6' },
+  ...(['資金収支計算書', '事業活動計算書', '貸借対照表'] as const).map((r, i) => ({ name: `○○サービス区分 ${r}`, base: `○○サービス区分 ${r}`, note: `C${i + 1}-5`, form: `pc${i + 1}-5` })),
 ];
 
 /** 画面キー → 印刷できる帳票（現行の印刷メニューの振り分け） */
@@ -53,9 +54,9 @@ export const SCREEN_PRINTS: Record<string, PrintGroup[]> = {
   分析グラフ: [{ label: '経営分析', items: ['財務分析一覧表', '財務分析グラフ', '財務分析シート', '基本チェック表', '財務分析内訳グラフ'].map((n) => ({ name: n, base: n })) }],
 };
 
-function reportOf(item: PrintItem): ReportDef {
+function reportOf(item: PrintItem, s: Session): ReportDef {
   const base = REPORTS.find((r) => r.name === item.base);
-  return { ...(base ?? { id: 'x', name: item.name, cat: '画面の帳票', detail: SCREEN_DETAIL }), id: 'menu:' + item.name, name: item.name, note: item.note ?? base?.note, cat: base?.cat ?? '画面の帳票' };
+  return { ...(base ?? { id: 'x', name: item.name, cat: '画面の帳票', detail: SCREEN_DETAIL }), id: 'menu:' + item.name, name: fillReportName(item.name, s), note: item.note ?? base?.note, cat: base?.cat ?? '画面の帳票' };
 }
 
 /** 画面の「印刷」ボタン。帳票が1つならそのまま印刷ダイアログ、複数なら一覧から選ぶ */
@@ -78,7 +79,7 @@ export function ScreenPrintMenu({ page, groups, actions, accent, data, label = '
   if (items.length === 0) return null;
   const single = items.length === 1;
   const choose = (it: PrintItem | PrintAction) => { setOpen(false); if ('onClick' in it) it.onClick(); else setPicked(it); };
-  const report = picked ? reportOf(picked) : null;
+  const report = picked ? reportOf(picked, s) : null;
   const pdata = picked?.screenData ? data : undefined;
   const icon = <PrintIcon />;
   return (
@@ -93,7 +94,7 @@ export function ScreenPrintMenu({ page, groups, actions, accent, data, label = '
               {g.label && <div style={{ padding: '6px 10px 3px', fontSize: 12, fontWeight: 800, color: '#8290a0', letterSpacing: '.04em' }}>{g.label}</div>}
               {g.items.map((it) => (
                 <button key={it.name} type="button" role="menuitem" className="menu-sub" data-print-item={it.name} onClick={() => choose(it)} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '7px 10px', border: 'none', borderRadius: 7, background: 'transparent', fontFamily: 'inherit', fontSize: 14, color: '#22303c', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.name}</span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{'base' in it ? fillReportName(it.name, s) : it.name}</span>
                   {it.note && <span style={{ marginLeft: 'auto', fontSize: 12, color: '#9aa5b1', flex: 'none' }}>{it.note}</span>}
                 </button>
               ))}

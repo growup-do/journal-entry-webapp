@@ -44,6 +44,8 @@ const txt = (k: string, label: string, def = '', placeholder?: string, width?: n
 const DEPTH_SECTION = (def = '細々区分までの印刷'): DetailSection => ({ title: '印刷位置', items: [rad('depth', '印刷する区分の深さ', DEPTH_OPTS, def)] });
 const LINE_GAP = (def = '上のみ空き', gap = '4.8'): DetailSection => ({ title: '行の間隔', items: [rad('lineGap', '行の間隔', ['上・下空き', '上のみ空き', '空きなし'], def), sel('gap', '空きの間隔（mm。空きなしは 3.2mm）', GAPS, gap)] });
 
+/** 行の間隔と、上・下空き／上のみ空きに付随する空きの間隔（空きなしのときは押せない。確認メモ #365） */
+const GAP_WITH = (def: string, gap: string): DetailSection => ({ title: '行の間隔', items: [rad('lineGap', '行の間隔', ['上・下空き', '上のみ空き', '空きなし'], def), { ...sel('gap', '空きの間隔（mm）', GAPS, gap), when: { k: 'lineGap', v: '空きなし', not: true } }] });
 /** 伝票番号（仕訳日記帳・伝票で共通） */
 const SLIP_NO: DetailSection = { title: '伝票番号', items: [
   rad('slipNo', '伝票番号', ['入力番号', '自動連番 番号指定', '自動連番 Seq-No', 'Seq指定']),
@@ -216,7 +218,7 @@ const D: Record<string, DetailSection[]> = {
   fundLedger: LEDGER('資金元帳'),
   vendorLedger: LEDGER('取引先元帳'),
   // 月別の推移表（現行は 0データ・網掛け・太線・横線と、印刷位置・行の間隔・タイトル・位置調整だけ）
-  monthly: [{ title: '印刷項目', items: [chk('shade', '費目行を網掛け、太字にする'), chk('bold', '費目下を太線にする'), chk('hline', '項目・科目毎に横線を印刷する')] }, DEPTH_SECTION('中区分までの印刷'), LINE_GAP('上・下空き', '6.4'), POSITION('0', '0')],
+  monthly: [{ title: '印刷項目', items: [chk('shade', '費目行を網掛け、太字にする'), chk('bold', '費目下を太線にする'), chk('hline', '項目・科目毎に横線を印刷する'), chk('area', '区分名を印刷する', true)] }, DEPTH_SECTION('中区分までの印刷'), LINE_GAP('上・下空き', '6.4'), POSITION('0', '0')],
   sub: [
     { title: '印刷条件', items: [rad('amt', '明細表内に印刷する金額', ['全ての伝票', '伝票を選択']), rad('pdate', '印刷日付', ['日付印刷しない', '期首〜期末', '指定月']), txt('title', 'タイトル（全角20文字）', '', '例：未払金明細表', 260)] },
     { title: '印刷項目', items: [chk('vsub', '取引先コード小計（同一取引先コードは集計する）'), chk('tshade', '合計行を網掛け、太字にする', true), chk('area', '区分名を印刷する', true)] },
@@ -226,7 +228,7 @@ const D: Record<string, DetailSection[]> = {
     { title: '印刷項目', items: [chk('title', 'タイトルを印刷する', true), chk('area', '伝票入力区分名を印刷する', true), chk('scale', '縦軸スケールを自動調整する', true), chk('avg', '平均値を表示する')] },
   ],
   // 消費税区分別集計表・科目別消費税区分別集計表（現行「消費税区分別集計表 - 詳細設定」）
-  tax: [{ title: '印刷項目', items: [chk('area', '区分名を印刷する', true), chk('autofont', '科目名のフォントサイズを自動調整する'), chk('page', 'ページ番号を印刷する'), txt('pageStart', 'ページ番号の開始番号', '1', '1', 80), chk('date', '印刷時の日付を印刷する')] }, { title: '行の間隔', items: [rad('lineGap', '行の間隔', ['上・下空き', '上のみ空き', '空きなし'], '上・下空き')] }, POSITION('0', '0')],
+  tax: [{ title: '印刷項目', items: [chk('area', '区分名を印刷する', true), chk('autofont', '科目名のフォントサイズを自動調整する'), chk('page', 'ページ番号を印刷する'), txt('pageStart', 'ページ番号の開始番号', '1', '1', 80), chk('date', '印刷時の日付を印刷する')] }, GAP_WITH('上・下空き', '6.4'), POSITION('0', '0')],
   // 消費税区分別集計内訳表（現行は条件画面だけで、詳細設定ボタンは無い）
   taxInner: [
     { title: '消費税区分', items: [sel('taxKind', '消費税区分', TAX_CODES, TAX_CODES[0])] },
@@ -236,8 +238,9 @@ const D: Record<string, DetailSection[]> = {
   // 消費税区分コード内訳表（現行「印刷詳細」）
   taxCode: [
     { title: '印刷項目', items: [chk('shade', '費目行を網掛け、太字にする'), chk('bold', '費目下を太線にする'), chk('stamp', '捺印欄を印刷する'), chk('area', '区分名を印刷する', true), chk('hline', '項目・科目毎に横線を印刷する'), chk('lastCol', '合計額を最後の列に印刷する'), chk('page', 'ページ番号を印刷する'), txt('pageStart', 'ページ番号の開始番号', '1', '1', 80), chk('date', '印刷時の日付を印刷する')] },
-    { title: '印刷位置', items: [rad('depth', '印刷する区分の深さ', DEPTH_OPTS.slice(0, 4), '中区分までの印刷')] },
-    { title: '行の間隔', items: [rad('lineGap', '行の間隔', ['上・下空き', '上のみ空き', '空きなし'], '上・下空き')] },
+    // 細々区分までの印刷も選べる（確認メモ #367）
+    { title: '印刷位置', items: [rad('depth', '印刷する区分の深さ', DEPTH_OPTS.slice(0, 5), '中区分までの印刷')] },
+    GAP_WITH('上・下空き', '6.4'),
     { title: '消費税区分（選択した税区）', items: TAX_SHORT.map((t, i) => chk('tc' + i, t, i === 0)) },
     { title: '科目体系', items: [rad('acctKind', '科目体系', ['勘定科目', '資金科目'], '資金科目')] },
     { title: '印刷金額', items: [rad('amount', '印刷金額', ['消費税額', '税込金額'])] },
@@ -245,6 +248,18 @@ const D: Record<string, DetailSection[]> = {
   ],
   internal: [{ title: '内部取引区分', items: [rad('kind', '内部取引区分', ['全て', '事業', '拠点', 'サービス', '小サービス'])] }],
 };
+
+/** ページ番号の開始番号は「ページ番号を印刷する」に付随させる（すぐ下に字下げして置き、オンのときだけ入力できる。確認メモ #359） */
+function withPageStart(sections: DetailSection[]): DetailSection[] {
+  return sections.map((sec) => {
+    const start = sec.items.find((it) => it.k === 'pageStart');
+    const pi = sec.items.findIndex((it) => it.k === 'page');
+    if (!start || pi < 0) return sec;
+    const rest = sec.items.filter((it) => it !== start);
+    const at = rest.findIndex((it) => it.k === 'page') + 1;
+    return { ...sec, items: [...rest.slice(0, at), { ...start, label: '開始番号', when: { k: 'page', v: true } }, ...rest.slice(at)] };
+  });
+}
 
 /* ---------------- 別紙（現行の各明細書の詳細設定。行の間隔・印刷様式・印刷位置調整は共通の部品） ---------------- */
 const AP_GAP = (def: string): DetailSection => ({ title: '行の間隔', items: [rad('lineGap', '行の間隔', ['上・下空き', '上のみ空き', '空きなし'], def, '上・下空き 6.4mm／上のみ空き 4.8mm／空きなし 3.2mm')] });
@@ -271,8 +286,9 @@ const AP_LINKED = (activity: boolean): DetailSection[] => [
 export interface AppendixSpec { detail: DetailSection[]; note?: string; /** 開発用のメモ。画面には出さない */ memo?: string; zero?: boolean; noZero?: boolean; outs?: ReportDef['outs']; range?: boolean }
 const AP: Record<string, AppendixSpec> = {
   // 別紙1・2 注記（「注記印刷詳細」。年月指定は無い）
-  'note-corp': { noZero: true, outs: ['print', 'excel', 'pdf'], detail: [{ title: '印刷項目', items: [chk('corp', '法人名を印刷する'), chk('page', 'ページ番号を印刷する'), txt('pageStart', 'ページ番号の開始番号', '1', '1', 80), chk('date', '印刷時の日付を印刷する')] }, POSITION('0', '0')] },
-  'note-base': { noZero: true, outs: ['print', 'excel', 'pdf'], detail: [{ title: '印刷項目', items: [chk('corp', '法人名を印刷する'), chk('site', '拠点名を印刷する'), chk('page', 'ページ番号を印刷する'), txt('pageStart', 'ページ番号の開始番号', '1', '1', 80), chk('date', '印刷時の日付を印刷する')] }, POSITION('0', '0')] },
+  // ２ページ目以降も項目名を印刷する（確認メモ #358）
+  'note-corp': { noZero: true, outs: ['print', 'excel', 'pdf'], detail: [{ title: '印刷項目', items: [chk('corp', '法人名を印刷する'), chk('page', 'ページ番号を印刷する'), txt('pageStart', 'ページ番号の開始番号', '1', '1', 80), chk('date', '印刷時の日付を印刷する'), chk('head2', '２ページ目以降も項目名を印刷する', true)] }, POSITION('0', '0')] },
+  'note-base': { noZero: true, outs: ['print', 'excel', 'pdf'], detail: [{ title: '印刷項目', items: [chk('corp', '法人名を印刷する'), chk('site', '拠点名を印刷する'), chk('page', 'ページ番号を印刷する'), txt('pageStart', 'ページ番号の開始番号', '1', '1', 80), chk('date', '印刷時の日付を印刷する'), chk('head2', '２ページ目以降も項目名を印刷する', true)] }, POSITION('0', '0')] },
   d1: { zero: false, range: true, detail: [{ title: '印刷項目', items: apItems({ shade: true, autofont: true }) }, AP_GAP('空きなし'), POSITION('-13', '0')] },
   d2: { noZero: true, range: true, detail: [{ title: '印刷項目', items: apItems({ shade: true, autofont: true }) }, AP_INNER(true), AP_GAP('上・下空き'), POSITION('0', '0')] },
   d3: { zero: true, range: true, detail: [{ title: '印刷項目', items: apItems({ shade: true, autofont: true }) }, AP_INNER(false), AP_GAP('上・下空き'), POSITION('0', '0')] },
@@ -296,7 +312,7 @@ const AP: Record<string, AppendixSpec> = {
   ] },
 };
 /** 就労支援・授産の明細書（⑮〜⑲）は現行で開けなかったため、①と同じ部品で仮置き */
-export const appendixSpec = (id: string): AppendixSpec => AP[id] ?? { zero: false, range: true, detail: [{ title: '印刷項目', items: apItems({ shade: true, autofont: true }) }, AP_GAP('上・下空き'), POSITION('0', '0')] };
+export const appendixSpec = (id: string): AppendixSpec => { const a = AP[id] ?? { zero: false, range: true, detail: [{ title: '印刷項目', items: apItems({ shade: true, autofont: true }) }, AP_GAP('上・下空き'), POSITION('0', '0')] }; return { ...a, detail: withPageStart(a.detail) }; };
 
 /* ---------------- 表示条件 ---------------- */
 export interface Cond { label: string; ok: (s: Session) => boolean }
@@ -307,7 +323,7 @@ const C = {
   service: { label: '伝票入力区分（サービス区分・小サービス区分）で起動したとき', ok: (s: Session) => { const n = nodeOf(s); return startKindOf(s) === '入力区分' && (n?.kind === 'サービス区分' || n?.kind === '小サービス区分'); } } as Cond,
   belowSite: { label: '拠点区分以下で起動したとき', ok: (s: Session) => { const k = nodeOf(s)?.kind; return k === '拠点区分' || k === 'サービス区分' || k === '小サービス区分'; } } as Cond,
   honsoku: { label: '消費税モードが本則課税（一括比例配分方式／個別対応方式）のとき', ok: (s: Session) => s.taxMode === '本則課税の一括比例配分方式' || s.taxMode === '本則課税の個別対応方式' } as Cond,
-  subAcct: { label: '補助簿（明細表）設定で科目を指定したとき', ok: () => true } as Cond,
+  subAcct: { label: '補助簿（明細表）設定で科目を指定したとき', ok: (s: Session) => subLedgerNames(s).length > 0 } as Cond,
 };
 
 /* ---------------- 帳票選択（様式設定） ---------------- */
@@ -353,9 +369,11 @@ export interface ReportDef {
   /** 出力できる先（省略時はすべて。月別の推移表は Excel・CSV だけ） */ outs?: ('print' | 'pdf' | 'excel' | 'csv')[];
   /** 「0データを表示しない」の初期値（省略時は共通の印刷設定の値） */ zero?: boolean;
   /** 現行の詳細設定に「０データを印刷しない」が無い帳票 */ noZero?: boolean;
+  /** 科目ごとの備考を入力する［備考］ボタン（確認メモ #364） */ remarkBtn?: '備考';
+  /** 科目設定の［勘定科目］［資金科目］ボタン（印刷する科目を選ぶ。確認メモ #366） */ acctPick?: boolean;
 }
 type R = Omit<ReportDef, 'cat' | 'sub'>;
-const group = (cat: string, sub: string, list: R[]): ReportDef[] => list.map((r) => ({ ...r, cat, sub, range: r.range ?? (cat === '試算表' || cat === '決算書' || cat === '準決算書' || !!r.rangeSumOnly) }));
+const group = (cat: string, sub: string, list: R[]): ReportDef[] => list.map((r) => ({ ...r, detail: withPageStart(r.detail), cat, sub, range: r.range ?? (cat === '試算表' || cat === '決算書' || cat === '準決算書' || !!r.rangeSumOnly) }));
 const BUDGET4 = ['前年度', '当初', '補正', '次年度'];
 const BUDGET_TITLE: Record<string, string> = { 前年度: '前年度資金収支予算書', 当初: '資金収支予算書', 補正: '資金収支補正予算書', 次年度: '次年度資金収支予算書' };
 const CLOSING12: [string, string][] = [
@@ -407,7 +425,7 @@ export const REPORTS: ReportDef[] = [
     { id: 's1', name: '○○［科目名］明細表', memo: '補助簿（明細表）設定で指定した科目ごと（例：事業未収金 明細表・職員預り金 明細表）', cond: C.subAcct, detail: D.sub },
   ]),
   ...group('準決算書', '準決算書', [
-    { id: 'p1', name: '○○拠点区分 貸借対照表明細書', note: 'C別紙6', common: true, form: 'pc6', cond: formCond('pc6'), detail: CLOSING('内訳表', { serial: true }) },
+    { id: 'p1', name: '○○拠点区分 貸借対照表明細書', note: 'C別紙6', common: true, form: 'pc6', cond: formCond('pc6'), remarkBtn: '備考', detail: CLOSING('内訳表', { serial: true }) },
     { id: 'p2', name: '○○サービス区分 資金収支計算書', note: 'C1-5', common: true, form: 'pc1-5', cond: formCond('pc1-5'), detail: CLOSING('資金収支') },
     { id: 'p3', name: '○○サービス区分 事業活動計算書', note: 'C2-5', common: true, form: 'pc2-5', cond: formCond('pc2-5'), detail: CLOSING('事業活動') },
     { id: 'p4', name: '○○サービス区分 貸借対照表', note: 'C3-5', common: true, form: 'pc3-5', cond: formCond('pc3-5'), detail: CLOSING('貸借対照表') },
@@ -415,7 +433,7 @@ export const REPORTS: ReportDef[] = [
   ...group('消費税', '消費税', [
     { id: 'x1', name: '消費税区分別集計内訳表', memo: '現行は条件画面だけ（詳細設定ボタンなし）', noZero: true, detail: D.taxInner },
     { id: 'x2', name: '消費税区分別集計表', range: true, noZero: true, title: '消費税区分別集計表', detail: D.tax },
-    { id: 'x3', name: '科目別消費税区分別集計表', memo: '勘定科目・資金科目の一覧で印刷する科目を選ぶ（科目設定は他の伝票入力区分と共有）', zero: false, title: '消費税区分別集計表', detail: [{ ...D.tax[0], items: D.tax[0].items.map((it) => (it.k === 'area' && it.t === 'check' ? { ...it, on: false } : it)) }, ...D.tax.slice(1)] },
+    { id: 'x3', name: '科目別消費税区分別集計表', memo: '勘定科目・資金科目の一覧で印刷する科目を選ぶ（科目設定は他の伝票入力区分と共有）', zero: false, acctPick: true, title: '消費税区分別集計表', detail: [{ ...D.tax[0], items: D.tax[0].items.map((it) => (it.k === 'area' && it.t === 'check' ? { ...it, on: false } : it)) }, ...D.tax.slice(1)] },
     { id: 'x4', name: '消費税区分コード内訳表', range: true, zero: false, detail: D.taxCode },
     { id: 'x5', name: '売上仕入税額集計表', memo: '現行の印刷メニューでは見当たらない（帳票・印刷_画面一覧には記載）', cond: C.honsoku, range: true, noZero: true, title: '売上仕入税額集計表', detail: D.tax },
   ]),
@@ -443,3 +461,42 @@ export const CATS = ['仕訳日記帳', '元帳', '試算表', '予算', '決算
 export const subsOf = (cat: string) => [...new Set(REPORTS.filter((r) => r.cat === cat).map((r) => r.sub ?? cat))];
 /** 表示条件を満たすか（条件のない帳票は常に表示） */
 export const condOk = (r: ReportDef, s: Session) => !r.cond || r.cond.ok(s);
+
+/* ---------------- 帳票名の「○○」（確認メモ #355・#356・#361〜#363） ---------------- */
+/** 起動中の区分から法人までの区分（上から順） */
+function chainOf(node: DivisionNode, label: string, up: DivisionNode[] = []): DivisionNode[] | null {
+  const here = [...up, node];
+  if (divisionLabel(node) === label) return here;
+  for (const c of node.children ?? []) { const hit = chainOf(c, label, here); if (hit) return hit; }
+  return null;
+}
+const withTail = (name: string, tail: string) => (name.endsWith(tail.replace(/区分$/, '')) ? name + '区分' : name + tail);
+/** 補助簿（明細表）設定で指定した科目・項目の名前 */
+export function subLedgerNames(s: Pick<Session, 'subLedger' | 'subBlue'>): string[] {
+  const a = Object.entries(s.subLedger ?? {}).filter(([, on]) => on).map(([k]) => k.replace(/^#/, ''));
+  const b = Object.entries(s.subBlue ?? {}).filter(([, on]) => on).map(([k]) => k);
+  return [...new Set([...a, ...b])];
+}
+/** 帳票名の「○○事業区分」「○○拠点区分」「○○サービス区分」を、起動中の区分が属する区分の名前で埋める */
+export function fillReportName(name: string, s: Pick<Session, 'tree' | 'division'>): string {
+  if (!name.includes('○○')) return name;
+  const chain = chainOf(s.tree, s.division) ?? [];
+  const biz = chain.find((n) => n.kind === '事業区分');
+  const site = chain.find((n) => n.kind === '拠点区分');
+  const svc = chain.find((n) => n.kind === 'サービス区分');
+  // 拠点区分以上で起動中のときは、拠点区分に属するサービス区分の名前を並べる
+  const svcs = svc ? [svc] : (site?.children ?? []).filter((n) => n.kind === 'サービス区分');
+  let out = name;
+  if (biz) out = out.replace('○○事業区分', withTail(biz.name, '事業区分'));
+  if (site) out = out.replace('○○拠点区分', withTail(site.name, '拠点区分'));
+  if (svcs.length) out = out.replace('○○サービス区分', svcs.map((n) => n.name).join('・') + 'サービス区分');
+  return out;
+}
+/** 印刷センターに出す帳票：区分名を埋め、補助簿（明細表）は設定した科目ごとに分ける */
+export function localizeReports(s: Session): ReportDef[] {
+  const subs = subLedgerNames(s);
+  return REPORTS.flatMap((r): ReportDef[] => {
+    if (r.id === 's1') return subs.length ? subs.map((n) => ({ ...r, id: 's1:' + n, name: `${n} 明細表`, title: `${n}明細表` })) : [r];
+    return [{ ...r, name: fillReportName(r.name, s) }];
+  });
+}

@@ -16,14 +16,14 @@ import { ToastView, useToast } from './Toast';
 import { Field, ManualButton, Notice, SelectionBar, SettingsShell, Tabs, Toggle, btn, card, cardHead, input, lbl } from './ui';
 import { ACCOUNT_META, accountMatches, toKatakana, type AccountMeta } from '../lib/accounts';
 import { ACCOUNTS, SERVICES, SUMMARIES, displayName } from '../data';
-import { useSession } from '../store/session';
+import { setSession, useSession } from '../store/session';
 
 const HIMOKU_BS = [[1, 'サービス活動収益計 (1)'], [2, 'サービス活動費用計 (2)'], [3, 'サービス活動増減差額 (3)=(1)-(2)'], [4, 'サービス活動外収益計 (4)'], [5, 'サービス活動外費用計 (5)'], [7, '経常増減差額 (7)=(3)+(6)'], [8, '特別収益計 (8)'], [9, '特別費用計 (9)'], [11, '当期活動増減差額 (11)'], [50, '流動資産'], [51, '基本財産'], [52, 'その他の固定資産'], [60, '流動負債'], [61, '固定負債'], [70, '基本金'], [71, '国庫補助金等特別積立金'], [72, 'その他の積立金'], [80, '次期繰越活動増減差額']] as const;
 const HIMOKU_FUND = [[1, '事業活動収入計 (1)'], [2, '事業活動支出計 (2)'], [3, '事業活動資金収支差額 (3)'], [4, '施設整備等収入計 (4)'], [5, '施設整備等支出計 (5)'], [7, 'その他の活動収入計 (7)'], [8, 'その他の活動支出計 (8)'], [10, '予備費支出 (10)'], [11, '当期資金収支差額合計 (11)'], [12, '前期末支払資金残高 (12)'], [13, '当期末支払資金残高 (11)+(12)']] as const;
 
 type Cls = AccountMeta['cls'];
 /** 項目（集計上の見出し）。top＝大項目、name＝中項目。科目のコードはこの項目から自動設定する */
-interface GroupDef { name: string; top: string; cls: Cls; himoku: string; fundHimoku: string; prefix: string; fixed?: boolean; /** 以下は項目の編集で設定する内容（確認メモ #83）。未設定なら name／自動のコードを使う */ printName?: string; dispName?: string; kana?: string; kubun?: string; /** 画面から追加した項目 */ custom?: boolean }
+interface GroupDef { name: string; top: string; cls: Cls; himoku: string; fundHimoku: string; prefix: string; fixed?: boolean; /** 以下は項目の編集で設定する内容（確認メモ #83）。未設定なら name／自動のコードを使う */ printName?: string; dispName?: string; kana?: string; kubun?: string; /** 画面から追加した項目 */ custom?: boolean; /** 親の項目（自分で作成した項目の下に作ったとき。確認メモ #357） */ parent?: string }
 const GROUPS: GroupDef[] = [
   { name: '現金及び預金', top: '流動資産', cls: '現預金', himoku: '50', fundHimoku: '', prefix: '11' },
   { name: '事業未収金', top: '流動資産', cls: '資産', himoku: '50', fundHimoku: '', prefix: '12' },
@@ -50,6 +50,12 @@ const headKubun = (g: GroupDef) => g.kubun ?? `${g.prefix}0-00-00-00-00`;
 const gLabel = (g: GroupDef) => g.dispName || g.name;
 /** 大項目（項目の親）の一覧 */
 const topsOf = () => GROUPS.map((g) => g.top).filter((t, i, a) => a.indexOf(t) === i);
+/** 項目の深さ（自分で作成した項目の下に作った項目は 1 段ずつ深くなる） */
+const depthOf = (g: GroupDef): number => { let d = 0; let p = g.parent; while (p && d < 8) { d++; p = GROUPS.find((x) => x.name === p)?.parent; } return d; };
+/** 配下の項目（子・孫）か */
+const isUnder = (g: GroupDef, anc: string): boolean => { let p = g.parent; let n = 0; while (p && n < 8) { if (p === anc) return true; p = GROUPS.find((x) => x.name === p)?.parent; n++; } return false; };
+/** 項目を追加の「所属する項目（親）」の選択肢：大項目と、自分で作成した項目（確認メモ #357）。値は大項目＝名前、作成した項目＝'#'＋名前 */
+const parentOptions = () => topsOf().flatMap((t) => [{ value: t, label: t }, ...GROUPS.filter((g) => g.top === t && g.custom).map((g) => ({ value: '#' + g.name, label: `${t} ＞ ${'　'.repeat(depthOf(g))}${gLabel(g)}（作成した項目）` }))]);
 
 /** 社会福祉法人会計基準の標準科目（サンプル）。「科目を追加」でチェックして一覧へ追加する */
 interface StdItem { name: string; kana: string; group: string; desc: string; noFund?: boolean }
@@ -247,9 +253,12 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
   /** 補助簿（明細表）を作る科目（旧【補助簿（明細表）設定】） */
   // 既定で対象にする科目はない（確認メモ #52）
   // 補助簿は2種類（確認メモ #90）：subLedger＝黄色「指定した勘定科目の伝票を、印刷時に明細として指定する」（科目名、項目は '#'+項目名）／subBlue＝水色「項目以下の勘定科目を明細とする」（項目名）
-  const [subLedger, setSubLedger] = useState<Record<string, boolean>>({});
-  const [subBlue, setSubBlue] = useState<Record<string, boolean>>({});
   const session = useSession();
+  // 印刷センターの「○○［科目名］明細表」でも使うため、セッションに保存する（確認メモ #361）
+  const subLedger = session.subLedger ?? {};
+  const subBlue = session.subBlue ?? {};
+  const setSubLedger = (f: (x: Record<string, boolean>) => Record<string, boolean>) => setSession((s) => ({ subLedger: f(s.subLedger ?? {}) }));
+  const setSubBlue = (f: (x: Record<string, boolean>) => Record<string, boolean>) => setSession((s) => ({ subBlue: f(s.subBlue ?? {}) }));
   const useCols = divView === '起動区分のみ' ? (SERVICES.includes(session.division) ? [session.division] : [SERVICES[1]]) : SERVICES;
   const useRows = acctView === '内部取引科目' ? rows.filter((m) => !m.internal.startsWith('0')) : rows;
   /** 初期状態に戻す：区分の事業区分（事業種別）に従って使用科目を初期化する（旧【使用科目設定更新】は更新ではなく初期化の動き。確認メモ #52） */
@@ -290,28 +299,35 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
   const moveGroupTop = (g: GroupDef, top: string) => {
     const ref = GROUPS.find((x) => x.top === top);
     if (g.top === top || !ref) return;
+    // 作成した項目の下にある項目・配下に項目がある項目は、大項目を移せない（親子がずれるため。確認メモ #357）
+    if (g.parent || GROUPS.some((x) => x.parent === g.name)) { toast.show('親子になっている項目は、大項目を移動できません'); return; }
     GROUPS.splice(GROUPS.indexOf(g), 1);
     let j = -1; GROUPS.forEach((x, k) => { if (x.top === top) j = k; });
     GROUPS.splice(j + 1, 0, { ...g, top, cls: ref.cls, himoku: ref.himoku, fundHimoku: ref.fundHimoku, fixed: ref.fixed });
     setRows((rs) => sortRows(rs.map((r) => (r.group === g.name ? { ...r, cls: ref.cls, kind: ref.cls === '費用' || ref.cls === '収益' ? 'PL' : 'BS', himoku: r.manualCode ? r.himoku : ref.himoku } : r))));
     setGv((v) => v + 1);
   };
-  const openGroupAdd = () => setGAdd({ top: (selG ?? (sel ? groupDef(sel.group) : GROUPS[0])).top, name: '', disp: '', kana: '' });
+  // 選択中の項目が自分で作成した項目なら、その項目を親の初期値にする（確認メモ #357）
+  const openGroupAdd = () => { const base = selG ?? (sel ? groupDef(sel.group) : GROUPS[0]); setGAdd({ top: base.custom ? '#' + base.name : base.top, name: '', disp: '', kana: '' }); };
   const addGroup = () => {
     if (!gAdd || !gAdd.name.trim()) return;
     const name = gAdd.name.trim();
     if (GROUPS.some((g) => g.name === name)) { toast.show('同じ名称の項目がすでにあります'); return; }
-    const ref = GROUPS.find((x) => x.top === gAdd.top)!;
+    // 親が自分で作成した項目のときは、その項目の配下の最後に入れる（確認メモ #357）
+    const parentG = gAdd.top.startsWith('#') ? GROUPS.find((x) => x.name === gAdd.top.slice(1)) : undefined;
+    const top = parentG ? parentG.top : gAdd.top;
+    const ref = parentG ?? GROUPS.find((x) => x.top === top)!;
     const used = GROUPS.map((g) => g.prefix);
     let p = Number(ref.prefix); while (used.includes(String(p))) p += 1;
-    let j = -1; GROUPS.forEach((x, k) => { if (x.top === gAdd.top) j = k; });
-    GROUPS.splice(j + 1, 0, { name, top: gAdd.top, cls: ref.cls, himoku: ref.himoku, fundHimoku: ref.fundHimoku, prefix: String(p), fixed: ref.fixed, printName: name, dispName: gAdd.disp.trim() || name, kana: gAdd.kana.trim(), custom: true });
+    let j = -1; GROUPS.forEach((x, k) => { if (parentG ? x === parentG || isUnder(x, parentG.name) : x.top === top) j = k; });
+    GROUPS.splice(j + 1, 0, { name, top, cls: ref.cls, himoku: ref.himoku, fundHimoku: ref.fundHimoku, prefix: String(p), fixed: ref.fixed, printName: name, dispName: gAdd.disp.trim() || name, kana: gAdd.kana.trim(), custom: true, parent: parentG?.name });
     setGAdd(null); setQ(''); setClsF(null); setUseF(null); if (fundTab) setTab('勘定科目');
     setBlankGroup(name); pickGroup(name);
-    toast.show(`項目「${name}」を「${gAdd.top}」の下に追加しました（費目・区分コードは親から自動で設定）`);
+    toast.show(`項目「${name}」を「${parentG ? gLabel(parentG) : top}」の下に追加しました（費目・区分コードは親から自動で設定）`);
   };
   const deleteGroup = (g: GroupDef) => {
     if (rows.some((r) => r.group === g.name)) { toast.show('配下に科目がある項目は削除できません'); return; }
+    if (GROUPS.some((x) => x.parent === g.name)) { toast.show('配下に項目がある項目は削除できません'); return; }
     if (!confirm(`項目「${gLabel(g)}」を削除しますか？`)) return;
     GROUPS.splice(GROUPS.indexOf(g), 1); pickGroup(null); setGv((v) => v + 1); toast.show(`項目「${gLabel(g)}」を削除しました`);
   };
@@ -377,6 +393,8 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
       const rs = visible.filter((r) => r.group === g.name);
       // 絞り込み中・資金科目タブでは、該当する科目のある項目だけを出す。それ以外は、科目のない項目（追加したばかりの項目）も出す
       if (!rs.length && (filtering || fundTab)) return;
+      // 親の項目をたたんでいるときは、配下の項目も出さない
+      if (!filtering && collapsed.some((c) => isUnder(g, c))) return;
       if (g.top !== lastTop) { items.push({ t: 'top', name: g.top, count: visible.filter((x) => groupDef(x.group).top === g.top).length }); lastTop = g.top; }
       items.push({ t: 'group', g, count: rs.length });
       if (filtering || !collapsed.includes(g.name)) rs.forEach((r) => items.push({ t: 'row', r }));
@@ -497,7 +515,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                 if (it.t === 'group') { const open = filtering || !collapsed.includes(it.g.name); const gOn = selGroup === it.g.name; const toggle = () => setCollapsed((c) => (c.includes(it.g.name) ? c.filter((x) => x !== it.g.name) : [...c, it.g.name])); return (
                   <div key={'g' + it.g.name} role="button" tabIndex={0} aria-pressed={gOn} data-group-row={it.g.name} title={fundTab ? undefined : '押すと、右側でこの項目の内容を編集できます'} onClick={() => pickGroup(gOn ? null : it.g.name)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) pickGroup(it.g.name); }}
                     style={{ display: 'grid', gridTemplateColumns: cols, alignItems: 'center', height: 36, background: gOn ? '#eaf1f8' : '#f3f6f9', boxShadow: gOn ? `inset 3px 0 0 ${accent}` : 'none', borderBottom: '1px solid #e6ebf0', cursor: 'pointer', fontSize: 14 }}>
-                    <span style={{ ...cell, paddingLeft: 16, display: 'flex', alignItems: 'center', gap: 7, fontWeight: 800 }}>
+                    <span style={{ ...cell, paddingLeft: 16 + depthOf(it.g) * 20, display: 'flex', alignItems: 'center', gap: 7, fontWeight: 800 }}>
                       <button type="button" aria-expanded={open} aria-label={open ? '科目をたたむ' : '科目を開く'} title={open ? '科目をたたむ' : '科目を開く'} onClick={(e) => { e.stopPropagation(); toggle(); }} style={{ flex: 'none', width: 22, height: 22, border: 'none', background: 'transparent', color: '#6b7783', fontSize: 12, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>{open ? '▼' : '▶'}</button><Badge kind="項目" /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{gLabel(it.g)}</span><span style={{ fontSize: 12, fontWeight: 500, color: '#6b7783' }}>{it.count} 科目</span>
                     </span>
                     <span style={mono} /><span style={{ ...mono, fontSize: 14 }}>{headKubun(it.g)}</span><span style={cell} />
@@ -509,7 +527,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                 return (
                   <div key={r.key} role="button" tabIndex={0} aria-pressed={on} className="row-hover" onClick={() => pick(on ? null : r.key)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) pick(r.key); }}
                     style={{ display: 'grid', gridTemplateColumns: cols, alignItems: 'center', minHeight: 40, borderBottom: '1px solid #f1f4f6', cursor: 'pointer', fontSize: 14, background: on ? '#eaf1f8' : '#fff', boxShadow: on ? `inset 3px 0 0 ${accent}` : 'none', opacity: used ? 1 : 0.6 }}>
-                    <span style={{ ...cell, paddingLeft: 36, display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <span style={{ ...cell, paddingLeft: 36 + depthOf(groupDef(r.group)) * 20, display: 'flex', alignItems: 'center', gap: 7 }}>
                       <input type="checkbox" checked={bulk.includes(r.key)} onClick={(e) => e.stopPropagation()} onChange={() => setBulk((b) => (b.includes(r.key) ? b.filter((k) => k !== r.key) : [...b, r.key]))} aria-label={`${r.dispName}を選択（まとめて設定）`} title="チェックして「まとめて設定」" style={{ margin: 0 }} data-bulk-check />
                       <Badge kind="科目" />
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: on ? 700 : 500, ...(r.color ? { color: r.color.fg, background: r.color.bg, padding: '1px 6px', borderRadius: 4 } : {}) }}>{fundTab ? r.fund : r.dispName}</span>
@@ -917,7 +935,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
         {gAdd && (
           <div style={{ padding: '16px 22px 20px', display: 'grid', gap: 12 }}>
             <Notice>項目は集計上の見出しです（伝票には入力しません）。費目コード・区分コードは、親の項目から自動で設定されます。項目として作成したものを、後から科目に変更することはできません。</Notice>
-            <Field label="所属する項目（親）"><select value={gAdd.top} onChange={(e) => setGAdd({ ...gAdd, top: e.target.value })} style={input} data-gadd-top>{topsOf().map((t) => <option key={t} value={t}>{t}</option>)}</select></Field>
+            <Field label="所属する項目（親）"><select value={gAdd.top} onChange={(e) => setGAdd({ ...gAdd, top: e.target.value })} style={input} data-gadd-top>{parentOptions().map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></Field>
             <Field label="印刷用科目名称（40文字まで）"><input className="field-input ring" autoFocus data-gadd-name value={gAdd.name} onChange={(e) => setGAdd({ ...gAdd, name: e.target.value.slice(0, 40) })} placeholder="項目の名称" style={input} /></Field>
             <Field label="表示用科目名称（空欄のときは印刷用と同じ）"><input className="field-input ring" value={gAdd.disp} onChange={(e) => setGAdd({ ...gAdd, disp: e.target.value })} placeholder={gAdd.name} style={input} /></Field>
             <Field label="フリガナ（検索用）"><input className="field-input" value={gAdd.kana} onChange={(e) => setGAdd({ ...gAdd, kana: e.target.value })} style={input} /></Field>

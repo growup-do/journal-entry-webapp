@@ -138,6 +138,8 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
   const [cur, setCur] = useState('note-corp');
   const [mode, setMode] = useState('設定・編集');
   const [hideNa, setHideNa] = useState(true);
+  /** 就労支援・授産（⑮〜⑲）：条件を満たしたときの画面を見本として表示する（確認メモ #360） */
+  const [peek, setPeek] = useState(false);
   const shown = (x: Sheet) => !hideNa || sheetOk(x, s);
   const [rows, setRows] = useState<Record<string, string[][]>>(() => Object.fromEntries(Object.entries(DETAILS).map(([k, v]) => [k, v.rows.map((r) => [...r])])));
   const [notes, setNotes] = useState<Record<string, string>>({ 'note-corp': NOTE_DEFAULT, 'note-base': NOTE_BASE_DEFAULT });
@@ -164,7 +166,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
   const def = DETAILS[sheet.id];
   const myRows = rows[sheet.id] ?? [];
   const invRows = inv[invTab] ?? [];
-  const pick = (id: string) => { setCur(id); setMode('設定・編集'); setInvSel(null); };
+  const pick = (id: string) => { setCur(id); setMode('設定・編集'); setInvSel(null); setPeek(false); };
   const goSettings = () => { if (onNavigate) onNavigate('決算附属明細書'); else toast.show(`科目の設定は「各種設定 ＞ ${displayName('決算附属明細書')}」で行います`); };
 
   /** 左の一覧に出す状態 */
@@ -236,7 +238,8 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
   const moveInv = (dir: -1 | 1) => { if (invSel == null) return; const j = invSel + dir; if (j < 0 || j >= invRows.length) return; const n = [...invRows]; [n[invSel], n[j]] = [n[j], n[invSel]]; setInv({ ...inv, [invTab]: n }); setInvSel(j); };
   const setCell = (ri: number, ci: number, v: string) => setRows((d) => ({ ...d, [sheet.id]: (d[sheet.id] ?? []).map((r, i) => (i === ri ? r.map((c, k) => (k === ci ? v : c)) : r)) }));
 
-  const canPrint = sheet.editor !== 'merge' && sheetOk(sheet, s);
+  const peeking = peek && !!sheet.na;
+  const canPrint = sheet.editor !== 'merge' && (sheetOk(sheet, s) || peeking);
   const tag = (label: string, bg: string, fg: string): ReactNode => <span style={{ fontSize: 12, fontWeight: 800, padding: '2px 8px', borderRadius: 8, background: bg, color: fg, whiteSpace: 'nowrap' }}>{label}</span>;
 
   const actions = <>
@@ -287,6 +290,10 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
             <span style={{ marginLeft: 'auto', fontSize: 12, color: '#8290a0' }}>{s.fiscalYear}　{s.division}</span>
           </div>
           {condText(sheet) && <div data-sheet-cond style={{ padding: '0 22px 8px', fontSize: 12, color: '#8290a0' }}>表示条件：{condText(sheet)}</div>}
+          {peeking && <div data-sheet-peek style={{ margin: '0 22px 10px', padding: '8px 12px', borderRadius: 8, background: '#fff8ea', border: '1px solid #f0dcae', fontSize: 14, color: '#6b4e00', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{ flex: 1, minWidth: 0 }}>見本の表示です。対象の事業がある法人で、条件を満たしたときの画面を確認用に表示しています（起動中の法人では印刷されません）。</span>
+            <button type="button" onClick={() => { setPeek(false); setMode('設定・編集'); }} style={btn('#5b6773', false, true)}>見本の表示をやめる</button>
+          </div>}
           {canPrint && <Tabs items={['設定・編集', '印刷']} current={mode} onChange={setMode} accent={accent} small />}
 
           {mode === '印刷' && canPrint ? (
@@ -340,9 +347,9 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
 
               {/* ---- 自動作成／対象外 ---- */}
               {sheet.editor === 'auto' && (
-                !sheetOk(sheet, s) ? <Notice>{sheet.na ? 'この明細書は、就労支援事業・授産事業を行う法人が作成するものです。起動中の法人には対象の事業がないため、編集・印刷する内容はありません。' : `この明細書は表示条件（${condText(sheet)}）を満たしていないため、印刷できません。`}</Notice>
+                !sheetOk(sheet, s) && !peeking ? <Notice>{sheet.na ? <>この明細書は、就労支援事業・授産事業を行う法人が作成するものです。起動中の法人には対象の事業がないため、編集・印刷する内容はありません。<span style={{ display: 'block', marginTop: 8 }}><button type="button" data-peek onClick={() => setPeek(true)} style={btn(accent, false, true)}>条件を満たしたときの画面を見る（見本）</button></span></> : `この明細書は表示条件（${condText(sheet)}）を満たしていないため、印刷できません。`}</Notice>
                   : <>
-                    <Notice tone="ok">この明細書は「{sheet.source}」から自動で作成します。この画面で編集する項目はありません。</Notice>
+                    <Notice tone="ok">この明細書は「{sheet.source ?? (sheet.na ? '伝票（就労支援事業・授産事業の区分ごとの集計）' : '伝票')}」から自動で作成します。この画面で編集する項目はありません。</Notice>
                     <div><button type="button" onClick={() => setMode('印刷')} style={btn(accent, true)}>印刷へ進む</button></div>
                   </>
               )}
