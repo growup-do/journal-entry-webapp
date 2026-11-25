@@ -8,7 +8,7 @@ import { ToastView, useToast } from './Toast';
 import { Field, Notice, SettingsShell, Tabs, btn, input, numInput, toInt, yen } from './ui';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { ACCOUNTS, SERVICES } from '../data';
-import { setSession, specialRatesOf, splitSpecialAmount, useSession, type AllocationTemplate, type JournalTemplate } from '../store/session';
+import { setSession, specialRatesOf, splitSpecialAmount, templatePages, useSession, type AllocationTemplate, type JournalTemplate } from '../store/session';
 import { allocate } from './EntryExtras';
 import { AllocationWizardModal, TemplateWizardModal, blankAllocation, blankTemplate } from './TemplateWizards';
 
@@ -105,15 +105,15 @@ export function TemplateJournalPage({ variant, accent }: { variant: 'form' | 'sh
 
       {tab === '連続定型仕訳' && (
         <div style={{ padding: 22 }}>
-          <Notice>事前に登録した仕訳を伝票入力の「連続定型」で呼び出し、日付・金額を入れて登録できます。伝票形式ごとにテンプレートを持てます（伝票追加／挿入／削除、強制資金に対応）。</Notice>
+          <Notice>事前に登録した仕訳を伝票入力の「連続定型」で呼び出し、日付・金額を入れて登録できます。1 つの定型に複数のページ（1 ページ＝伝票 1 枚）を持てて、伝票画面ではページごとに有効・無効を切り替えます。伝票形式ごとにテンプレートを持てます。</Notice>
           <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
-            <thead><tr><th style={TH}>名称</th><th style={{ ...TH, width: 110 }}>伝票の形式</th><th style={TH}>内容</th><th style={{ ...TH, width: 70, textAlign: 'right' }}>行数</th><th style={{ ...TH, width: 150, textAlign: 'right' }}>操作</th></tr></thead>
+            <thead><tr><th style={TH}>名称</th><th style={{ ...TH, width: 110 }}>伝票の形式</th><th style={TH}>内容</th><th style={{ ...TH, width: 80, textAlign: 'right' }}>ページ</th><th style={{ ...TH, width: 150, textAlign: 'right' }}>操作</th></tr></thead>
             <tbody>
               {s.templates.map((t) => (
                 <tr key={t.id}>
                   <td style={{ ...TD, fontWeight: 700 }}>{t.name}</td><td style={TD}>{t.form}</td>
-                  <td style={{ ...TD, fontSize: 14, color: '#5b6773' }}>{t.lines.map((l) => `${l.kari}／${l.kashi}${l.amount ? ` ${yen(Number(l.amount))}` : ''}`).join('、')}</td>
-                  <td style={NUM}>{t.lines.length}</td>
+                  <td style={{ ...TD, fontSize: 14, color: '#5b6773' }}>{templatePages(t).map((p, k) => <div key={k} style={{ opacity: p.enabled === false ? 0.55 : 1 }}><span style={{ display: 'inline-block', minWidth: 30, fontSize: 12, color: '#8290a0' }}>{k + 1}.</span>{p.lines.map((l) => `${l.tekiyo || l.kari}${l.amount ? ` ${yen(Number(l.amount))}` : ''}`).join('、') || '（行なし）'}{p.enabled === false && <span style={{ marginLeft: 6, fontSize: 12, color: '#8290a0' }}>無効</span>}</div>)}</td>
+                  <td style={NUM}>{templatePages(t).length}</td>
                   <td style={{ ...TD, textAlign: 'right' }}><div style={{ display: 'inline-flex', gap: 6 }}><button type="button" onClick={() => setWiz({ step: 2, t: JSON.parse(JSON.stringify(t)) })} style={btn('#5b6773', false, true)}>訂正</button><button type="button" onClick={() => { if (confirm(`「${t.name}」を削除しますか？`)) setSession({ templates: s.templates.filter((x) => x.id !== t.id) }); }} style={btn('#c0392b', false, true)}>削除</button></div></td>
                 </tr>
               ))}

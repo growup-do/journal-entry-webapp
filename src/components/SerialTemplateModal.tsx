@@ -1,5 +1,6 @@
-// 連続定型（確認メモ #202）。
-//   定型の伝票をページとして並べ、ページごとに内容を直し、有効／無効を切り替えて、有効なページをまとめて登録する（最大 50 ページ。現行を踏襲）。
+// 連続定型（確認メモ #202／#291）。
+//   定型を 1 つ選び、その定型のページ（1 ページ＝伝票 1 枚）を並べる。ページごとに内容を直し、有効／無効を切り替えて、有効なページをまとめて登録する（最大 50 ページ。現行を踏襲）。
+//   ページは仕訳辞書の連続定型仕訳ウィザードで作る。ここで「定型に保存」すると、選んでいる定型のページと有効／無効を上書きする。
 //   以前の「定型仕訳」（右上のボタン）と「仕訳登録」（入力補助）はここに統合した。定型の追加・保存もこのダイアログで行う。
 //   EntryExtras から呼ぶので、EntryExtras は import しない（循環を避ける）。
 
@@ -9,7 +10,7 @@ import { Modal } from './Modal';
 import { btn, input, numInput } from './ui';
 import { ComboField, ENTRY_DATE_RANGE, EntryMonthNote, FORMAT_KIND, autoInternalSide, fmtNum, focusId, isInternalAccount, judgeEntry, onEnter, parseEntryDate, scopeStyle, setPartner, toNum, type EntryFormat } from './EntryCommon';
 import { addVoucher, getVouchers } from '../store/journalStore';
-import { setSession, useSession, type EnvSettings, type JournalTemplate, type TemplateLine } from '../store/session';
+import { setSession, templatePages, useSession, withPages, type EnvSettings, type JournalTemplate, type TemplateLine, type TemplatePage } from '../store/session';
 
 const TEMPLATE_FORM: Record<EntryFormat, JournalTemplate['form']> = { 伝票入力: '伝票式', 単一入力: '単一式', 振替入力: '振替伝票式', 振替単一: '振替単一式' };
 const FORMAT_LABEL: Record<EntryFormat, string> = { 伝票入力: '仕訳伝票形式', 単一入力: '単一仕訳形式', 振替入力: '振替伝票形式', 振替単一: '振替単一形式' };
@@ -17,40 +18,45 @@ const FORMAT_LABEL: Record<EntryFormat, string> = { 伝票入力: '仕訳伝票�
 const MAX_PAGES = 50;
 
 interface PLine { id: number; kari: string; kashi: string; tekiyo: string; gyosha: string; amount: string; /** 定型に登録した予備１・２、消費税（貸借）、振替伝票式の貸方金額（確認メモ #292／#293） */ spare1?: string; spare2?: string; kariTax?: string; kashiTax?: string; kashiAmount?: string }
-interface Page { id: number; name: string; enabled: boolean; kari: string; kashi: string; lines: PLine[]; aite: string }
+interface Page { id: number; enabled: boolean; kari: string; kashi: string; lines: PLine[]; aite: string }
 
 let uid = 1;
 const nid = () => uid++;
 const blankLine = (): PLine => ({ id: nid(), kari: '', kashi: '', tekiyo: '', gyosha: '', amount: '' });
-const blankPage = (n: number): Page => ({ id: nid(), name: `定型 ${n}`, enabled: true, kari: '', kashi: '', lines: [blankLine()], aite: '' });
+const blankPage = (): Page => ({ id: nid(), enabled: true, kari: '', kashi: '', lines: [blankLine()], aite: '' });
 
 /** 行ごとに借方・貸方の科目を持つ形式（振替伝票形式・振替単一形式） */
 const isPerLine = (f: EntryFormat) => f === '振替入力' || f === '振替単一';
 /** 1 枚の伝票に複数行を持てる形式（単一仕訳形式だけ 1 行） */
 const isMulti = (f: EntryFormat) => f !== '単一入力';
 
-/** 保存してある定型を、ダイアログのページに直す（1 ページ＝伝票 1 枚） */
-function toPages(templates: JournalTemplate[], format: EntryFormat): Page[] {
+/** 選んだ定型のページを、ダイアログのページに直す（1 ページ＝伝票 1 枚。確認メモ #291） */
+function toPages(t: JournalTemplate | undefined, format: EntryFormat): Page[] {
+  if (!t) return [];
   const out: Page[] = [];
   const mk = (l: TemplateLine): PLine => ({ id: nid(), kari: l.kari, kashi: l.kashi, tekiyo: l.tekiyo, gyosha: l.gyosha ?? '', amount: l.kariAmount || l.amount, spare1: l.spare1, spare2: l.spare2, kariTax: l.kariTax, kashiTax: l.kashiTax, kashiAmount: l.kashiAmount });
-  for (const t of templates.filter((x) => x.form === TEMPLATE_FORM[format])) {
-    const enabled = t.enabled !== false;
+  for (const tp of templatePages(t)) {
+    const enabled = tp.enabled !== false;
     if (isPerLine(format)) {
-      out.push({ id: nid(), name: t.name, enabled, kari: '', kashi: '', lines: t.lines.length ? t.lines.map(mk) : [blankLine()], aite: '' });
+      out.push({ id: nid(), enabled, kari: '', kashi: '', lines: tp.lines.length ? tp.lines.map(mk) : [blankLine()], aite: '' });
     } else if (format === '伝票入力') {
-      // 仕訳伝票形式は借方・貸方の科目が伝票に 1 組。科目の組が違う行は別のページに分ける
-      const groups: { kari: string; kashi: string; lines: PLine[] }[] = [];
-      for (const l of t.lines) {
-        const g = groups.find((x) => x.kari === l.kari && x.kashi === l.kashi);
-        if (g) g.lines.push(mk(l)); else groups.push({ kari: l.kari, kashi: l.kashi, lines: [mk(l)] });
-      }
-      groups.forEach((g, i) => out.push({ id: nid(), name: groups.length > 1 ? `${t.name}（${i + 1}）` : t.name, enabled, kari: g.kari, kashi: g.kashi, lines: g.lines, aite: '' }));
+      // 仕訳伝票形式は借方・貸方の科目が伝票に 1 組（ウィザードでもページに 1 組で入力する）
+      const first = tp.lines[0];
+      out.push({ id: nid(), enabled, kari: first?.kari ?? '', kashi: first?.kashi ?? '', lines: tp.lines.length ? tp.lines.map(mk) : [blankLine()], aite: '' });
     } else {
-      t.lines.forEach((l, i) => out.push({ id: nid(), name: t.lines.length > 1 ? `${t.name}（${i + 1}）` : t.name, enabled, kari: l.kari, kashi: l.kashi, lines: [mk(l)], aite: '' }));
+      // 単一仕訳形式は 1 ページ＝1 行
+      (tp.lines.length ? tp.lines : [{ kari: '', kashi: '', tekiyo: '', amount: '' }]).forEach((l) => out.push({ id: nid(), enabled, kari: l.kari, kashi: l.kashi, lines: [mk(l)], aite: '' }));
     }
   }
   return out.slice(0, MAX_PAGES);
 }
+
+/** ページの一覧に出す内容（1 行目の摘要か科目） */
+const pageLabel = (p: Page, perLine: boolean) => {
+  const l = p.lines[0];
+  if (!l) return '（行なし）';
+  return l.tekiyo || (perLine ? l.kari : p.kari) || '（未入力）';
+};
 
 const lineAccounts = (p: Page, l: PLine, perLine: boolean) => ({ kari: perLine ? l.kari : p.kari, kashi: perLine ? l.kashi : p.kashi });
 const pageTotal = (p: Page) => p.lines.reduce((s, l) => s + toNum(l.amount), 0);
@@ -87,6 +93,10 @@ export function SerialTemplateModal({ open, onClose, accent, format, service, ye
   const sess = useSession();
   const perLine = isPerLine(format);
   const multi = isMulti(format);
+  const mine = sess.templates.filter((t) => t.form === TEMPLATE_FORM[format]);
+  /** 選んでいる定型（'new' は新しい定型） */
+  const [tplId, setTplId] = useState<string>('new');
+  const [newName, setNewName] = useState('');
   const [pages, setPages] = useState<Page[]>([]);
   const [sel, setSel] = useState(0);
   const [y, setY] = useState(year);
@@ -97,7 +107,10 @@ export function SerialTemplateModal({ open, onClose, accent, format, service, ye
   // 開いたときに、保存してある定型と入力画面の日付を読み込む
   useEffect(() => {
     if (!open) return;
-    setPages(toPages(sess.templates, format));
+    const first = mine[0];
+    setTplId(first?.id ?? 'new');
+    setNewName('');
+    setPages(toPages(first, format));
     setSel(0);
     setY(year); setM(month); setD(day);
     setErr('');
@@ -105,6 +118,13 @@ export function SerialTemplateModal({ open, onClose, accent, format, service, ye
   }, [open]);
 
   const cur = pages[sel];
+  /** 定型を選び直す（ページはその定型の内容に入れ替わる） */
+  const pickTemplate = (id: string) => {
+    setErr('');
+    setTplId(id);
+    setPages(id === 'new' ? [blankPage()] : toPages(mine.find((t) => t.id === id), format));
+    setSel(0);
+  };
   const errors = useMemo(() => pages.map((p) => (p.enabled ? pageError(p, perLine, service, sess.env) : '')), [pages, perLine, service, sess.env]);
   const active = pages.filter((p) => p.enabled);
   const total = active.reduce((s, p) => s + pageTotal(p), 0);
@@ -123,9 +143,9 @@ export function SerialTemplateModal({ open, onClose, accent, format, service, ye
   const addPage = () => {
     if (pages.length >= MAX_PAGES) { toast(`連続定型は ${MAX_PAGES} ページまでです`); return; }
     setErr('');
-    setPages((ps) => [...ps, blankPage(ps.length + 1)]);
+    setPages((ps) => [...ps, blankPage()]);
     setSel(pages.length);
-    focusId('st-name');
+    if (!perLine) focusId('st-kari');
   };
   const removePage = () => {
     if (!cur) return;
@@ -142,15 +162,24 @@ export function SerialTemplateModal({ open, onClose, accent, format, service, ye
     else if (multi && toNum(cur.lines[i].amount) > 0) addLine();
   };
 
-  /** ページの内容を定型として保存する（この形式の定型を、いまのページに置き換える） */
+  /** ページの内容と有効／無効を、選んでいる定型に保存する（新しい定型なら追加する。確認メモ #291） */
   const save = () => {
-    const stamp = Date.now();
-    const mine: JournalTemplate[] = pages.map((p, i) => ({
-      id: `s${stamp}-${i}`, name: p.name.trim() || `定型 ${i + 1}`, form: TEMPLATE_FORM[format], enabled: p.enabled,
+    const tp: TemplatePage[] = pages.map((p) => ({
+      enabled: p.enabled ? undefined : false,
       lines: p.lines.map((l) => ({ ...lineAccounts(p, l, perLine), tekiyo: l.tekiyo, amount: l.amount, gyosha: l.gyosha, spare1: l.spare1, spare2: l.spare2, kariTax: l.kariTax, kashiTax: l.kashiTax, ...(format === '振替入力' ? { kariAmount: l.amount, kashiAmount: l.kashiAmount } : {}) })),
     }));
-    setSession({ templates: [...sess.templates.filter((t) => t.form !== TEMPLATE_FORM[format]), ...mine] });
-    toast(`${FORMAT_LABEL[format]}の定型を保存しました（${mine.length}ページ）`);
+    if (tplId === 'new') {
+      const name = newName.trim() || `定型 ${mine.length + 1}`;
+      const t = withPages({ id: `s${Date.now()}`, name, form: TEMPLATE_FORM[format], lines: [] }, tp);
+      setSession({ templates: [...sess.templates, t] });
+      setTplId(t.id);
+      toast(`定型「${name}」を保存しました（${tp.length}ページ）`);
+      return;
+    }
+    const base = mine.find((t) => t.id === tplId);
+    if (!base) return;
+    setSession({ templates: sess.templates.map((t) => (t.id === tplId ? withPages(t, tp) : t)) });
+    toast(`定型「${base.name}」を保存しました（${tp.length}ページ）`);
   };
 
   /** 有効なページを、1 ページ＝伝票 1 枚として登録する */
@@ -159,7 +188,7 @@ export function SerialTemplateModal({ open, onClose, accent, format, service, ye
     if (!(dn >= 1 && dn <= 31)) { setErr('伝票日付の日を 1〜31 で入力してください。'); focusId('st-day'); return; }
     if (active.length === 0) { setErr('有効なページがありません。登録するページにチェックを入れてください。'); return; }
     const bad = errors.findIndex((e) => e);
-    if (bad >= 0) { setSel(bad); setErr(`${bad + 1}ページ目「${pages[bad].name}」：${errors[bad]}`); return; }
+    if (bad >= 0) { setSel(bad); setErr(`${bad + 1}ページ目：${errors[bad]}`); return; }
     const date = `${em.month}/${dn}`;
     const ids: number[] = [];
     let seq = getVouchers().reduce((mx, r) => Math.max(mx, r.seq), 0);
@@ -194,6 +223,14 @@ export function SerialTemplateModal({ open, onClose, accent, format, service, ye
     <Modal open={open} onClose={onClose} width={1120} title={<>連続定型 <span style={{ fontSize: 13, fontWeight: 500, color: '#8290a0', marginLeft: 8 }}>{FORMAT_LABEL[format]}の定型をまとめて登録します</span></>}>
       <div data-serial-template style={{ ...scopeStyle(accent), padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', padding: '8px 12px', borderRadius: 8, background: '#f3f6f9', fontSize: 14 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            定型：
+            <select data-serial-template-pick aria-label="定型" value={tplId} onChange={(e) => pickTemplate(e.target.value)} style={{ ...input, width: 'auto', minWidth: 220, padding: '6px 8px', fontWeight: 700 }}>
+              {mine.map((t) => <option key={t.id} value={t.id}>{t.name}（{templatePages(t).length}ページ）</option>)}
+              <option value="new">＋ 新しい定型</option>
+            </select>
+            {tplId === 'new' && <input aria-label="新しい定型の名前" value={newName} onChange={(e) => setNewName(e.target.value.slice(0, 20))} placeholder="定型の名前" style={{ ...input, width: 180, padding: '6px 8px' }} />}
+          </span>
           <span>入力区分：<b>{service || '（未指定）'}</b></span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             伝票日付：令和
@@ -214,13 +251,13 @@ export function SerialTemplateModal({ open, onClose, accent, format, service, ye
               <button type="button" className="ef-act" data-serial-all="off" onClick={() => setAll(false)} style={btn('#5b6773', false, true)}>すべて無効</button>
             </div>
             <div style={{ maxHeight: 330, overflow: 'auto' }}>
-              {pages.length === 0 && <div style={{ padding: 14, fontSize: 14, color: '#8290a0', lineHeight: 1.8 }}>定型がまだありません。「＋ページを追加」で作成します。</div>}
+              {pages.length === 0 && <div style={{ padding: 14, fontSize: 14, color: '#8290a0', lineHeight: 1.8 }}>{mine.length === 0 ? 'この形式の定型がまだありません。「＋ページを追加」でページを作り、「定型に保存」で保存します。仕訳辞書の連続定型仕訳ウィザードでも作れます。' : 'この定型にはページがありません。「＋ページを追加」で作成します。'}</div>}
               {pages.map((p, i) => (
                 <div key={p.id} data-serial-page={i + 1} data-enabled={p.enabled ? '1' : '0'} onClick={() => setSel(i)} style={{ display: 'grid', gridTemplateColumns: '26px 22px minmax(0,1fr) auto', gap: 6, alignItems: 'center', padding: '7px 10px', cursor: 'pointer', borderBottom: '1px solid #eef2f5', background: i === sel ? '#eef4fb' : '#fff', borderLeft: '3px solid ' + (i === sel ? accent : 'transparent'), opacity: p.enabled ? 1 : 0.55 }}>
                   <span style={{ fontSize: 12, color: '#8290a0', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{i + 1}</span>
                   <input type="checkbox" aria-label={`${i + 1}ページ目を有効にする`} title="チェックを入れたページだけ登録します" checked={p.enabled} onClick={(e) => e.stopPropagation()} onChange={(e) => { setErr(''); setPages((ps) => ps.map((x, k) => (k === i ? { ...x, enabled: e.target.checked } : x))); }} style={{ width: 16, height: 16, cursor: 'pointer' }} />
                   <span style={{ minWidth: 0 }}>
-                    <span style={{ display: 'block', fontSize: 14, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name || '（名前なし）'}</span>
+                    <span style={{ display: 'block', fontSize: 14, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pageLabel(p, perLine)}</span>
                     {errors[i] && <span data-serial-page-error style={{ display: 'block', fontSize: 12, color: '#c0392b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={errors[i]}>{errors[i]}</span>}
                   </span>
                   <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums', color: '#22303c' }}>{pageTotal(p).toLocaleString('ja-JP')}</span>
@@ -238,9 +275,8 @@ export function SerialTemplateModal({ open, onClose, accent, format, service, ye
             {!cur && <div style={{ fontSize: 14, color: '#8290a0' }}>左の一覧からページを選ぶか、「＋ページを追加」で定型を作成します。</div>}
             {cur && (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: perLine ? '70px minmax(0,1fr)' : '70px minmax(0,1fr) 44px minmax(0,1fr) 44px minmax(0,1fr)', gap: 8, alignItems: 'center' }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#5b6773' }}>{sel + 1}ページ目</span>
-                  <input id="st-name" aria-label="ページの名前" value={cur.name} onChange={(e) => patchPage({ name: e.target.value })} onKeyDown={onEnter(() => focusId(perLine ? `st-l${cur.lines[0].id}-kari` : 'st-kari'))} placeholder="定型の名前" style={{ ...input, padding: '8px 10px' }} />
+                <div style={{ display: 'grid', gridTemplateColumns: perLine ? '90px' : '90px 44px minmax(0,1fr) 44px minmax(0,1fr)', gap: 8, alignItems: 'center' }}>
+                  <span data-serial-page-no style={{ fontSize: 14, fontWeight: 700, color: '#22303c' }}>{sel + 1}ページ目</span>
                   {!perLine && (
                     <>
                       <span style={{ fontSize: 13, fontWeight: 700, color: '#5b6773', textAlign: 'right' }}>借方</span>
@@ -300,7 +336,7 @@ export function SerialTemplateModal({ open, onClose, accent, format, service, ye
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span data-serial-summary style={{ fontSize: 14, flex: 1 }}>有効 <b>{active.length}</b> ページ／合計 <b style={{ fontVariantNumeric: 'tabular-nums' }}>{total.toLocaleString('ja-JP')}</b> 円</span>
           <button type="button" className="ef-act" onClick={onClose} style={btn()}>キャンセル</button>
-          <button type="button" className="ef-act" data-serial-save onClick={save} title="いまのページの内容と有効／無効を、定型として保存します（伝票は登録しません）" style={btn(accent)}>定型に保存</button>
+          <button type="button" className="ef-act" data-serial-save onClick={save} title="いまのページの内容と有効／無効を、選んでいる定型に保存します（伝票は登録しません）" style={btn(accent)}>定型に保存</button>
           <button type="button" className="ef-act" data-serial-register onClick={register} style={btn(accent, true)}>有効な {active.length} ページを登録する</button>
         </div>
       </div>

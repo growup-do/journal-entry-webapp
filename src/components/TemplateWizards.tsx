@@ -1,5 +1,6 @@
 // 連続定型仕訳ウィザード／自動按分仕訳登録（テンプレートの新規登録・訂正）
-//   連続定型仕訳ウィザードの明細は、予備１・予備２・消費税（貸借）も入力できる（確認メモ #292）。振替伝票式は借方金額・貸方金額を行ごとに分ける（#293）。0 行では登録できない（#294）。
+//   連続定型は 1 つの定型に複数のページ（1 ページ＝伝票 1 枚）を持ち、ページごとに伝票画面での有効・無効の初期値を持つ（確認メモ #291）。
+//   連続定型仕訳ウィザードの明細は、予備１・予備２・消費税（貸借）も入力できる（確認メモ #292）。振替伝票式は借方金額・貸方金額を行ごとに分ける（#293）。0 行のページがあると登録できない（#294）。
 //   設定「仕訳辞書」と、伝票入力の「連続定型」「自動按分」ダイアログの両方から開く共通部品。
 
 import { Modal } from './Modal';
@@ -8,31 +9,52 @@ import { ToastView, useToast } from './Toast';
 import { Field, Notice, Steps, btn, input, lbl, numInput, toInt, yen } from './ui';
 import { ACCOUNTS, SERVICES, VENDORS } from '../data';
 import { TAX_OPTS } from '../lib/transferTax';
-import { setSession, useSession, type AllocationLine, type AllocationTemplate, type JournalTemplate, type TemplateLine } from '../store/session';
+import { setSession, templatePages, useSession, withPages, type AllocationLine, type AllocationTemplate, type JournalTemplate, type TemplateLine, type TemplatePage } from '../store/session';
 
 const ACCTS = ACCOUNTS.flatMap((g) => g.items).concat(['水道光熱費（事務）', '寄附金収益', '基本金組入額']);
 const FORMS = ['単一式', '伝票式', '振替伝票式', '振替単一式'] as const;
 
-export type TemplateWiz = { step: number; t: JournalTemplate } | null;
+/** page は明細の手順で開いているページ（0 始まり） */
+export type TemplateWiz = { step: number; t: JournalTemplate; page?: number } | null;
 export type AllocationWiz = { step: number; t: AllocationTemplate } | null;
 
-export const blankTemplate = (line?: Partial<TemplateLine>, form: JournalTemplate['form'] = '単一式'): JournalTemplate => ({ id: 't' + Date.now(), name: '', form, lines: [{ kari: '', kashi: '', tekiyo: '', amount: '', ...line }] });
+export const blankTemplate = (line?: Partial<TemplateLine>, form: JournalTemplate['form'] = '単一式'): JournalTemplate => withPages({ id: 't' + Date.now(), name: '', form, lines: [] }, [{ lines: [{ kari: '', kashi: '', tekiyo: '', amount: '', ...line }] }]);
 export const blankAllocation = (line?: Partial<AllocationLine>): AllocationTemplate => ({ id: 'a' + Date.now(), name: '', form: '単一式', rounding: '切り捨て', lines: [{ division: SERVICES[0], kari: '', kashi: '', tekiyo: '', rate: 50, mode: '％', ...line }, { division: SERVICES[1], kari: '', kashi: '', tekiyo: '', rate: 50, mode: '残り', ...line }] });
 
 const sel = (v: string, onChange: (x: string) => void, opts: string[], ph = '選択') => <select value={v} onChange={(e) => onChange(e.target.value)} style={{ ...input, padding: '5px 8px', fontSize: 14 }}><option value="">{ph}</option>{opts.map((o) => <option key={o}>{o}</option>)}</select>;
 
 /* ---------------- 連続定型仕訳ウィザード ---------------- */
+/** 1 つの定型に置けるページ数の上限（伝票画面の連続定型と同じ） */
+const MAX_TEMPLATE_PAGES = 50;
+const blankLine = (): TemplateLine => ({ kari: '', kashi: '', tekiyo: '', amount: '' });
+
 export function TemplateWizardModal({ wiz, setWiz, accent, onSaved }: { wiz: TemplateWiz; setWiz: (w: TemplateWiz) => void; accent: string; onSaved?: (t: JournalTemplate) => void }) {
   const s = useSession();
   const toast = useToast();
+  const pages = wiz ? templatePages(wiz.t) : [];
+  const pi = Math.min(wiz?.page ?? 0, Math.max(0, pages.length - 1));
+  const cur = pages[pi];
+  /** 行が 0 行のページ（登録できない。確認メモ #294） */
+  const emptyPage = pages.findIndex((p) => p.lines.length === 0);
+  const blocked = pages.length === 0 ? 'ページがありません。「＋ ページ追加」でページを追加してください' : emptyPage >= 0 ? `${emptyPage + 1}ページ目の行が 0 行のため登録できません。「＋ 行追加」で行を追加するか、ページを削除してください` : '';
   const saveT = () => {
     if (!wiz) return;
     if (!wiz.t.name.trim()) return toast.show('名称を入力してください（全角20文字まで）');
-    if (wiz.t.lines.length === 0) return toast.show('行がありません。「＋ 行追加」で 1 行以上追加してから登録してください');
-    setSession({ templates: s.templates.some((x) => x.id === wiz.t.id) ? s.templates.map((x) => (x.id === wiz.t.id ? wiz.t : x)) : [...s.templates, wiz.t] });
-    setWiz(null); toast.show('定型仕訳を登録しました'); onSaved?.(wiz.t);
+    if (blocked) return toast.show(blocked);
+    const t = withPages(wiz.t, pages);
+    setSession({ templates: s.templates.some((x) => x.id === t.id) ? s.templates.map((x) => (x.id === t.id ? t : x)) : [...s.templates, t] });
+    setWiz(null); toast.show(`定型仕訳を登録しました（${pages.length}ページ）`); onSaved?.(t);
   };
-  const updLine = (i: number, p: Partial<TemplateLine>) => wiz && setWiz({ ...wiz, t: { ...wiz.t, lines: wiz.t.lines.map((l, k) => (k === i ? { ...l, ...p } : l)) } });
+  const setPages = (ps: TemplatePage[], page = pi) => wiz && setWiz({ ...wiz, t: withPages(wiz.t, ps), page });
+  const patchPage = (p: Partial<TemplatePage>) => setPages(pages.map((x, k) => (k === pi ? { ...x, ...p } : x)));
+  const updLine = (i: number, p: Partial<TemplateLine>) => cur && patchPage({ lines: cur.lines.map((l, k) => (k === i ? { ...l, ...p } : l)) });
+  const addPage = () => {
+    if (pages.length >= MAX_TEMPLATE_PAGES) return toast.show(`1 つの定型に置けるのは ${MAX_TEMPLATE_PAGES} ページまでです`);
+    // 新しいページは、仕訳伝票形式なら借方・貸方の科目をいまのページから引き継ぐ
+    const base = wiz?.t.form === '伝票式' && cur?.lines[0] ? { ...blankLine(), kari: cur.lines[0].kari, kashi: cur.lines[0].kashi } : blankLine();
+    setPages([...pages.slice(0, pi + 1), { lines: [base] }, ...pages.slice(pi + 1)], pi + 1);
+  };
+  const removePage = () => setPages(pages.filter((_, k) => k !== pi), Math.max(0, pi - 1));
   return (
     <>
       <ToastView msg={toast.msg} />
@@ -45,50 +67,104 @@ export function TemplateWizardModal({ wiz, setWiz, accent, onSaved }: { wiz: Tem
           {wiz.step === 1 && <Field label="伝票の形式"><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>{FORMS.map((f) => <label key={f} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '10px 12px', border: '1px solid ' + (wiz.t.form === f ? accent : '#e2e8ee'), borderRadius: 10, fontSize: 14, cursor: 'pointer' }}><input type="radio" checked={wiz.t.form === f} onChange={() => setWiz({ ...wiz, t: { ...wiz.t, form: f } })} />{f}</label>)}</div></Field>}
           {wiz.step === 2 && (() => {
             const split = wiz.t.form === '振替伝票式';
+            /** 仕訳伝票形式は、借方・貸方の科目を伝票（ページ）に 1 組だけ持つ */
+            const slip = wiz.t.form === '伝票式';
+            /** 単一式は 1 ページ＝1 行 */
+            const single = wiz.t.form === '単一式';
             const amt = (v: string | undefined, on: (x: string) => void, ph: string, label: string) => <input className="field-input" aria-label={label} value={v ? yen(Number(v)) : ''} onChange={(e) => on(e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" placeholder={ph} style={{ ...numInput, padding: '5px 8px', fontSize: 14 }} />;
             const txt = (v: string | undefined, on: (x: string) => void, label: string) => <input className="field-input" aria-label={label} value={v ?? ''} onChange={(e) => on(e.target.value)} style={{ ...input, padding: '5px 8px', fontSize: 14 }} />;
             const tax = (v: string | undefined, on: (x: string) => void, label: string) => <select aria-label={label} value={v ?? ''} onChange={(e) => on(e.target.value)} style={{ ...input, padding: '3px 6px', fontSize: 12 }}><option value="">科目の既定</option>{TAX_OPTS.map((o) => <option key={o}>{o}</option>)}</select>;
+            const cols = 8 + (slip ? 0 : 2) + (split ? 1 : 0);
+            const slipKari = cur?.lines[0]?.kari ?? '';
+            const slipKashi = cur?.lines[0]?.kashi ?? '';
             return (
             <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}><span style={lbl}>{wiz.t.name}（{wiz.t.form}）　日付・金額は未入力でも登録できます</span><button type="button" onClick={() => setWiz({ ...wiz, t: { ...wiz.t, lines: [...wiz.t.lines, { kari: '', kashi: '', tekiyo: '', amount: '' }] } })} style={{ ...btn(accent, false, true), marginLeft: 'auto' }}>＋ 行追加</button></div>
-              <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead><tr>
-                  <th style={{ ...TH, width: 30 }}>#</th><th style={TH}>借方</th><th style={TH}>貸方</th><th style={TH}>摘要</th><th style={{ ...TH, width: 120 }}>取引先</th>
-                  <th style={{ ...TH, width: 90 }}>予備１</th><th style={{ ...TH, width: 90 }}>予備２</th>
-                  <th style={{ ...TH, width: 128 }} title="消費税コード（上が借方、下が貸方。「科目の既定」は科目に設定した税区分）">消費税（借／貸）</th>
-                  {split ? <><th style={{ ...TH, width: 110, textAlign: 'right' }}>借方金額</th><th style={{ ...TH, width: 110, textAlign: 'right' }}>貸方金額</th></> : <th style={{ ...TH, width: 110, textAlign: 'right' }}>金額</th>}
-                  <th style={{ ...TH, width: 64 }} />
-                </tr></thead>
-                <tbody>
-                  {wiz.t.lines.length === 0 && <tr><td colSpan={split ? 11 : 10} style={{ ...TD, textAlign: 'center', color: '#c0392b', padding: 18 }}>行がありません。「＋ 行追加」で 1 行以上追加してください（0 行のままでは登録できません）。</td></tr>}
-                  {wiz.t.lines.map((l, i) => <tr key={i}>
-                    <td style={TD}>{i + 1}</td>
-                    <td style={TD}>{sel(l.kari, (v) => updLine(i, { kari: v }), ACCTS)}</td>
-                    <td style={TD}>{sel(l.kashi, (v) => updLine(i, { kashi: v }), ACCTS)}</td>
-                    <td style={TD}>{txt(l.tekiyo, (v) => updLine(i, { tekiyo: v }), `${i + 1}行目の摘要`)}</td>
-                    <td style={TD}>{sel(l.gyosha ?? '', (v) => updLine(i, { gyosha: v }), VENDORS.filter((x) => x !== '（なし）'), 'なし')}</td>
-                    <td style={TD}>{txt(l.spare1, (v) => updLine(i, { spare1: v }), `${i + 1}行目の予備１`)}</td>
-                    <td style={TD}>{txt(l.spare2, (v) => updLine(i, { spare2: v }), `${i + 1}行目の予備２`)}</td>
-                    <td style={TD}><div style={{ display: 'grid', gap: 3 }}>{tax(l.kariTax, (v) => updLine(i, { kariTax: v }), `${i + 1}行目の借方の消費税`)}{tax(l.kashiTax, (v) => updLine(i, { kashiTax: v }), `${i + 1}行目の貸方の消費税`)}</div></td>
-                    {split ? (
-                      <>
-                        <td style={NUM}>{amt(l.kariAmount ?? l.amount, (v) => updLine(i, { kariAmount: v, amount: v }), '呼出時', `${i + 1}行目の借方金額`)}</td>
-                        <td style={NUM}>{amt(l.kashiAmount ?? l.amount, (v) => updLine(i, { kashiAmount: v }), '呼出時', `${i + 1}行目の貸方金額`)}</td>
-                      </>
-                    ) : <td style={NUM}>{amt(l.amount, (v) => updLine(i, { amount: v }), '呼出時に入力', `${i + 1}行目の金額`)}</td>}
-                    <td style={TD}><button type="button" onClick={() => setWiz({ ...wiz, t: { ...wiz.t, lines: wiz.t.lines.filter((_, k) => k !== i) } })} title="この行を削除" style={btn('#c0392b', false, true)}>行削除</button></td>
-                  </tr>)}
-                </tbody>
-              </table>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <span style={{ ...lbl, marginBottom: 0 }}>{wiz.t.name}（{wiz.t.form}）　1 ページが伝票 1 枚です。日付・金額は未入力でも登録できます</span>
               </div>
-              {split && <div style={{ marginTop: 8, fontSize: 12, color: '#7a8794' }}>振替伝票式は、行ごとに借方金額と貸方金額を分けて入力できます。</div>}
+
+              {/* ページの切替（確認メモ #291）。伝票画面の連続定型では、ページごとに有効・無効を切り替えて登録する */}
+              <div data-wiz-pages style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', padding: '8px 10px', marginBottom: 10, borderRadius: 8, background: '#f3f6f9' }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#5b6773', marginRight: 2 }}>ページ</span>
+                <div role="tablist" aria-label="ページ" style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  {pages.map((p, k) => {
+                    const on = k === pi;
+                    const off = p.enabled === false;
+                    return (
+                      <button key={k} type="button" role="tab" aria-selected={on} data-wiz-page={k + 1} onClick={() => setWiz({ ...wiz, page: k })}
+                        title={`${k + 1}ページ目${off ? '（伝票画面では無効で始まる）' : ''}${p.lines.length === 0 ? '：行がありません' : `：${p.lines[0].tekiyo || p.lines[0].kari || '（未入力）'}`}`}
+                        style={{ minWidth: 34, height: 30, padding: '0 8px', borderRadius: 6, border: '1px solid ' + (on ? accent : p.lines.length === 0 ? '#e3a59c' : '#cfd8e0'), background: on ? accent : '#fff', color: on ? '#fff' : p.lines.length === 0 ? '#c0392b' : '#22303c', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', fontVariantNumeric: 'tabular-nums', textDecoration: off ? 'line-through' : 'none', opacity: off && !on ? 0.6 : 1 }}>{k + 1}</button>
+                    );
+                  })}
+                </div>
+                <button type="button" data-wiz-add-page onClick={addPage} disabled={pages.length >= MAX_TEMPLATE_PAGES} style={btn(accent, false, true)}>＋ ページ追加</button>
+                <button type="button" data-wiz-remove-page onClick={removePage} disabled={!cur} style={btn('#c0392b', false, true)}>このページを削除</button>
+                <span style={{ marginLeft: 'auto', fontSize: 12, color: '#7a8794' }}>{pages.length}／{MAX_TEMPLATE_PAGES} ページ</span>
+              </div>
+
+              {!cur && <div style={{ padding: 18, textAlign: 'center', color: '#c0392b', fontSize: 14 }}>ページがありません。「＋ ページ追加」で 1 ページ以上追加してください（0 ページのままでは登録できません）。</div>}
+              {cur && (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+                    <b style={{ fontSize: 14 }}>{pi + 1}ページ目</b>
+                    {slip && (
+                      <>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#5b6773' }}>借方</span>
+                        <span style={{ width: 220 }}>{sel(slipKari, (v) => patchPage({ lines: cur.lines.map((l) => ({ ...l, kari: v })) }), ACCTS)}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#5b6773' }}>貸方</span>
+                        <span style={{ width: 220 }}>{sel(slipKashi, (v) => patchPage({ lines: cur.lines.map((l) => ({ ...l, kashi: v })) }), ACCTS)}</span>
+                      </>
+                    )}
+                    <label title="伝票画面の連続定型を開いたときに、このページを有効（登録の対象）にしておくか" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#22303c', cursor: 'pointer' }}>
+                      <input type="checkbox" data-wiz-page-enabled checked={cur.enabled !== false} onChange={(e) => patchPage({ enabled: e.target.checked ? undefined : false })} style={{ width: 16, height: 16 }} />
+                      伝票画面で有効にしておく
+                    </label>
+                    {(!single || cur.lines.length === 0) && <button type="button" onClick={() => patchPage({ lines: [...cur.lines, slip ? { ...blankLine(), kari: slipKari, kashi: slipKashi } : blankLine()] })} style={{ ...btn(accent, false, true), marginLeft: 'auto' }}>＋ 行追加</button>}
+                  </div>
+                  <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead><tr>
+                      <th style={{ ...TH, width: 30 }}>#</th>{!slip && <><th style={TH}>借方</th><th style={TH}>貸方</th></>}<th style={TH}>摘要</th><th style={{ ...TH, width: 120 }}>取引先</th>
+                      <th style={{ ...TH, width: 90 }}>予備１</th><th style={{ ...TH, width: 90 }}>予備２</th>
+                      <th style={{ ...TH, width: 128 }} title="消費税コード（上が借方、下が貸方。「科目の既定」は科目に設定した税区分）">消費税（借／貸）</th>
+                      {split ? <><th style={{ ...TH, width: 110, textAlign: 'right' }}>借方金額</th><th style={{ ...TH, width: 110, textAlign: 'right' }}>貸方金額</th></> : <th style={{ ...TH, width: 110, textAlign: 'right' }}>金額</th>}
+                      <th style={{ ...TH, width: 64 }} />
+                    </tr></thead>
+                    <tbody>
+                      {cur.lines.length === 0 && <tr><td colSpan={cols} style={{ ...TD, textAlign: 'center', color: '#c0392b', padding: 18 }}>このページには行がありません。「＋ 行追加」で 1 行以上追加するか、ページを削除してください（0 行のページがあると登録できません）。</td></tr>}
+                      {cur.lines.map((l, i) => <tr key={i}>
+                        <td style={TD}>{i + 1}</td>
+                        {!slip && <td style={TD}>{sel(l.kari, (v) => updLine(i, { kari: v }), ACCTS)}</td>}
+                        {!slip && <td style={TD}>{sel(l.kashi, (v) => updLine(i, { kashi: v }), ACCTS)}</td>}
+                        <td style={TD}>{txt(l.tekiyo, (v) => updLine(i, { tekiyo: v }), `${i + 1}行目の摘要`)}</td>
+                        <td style={TD}>{sel(l.gyosha ?? '', (v) => updLine(i, { gyosha: v }), VENDORS.filter((x) => x !== '（なし）'), 'なし')}</td>
+                        <td style={TD}>{txt(l.spare1, (v) => updLine(i, { spare1: v }), `${i + 1}行目の予備１`)}</td>
+                        <td style={TD}>{txt(l.spare2, (v) => updLine(i, { spare2: v }), `${i + 1}行目の予備２`)}</td>
+                        <td style={TD}><div style={{ display: 'grid', gap: 3 }}>{tax(l.kariTax, (v) => updLine(i, { kariTax: v }), `${i + 1}行目の借方の消費税`)}{tax(l.kashiTax, (v) => updLine(i, { kashiTax: v }), `${i + 1}行目の貸方の消費税`)}</div></td>
+                        {split ? (
+                          <>
+                            <td style={NUM}>{amt(l.kariAmount ?? l.amount, (v) => updLine(i, { kariAmount: v, amount: v }), '呼出時', `${i + 1}行目の借方金額`)}</td>
+                            <td style={NUM}>{amt(l.kashiAmount ?? l.amount, (v) => updLine(i, { kashiAmount: v }), '呼出時', `${i + 1}行目の貸方金額`)}</td>
+                          </>
+                        ) : <td style={NUM}>{amt(l.amount, (v) => updLine(i, { amount: v }), '呼出時に入力', `${i + 1}行目の金額`)}</td>}
+                        <td style={TD}><button type="button" onClick={() => patchPage({ lines: cur.lines.filter((_, k) => k !== i) })} title="この行を削除" style={btn('#c0392b', false, true)}>行削除</button></td>
+                      </tr>)}
+                    </tbody>
+                  </table>
+                  </div>
+                </>
+              )}
+              <div style={{ marginTop: 8, fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>
+                伝票画面の「連続定型」でこの定型を選ぶと、ページごとに有効・無効を切り替えて、有効なページをまとめて登録できます。
+                {split && <><br />振替伝票式は、行ごとに借方金額と貸方金額を分けて入力できます。</>}
+                {single && <><br />単一式は 1 ページに 1 行です。</>}
+              </div>
             </>
             );
           })()}
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
             <button type="button" onClick={() => (wiz.step === 0 ? setWiz(null) : setWiz({ ...wiz, step: wiz.step - 1 }))} style={btn()}>{wiz.step === 0 ? '中止' : '戻る'}</button>
-            {wiz.step < 2 ? <button type="button" className="submit-btn" onClick={() => setWiz({ ...wiz, step: wiz.step + 1 })} style={btn(accent, true)}>次へ</button> : <span data-tip={wiz.t.lines.length === 0 ? '行が 0 行のため登録できません。「＋ 行追加」で行を追加してください' : undefined} style={{ display: 'inline-flex' }}><button type="button" className="submit-btn" data-template-save disabled={wiz.t.lines.length === 0} onClick={saveT} style={{ ...btn(accent, true), ...(wiz.t.lines.length === 0 ? { opacity: 0.45, cursor: 'not-allowed' } : {}) }}>定型仕訳を登録</button></span>}
+            {wiz.step < 2 ? <button type="button" className="submit-btn" onClick={() => setWiz({ ...wiz, step: wiz.step + 1 })} style={btn(accent, true)}>次へ</button> : <span data-tip={blocked || undefined} style={{ display: 'inline-flex' }}><button type="button" className="submit-btn" data-template-save disabled={!!blocked} onClick={saveT} style={{ ...btn(accent, true), ...(blocked ? { opacity: 0.45, cursor: 'not-allowed' } : {}) }}>定型仕訳を登録</button></span>}
           </div>
         </div>
       </>

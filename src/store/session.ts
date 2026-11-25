@@ -138,16 +138,38 @@ export const DEFAULT_PRINT: PrintCommon = {
 
 /* ---------- 定型仕訳・自動按分 ---------- */
 export interface TemplateLine { kari: string; kashi: string; tekiyo: string; amount: string; gyosha?: string; /** 入力予備１・２（確認メモ #292） */ spare1?: string; spare2?: string; /** 消費税コード（貸借それぞれ。空は科目からの既定。確認メモ #292） */ kariTax?: string; kashiTax?: string; /** 振替伝票式：行の借方金額・貸方金額（確認メモ #293。amount は借方金額と同じ） */ kariAmount?: string; kashiAmount?: string }
-export interface JournalTemplate { id: string; name: string; form: '単一式' | '伝票式' | '振替伝票式' | '振替単一式'; lines: TemplateLine[]; /** 連続定型で登録の対象にするか（未指定は有効。確認メモ #202） */ enabled?: boolean }
+/** 連続定型のページ（1 ページ＝伝票 1 枚。確認メモ #291） */
+export interface TemplatePage { lines: TemplateLine[]; /** 伝票画面で登録の対象にするか（未指定は有効）。伝票画面の連続定型で切り替えて保存できる */ enabled?: boolean }
+/** 連続定型。1 つの定型に複数のページ（伝票）を持つ（確認メモ #291）。lines は全ページの行をつなげたもの（一覧の表示用。pages がない古いデータは lines を 1 ページとして読む） */
+export interface JournalTemplate { id: string; name: string; form: '単一式' | '伝票式' | '振替伝票式' | '振替単一式'; lines: TemplateLine[]; pages?: TemplatePage[]; /** 古いデータの有効／無効（確認メモ #202）。いまはページごとに持つ */ enabled?: boolean }
+
+/** 定型のページを返す。pages がない古いデータは、lines を 1 ページにする（単一式は 1 行＝1 ページ） */
+export function templatePages(t: JournalTemplate): TemplatePage[] {
+  if (t.pages) return t.pages;
+  if (t.form === '単一式') return t.lines.map((l) => ({ lines: [l], enabled: t.enabled }));
+  return [{ lines: t.lines, enabled: t.enabled }];
+}
+/** ページを差し替えた定型（lines も合わせる） */
+export const withPages = (t: JournalTemplate, pages: TemplatePage[]): JournalTemplate => ({ ...t, pages, lines: pages.flatMap((p) => p.lines), enabled: undefined });
 export interface AllocationLine { division: string; kari: string; kashi: string; tekiyo: string; rate: number; mode: '％' | '分数' | '残り'; }
 export interface AllocationTemplate { id: string; name: string; form: '単一式' | '伝票式'; rounding: '切り捨て' | '四捨五入' | '切り上げ'; lines: AllocationLine[] }
 
 /** 仕訳伝票形式のサンプル（連続定型のダイアログで有効／無効を切り替えて登録する。確認メモ #202） */
-const SLIP_TEMPLATES: JournalTemplate[] = [
-  { id: 't5', name: '電気代・ガス代（月次）', form: '伝票式', lines: [{ kari: '水道光熱費（事業）', kashi: '当座預金（保育園）', tekiyo: '電気代', amount: '61000', gyosha: '東京電力' }, { kari: '水道光熱費（事業）', kashi: '当座預金（保育園）', tekiyo: 'ガス代', amount: '26000', gyosha: '東京電力' }] },
-  { id: 't6', name: '給食材料費の支払', form: '伝票式', lines: [{ kari: '給食費', kashi: '普通預金（保育園）', tekiyo: '給食材料', amount: '186000', gyosha: 'みどり商店' }] },
-  { id: 't7', name: '保育材料の購入', form: '伝票式', enabled: false, lines: [{ kari: '保育材料費', kashi: '普通預金（保育園）', tekiyo: '保育材料', amount: '', gyosha: '' }] },
-];
+const SLIP_TEMPLATES: JournalTemplate[] = ([
+  // 1 つの定型に 4 ページ。保育材料のページは無効にしてある（伝票画面で有効にすると登録の対象になる。確認メモ #291）
+  { id: 't5', name: '月次の支払（保育園）', form: '伝票式', lines: [], pages: [
+    { lines: [{ kari: '水道光熱費（事業）', kashi: '当座預金（保育園）', tekiyo: '電気代', amount: '61000', gyosha: '東京電力' }, { kari: '水道光熱費（事業）', kashi: '当座預金（保育園）', tekiyo: 'ガス代', amount: '26000', gyosha: '東京電力' }] },
+    { lines: [{ kari: '給食費', kashi: '普通預金（保育園）', tekiyo: '給食材料', amount: '186000', gyosha: 'みどり商店' }] },
+    { lines: [{ kari: '賃借料（事業）', kashi: '普通預金（保育園）', tekiyo: 'コピー機リース代', amount: '10995', gyosha: '中央リース' }] },
+    { enabled: false, lines: [{ kari: '保育材料費', kashi: '普通預金（保育園）', tekiyo: '保育材料', amount: '', gyosha: '' }] },
+  ] },
+] as JournalTemplate[]).map((t) => (t.pages ? withPages(t, t.pages) : t));
+/** 保存してある定型を読み込むときの置き換え。ページのない以前のサンプル（t5〜t7）は、ページを持つ新しいサンプルに差し替える（確認メモ #291） */
+function migrateTemplates(ts: JournalTemplate[]): JournalTemplate[] {
+  const oldSample = ts.some((t) => t.id === 't5' && !t.pages);
+  const kept = oldSample ? ts.filter((t) => !['t5', 't6', 't7'].includes(t.id)) : ts;
+  return kept.some((t) => t.form === '伝票式') ? kept : [...kept, ...SLIP_TEMPLATES];
+}
 export const DEFAULT_TEMPLATES: JournalTemplate[] = [
   { id: 't1', name: '電話料金', form: '単一式', lines: [{ kari: '通信運搬費', kashi: '普通預金（保育園）', tekiyo: '電話料金', amount: '', gyosha: 'ＮＴＴ東日本' }] },
   { id: 't2', name: '給与支給（月次）', form: '振替伝票式', lines: [{ kari: '職員俸給', kashi: '普通預金（保育園）', tekiyo: '職員俸給', amount: '' }, { kari: '特殊業務手当', kashi: '普通預金（保育園）', tekiyo: '特殊業務手当', amount: '' }, { kari: '通勤手当', kashi: '普通預金（保育園）', tekiyo: '通勤手当', amount: '' }] },
@@ -259,7 +281,7 @@ let state: Session = (() => {
       // 以前の保存データ（消費税対応の On／Off だけ）には方式がないので、On は「簡易課税方式」として引き継ぐ（確認メモ #175）
       taxMode: saved.taxMode ?? (saved.taxEntry ? '簡易課税方式' : DEFAULT.taxMode),
       // 以前の保存データには仕訳伝票形式の定型がないので、サンプルを足す（確認メモ #202）
-      templates: saved.templates ? (saved.templates.some((t) => t.form === '伝票式') ? saved.templates : [...saved.templates, ...SLIP_TEMPLATES]) : DEFAULT_TEMPLATES };
+      templates: saved.templates ? migrateTemplates(saved.templates) : DEFAULT_TEMPLATES };
   } catch {
     return DEFAULT;
   }
