@@ -1,14 +1,14 @@
 // 印刷の詳細設定から開く小さな画面（Windows の現行画面で項目を確認。確認メモ #314・#338・#339・#342・#343・#345・#346）
 //   ・印刷書式設定 … 仕訳日記帳（フォントだけ）、試算表・予算管理表（印刷幅＋科目名・金額）、予算書（印刷幅＋科目名・金額・摘要）
 //   ・内訳書－印刷書式 … 予算内訳表（用紙・印刷幅・用紙方向・ヘッダーなど4行のフォント）
-//   ・表示区分選択 … 予算内訳表の「印刷区分を指定する」（No ごとに区分を選ぶ。1ページの区分数ごとに色を変える）
+//   ・表示区分選択 … 予算内訳表の「印刷区分を指定する」（No ごとに区分・小計・内部取引消去・合計・計算式を選び、印刷用列名を変えられる。1ページの区分数ごとに色を変える）
 //   ・摘要 … 予算書の科目ごとの備考（使えない文字は入力できない）
 //   ・科目毎の表示設定 … 印刷位置の「科目毎に指定」で使う（科目ごとに表示する／しない）
 //   入力画面なので、Esc や背景のクリックでは閉じない（Modal の既定）。
 
 import { useId, useState } from 'react';
 import { Modal } from './Modal';
-import { btn, input } from './ui';
+import { btn, input, HelpTip } from './ui';
 import { ACCOUNTS } from '../data';
 import { ACCOUNT_META } from '../lib/accounts';
 /** 資金科目の一覧（科目設定の［資金科目］。確認メモ #366） */
@@ -117,31 +117,65 @@ export function InnerFormatDialog({ value, accent, onCancel, onOk, std = STD_INN
   );
 }
 
-/* ---------------- 表示区分選択（予算内訳表の印刷区分） ---------------- */
+/* ---------------- 表示区分選択（予算内訳表の印刷区分） ----------------
+ * 現行の「合算テーブル」と「内部取引消去対応」の2つの方式を、内部取引消去対応をもとに1つにまとめた（確認メモ #380／#388）。
+ * 行ごとに 区分／小計／内部取引消去／合計／計算式 を選び、印刷用列名（列の見出し）を変えられる。
+ * 計算式は現行の合算テーブルと同じく行の No で指定する（例 1+3）。誤りのメッセージも現行の文言に合わせた。 */
 const AREA_ROWS = 30;
-export function AreaPickDialog({ value, divisions, perPage, accent, onCancel, onOk }: { value: string[]; divisions: string[]; perPage: number; accent: string; onCancel: () => void; onOk: (v: string[]) => void }) {
-  const [rows, setRows] = useState<string[]>(() => Array.from({ length: AREA_ROWS }, (_, i) => value[i] ?? ''));
+/** 区分のほかに置ける行 */
+export const AREA_SPECIAL = ['小計', '内部取引消去', '合計', '計算式'] as const;
+export interface AreaRow { div: string; name: string; formula: string }
+/** 以前の形（区分名だけの配列）も読めるようにする */
+export const toAreaRows = (v: (AreaRow | string)[] | undefined): AreaRow[] => (v ?? []).map((x) => (typeof x === 'string' ? { div: x, name: '', formula: '' } : x));
+/** 計算式の誤り（なければ空文字） */
+export function areaFormulaError(rows: AreaRow[]): string {
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    if (r.div !== '計算式') continue;
+    const no = i + 1;
+    const f = r.formula.replace(/[＋]/g, '+').replace(/[－−ー]/g, '-').replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).replace(/\s/g, '');
+    if (!f) return `${no}行目の計算式が未入力です。`;
+    if (!/^\d+([+-]\d+)*$/.test(f)) return `${no}行目の計算式は、行の No と ＋・－ で入力してください（例 1+3）。`;
+    const refs = f.split(/[+-]/).map(Number);
+    if (refs.includes(no)) return `${no}行目の計算式に自分自身の行番号が含まれています。修正してください。`;
+    const bad = refs.find((n) => n < 1 || n > rows.length || !rows[n - 1].div);
+    if (bad != null) return `${no}行目の計算式の ${bad} 行目は空行です。修正してください。`;
+  }
+  return '';
+}
+export function AreaPickDialog({ value, divisions, perPage, accent, onCancel, onOk }: { value: (AreaRow | string)[]; divisions: string[]; perPage: number; accent: string; onCancel: () => void; onOk: (v: AreaRow[]) => void }) {
+  const [rows, setRows] = useState<AreaRow[]>(() => { const v = toAreaRows(value); return Array.from({ length: AREA_ROWS }, (_, i) => v[i] ?? { div: '', name: '', formula: '' }); });
+  const [err, setErr] = useState('');
   const per = Math.max(1, perPage);
+  const put = (i: number, p: Partial<AreaRow>) => { setRows(rows.map((x, k) => (k === i ? { ...x, ...p } : x))); setErr(''); };
+  const th = { position: 'sticky', top: 0, background: '#f3f6f9', padding: '6px 10px', fontSize: 12, textAlign: 'left', zIndex: 1 } as const;
+  const ok = () => { const e = areaFormulaError(rows); if (e) { setErr(e); return; } onOk(rows); };
   return (
-    <Modal open onClose={onCancel} width={560} title="表示区分選択">
+    <Modal open onClose={onCancel} width={820} title="表示区分選択">
       <div data-area-dialog style={{ padding: '14px 22px 18px', display: 'grid', gap: 10 }}>
-        <div style={{ fontSize: 14 }}>内訳表に表示する区分を設定してください。<span style={{ ...note, display: 'block' }}>No の順に左から印刷します。色の切れ目が 1 ページの区切り（1 ページ {per} 区分）です。空行は詰めずに空欄で印刷します。</span></div>
+        <div style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>内訳表に表示する区分を設定してください。<HelpTip text={['No の順に左から印刷します。色の切れ目が 1 ページの区切りです', '区分のほか、小計・内部取引消去・合計・計算式の行を置けます', '計算式は行の No で指定します。例 1+3 は 1 行目と 3 行目を足した金額です', '印刷用列名を入れると、その名前で列の見出しを印刷します。空欄のときは区分名で印刷します', '空行は詰めずに空欄で印刷します']} /></div>
         <div style={{ maxHeight: 360, overflowY: 'auto', border: '1px solid #e2e8ee', borderRadius: 8 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr><th style={{ position: 'sticky', top: 0, background: '#f3f6f9', padding: '6px 10px', fontSize: 12, textAlign: 'right', width: 56 }}>No</th><th style={{ position: 'sticky', top: 0, background: '#f3f6f9', padding: '6px 10px', fontSize: 12, textAlign: 'left' }}>区分名</th></tr></thead>
-            <tbody>{rows.map((v, i) => (
-              <tr key={i} data-area-row={i + 1} style={{ background: Math.floor(i / per) % 2 ? '#fff8e1' : '#f4efff' }}>
-                <td style={{ padding: '3px 10px', textAlign: 'right', fontSize: 14, fontVariantNumeric: 'tabular-nums' }}>{i + 1}</td>
-                <td style={{ padding: '3px 10px' }}><select aria-label={`No ${i + 1} の区分`} value={v} onChange={(e) => setRows(rows.map((x, k) => (k === i ? e.target.value : x)))} style={{ ...input, padding: '4px 8px', background: '#fff' }}><option value="">（空行）</option>{divisions.map((d) => <option key={d}>{d}</option>)}</select></td>
-              </tr>
-            ))}</tbody>
+            <thead><tr><th style={{ ...th, textAlign: 'right', width: 48 }}>No</th><th style={{ ...th, width: '34%' }}>区分名</th><th style={th}>印刷用列名</th><th style={{ ...th, width: '22%' }}>計算式</th></tr></thead>
+            <tbody>{rows.map((r, i) => {
+              const fx = r.div === '計算式';
+              return (
+                <tr key={i} data-area-row={i + 1} style={{ background: Math.floor(i / per) % 2 ? '#fff8e1' : '#f4efff' }}>
+                  <td style={{ padding: '3px 10px', textAlign: 'right', fontSize: 14, fontVariantNumeric: 'tabular-nums' }}>{i + 1}</td>
+                  <td style={{ padding: '3px 6px' }}><select aria-label={`No ${i + 1} の区分`} value={r.div} onChange={(e) => put(i, { div: e.target.value, ...(e.target.value === '計算式' ? {} : { formula: '' }) })} style={{ ...input, padding: '4px 8px', background: '#fff' }}><option value="">（空行）</option>{divisions.map((d) => <option key={d}>{d}</option>)}{AREA_SPECIAL.map((d) => <option key={d}>{d}</option>)}</select></td>
+                  <td style={{ padding: '3px 6px' }}><input className="field-input" data-area-name={i + 1} aria-label={`No ${i + 1} の印刷用列名`} value={r.name} disabled={!r.div} onChange={(e) => put(i, { name: e.target.value })} placeholder={r.div ? (r.div.split(' ').slice(1).join(' ') || r.div) : ''} style={{ ...input, padding: '4px 8px', background: r.div ? '#fff' : '#f3f5f7' }} /></td>
+                  <td style={{ padding: '3px 6px' }}><input className="field-input" data-area-formula={i + 1} aria-label={`No ${i + 1} の計算式`} value={r.formula} disabled={!fx} onChange={(e) => put(i, { formula: e.target.value })} placeholder={fx ? '例 1+3' : ''} style={{ ...input, padding: '4px 8px', background: fx ? '#fff' : '#f3f5f7', fontVariantNumeric: 'tabular-nums' }} /></td>
+                </tr>
+              );
+            })}</tbody>
           </table>
         </div>
+        {err && <div role="alert" data-area-error style={{ fontSize: 14, fontWeight: 700, color: '#c0392b' }}>{err}</div>}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={note}>1ページに表示可能な区分数：{per}</span>
           <span style={{ flex: 1 }} />
           <button type="button" onClick={onCancel} style={btn()}>キャンセル</button>
-          <button type="button" className="submit-btn" onClick={() => onOk(rows)} style={btn(accent, true)}>OK</button>
+          <button type="button" className="submit-btn" onClick={ok} style={btn(accent, true)}>OK</button>
         </div>
       </div>
     </Modal>

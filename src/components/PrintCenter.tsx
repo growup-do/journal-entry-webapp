@@ -21,7 +21,7 @@ import { Field, IconButton, Notice, SettingsShell, Toggle, btn, card, cardHead, 
 import { ExportDialog, runExport, type ExportKind, type ExportSpec } from './ExportDialog';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { TargetCombo } from './TargetCombo';
-import { AreaPickDialog, DisplaySettingDialog, FUND_GROUPS, FormatDialog, InnerFormatDialog, RemarkDialog, STD_INNER_PRINT, formatSummary, stdFormat, type FormatSpec, type InnerPrintFormat, type PrintFormat } from './PrintDetailDialogs';
+import { AreaPickDialog, toAreaRows, type AreaRow, DisplaySettingDialog, FUND_GROUPS, FormatDialog, InnerFormatDialog, RemarkDialog, STD_INNER_PRINT, formatSummary, stdFormat, type FormatSpec, type InnerPrintFormat, type PrintFormat } from './PrintDetailDialogs';
 import { PrintSteps, type OutKind } from './PrintSteps';
 import { LoadDivisionSettings } from './DivisionSettingsLoad';
 import { COMMON_LINK, FORM_GROUPS, REPORTS, formEnabled, omittable, type DetailItem, type DetailSection, type DetailValue, type ReportDef } from './printCatalog';
@@ -168,7 +168,7 @@ interface FlowPrefs {
   /** 印刷書式（印刷幅とフォント。確認メモ #314・#339・#342） */
   fmt?: PrintFormat;
   /** 予算内訳表：内訳書－印刷書式・表示区分（確認メモ #345・#346） */
-  innerFmt?: InnerPrintFormat; areas?: string[];
+  innerFmt?: InnerPrintFormat; areas?: (AreaRow | string)[];
   /** 予算書：科目ごとの摘要（確認メモ #343） */
   remarks?: Record<string, string>;
   /** 科目毎の表示設定（印刷位置の「科目毎に指定」。確認メモ #338） */
@@ -333,8 +333,8 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
   const fmtSpec = formatSpecOf(report);
   const fmt = p.fmt ?? (fmtSpec ? stdFormat(fmtSpec) : null);
   const hasItem = (k: string) => report.detail.some((sec) => sec.items.some((it) => it.k === k));
-  /** 予算内訳表：内訳書－印刷書式は「内部取引消去対応」のときだけ（確認メモ #345） */
-  const hasInner = hasItem('innerMode');
+  /** 予算内訳表：［内訳表の印刷書式］（方式の選択はなくしたので、いつでも使える。確認メモ #345／#380） */
+  const hasInner = report.cat === '予算' && hasItem('pickArea');
   /** 決算書・準決算書の内訳表：［内訳書の印刷書式］（いつでも使える。確認メモ #354） */
   const closingInner = (fixedStart(report) || !!report.innerBtn) && report.detail.some((sec) => sec.title === '内訳表');
   /** 内訳書の印刷書式の標準（就労支援・授産の明細書は印刷幅が違う） */
@@ -342,7 +342,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
   /** 科目別消費税区分別集計表：チェックした科目の数 */
   const picked = (v?: Record<string, boolean>) => Object.values(v ?? {}).filter(Boolean).length;
   const noAcct = !!report.acctPick && picked(p.acctSel) + picked(p.fundSel) === 0;
-  const innerOn = closingInner || p.detail.innerMode === '内部取引消去対応';
+  const innerOn = closingInner || hasInner;
   /** 予算書：［摘要］。「所属区分の摘要を使用する」のときは押せない（確認メモ #343・#348） */
   const hasRemarks = hasItem('ownRemark') || !!report.remarkBtn;
   /** 準決算書（C別紙6）は［備考］（確認メモ #364）、予算書は［摘要］ */
@@ -517,7 +517,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
                 </div>
                 {report.detail.length > 0 && <DetailSections sections={report.detail} values={p.detail} onChange={(k, v) => set({ detail: { ...p.detail, [k]: v } })} accent={accent} labelOf={labelOf} optionsOf={optionsOf} lead={zeroInItems ? zeroToggle : undefined} buttons={{
                   depth: { label: report.cat === '予算' && report.budget && !report.rangeSumOnly ? '表示科目' : '表示設定', always: true, onClick: () => setDlg('disp'), title: '科目毎の表示設定（「科目毎に指定」で印刷する科目）を開きます', note: Object.values(p.disp ?? {}).some((x) => x === false) ? `表示しない科目 ${Object.values(p.disp ?? {}).filter((x) => x === false).length} 件` : undefined },
-                  pickArea: { label: '印刷区分', onClick: () => setDlg('areas'), title: '内訳表に表示する区分を選びます', note: (p.areas ?? []).filter(Boolean).length ? `${(p.areas ?? []).filter(Boolean).length} 区分を指定` : '区分が未指定です' },
+                  pickArea: { label: '印刷区分', onClick: () => setDlg('areas'), title: '内訳表に表示する区分を選びます', note: toAreaRows(p.areas).filter((x) => x.div).length ? `${toAreaRows(p.areas).filter((x) => x.div).length} 列を指定` : '区分が未指定です' },
                   stamp: { label: '捺印欄', onClick: () => setStampEdit([...stamps]), note: stamps.filter(Boolean).join('・') || '名前が未入力です', title: '捺印欄に印刷する名前を入力します' },
                   note: { label: '脚注編集', onClick: () => setFootEdit(pr.footnotes[report.name] ?? ''), note: pr.footnotes[report.name] ? pr.footnotes[report.name].slice(0, 30) + (pr.footnotes[report.name].length > 30 ? '…' : '') : '脚注が未入力です', title: '（注）予備費の充当額等として印刷する脚注を入力します' },
                   foot: { label: '脚注編集', onClick: () => setFootEdit(pr.footnotes[report.name] ?? ''), note: pr.footnotes[report.name] ? pr.footnotes[report.name].slice(0, 30) + (pr.footnotes[report.name].length > 30 ? '…' : '') : '脚注が未入力です', title: 'この帳票の脚注を入力します' },
@@ -536,7 +536,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
                     </div>}
                     {(hasInner || closingInner) && <div data-inner-format style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                       <button type="button" data-open-inner-format disabled={!innerOn} onClick={() => setDlg('inner')} title={innerOn ? undefined : '「内部取引消去対応」を選ぶと使えます'} style={{ ...btn('#5b6773', false, true), opacity: innerOn ? 1 : 0.5, cursor: innerOn ? 'pointer' : 'default' }}>{closingInner ? '内訳書の印刷書式' : '内訳表の印刷書式'}</button>
-                      <span style={{ fontSize: 12, color: '#8290a0' }}>{innerOn ? (() => { const f = p.innerFmt ?? innerStd; return `${f.paper}・${f.orient}／科目名 ${f.widths[0]}mm／金額 ${f.widths[1]}mm`; })() : '合算テーブルのときは使いません'}</span>
+                      <span style={{ fontSize: 12, color: '#8290a0' }}>{innerOn ? (() => { const f = p.innerFmt ?? innerStd; return `${f.paper}・${f.orient}／科目名 ${f.widths[0]}mm／金額 ${f.widths[1]}mm`; })() : ''}</span>
                     </div>}
                     {hasRemarks && <div data-remarks style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                       <button type="button" data-open-remarks disabled={!!p.detail.ownRemark} onClick={() => setDlg('remarks')} title={p.detail.ownRemark ? '「所属区分の摘要を使用する」のときは、選んだ区分の摘要を使います' : `科目ごとの${remarkLabel}を入力します`} style={{ ...btn('#5b6773', false, true), opacity: p.detail.ownRemark ? 0.5 : 1, cursor: p.detail.ownRemark ? 'default' : 'pointer' }}>{remarkLabel}</button>

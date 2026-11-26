@@ -129,15 +129,13 @@ function CLOSING(kind: ClosingKind, o: { depth?: string; serial?: boolean } = {}
     POSITION('-8', '5'),
   ];
 }
-/** 予算内訳表：内部取引消去対応のときだけ押せる項目 */
-const IN = (it: DetailItem): DetailItem => ({ ...it, when: { k: 'innerMode', v: '内部取引消去対応' } });
 /** 資金収支予算内訳表（試算表系の項目＋内訳表の設定） */
 const BUDGET_INNER: DetailSection[] = (() => {
   const t = TRIAL({ head2: true, depth: '小区分までの印刷', stamp: false });
   return [t[0],
-    { title: '予算内訳表 内訳表の印刷区分設定方法', items: [rad('innerMode', '印刷区分設定方法', ['合算テーブル', '内部取引消去対応'], '内部取引消去対応')] },
-    // 合算テーブルのときは押せない。印刷区分を指定する が ON で［印刷区分］（確認メモ #346）
-    { title: '内訳表', items: [IN(chk('twoLine', '項目名を二行で印刷する')), IN(chk('autoFontHead', '項目名のフォントサイズを自動調整する')), IN(sel('perPage', '１ページの区分数', Array.from({ length: 20 }, (_, i) => String(i + 1)), '5')), IN(chk('pickArea', '印刷区分を指定する'))] },
+    // 現行の「合算テーブル」と「内部取引消去対応」の選択はなくし、内部取引消去対応をもとに1つにまとめた（確認メモ #380／#388）。
+    //   合算テーブルにだけあった 計算式・列名の変更・2ページ以降の区分名 は、［印刷区分］の表示区分選択と下の項目に入れた。印刷区分を指定する が ON で［印刷区分］（確認メモ #346）
+    { title: '内訳表', items: [chk('twoLine', '項目名を二行で印刷する'), chk('autoFontHead', '項目名のフォントサイズを自動調整する'), sel('perPage', '１ページの区分数', Array.from({ length: 20 }, (_, i) => String(i + 1)), '5'), chk('namePerPage', '2ページ以降も区分名を印刷する'), chk('pickArea', '印刷区分を指定する')] },
     ...t.slice(1)];
 })();
 
@@ -433,7 +431,7 @@ export const REPORTS: ReportDef[] = [
   ...group('予算', '予算書', [
     ...BUDGET4.map((k, i): R => ({ id: 'b' + (i + 1), name: `資金収支${k}予算書`, annual: true, budget: k === '補正' ? '補正' : '通常', title: BUDGET_TITLE[k], detail: BUDGET(k as BudgetKind) })),
     { id: 'b5', name: '資金収支予算内訳表', annual: true, cond: C.parent, rangeSumOnly: true, detail: BUDGET_INNER },
-    { id: 'b6', name: '資金収支次年度予算内訳表', annual: true, cond: C.parent, rangeSumOnly: true, memo: '合算テーブルの作成が必要', detail: BUDGET_INNER },
+    { id: 'b6', name: '資金収支次年度予算内訳表', annual: true, cond: C.parent, rangeSumOnly: true, memo: '内訳表の列は［印刷区分］の表示区分選択で指定（合算テーブルは統合。確認メモ #380）', detail: BUDGET_INNER },
   ]),
   ...group('予算', '予算書（拠点区分）', BUDGET4.map((k, i): R => ({ id: 'bk' + (i + 1), name: `資金収支${k}予算書（拠点区分）`, annual: true, cond: C.service, budget: k === '補正' ? '補正' : '通常', title: BUDGET_TITLE[k], detail: BUDGET(k as BudgetKind) }))),
   ...group('予算', '予算管理表', [
