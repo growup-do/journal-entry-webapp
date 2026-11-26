@@ -395,6 +395,8 @@ export interface EntryToolsOptions {
   blocked?: boolean;
   /** 内部取引科目を使っているため、内部取引スイッチを自動でオンに固定する */
   internalLocked?: boolean;
+  /** 入力補助に［内部取引］ボタンを出さない（振替単一形式は行ごとに内部取引を入力するため。11/26 鈴木さん指示） */
+  noInternalButton?: boolean;
   /** 自動按分などで登録した仕訳の id（一覧の強調表示用） */
   /** 伝票を削除したあと（削除した伝票の id。画面内の一覧から消すのに使う） */
   onDeleted?: (ids: number[]) => void;
@@ -518,7 +520,7 @@ export function useEntryTools(o: EntryToolsOptions) {
     { key: 'K', label: 'カレンダー', group: G3, run: () => setDlg('カレンダー'), disabled: ro },
     { key: 'R', label: '連続定型（定型の伝票をまとめて登録）', group: G3, run: () => setDlg('連続'), disabled: ro },
     { key: 'A', label: '自動按分', group: G3, run: () => setDlg('按分'), disabled: ro },
-    { key: 'U', label: '内部取引（入力補助のボタン。内部取引相手区分の欄を出す／しまう）', group: G3, run: () => toggleInternalArea(), disabled: ro || !!o.internalLocked },
+    ...(o.noInternalButton ? [] : [{ key: 'U', label: '内部取引（入力補助のボタン。内部取引相手区分の欄を出す／しまう）', group: G3, run: () => toggleInternalArea(), disabled: ro || !!o.internalLocked }]),
     { key: 'M', label: '資金モードの切替（自動資金⇄強制資金）', group: G3, run: cycleFund, disabled: ro },
     { key: 'B', label: '科目別残高', group: G4, run: () => setDlg('科目別残') },
     { key: 'Z', label: '現預金残高', group: G4, run: () => setDlg('現預金残') },
@@ -566,7 +568,7 @@ export function useEntryTools(o: EntryToolsOptions) {
       {!viewOnly && <ActionGroup caption="入力補助">
         <ActButton label="連続定型" k="R" accent={o.accent} disabled={ro} title={why('定型の伝票を一覧で開き、有効にしたものをまとめて登録します（内容の入力と有効／無効の切替もここで行います）')} onClick={() => setDlg('連続')} />
         <ActButton label="自動按分" k="A" accent={o.accent} disabled={ro} title={why('按分テンプレートで、複数の区分・科目に金額を配分します')} onClick={() => setDlg('按分')} />
-        <ActButton label={internalShown ? '内部取引：あり' : '内部取引'} k="U" menu="内部取引" active={internalShown} accent={o.accent} disabled={ro || !!o.internalLocked} title={o.internalLocked ? '内部取引科目（区分間繰入金など）を使っているため、内部取引の欄を表示しています' : why(internalShown ? '内部取引の欄をしまいます（内部取引なしに戻します）' : '内部取引相手区分の欄を出し、借方か貸方を選べるようにします')} onClick={toggleInternalArea} />
+        {!o.noInternalButton && <ActButton label={internalShown ? '内部取引：あり' : '内部取引'} k="U" menu="内部取引" active={internalShown} accent={o.accent} disabled={ro || !!o.internalLocked} title={o.internalLocked ? '内部取引科目（区分間繰入金など）を使っているため、内部取引の欄を表示しています' : why(internalShown ? '内部取引の欄をしまいます（内部取引なしに戻します）' : '内部取引相手区分の欄を出し、借方か貸方を選べるようにします')} onClick={toggleInternalArea} />}
         {settingButtons}
       </ActionGroup>}
       <ActionGroup caption="参照">

@@ -12,6 +12,7 @@
 //   金額書式（桁区切り・負の表記・0円行のカット）は動作環境の設定に従う。
 //   資産の部のみサンプルデータあり。他の部は「サンプル未作成」。
 
+import { useMemoAction } from '../memo/memoAction';
 import type { CSSProperties, ReactNode } from 'react';
 import { rowClick, HelpTip } from './ui';
 import { useState } from 'react';
@@ -292,6 +293,9 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
   const [graph, setGraph] = useState(false);
   // 貸借対照表の不一致（確認メモ #130）：warn＝確認メッセージを表示中
   const [warn, setWarn] = useState(false);
+  /** 確認メモ #384／#385 のボタンから開いたとき：見本の差額で警告を出す（会計データの貸借は変えない） */
+  const [demoGap, setDemoGap] = useState(0);
+  useMemoAction('bs-unbalanced', () => { setDemoGap(12_600); setWarn(true); });
   /** 集計し直したとき（月・期間の切り替え）に、不一致なら確認メッセージを出す */
   const recheck = () => { if (unbalanced) setWarn(true); };
   // 指定科目：科目名の一部、または科目コード（前方一致）で一覧の行を強調（共通構成の②。確認メモ #160）
@@ -499,15 +503,15 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
       </Modal>
 
       {/* 確認メッセージ：貸借対照表が不一致（確認メモ #130）。閉じるのは OK ボタンだけ */}
-      <Modal open={warn} onClose={() => setWarn(false)} width={460} title="確認" closable={false}>
+      <Modal open={warn} onClose={() => { setWarn(false); setDemoGap(0); }} width={460} title="確認" closable={false}>
         <div data-bs-unbalanced style={{ padding: '16px 22px 18px', display: 'grid', gap: 14 }}>
           <div style={{ fontSize: 14, lineHeight: 1.7 }}>貸借対照表 決算額の借方合計と貸方合計が一致しておりません。</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '6px 16px', padding: '10px 14px', borderRadius: 8, background: '#f6f8fa', border: '1px solid #e2e8ee', fontSize: 14 }}>
             <span style={{ color: '#5b6773' }}>借方合計</span><span style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{money(debitTotal)}</span>
-            <span style={{ color: '#5b6773' }}>貸方合計</span><span style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{money(creditTotal)}</span>
-            <span style={{ fontWeight: 700, paddingTop: 6, borderTop: '1px solid #e2e8ee' }}>差額</span><span style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 700, paddingTop: 6, borderTop: '1px solid #e2e8ee' }}>{money(debitTotal - creditTotal)}</span>
+            <span style={{ color: '#5b6773' }}>貸方合計</span><span style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{money(creditTotal - demoGap)}</span>
+            <span style={{ fontWeight: 700, paddingTop: 6, borderTop: '1px solid #e2e8ee' }}>差額</span><span style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 700, paddingTop: 6, borderTop: '1px solid #e2e8ee' }}>{money(debitTotal - creditTotal + demoGap)}</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'center' }}><button type="button" data-action="OK" autoFocus onClick={() => setWarn(false)} style={{ minWidth: 110, padding: '8px 22px', borderRadius: 8, border: 'none', background: accent, color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>OK</button></div>
+          <div style={{ display: 'flex', justifyContent: 'center' }}><button type="button" data-action="OK" autoFocus onClick={() => { setWarn(false); setDemoGap(0); }} style={{ minWidth: 110, padding: '8px 22px', borderRadius: 8, border: 'none', background: accent, color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>OK</button></div>
         </div>
       </Modal>
 

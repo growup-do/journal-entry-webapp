@@ -235,6 +235,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
   const tools = useEntryTools({
     format: single ? '振替単一' : '振替入力',
     accent,
+    noInternalButton: single,
     onNavigate,
     toast: toast.show,
     dirty,

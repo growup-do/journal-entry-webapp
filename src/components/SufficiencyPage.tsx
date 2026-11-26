@@ -3,6 +3,7 @@
 //   本体：1. 活用可能な財産の算定（資産・負債・基本金・国庫補助金等特別積立金）、2. 事業に活用している不動産等（控除対象）。
 //   金額を編集すると予想額が再計算される。値はサンプル。
 
+import { useMemoAction } from '../memo/memoAction';
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { ExplainModal } from './ExplainModal';
@@ -68,6 +69,10 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
   const unbalanced = WARN.debit !== WARN.credit;
   /** 科目警告画面のあと：貸借が合わないときは警告画面、合うときは本体へ */
   const afterAcct = () => setStep(unbalanced ? 'warn' : 'main');
+  /** 確認メモ #386 のボタンから開いたとき：見本の差額で警告画面を出す（会計データの貸借は変えない） */
+  const [demo, setDemo] = useState(false);
+  const warnVals = demo ? { debit: WARN.debit, credit: WARN.debit - 36_500 } : WARN;
+  useMemoAction('suff-unbalanced', () => { setDemo(true); setStep('warn'); });
   const [a, setA] = useState(D.assets);
   const [b, setB] = useState(D.liabilities);
   const [c, setC] = useState(D.kihonkin);
@@ -205,24 +210,24 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
       </Modal>
 
       {/* ④ 警告画面（確認メモ #111 ①）：実績額方式・追加額方式では、貸借対照表 決算額の借方合計と貸方合計が一致していないと警告する。値はサンプル */}
-      <Modal open={step === 'warn'} onClose={() => setStep('main')} width={640} strict title="警告画面">
+      <Modal open={step === 'warn'} onClose={() => { setStep('main'); setDemo(false); }} width={640} strict title="警告画面">
         <div style={{ padding: '18px 28px 22px' }} data-sufficiency-warn>
           <div style={{ border: '1px solid #c0392b', borderRadius: 10, padding: '16px 18px', fontSize: 14.5, lineHeight: 1.9, display: 'flex', gap: 14, alignItems: 'flex-start' }}>
             <span aria-hidden style={{ fontSize: 26, lineHeight: 1 }}>⚠️</span>
             <div>
               <div style={{ fontWeight: 700, color: '#c0392b' }}>貸借対照表 決算額の借方合計と貸方合計が一致しておりません。</div>
               <div style={{ fontVariantNumeric: 'tabular-nums', marginTop: 4 }}>
-                借方合計 ＝ ¥{yen(WARN.debit)}<br />
-                貸方合計 ＝ ¥{yen(WARN.credit)}<br />
-                差　　額 ＝ ¥{yen(WARN.debit - WARN.credit)}
+                借方合計 ＝ ¥{yen(warnVals.debit)}<br />
+                貸方合計 ＝ ¥{yen(warnVals.credit)}<br />
+                差　　額 ＝ ¥{yen(warnVals.debit - warnVals.credit)}
               </div>
               <div style={{ marginTop: 4 }}>残高入力や当年度仕訳を見直してください。</div>
             </div>
           </div>
           <div style={{ fontSize: 12, color: '#8290a0', marginTop: 8, lineHeight: 1.7 }}>実績額方式・追加額方式は実績の金額から算出するため、貸借が一致していないと予想額が正しく計算できません。</div>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 18 }}>
-            <PrintOutButton name="警告画面" accent={accent} defaultDest="csv" fileName="充実残額_警告_令和8年度" meta="貸借対照表 決算額の借方合計と貸方合計が一致しておりません" data={() => ({ header: ['項目', '金額（円）'], rows: [['借方合計', WARN.debit], ['貸方合計', WARN.credit], ['差額', WARN.debit - WARN.credit]] })} />
-            <button type="button" onClick={() => setStep('main')} style={btn(true)}>閉じる</button>
+            <PrintOutButton name="警告画面" accent={accent} defaultDest="csv" fileName="充実残額_警告_令和8年度" meta="貸借対照表 決算額の借方合計と貸方合計が一致しておりません" data={() => ({ header: ['項目', '金額（円）'], rows: [['借方合計', warnVals.debit], ['貸方合計', warnVals.credit], ['差額', warnVals.debit - warnVals.credit]] })} />
+            <button type="button" onClick={() => { setStep('main'); setDemo(false); }} style={btn(true)}>閉じる</button>
           </div>
         </div>
       </Modal>

@@ -2,6 +2,7 @@
 // GROW UP ⇄ クライアント間の「この仕様で合っていますか？」を画面上に貼って残すための仕組み。
 // 解決したメモは status='resolved' にして非表示（履歴として残す）。
 
+import type { MemoAction } from './memoAction';
 import { useCallback, useEffect, useState } from 'react';
 import { collection, deleteDoc, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
@@ -29,6 +30,8 @@ export interface Memo {
   path?: string[];
   /** モーダル・パネルの中に置いたときの、その要素からの相対位置 */
   anchor?: MemoAnchor;
+  /** メモに出すボタン（押すと画面に合図を送る。memoAction.ts） */
+  action?: MemoAction;
 }
 
 const uid = () => (crypto?.randomUUID?.() ?? 'm-' + Math.random().toString(36).slice(2) + Date.now().toString(36));
@@ -66,6 +69,7 @@ export function useMemos() {
             ctx: r.ctx,
             path: r.path,
             anchor: r.anchor,
+            action: r.action,
           };
         });
         list.sort((a, b) => a.createdAt - b.createdAt);

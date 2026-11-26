@@ -413,35 +413,35 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
             })}
           </div>
 
-          {/* 入力行（紙の単一式入力の配置：上に 入力区分、下に 4段の項目） */}
-          <div style={{ margin: '14px 0 6px', fontSize: 14, color: PAPER.ink, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>令和 <input id="se-year" className="ef-input pp-input" aria-label="年" title={ENTRY_YEAR_HELP} disabled={ro} value={yr.year} onChange={(e) => yr.edit(e.target.value)} onFocus={(e) => e.currentTarget.select()} onKeyDown={onEnter(() => focusId('se-month'))} inputMode="numeric" autoComplete="off" style={{ ...dateInput, width: 38, padding: '5px 2px', fontWeight: 700 }} /> 年　入力中の伝票</span><EntryMonthNote month={f.month} year={yr.year} />
-            {/* 取引区分のバッジ＋資金モードの切替は、入力中の伝票と同じ行の右端に置く */}
-            <span style={{ marginLeft: 'auto', fontWeight: 400 }}><TorihikiBadge kari={f.kariKamoku} kashi={f.kashiKamoku} force={fundMode === '強制資金'} blocked={blocked} right={tools.fundSwitch} /></span></div>
-          {/* 幅が足りないとき（1600px の画面で参照パネルを開いたときなど）は折り返し、右端の取引区分・Seq No の列を次の行に回す（確認メモ #243） */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch', gap: 12, margin: '0 0 8px', width: '100%' }}>
-            {/* 入力区分：入力区分で起動中は固定表示、親区分で起動中は配下の入力区分から選ぶ（確認メモ #157／#181／#182）。残りの幅いっぱいに広げる */}
-            <div className="ef-field" style={{ display: 'flex', flex: '0 1 300px', minWidth: 200 }}>
+          {/* 入力行（紙の単一式入力の配置）。1行目：令和○年 入力中の伝票 と、その右に入力区分。2行目：内部取引・Seq No の枠と、右端に取引区分のバッジ＋資金モードの切替（11/26 鈴木さん指示） */}
+          <div style={{ margin: '14px 0 8px', fontSize: 14, color: PAPER.ink, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>令和 <input id="se-year" className="ef-input pp-input" aria-label="年" title={ENTRY_YEAR_HELP} disabled={ro} value={yr.year} onChange={(e) => yr.edit(e.target.value)} onFocus={(e) => e.currentTarget.select()} onKeyDown={onEnter(() => focusId('se-month'))} inputMode="numeric" autoComplete="off" style={{ ...dateInput, width: 38, padding: '5px 2px', fontWeight: 700 }} /> 年　入力中の伝票</span><EntryMonthNote month={f.month} year={yr.year} />
+            {/* 入力区分：入力区分で起動中は固定表示、親区分で起動中は配下の入力区分から選ぶ（確認メモ #157／#181／#182） */}
+            <div className="ef-field" style={{ display: 'flex', flex: '0 1 300px', minWidth: 200, fontWeight: 400 }}>
               <PaperBox label="入力区分" grow>
                 <EntryDivisionField ctl={ed} id="se-service" disabled={ro} onCommit={() => focusId('se-month')} />
               </PaperBox>
             </div>
-            {/* 内部取引相手区分（最初から表示。スイッチがオンのときだけ入力できる）。参照パネルで本文が狭くなったときは 280px まで縮める（確認メモ #243） */}
-            {tools.internalShown && <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} data-side={side || 'なし'} style={{ display: 'flex', flex: '0 1 400px', minWidth: 280 }}>
-              <PaperBox label={<span style={{ color: partner ? '#6b3fb5' : '#8895a3' }}>内部取引相手区分{partner ? `（${side}が内部取引）` : ''}</span>} grow muted={!partner}>
-                {/* 2行：上に 内部取引 のスイッチ、下に 相手先の区分 */}
-                <div style={{ display: 'grid', gap: 4, width: '100%', minWidth: 0, padding: '4px 0' }}>
-                  <div style={{ display: 'flex', alignItems: 'center' }}>{tools.internalSwitch}</div>
-                  <div style={{ minWidth: 0, opacity: partner ? 1 : 0.5 }}>
-                    <ComboField id="se-aite" title={!partner ? '上の「内部取引」で借方か貸方を選ぶと入力できます（内部取引科目を選ぶと、その側に自動で決まります）' : undefined} kind="service" value={aite} onChange={setAite} onCommit={() => focusId('se-tekiyo')} placeholder="相手先の区分を指定" dropUp disabled={ro || !partner} invalid={partner ? fieldState(issues, 'aite') : undefined} message={partner ? fieldMessage(issues, 'aite') : undefined} padY={6} />
-                  </div>
+          </div>
+          {/* 幅が足りないとき（1600px の画面で参照パネルを開いたときなど）は折り返す（確認メモ #243） */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, margin: '0 0 8px', width: '100%' }}>
+            {tools.internalShown && (
+              <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} data-side={side || 'なし'} style={{ display: 'grid', gap: 4, flex: '1 1 260px', minWidth: 240, maxWidth: 400, padding: '4px 10px 6px', border: '1px solid ' + (partner ? '#e0d6f3' : '#dfe5ea'), background: partner ? '#faf7ff' : '#fff', borderRadius: 10, transition: 'background .15s, border-color .15s' }}>
+                {/* 2行：上に 内部取引 のスイッチと見出し、下に 相手先の区分 */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  {tools.internalSwitch}
+                  <span style={{ fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', color: partner ? '#6b3fb5' : '#8895a3' }} title={partner ? `${side}が内部取引のため入力が必要です` : undefined}>相手区分{partner ? '（必須）' : ''}</span>
                 </div>
-              </PaperBox>
-            </div>}
-            {/* Seq No などの枠（詰めて表示）。操作説明の ? は枠の右 */}
-            <div style={{ display: 'flex', alignItems: 'center', alignSelf: 'flex-start', gap: 8, flex: 'none' }}>
+                <div style={{ minWidth: 0, opacity: partner ? 1 : 0.5, transition: 'opacity .15s' }}>
+                  <ComboField id="se-aite" title={!partner ? '上の「内部取引」で借方か貸方を選ぶと入力できます（内部取引科目を選ぶと、その側に自動で決まります）' : undefined} kind="service" value={aite} onChange={setAite} onCommit={() => focusId('se-tekiyo')} placeholder="相手先の区分を指定" dropUp disabled={ro || !partner} invalid={partner ? fieldState(issues, 'aite') : undefined} message={partner ? fieldMessage(issues, 'aite') : undefined} padY={6} />
+                </div>
+              </div>
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }}>
               <VoucherMarks compact seq="自動" flags={flags} onChange={(p) => setFlags((st) => ({ ...st, ...p }))} disabled={ro} viewOnly={tools.viewOnly} />
               <span style={{ display: 'inline-flex' }}><HelpTip text={[`Enter で進む順：${ENTER_ORDER.split('。')[0]}`, '金額で Enter を押すと、登録の確認へ移ります']} /></span>
             </div>
+            <span style={{ marginLeft: 'auto' }}><TorihikiBadge kari={f.kariKamoku} kashi={f.kashiKamoku} force={fundMode === '強制資金'} blocked={blocked} right={tools.fundSwitch} /></span>
           </div>
           <div className="pp-table" style={{ gridTemplateColumns: '1fr', borderWidth: 2 }}>
             {/* 4段（見出し行＋入力行） */}

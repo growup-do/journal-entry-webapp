@@ -5,6 +5,7 @@
 // 置いたときの画面の状態（開いていたモーダル・タブ・パネル）を覚え、同じ状態のときだけ番号を表示する。
 // 一覧から番号を選ぶと、その状態になるまでの操作を再生してから表示する（uiContext.ts）。全閲覧者にリアルタイム同期。
 
+import { fireMemoAction } from './memoAction';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, MouseEvent } from 'react';
 import { useMemos, type Memo } from './useMemos';
@@ -362,6 +363,12 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
             </div>
             {openDesc && <div style={{ fontSize: 12, color: '#8290a0', marginBottom: 6 }}>置いた状態：{openDesc}</div>}
             <div style={{ fontSize: 14, lineHeight: 1.65, whiteSpace: 'pre-wrap', color: '#22303c', marginBottom: 12 }}>{openMemo.text}</div>
+            {/* メモのボタン：押すとメモを閉じ、画面に合図を送る（例：警告画面を見本の金額で表示。確認メモ #384〜#386） */}
+            {openMemo.action && (
+              <div style={{ marginBottom: 12 }}>
+                <button type="button" data-memo-action={openMemo.action.event} onClick={() => { const ev = openMemo.action!.event; setOpenId(null); setTimeout(() => fireMemoAction(ev), 0); }} style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: '#1f7a52', color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{openMemo.action.label}</button>
+              </div>
+            )}
 
             <div style={{ borderTop: '1px solid #eef2f5', paddingTop: 10 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 5 }}>回答・コメント</div>
