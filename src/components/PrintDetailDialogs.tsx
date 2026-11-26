@@ -86,7 +86,7 @@ export function FormatDialog({ spec, value, accent, onCancel, onOk }: { spec: Fo
 /* ---------------- 内訳書－印刷書式（予算内訳表） ---------------- */
 export interface InnerPrintFormat { paper: string; widths: [string, string]; orient: '縦' | '横'; header: [string, string]; headerItem: [string, string]; name: [string, string]; amount: [string, string] }
 export const STD_INNER_PRINT: InnerPrintFormat = { paper: 'A4', widths: ['75', '22'], orient: '縦', header: [...STD_FONT], headerItem: [...STD_FONT], name: [...STD_FONT], amount: [...STD_FONT] };
-export function InnerFormatDialog({ value, accent, onCancel, onOk }: { value: InnerPrintFormat; accent: string; onCancel: () => void; onOk: (f: InnerPrintFormat) => void }) {
+export function InnerFormatDialog({ value, accent, onCancel, onOk, std = STD_INNER_PRINT }: { value: InnerPrintFormat; accent: string; onCancel: () => void; onOk: (f: InnerPrintFormat) => void; /** リセットで戻す標準 */ std?: InnerPrintFormat }) {
   const [f, setF] = useState(value);
   const listId = useId() + 'sizes';
   return (
@@ -111,7 +111,7 @@ export function InnerFormatDialog({ value, accent, onCancel, onOk }: { value: In
           {([['header', 'ヘッダー'], ['headerItem', 'ヘッダー項目名'], ['name', '科目名'], ['amount', '金額']] as const).map(([k, l]) => <FontRow key={k} label={l} value={f[k]} onChange={(v) => setF({ ...f, [k]: v })} listId={listId} />)}
           <datalist id={listId}>{FORMAT_SIZES.map((o) => <option key={o} value={o} />)}</datalist>
         </fieldset>
-        <Foot accent={accent} onReset={() => setF({ ...STD_INNER_PRINT })} onCancel={onCancel} onOk={() => onOk(f)} />
+        <Foot accent={accent} onReset={() => setF({ ...std, widths: [...std.widths] as [string, string] })} onCancel={onCancel} onOk={() => onOk(f)} />
       </div>
     </Modal>
   );

@@ -283,7 +283,7 @@ const AP_LINKED = (activity: boolean): DetailSection[] => [
   { title: '内訳表', items: [chk('twoLine', '項目名を二行で印刷する'), chk('autoFontHead', '項目名のフォントサイズを自動調整する', true), sel('perPage', '１ページの区分数', Array.from({ length: 20 }, (_, i) => String(i + 1)), '6'), chk('pickArea', '印刷区分を指定する')] },
   POSITION('-8', '5'),
 ];
-export interface AppendixSpec { detail: DetailSection[]; note?: string; /** 開発用のメモ。画面には出さない */ memo?: string; zero?: boolean; noZero?: boolean; outs?: ReportDef['outs']; range?: boolean }
+export interface AppendixSpec { detail: DetailSection[]; note?: string; /** 開発用のメモ。画面には出さない */ memo?: string; zero?: boolean; noZero?: boolean; outs?: ReportDef['outs']; range?: boolean; common?: boolean; ownInit?: boolean; innerBtn?: boolean; innerWidths?: [string, string] }
 const AP: Record<string, AppendixSpec> = {
   // 別紙1・2 注記（「注記印刷詳細」。年月指定は無い）
   // ２ページ目以降も項目名を印刷する（確認メモ #358）
@@ -311,8 +311,24 @@ const AP: Record<string, AppendixSpec> = {
     POSITION('0', '2'),
   ] },
 };
-/** 就労支援・授産の明細書（⑮〜⑲）は現行で開けなかったため、①と同じ部品で仮置き */
-export const appendixSpec = (id: string): AppendixSpec => { const a = AP[id] ?? { zero: false, range: true, detail: [{ title: '印刷項目', items: apItems({ shade: true, autofont: true }) }, AP_GAP('上・下空き'), POSITION('0', '0')] }; return { ...a, detail: withPageStart(a.detail) }; };
+/** 就労支援・授産の明細書（⑮〜⑲の9様式。現行の「決算附属明細書印刷」の詳細設定はタイトル以外すべて同じ）
+ *  共通の印刷設定を反映できる（初期は個別の設定）。印刷位置は「科目毎に指定」と［表示設定］、内訳表と［内訳書の印刷書式］がある */
+const AP_SHUROU: AppendixSpec = {
+  zero: false, range: true, common: true, ownInit: true, innerBtn: true, innerWidths: ['60', '20'],
+  memo: '現行のメニュー定義 ID 33542〜33550。就労・授産の事業がない区分ではメニューに出ない',
+  detail: [
+    { title: '印刷項目', items: [
+      chk('shade', '費目行を網掛け、太字にする'), chk('stamp', '捺印欄を印刷する'), chk('corp', '法人名を印刷する', true), chk('foot', '脚注を印刷する'),
+      chk('autofont', '科目名のフォントサイズを自動調整する'), chk('page', 'ページ番号を印刷する'), txt('pageStart', 'ページ番号の開始番号', '1', '1', 80), chk('date', '印刷時の日付を印刷する'),
+      chk('bottom', '常に最下行の下に横線を印刷する'), chk('top', '常に最上行の上に横線を印刷する'),
+    ] },
+    DEPTH_SECTION('中区分までの印刷'),
+    AP_GAP('上・下空き'),
+    { title: '内訳表', items: [chk('twoLine', '項目名を二行で印刷する'), chk('autoFontHead', '項目名のフォントサイズを自動調整する'), sel('perPage', '１ページの区分数', Array.from({ length: 20 }, (_, i) => String(i + 1)), '6')] },
+    POSITION('0', '0'),
+  ],
+};
+export const appendixSpec = (id: string): AppendixSpec => { const a = AP[id] ?? AP_SHUROU; return { ...a, detail: withPageStart(a.detail) }; };
 
 /* ---------------- 表示条件 ---------------- */
 export interface Cond { label: string; ok: (s: Session) => boolean }
@@ -370,7 +386,10 @@ export interface ReportDef {
   /** 「0データを表示しない」の初期値（省略時は共通の印刷設定の値） */ zero?: boolean;
   /** 現行の詳細設定に「０データを印刷しない」が無い帳票 */ noZero?: boolean;
   /** 科目ごとの備考を入力する［備考］ボタン（確認メモ #364） */ remarkBtn?: '備考';
-  /** 科目設定の［勘定科目］［資金科目］ボタン（印刷する科目を選ぶ。確認メモ #366） */ acctPick?: boolean;
+  /** 条件画面に勘定科目・資金科目の一覧を出し、印刷する科目をチェックで選ぶ（科目別消費税区分別集計表。確認メモ #366） */ acctPick?: boolean;
+  /** 共通の印刷設定を反映できるが、初期値は帳票個別の値（就労支援・授産の明細書） */ ownInit?: boolean;
+  /** ［内訳書の印刷書式］を置く（決算書・準決算書の内訳表のほか） */ innerBtn?: boolean;
+  /** ［内訳書の印刷書式］の印刷幅の標準（科目名・金額 mm） */ innerWidths?: [string, string];
 }
 type R = Omit<ReportDef, 'cat' | 'sub'>;
 const group = (cat: string, sub: string, list: R[]): ReportDef[] => list.map((r) => ({ ...r, detail: withPageStart(r.detail), cat, sub, range: r.range ?? (cat === '試算表' || cat === '決算書' || cat === '準決算書' || !!r.rangeSumOnly) }));
@@ -433,7 +452,7 @@ export const REPORTS: ReportDef[] = [
   ...group('消費税', '消費税', [
     { id: 'x1', name: '消費税区分別集計内訳表', memo: '現行は条件画面だけ（詳細設定ボタンなし）', noZero: true, detail: D.taxInner },
     { id: 'x2', name: '消費税区分別集計表', range: true, noZero: true, title: '消費税区分別集計表', detail: D.tax },
-    { id: 'x3', name: '科目別消費税区分別集計表', memo: '勘定科目・資金科目の一覧で印刷する科目を選ぶ（科目設定は他の伝票入力区分と共有）', zero: false, acctPick: true, title: '消費税区分別集計表', detail: [{ ...D.tax[0], items: D.tax[0].items.map((it) => (it.k === 'area' && it.t === 'check' ? { ...it, on: false } : it)) }, ...D.tax.slice(1)] },
+    { id: 'x3', name: '科目別消費税区分別集計表', memo: '現行は条件画面の右半分に勘定科目・資金科目の一覧（科目名だけ、全てON／全てOFF、初期は未チェック）。科目設定は他の伝票入力区分と共有。印刷書式は科目名81mm・金額25mm', zero: false, acctPick: true, title: '消費税区分別集計表', detail: [{ ...D.tax[0], items: D.tax[0].items.map((it) => (it.k === 'area' && it.t === 'check' ? { ...it, on: false } : it)) }, ...D.tax.slice(1)] },
     { id: 'x4', name: '消費税区分コード内訳表', range: true, zero: false, detail: D.taxCode },
     { id: 'x5', name: '売上仕入税額集計表', memo: '現行の印刷メニューでは見当たらない（帳票・印刷_画面一覧には記載）', cond: C.honsoku, range: true, noZero: true, title: '売上仕入税額集計表', detail: D.tax },
   ]),
