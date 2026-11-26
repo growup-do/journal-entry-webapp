@@ -26,6 +26,7 @@ import { allocate, allocationPages, isTransferForm, shareText, type AllocatedVou
 import { isViewOnly, setSession, specialRatesOf, splitSpecialAmount, useSession, type AllocationTemplate, type InputSettings, type TemplateLine } from '../store/session';
 
 export { WATCHED, watchedStatement } from './EntryCommon';
+import { watchedStatement } from './EntryCommon';
 
 /* ---------------- 入力設定（既存「入力の変更」＋詳細設定） ---------------- */
 export function InputSettingsModal({ open, onClose, accent }: { open: boolean; onClose: () => void; accent: string }) {
@@ -325,23 +326,94 @@ export function SpecialAmountModal({ open, total, account, onClose, accent, onOk
 }
 
 /* ---------------- 決算附属明細書への登録（伝票入力時の監視） ---------------- */
-export function AttachedStatementModal({ open, statement, entry, onClose, onDone, accent }: { open: boolean; statement: string; entry: { kari: string; kashi: string; tekiyo: string; amount: number } | null; onClose: () => void; onDone: (register: boolean) => void; accent: string }) {
+//   登録した伝票の行のうち、監視する科目（寄附金・補助金・基本金・繰入金）を使う行ごとに、明細書への登録画面を順に出す（確認メモ #419）。
+//   1枚の伝票に対象の行が2つあれば2回出す。4形式（仕訳伝票・単一・振替伝票・振替単一）で共通。
+//   寄附金収益明細書は、明細書の列（寄附者の属性・区分・うち基本金組入額）をここで入力する（確認メモ #418）。
+export interface StatementItem { label: string; kari: string; kashi: string; tekiyo: string; amount: number; /** 伝票の何行目か（複数行の形式） */ row?: number }
+/** 寄附金収益明細書：寄附者の属性 */
+export const DONOR_ATTRS = ['法人の役員等', '利用者本人', '利用者の家族', '取引業者', 'その他'];
+/** 寄附金収益明細書：区分 */
+export const DONATION_KINDS = ['経常経費寄附金', '長期運営資金借入金元金償還寄附金', '施設整備等寄附金', '設備資金借入金元金償還寄附金', '固定資産受贈額'];
+/** 登録した伝票の行から、明細書へ連動する行を拾う（金額のある行だけ。行ごとに1件） */
+export function statementItems(rows: { kari: string; kashi: string; tekiyo: string; amount: number }[]): StatementItem[] {
+  const out: StatementItem[] = [];
+  rows.forEach((r, i) => {
+    const w = watchedStatement(r.kari, r.kashi);
+    if (w && r.amount > 0) out.push({ label: w.label, kari: r.kari, kashi: r.kashi, tekiyo: r.tekiyo, amount: r.amount, row: rows.length > 1 ? i + 1 : undefined });
+  });
+  return out;
+}
+/** 明細書への登録の流れ：start(items) で開き、全件終わるとトーストで結果を出す */
+export function useStatementFlow(accent: string, toast: (m: string) => void) {
+  const [items, setItems] = useState<StatementItem[]>([]);
+  const node = (
+    <AttachedStatementModal
+      items={items}
+      accent={accent}
+      onClose={() => setItems([])}
+      onDone={(reg) => {
+        const labels = [...new Set(items.map((x) => x.label))].join('・');
+        toast(reg > 0 ? `${labels}に ${reg} 件登録しました` : '明細書には登録しませんでした');
+        setItems([]);
+      }}
+    />
+  );
+  return { start: (list: StatementItem[]) => setItems(list), node };
+}
+export function AttachedStatementModal({ items, onClose, onDone, accent }: { items: StatementItem[]; onClose: () => void; onDone: (registered: number) => void; accent: string }) {
+  const [idx, setIdx] = useState(0);
+  const [count, setCount] = useState(0);
+  const [prev, setPrev] = useState(items);
+  if (prev !== items) { setPrev(items); setIdx(0); setCount(0); }
+  const cur = items[idx];
+  if (!cur) return null;
+  const last = idx === items.length - 1;
+  const next = (reg: boolean) => {
+    const n = count + (reg ? 1 : 0);
+    if (last) onDone(n);
+    else { setCount(n); setIdx(idx + 1); }
+  };
+  return (
+    <Modal open onClose={onClose} width={600} title={<>{cur.label}への登録{items.length > 1 && <span style={{ fontSize: 14, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>{idx + 1} 件目／全 {items.length} 件</span>}</>} strict>
+      <StatementForm key={idx} item={cur} last={last} accent={accent} onCancel={onClose} onNext={next} />
+    </Modal>
+  );
+}
+function StatementForm({ item, last, accent, onCancel, onNext }: { item: StatementItem; last: boolean; accent: string; onCancel: () => void; onNext: (reg: boolean) => void }) {
+  const kifu = item.label === '寄附金収益明細書';
   const [reg, setReg] = useState(true);
   const [purpose, setPurpose] = useState('');
-  if (!entry) return null;
+  const [attr, setAttr] = useState('');
+  const [kind, setKind] = useState('');
+  const [kihon, setKihon] = useState('0');
+  const kihonNum = toInt(kihon);
+  const err = !reg || !kifu ? '' : !attr ? '寄附者の属性を選んでください。' : !kind ? '区分を選んでください。' : kihonNum > item.amount ? 'うち基本金組入額は、寄附金額以下にしてください。' : '';
   return (
-    <Modal open={open} onClose={onClose} width={560} title={`${statement}への登録`} strict>
-      <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
-        <Notice>登録した伝票を{statement}へ追加しますか？（設定「決算附属明細書」で「伝票入力時に監視する」が有効のため表示しています）</Notice>
-        <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: 12, fontSize: 14 }}><b>{entry.kari}</b> ／ <b>{entry.kashi}</b>　{entry.tekiyo}　<span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>{yen(entry.amount)}</span> 円<div style={{ fontSize: 12, color: '#8290a0', marginTop: 4 }}>登録伝票仕訳数：1</div></div>
-        <div style={{ display: 'grid', gap: 6, fontSize: 14 }}>
-          <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="radio" checked={reg} onChange={() => setReg(true)} />この金額を、{statement}データに登録する</label>
-          <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="radio" checked={!reg} onChange={() => setReg(false)} />この金額を、{statement}データに登録しない</label>
-        </div>
-        {reg && <Field label="明細書に出す内容（拠点名・目的など）"><input className="field-input ring" value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="例：市区町村補助金／延長保育事業" style={input} /></Field>}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={onClose} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => onDone(reg)} style={btn(accent, true)}>終了</button></div>
+    <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
+      <Notice>登録した伝票を{item.label}へ追加しますか？（設定「決算附属明細書」で「伝票入力時に監視する」が有効のため表示しています）</Notice>
+      <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: 12, fontSize: 14 }}>
+        {item.row && <span style={{ fontSize: 12, color: '#7a8794', marginRight: 8 }}>{item.row}行目</span>}
+        <b>{item.kari}</b> ／ <b>{item.kashi}</b>　{item.tekiyo}　<span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>{yen(item.amount)}</span> 円
       </div>
-    </Modal>
+      <div style={{ display: 'grid', gap: 6, fontSize: 14 }}>
+        <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="radio" checked={reg} onChange={() => setReg(true)} />この金額を、{item.label}データに登録する</label>
+        <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="radio" checked={!reg} onChange={() => setReg(false)} />この金額を、{item.label}データに登録しない</label>
+      </div>
+      {reg && kifu && (
+        <div data-stmt-kifu style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <Field label="寄附者の属性（必須）"><select className="field-input" value={attr} onChange={(e) => setAttr(e.target.value)} style={input}><option value="">選んでください</option>{DONOR_ATTRS.map((o) => <option key={o}>{o}</option>)}</select></Field>
+          <Field label="区分（必須）"><select className="field-input" value={kind} onChange={(e) => setKind(e.target.value)} style={input}><option value="">選んでください</option>{DONATION_KINDS.map((o) => <option key={o}>{o}</option>)}</select></Field>
+          <Field label="寄附金額"><div style={{ ...input, background: '#f6f8fa', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{yen(item.amount)}</div></Field>
+          <Field label="うち基本金組入額"><input className="field-input" inputMode="numeric" value={kihon} onChange={(e) => setKihon(e.target.value.replace(/[^0-9,]/g, ''))} onBlur={() => setKihon(yen(toInt(kihon)))} style={{ ...numInput, width: '100%' }} /></Field>
+        </div>
+      )}
+      {reg && !kifu && <Field label="明細書に出す内容（拠点名・目的など）"><input className="field-input ring" value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="例：市区町村補助金／延長保育事業" style={input} /></Field>}
+      {err && <Notice tone="warn">{err}</Notice>}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <button type="button" onClick={onCancel} style={btn()}>キャンセル</button>
+        <button type="button" className="submit-btn" disabled={!!err} onClick={() => onNext(reg)} style={{ ...btn(accent, true), opacity: err ? 0.5 : 1 }}>{last ? '終了' : '次へ'}</button>
+      </div>
+    </div>
   );
 }
 

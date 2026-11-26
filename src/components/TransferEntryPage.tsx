@@ -14,9 +14,9 @@ import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
-import { BudgetGraphModal, BudgetHintLive, EntryConfirmModal, EntryDivisionField, InternalSwitch, useEntryTools } from './EntryExtras';
+import { BudgetGraphModal, BudgetHintLive, EntryConfirmModal, EntryDivisionField, InternalSwitch, statementItems, useEntryTools, useStatementFlow } from './EntryExtras';
 import { judgeTorihiki } from '../lib/accounts';
-import { ComboField, ENTRY_MONTH_HELP, EntryMonthNote, EntryStyles, parseEntryDate, useEntryYear, ENTRY_DATE_RANGE, ENTRY_YEAR_HELP, isIme, FundAccountLine, PAPER, PaperBox, PaperDate, PaperStyles, PaperTitle, fieldMessage, fieldState, fmtNum, focusId, hasError, hasWarn, isInternalAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor, type Issue, FusenTab, VoucherMarks } from './EntryCommon';
+import { ComboField, ENTRY_MONTH_HELP, EntryMonthNote, EntryStyles, parseEntryDate, useEntryYear, ENTRY_DATE_RANGE, ENTRY_YEAR_HELP, isIme, FundAccountLine, PAPER, PaperBox, PaperDate, PaperStyles, PaperTitle, fieldMessage, fieldState, fmtNum, focusId, hasError, hasWarn, isInternalAccount, watchedStatement, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor, type Issue, FusenTab, VoucherMarks } from './EntryCommon';
 import { useWidePanel } from './WidePanel';
 import { addVoucher, updateVoucher } from '../store/journalStore';
 import { setSession, useSession } from '../store/session';
@@ -106,6 +106,8 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
   const [aite, setAite] = useState('');
   const [graphAcct, setGraphAcct] = useState<string | null>(null);
   const toast = useToast();
+  /** 決算附属明細書への登録：対象の科目を使う行ごとに順に出す（確認メモ #418／#419） */
+  const stmt = useStatementFlow(accent, toast.show);
   const wide = useWidePanel('form-entry'); // 右側の参照パネル（4形式で共有。表示は FormScreen 側）
 
   const closeAlert = () => {
@@ -229,6 +231,8 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
     });
     resetEntry(sess.input.keepLast);
     toast.show(`${title}を登録しました（${used.length}行）`);
+    // 振替伝票形式は、明細書へ連動する側の金額（借方科目なら借方金額）で登録する
+    stmt.start(statementItems(used.map((r) => { const ka = toNum(r.kariAmt), sa = single ? ka : toNum(r.kashiAmt); return { kari: r.kari, kashi: r.kashi, tekiyo: r.tekiyo, amount: single ? ka : watchedStatement(r.kari, '') ? ka : sa }; })));
     focusId(fid(0, 'ka'));
   };
 
@@ -403,6 +407,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
       <EntryStyles />
       <PaperStyles />
       <ToastView msg={toast.msg} />
+      {stmt.node}
       {tools.dialogs}
       <EntryConfirmModal
         open={confirmOpen}

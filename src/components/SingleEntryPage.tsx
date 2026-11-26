@@ -8,7 +8,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { ToastView, useToast } from './Toast';
-import { BudgetGraphModal, BudgetHintLive, EntryConfirmModal, EntryDivisionField, TorihikiBadge, useEntryTools, type EntryFlags } from './EntryExtras';
+import { BudgetGraphModal, BudgetHintLive, EntryConfirmModal, EntryDivisionField, TorihikiBadge, statementItems, useEntryTools, useStatementFlow, type EntryFlags } from './EntryExtras';
 import { ComboField, ConfirmModal, ENTRY_MONTH_HELP, EntryMonthNote, EntryStyles, parseEntryDate, entryDateOfKey, useEntryYear, ENTRY_DATE_RANGE, ENTRY_YEAR_HELP, INTERNAL_SIDES, autoInternalSide, type InternalSide, termMark, FundAccountLine, PAPER, PaperBox, PaperStyles, PaperTitle, fieldMessage, fieldState, focusId, hasError, hasWarn, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor, FusenTab, VoucherMarks } from './EntryCommon';
 import { useWidePanel } from './WidePanel';
 import { judgeTorihiki } from '../lib/accounts';
@@ -76,6 +76,8 @@ interface Props {
 export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
   const sess = useSession();
   const toast = useToast();
+  /** 決算附属明細書への登録（寄附金・補助金など。確認メモ #418／#419） */
+  const stmt = useStatementFlow(accent, toast.show);
   const wide = useWidePanel('form-entry'); // 右側の参照パネル（4形式で共有。表示は FormScreen 側）
   const [flags, setFlags] = useState<EntryFlags>({ check: false, fusen: '', shohyo: true });
   const [cheque, setCheque] = useState('');
@@ -167,6 +169,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
     setInternalSide('');
     setAite('');
     toast.show('伝票を登録しました');
+    stmt.start(statementItems([{ kari: f.kariKamoku, kashi: f.kashiKamoku, tekiyo: f.tekiyo, amount: toNum(f.amount) }]));
   };
 
   const tools = useEntryTools({
@@ -287,6 +290,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
       <EntryStyles />
       <PaperStyles />
       <ToastView msg={toast.msg} />
+      {stmt.node}
       {tools.dialogs}
       <EntryConfirmModal
         open={confirmOpen}

@@ -79,7 +79,9 @@ export function deleteVouchers(ids: number[]) {
 }
 export function addVoucher(v: Omit<Voucher, 'id' | 'check' | 'fusen' | 'seq' | 'no'> & Partial<Pick<Voucher, 'seq' | 'no'>>) {
   const seq = v.seq ?? (rows.reduce((m, r) => Math.max(m, r.seq), 0) + 1);
-  const row: Voucher = { seq, no: v.no ?? `${v.date.replace('/', '-')}`, check: false, fusen: '', ...v, id: nextId++ };
+  // 伝票Noの既定値は「月-Seq」（仕訳伝票形式と同じ）。日付だけにすると、同じ日の既存の伝票と同じ番号になり、
+  // 訂正画面で別の伝票の行とまとめられてしまう（確認メモ #419：振替単一形式の伝票が特殊摘要の伝票として開いた）
+  const row: Voucher = { seq, no: v.no ?? `${v.date.split('/')[0]}-${seq}`, check: false, fusen: '', ...v, id: nextId++ };
   rows = [...rows, row];
   emit();
   return row;

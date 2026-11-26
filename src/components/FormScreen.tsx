@@ -10,8 +10,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { CSSProperties, ReactNode } from 'react';
 import { DivisionPicker } from './DivisionPicker';
 import { FiscalYearBanner } from './FiscalYearPage';
-import { AttachedStatementModal, BudgetGraphModal, BudgetHintLive, EntryConfirmModal, EntryDivisionField, SpecialAmountModal, TorihikiBadge, useEntryTools } from './EntryExtras';
-import { ComboField, ENTRY_MONTH_HELP, EntryMonthNote, EntryStyles, isIme, FieldLabel, FundAccountLine, PAPER, PaperBox, PaperDate, PaperStyles, PaperTitle, parseEntryDate, useEntryYear, ENTRY_DATE_RANGE, ENTRY_YEAR_HELP, INTERNAL_SIDES, autoInternalSide, isSpecialParent, specialChildrenOf, type InternalSide, fieldMessage, fieldState, fmtNum, focusId, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, watchedStatement, type FundMode, type FusenColor, FusenTab, VoucherMarks } from './EntryCommon';
+import { BudgetGraphModal, BudgetHintLive, EntryConfirmModal, EntryDivisionField, SpecialAmountModal, TorihikiBadge, statementItems, useEntryTools, useStatementFlow } from './EntryExtras';
+import { ComboField, ENTRY_MONTH_HELP, EntryMonthNote, EntryStyles, isIme, FieldLabel, FundAccountLine, PAPER, PaperBox, PaperDate, PaperStyles, PaperTitle, parseEntryDate, useEntryYear, ENTRY_DATE_RANGE, ENTRY_YEAR_HELP, INTERNAL_SIDES, autoInternalSide, isSpecialParent, specialChildrenOf, type InternalSide, fieldMessage, fieldState, fmtNum, focusId, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, type FundMode, type FusenColor, FusenTab, VoucherMarks } from './EntryCommon';
 import { WIDE_TAB_SPACE, WIDE_WIDTH, WidePanel, usePanelPush, useWidePanel } from './WidePanel';
 import { ToastView, useToast } from './Toast';
 import { judgeTorihiki, metaOf } from '../lib/accounts';
@@ -230,7 +230,8 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [graphAcct, setGraphAcct] = useState<string | null>(null);
   const [special, setSpecial] = useState<{ row: number; total: number } | null>(null);
-  const [stmt, setStmt] = useState<{ label: string; entry: { kari: string; kashi: string; tekiyo: string; amount: number } } | null>(null);
+  /** 決算附属明細書への登録：対象の科目を使う行ごとに順に出す（確認メモ #418／#419） */
+  const stmt = useStatementFlow(GREEN, toast.show);
   const [hi, setHi] = useState<number[]>([]);
 
   // 入力内容が変わったら、登録時のメッセージを消す
@@ -347,9 +348,8 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
     });
     setHi(ids);
     const sum = list.reduce((s, r) => s + toNum(r.amount), 0);
-    const w = watchedStatement(kari, kashi);
     const dep = isDepreciationAccount(kari) || isDepreciationAccount(kashi);
-    if (w) setStmt({ label: w.label, entry: { kari, kashi, tekiyo: list[0].tekiyo, amount: sum } });
+    stmt.start(statementItems(list.map((r) => ({ kari, kashi, tekiyo: r.tekiyo.trim(), amount: toNum(r.amount) }))));
     reset(sess.input.keepLast);
     toast.show(`伝票No ${no}（${list.length} 行・合計 ${sum.toLocaleString('ja-JP')} 円）を登録しました${dep ? '。固定資産の登録は「減価償却」メニューで行ってください' : ''}`);
     // 科目を残す設定のときは、次の伝票の1行目（摘要）から続けて入力できるようにする
@@ -680,7 +680,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
           toast.show(`特殊金額入力：区分別に ${list.length} 枚の伝票を登録しました`);
         }}
       />
-      <AttachedStatementModal open={!!stmt} statement={stmt?.label ?? ''} entry={stmt?.entry ?? null} onClose={() => setStmt(null)} onDone={(reg) => { toast.show(reg ? `${stmt?.label}に登録しました` : '明細書には登録しませんでした'); setStmt(null); }} accent={GREEN} />
+      {stmt.node}
 
       {/* 参照パネル（右端固定・折りたたみ。日記帳〔当年／前年〕／元帳１／元帳２／残高照合） */}
       <WidePanel accent={GREEN} layout="side" state={wide} top={topOffset} highlightIds={hi} returnTo="伝票入力" onNavigate={onNavigate} />

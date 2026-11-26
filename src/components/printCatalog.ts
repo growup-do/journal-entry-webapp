@@ -349,7 +349,9 @@ const apItems = (o: { shade?: boolean; autofont: boolean; extra?: DetailItem[] }
   chk('stamp', '捺印欄を印刷する'), chk('corp', '法人名を印刷する', true), chk('foot', '脚注を印刷する'), chk('autofont', '科目名のフォントサイズを自動調整する', o.autofont),
   chk('page', 'ページ番号を印刷する'), txt('pageStart', 'ページ番号の開始番号', '1', '1', 80), chk('date', '印刷時の日付を印刷する'), ...(o.extra ?? []),
 ];
-const AP_INNER = (twoLine: boolean): DetailSection => ({ title: '内訳表', items: [chk('twoLine', '項目名を二行で印刷する', twoLine), chk('autoFontHead', '項目名のフォントサイズを自動調整する', true)] });
+/** 寄附金収益・補助金事業等収益・基本金・国庫補助金等特別積立金の明細書の内訳表：資金収支予算内訳表の内訳表と同じ項目（確認メモ #417）。
+ *  1ページの区分数・2ページ以降も区分名を印刷する・印刷区分を指定する（ON で［印刷区分］）。項目名の二行・自動調整の初期値は各明細書の現行のまま */
+const AP_INNER = (twoLine: boolean): DetailSection => ({ title: '内訳表', items: [chk('twoLine', '項目名を二行で印刷する', twoLine), chk('autoFontHead', '項目名のフォントサイズを自動調整する', true), sel('perPage', '１ページの区分数', Array.from({ length: 20 }, (_, i) => String(i + 1)), '5'), chk('namePerPage', '2ページ以降も区分名を印刷する'), chk('pickArea', '印刷区分を指定する')] });
 /** 資金収支明細書・事業活動明細書（決算書と同じく 決算書 共通印刷設定を反映できる） */
 const AP_LINKED = (activity: boolean): DetailSection[] => [
   { title: '印刷項目', items: [
