@@ -5,7 +5,7 @@
 //   表示条件を満たさない帳票は一覧に出さない（「表示条件を満たさない帳票も表示」で薄く表示し、条件を確かめられる）。
 //   まとめて印刷（旧「一括印刷」）は上部のボタンから、中区分をまたいで帳票を選ぶ。
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { AppendixPrintPage } from './AppendixPrintPage';
 import { Modal } from './Modal';
@@ -20,12 +20,16 @@ import { useSession } from '../store/session';
 
 const tag = (label: string, bg: string, fg: string, title?: string): ReactNode => <span title={title} style={{ fontSize: 12, fontWeight: 800, padding: '2px 8px', borderRadius: 8, background: bg, color: fg, whiteSpace: 'nowrap' }}>{label}</span>;
 
+/** 最後に開いていた中区分と帳票（ほかの画面へ移ってから「← 帳票の印刷に戻る」で戻ったときに、同じ帳票を開く） */
+const lastView: { cat: string | null; curOf: Record<string, string> } = { cat: null, curOf: {} };
+
 export function PrintCenterPage({ variant, accent, onNavigate, initialCat }: { variant: 'form' | 'sheet'; accent: string; onNavigate?: (label: string) => void; /** 最初に開く中区分（旧「別紙」の画面キーから来たとき） */ initialCat?: string }) {
   const s = useSession();
   const toast = useToast();
-  const [cat, setCat] = useState(initialCat && CATS.includes(initialCat) ? initialCat : CATS[0]);
+  const [cat, setCat] = useState(initialCat && CATS.includes(initialCat) ? initialCat : lastView.cat && CATS.includes(lastView.cat) ? lastView.cat : CATS[0]);
   /** 中区分ごとに最後に選んだ帳票 */
-  const [curOf, setCurOf] = useState<Record<string, string>>({});
+  const [curOf, setCurOf] = useState<Record<string, string>>(() => ({ ...lastView.curOf }));
+  useEffect(() => { lastView.cat = cat; lastView.curOf = curOf; }, [cat, curOf]);
   const [showAll, setShowAll] = useState(false);
   const [preview, setPreview] = useState<{ title: string; opts: { from: string; to: string; output: string; hideZero?: boolean } } | null>(null);
   const [wamnet, setWamnet] = useState<WamnetItem | null>(null);

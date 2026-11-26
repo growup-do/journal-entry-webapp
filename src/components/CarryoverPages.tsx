@@ -69,7 +69,7 @@ function RoundingField({ label, value, onChange, changed }: { label: string; val
 function Guide({ rows }: { rows: { label: string; value: ReactNode; strong?: boolean }[] }) {
   return (
     <div style={{ ...card, background: '#f7f9fb' }}>
-      <div style={cardHead}>判断の目安<span style={{ fontSize: 12, fontWeight: 500, color: '#7a8794', marginLeft: 6 }}>サンプルデータで計算</span></div>
+      <div style={cardHead}>判断の目安</div>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}><tbody>
         {rows.map((r) => <tr key={r.label}><td style={{ padding: '7px 12px', borderTop: '1px solid #eef2f5', color: '#5b6773' }}>{r.label}</td><td style={{ padding: '7px 12px', borderTop: '1px solid #eef2f5', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: r.strong ? 800 : 500 }}>{r.value}</td></tr>)}
       </tbody></table>
@@ -142,7 +142,6 @@ function NoticeModal({ doc, open, onClose, accent }: { doc?: NoticeDoc; open: bo
             {doc.refs.map((r) => <div key={r.source} style={{ paddingLeft: 12, borderLeft: '2px solid #e3e9ef' }}><div style={{ fontWeight: 700 }}>{r.source}</div><div style={{ color: '#3a4855' }}>{r.text}</div></div>)}
           </div>
         )}
-        <div style={{ fontSize: 12, color: '#7a8794' }}>ここでは出典と要旨を示しています。通知文の全文は、本番では現行システムと同じものを収録します。</div>
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" onClick={onClose} style={{ ...btn(accent, true), minWidth: 96 }}>OK</button></div>
       </div>
     </Modal>
@@ -349,7 +348,7 @@ export function DepreciationLinkPage({ variant, accent, onNavigate }: Maintenanc
     setAutoIn(saved.autoIn); setAutoAcct(saved.autoAcct); setAutoOn(saved.autoOn); setTekiyo(saved.tekiyo);
   };
   const reset = () => { setFixed(DEFAULTS.fixed); setEquip(DEFAULTS.equip); setReserveIn(DEFAULTS.reserveIn); setCash(DEFAULTS.cash); setSubsidy(DEFAULTS.subsidy); setAutoIn(DEFAULTS.autoIn); setAutoAcct(DEFAULTS.autoAcct); toast.show('デフォルト設定に戻しました（未保存）'); };
-  const go = (p: string) => (onNavigate ? onNavigate(p) : toast.show(`「${p}」を開きます（プロトタイプ）`));
+  const go = (p: string) => (onNavigate ? onNavigate(p) : toast.show(`「${p}」はメニューから開きます`));
   const cols3 = { padding: 22, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, alignItems: 'start' } as const;
   return (
     <SettingsShell variant={variant} title="減価償却との連動設定" badge="マスター設定" draft={false} desc="会計の仕訳と減価償却をつなぐ設定です。固定資産の取得・備品購入の仕訳を減価償却へ連動させる科目、借入元金償還補助の仕訳を認識する科目、国庫補助金等特別積立金を自動で積み立てる仕訳の科目を指定します。" unsaved={dirty} actions={<>

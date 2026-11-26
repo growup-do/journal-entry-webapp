@@ -374,7 +374,7 @@ export function FinancialAnalysisSettingsPage({ variant, accent, onNavigate }: M
                 })}
               </div>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
-                {dirty(def) && <span style={{ fontSize: 14, color: '#8a6d00', marginRight: 'auto' }}>変更があります。保存すると全区分のグラフ・帳票に反映されます。</span>}
+                {dirty(def) && <span style={{ fontSize: 14, color: '#8a6d00', marginRight: 'auto' }}>保存で変更内容を確定してください。保存すると全区分のグラフ・帳票に反映されます。</span>}
                 <button type="button" onClick={() => setPicked((x) => ({ ...x, ...Object.fromEntries(faKeys(def).map((key) => [key, saved[key] ?? []])) }))} disabled={!dirty(def)} style={{ ...btn(), opacity: dirty(def) ? 1 : 0.5 }}>変更を取り消す</button>
                 <button type="button" className="submit-btn" onClick={() => { setSaved((x) => ({ ...x, ...Object.fromEntries(faKeys(def).map((key) => [key, picked[key] ?? []])) })); toast.show(`「${def.name}」の対象科目を保存しました（全区分共通）`); }} style={btn(accent, true)}>保存</button>
               </div>
@@ -776,7 +776,7 @@ export function BackupPage({ variant, accent }: MaintenancePageProps) {
           return (
             <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
               <Field label="保存先フォルダ（このパソコン／外部ディスク／社内の共有フォルダ）"><input className="field-input ring" value={pathEdit.value} onChange={(e) => setPathEdit({ ...pathEdit, value: e.target.value })} onKeyDown={onEnter(apply)} autoFocus style={input} /></Field>
-              <Notice>{pathEdit.kind === 'auto' ? '年度ごとの自動バックアップは、このフォルダに「自動」として保存されます。' : '手動のバックアップは、このフォルダに保存されます。'}このパソコン以外の場所（外部ディスクや社内の共有フォルダ）をおすすめします。本番ではフォルダの選択画面から指定します。</Notice>
+              <Notice>{pathEdit.kind === 'auto' ? '年度ごとの自動バックアップは、このフォルダに「自動」として保存されます。' : '手動のバックアップは、このフォルダに保存されます。'}このパソコン以外の場所（外部ディスクや社内の共有フォルダ）をおすすめします。</Notice>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                 <button type="button" onClick={() => setPathEdit(null)} style={btn()}>キャンセル</button>
                 <button type="button" className="submit-btn" disabled={!pathEdit.value.trim()} onClick={apply} style={{ ...btn(accent, true), opacity: pathEdit.value.trim() ? 1 : 0.5 }}>変更する</button>

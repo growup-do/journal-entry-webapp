@@ -121,7 +121,7 @@ export function UserSettingsPage({ variant, accent }: Props) {
               <div><span style={label}>権限</span><div style={{ ...input, background: '#f5f7f9', color: '#5b6773' }}>{profile.role}</div><div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 4 }}>権限の変更は管理者が行います</div></div>
               <div style={{ gridColumn: 'span 2' }}><span style={label}>利用できる機能</span><div data-my-access style={{ ...input, background: '#f5f7f9', color: '#5b6773' }}>{accessLabel(session.access)}</div><div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 4 }}>利用できる機能は管理者が設定します{isAdmin ? '（下の「アカウントごとの利用できる機能」）' : ''}</div></div>
               <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end' }}>
-                <button type="button" className="submit-btn" onClick={() => toast.show('プロフィールを保存しました（プロトタイプ）')} style={btn(true)}>保存</button>
+                <button type="button" className="submit-btn" onClick={() => toast.show('プロフィールを保存しました')} style={btn(true)}>保存</button>
               </div>
             </div>
           </section>
@@ -157,7 +157,7 @@ export function UserSettingsPage({ variant, accent }: Props) {
                 <select value={view.start} onChange={(e) => setView({ ...view, start: e.target.value })} style={input}>{startOptions.map((o) => <option key={o}>{o}</option>)}</select></div>
               <div><span style={label}>表の行間</span>
                 <select value={view.density} onChange={(e) => setView({ ...view, density: e.target.value })} style={input}>{['標準', 'コンパクト', 'ゆったり'].map((o) => <option key={o}>{o}</option>)}</select></div>
-              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end' }}><button type="button" className="submit-btn" onClick={() => toast.show('表示設定を保存しました（プロトタイプ）')} style={btn(true)}>保存</button></div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end' }}><button type="button" className="submit-btn" onClick={() => toast.show('表示設定を保存しました')} style={btn(true)}>保存</button></div>
             </div>
           </section>
 

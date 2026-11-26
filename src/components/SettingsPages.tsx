@@ -271,7 +271,7 @@ function MasterPage({ variant, accent, label, tabs, title }: { variant: 'form' |
       <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
       <Modal open={imp.open} onClose={() => setImp((i) => ({ ...i, open: false }))} width={720} title={`${cfg.title}のCSV取込`}>
         <div style={{ padding: '14px 22px 20px', display: 'grid', gap: 12 }}>
-          <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.7 }}>1行目を見出し（{cfg.fields.map((f) => f.label).join('／')}／有効）として読み込みます。見出しがない場合はこの列順で取り込みます。文字コードは UTF-8（本番では Shift_JIS も対応）。</div>
+          <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.7 }}>1行目を見出し（{cfg.fields.map((f) => f.label).join('／')}／有効）として読み込みます。見出しがない場合はこの列順で取り込みます。文字コードは UTF-8 または Shift_JIS。</div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <input type="file" accept=".csv,text/csv" onChange={(e) => { const f = e.target.files?.[0]; if (f) readFile(f); e.target.value = ''; }} style={{ fontSize: 14, fontFamily: 'inherit' }} />
             <button type="button" className="btn-outline" onClick={sampleCsv} style={btn()}>サンプルCSVを読み込む</button>
@@ -484,7 +484,7 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
       <label data-opening-midterm title="期の途中から導入する場合だけチェックします。通常は使用しません" style={{ ...btn(mid ? accent : undefined), display: 'inline-flex', alignItems: 'center', gap: 6 }}>
         <input type="checkbox" checked={mid} onChange={() => setMidConfirm(mid ? 'off' : 'on')} style={{ margin: 0 }} />期中入力を行う（期の途中から導入する場合）
       </label>
-      <button type="button" className="submit-btn" disabled={!ok} onClick={() => toast.show('開始残高を確定しました（プロトタイプ）')} style={{ ...btn(accent, true), opacity: ok ? 1 : 0.5 }}>OK</button>
+      <button type="button" className="submit-btn" disabled={!ok} onClick={() => toast.show('開始残高を確定しました')} style={{ ...btn(accent, true), opacity: ok ? 1 : 0.5 }}>OK</button>
     </>}>
       <ToastView msg={toast.msg} />
       <Modal open={importOpen} onClose={() => setImportOpen(false)} width={480} title="前年度決算から取込" strict>

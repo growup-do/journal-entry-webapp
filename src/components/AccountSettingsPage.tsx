@@ -798,7 +798,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
             })}
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <span style={{ fontSize: 14, color: '#5b6773' }}>水色 {Object.values(subBlue).filter(Boolean).length} 項目／黄色 {Object.values(subLedger).filter(Boolean).length} 件　残高は前年度末（令和7年度末）のサンプルです</span>
+            <span style={{ fontSize: 14, color: '#5b6773' }}>水色 {Object.values(subBlue).filter(Boolean).length} 項目／黄色 {Object.values(subLedger).filter(Boolean).length} 件　残高は前年度末（令和7年度末）の値です</span>
             <button type="button" className="submit-btn" onClick={() => toast.show('補助簿（明細表）の設定を保存しました')} style={{ ...btn(accent, true), marginLeft: 'auto' }}>保存して終了</button>
           </div>
         </div>

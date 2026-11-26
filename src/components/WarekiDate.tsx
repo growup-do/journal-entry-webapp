@@ -101,14 +101,19 @@ export function WarekiDate({ value, onChange, disabled, accent = '#1f7a52', tone
   const unit: CSSProperties = { fontSize: 13, color: disabled ? '#b3bcc5' : '#48565f', flex: 'none' };
   const attrs = dataAttr ? { [dataAttr]: '' } : {};
   return (
-    <span data-wareki {...attrs} title={title} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, flexWrap: 'nowrap', maxWidth: '100%' }}>
+    // 幅が足りないとき（固定資産の登録で一覧パネルを開いたときなど）は、年の後ろで改行する
+    <span data-wareki {...attrs} title={title} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px 3px', flexWrap: 'wrap', maxWidth: '100%' }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, flex: 'none' }}>
       <select aria-label="元号" value={p.era} disabled={disabled} onChange={(e) => set({ era: e.target.value as Era })} style={{ ...box, width: 62, padding: '4px 2px' }}>{ERAS.map((e) => <option key={e}>{e}</option>)}</select>
       <input className="field-input" aria-label="年" value={p.y} disabled={disabled} onChange={(e) => set({ y: digits(e.target.value, 2) })} inputMode="numeric" style={num(34)} /><span style={unit}>年</span>
+      </span>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, flex: 'none' }}>
       <input className="field-input" aria-label="月" value={p.m.trim()} disabled={disabled} onChange={(e) => set({ m: digits(e.target.value, 2) })} inputMode="numeric" style={num(30)} /><span style={unit}>月</span>
       <input className="field-input" aria-label="日" value={p.d.trim()} disabled={disabled} onChange={(e) => set({ d: digits(e.target.value, 2) })} inputMode="numeric" style={num(30)} /><span style={unit}>日</span>
       <button type="button" aria-label="カレンダーから選ぶ" title="カレンダーから選ぶ" data-wareki-cal disabled={disabled} onClick={() => setCal(true)} style={{ ...box, width: 30, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: disabled ? 'not-allowed' : 'pointer', color: disabled ? '#b3bcc5' : accent, background: disabled ? '#f5f7f9' : '#fff', borderColor: '#cfd8e0', flex: 'none' }}>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
       </button>
+      </span>
       {cal && <WarekiCalendar value={p} accent={accent} onClose={() => setCal(false)} onPick={(np) => onChange(formatWareki(np))} />}
     </span>
   );

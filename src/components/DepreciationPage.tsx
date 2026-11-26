@@ -531,7 +531,7 @@ function ImageModal({ open, title, src, onClose, onChange, accent, toast }: { op
           {src ? <img src={src} alt={title} style={{ maxWidth: '100%', maxHeight: 340, objectFit: 'contain' }} /> : <div style={{ textAlign: 'center', color: '#7a8794', fontSize: 14, lineHeight: 1.8 }}>ここに画像をドロップ、またはクリックして選択<br /><span style={{ fontSize: 12, color: '#9aa5b1' }}>JPEG／PNG／GIF　5MB まで</span></div>}
         </div>
         {name && <div style={{ fontSize: 14, color: '#7a8794' }}>ファイル：{name}</div>}
-        <Notice>画像はこの画面内でのみ保持します（本番ではサーバーに保存し、固定資産タックシール等に印字できます）。</Notice>
+        <Notice>登録した画像は、固定資産タックシール等に印字できます。</Notice>
         <div style={FOOT}>
           {src && <button type="button" className="btn-outline" onClick={async () => { if (await askConfirm({ title: '画像の削除', message: '添付した画像を削除しますか？', okLabel: '削除する', danger: true })) { onChange(null); setName(''); toast('画像を削除しました'); } }} style={{ ...BTN('#c0392b'), marginRight: 'auto' }}>削除</button>}
           <button type="button" className="btn-outline" onClick={() => fileRef.current?.click()} style={BTN(accent, true)}>{src ? '画像を保存' : '画像を選択'}</button>
@@ -565,7 +565,7 @@ function LifeDictModal({ onClose, onPick, accent }: { onClose: () => void; onPic
             </tbody>
           </table>
         </div>
-        <Notice>減価償却資産の耐用年数等に関する省令（別表）に基づくサンプルです。選択すると耐用年数と科目を入力欄にセットします。</Notice>
+        <Notice>減価償却資産の耐用年数等に関する省令（別表）に基づく一覧です。選択すると耐用年数と科目を入力欄にセットします。</Notice>
       </div>
     </Modal>
   );
@@ -986,7 +986,7 @@ export function DepreciationPage({ variant, accent }: Props) {
               {assetModal.manual && <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#fff1b8', color: '#8a6d00', verticalAlign: 'middle' }}>全項目手入力</span>}
               <ManualButton onClick={() => setManualOpen(true)} title="減価償却のマニュアルを開きます" style={{ marginLeft: 8 }} />
             </div>
-            <span style={{ marginLeft: 'auto', fontSize: 12, color: '#8290a0' }}>右の「一覧パネル」で、登録済みの固定資産・備品を確認できます</span>
+            <HelpTip style={{ marginLeft: 'auto' }} text="右の「一覧パネル」で、登録済みの固定資産・備品を確認できます" />
           </div>
           <AssetForm key={assetFormKey} accent={accent} asset={assetModal.asset} manual={assetModal.manual} dispCalc={dispCalc} onAddCapex={addCapex} sortItems={sortItems} nextCode={String(assets.reduce((m, a) => Math.max(m, Number(a.code) < 10000 ? Number(a.code) : 0), 0) + 1).padStart(5, '0')} imageSrc={images['A:' + (assetModal.asset?.code ?? '')]} onSave={saveAsset} onCancel={closeAssetPage} onReport={openReport} onLog={(code) => openLog('資産', code)} onImage={(code, name) => setImgTarget({ key: 'A:' + code, title: `資産画像：${name || code}` })} toast={toast.show} />
         </div>
@@ -1001,7 +1001,7 @@ export function DepreciationPage({ variant, accent }: Props) {
               <span style={{ fontSize: 14, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>チャイルド保育園　令和8年度</span>
               <ManualButton onClick={() => setManualOpen(true)} title="減価償却のマニュアルを開きます" style={{ marginLeft: 8 }} />
             </div>
-            <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>固定資産・備品の台帳管理と、減価償却の決算処理。<span style={{ color: '#b7791f' }}>（値はサンプル）</span></div>
+            <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>固定資産・備品の台帳管理と、減価償却の決算処理。</div>
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             <button type="button" className="submit-btn" onClick={() => setAssetModal({ open: true, asset: null, manual: false })} style={btn(accent, true)}>＋ 固定資産を登録</button>
@@ -1644,7 +1644,7 @@ function AssetForm({ accent, asset, manual, dispCalc, capexFor, onAddCapex, onRe
         <div style={{ fontSize: 12, color: '#9aa5b1', lineHeight: 1.6 }}>
           {manual
             ? `${yrTab === '償還補助金' ? '期末未入金額' : '期末帳簿価額・減価償却累計額・期末取得原価'}は、入力した金額から表示します。「自動計算の値を入れる」は、選択中の表の耐用年数ぶんを上書きします。`
-            : yrTab === '償還補助金' ? '償還補助金の入金額は、耐用年数で均等に入金する見込みとして表示しています（プロトタイプのサンプル）。' : yrTab === '国庫補助金' ? '国庫補助金等の取崩額は、固定資産の当期減価償却額に比例して計算しています。' : '償却を開始する年度から耐用年数の年度までを表示します。色のついた行が当期です。'}
+            : yrTab === '償還補助金' ? '償還補助金の入金額は、耐用年数で均等に入金する見込みとして表示しています。' : yrTab === '国庫補助金' ? '国庫補助金等の取崩額は、固定資産の当期減価償却額に比例して計算しています。' : '償却を開始する年度から耐用年数の年度までを表示します。色のついた行が当期です。'}
         </div>
       </div>
 
@@ -2103,7 +2103,7 @@ function TransferView({ accent, assets, onRegister, toast }: { accent: string; a
     const codes = autoCodes(2);
     setRows([{ code: codes[0], from: 'ひまわり保育園', name: '遊具（複合滑り台）', date: '令和8年 4月 1日', qty: 1, inQty: 1, unit: 1250000, cost: 1250000, subsidy: 600000 }, { code: codes[1], from: 'ひまわり保育園', name: '業務用冷蔵庫', date: '令和8年 4月 1日', qty: 1, inQty: 1, unit: 380000, cost: 380000, subsidy: 0 }]);
     setHistory((h) => [...h, { time: stamp(), file, count: 2, user: USER, result: '正常終了' }]);
-    toast(`${file} を読み込み、資産コードを自動で採番しました（サンプル2件）`);
+    toast(`${file} を読み込み、資産コードを自動で採番しました`);
   };
   const setCode = (i: number, code: string) => setRows((rs) => rs.map((x, k) => (k === i ? { ...x, code } : x)));
   const codeIssue = (r: TransferRow, i: number) => (!r.code ? '資産コードを入力してください' : rows.some((x, k) => k !== i && x.code === r.code) ? '同じ資産コードが一覧にあります' : assets.some((a) => a.code === r.code) ? 'この資産コードは既に使われています' : '');

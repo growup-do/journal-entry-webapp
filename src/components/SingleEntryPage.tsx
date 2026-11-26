@@ -414,7 +414,9 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
           </div>
 
           {/* 入力行（紙の単一式入力の配置：上に 入力区分、下に 4段の項目） */}
-          <div style={{ margin: '14px 0 6px', fontSize: 14, color: PAPER.ink, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>令和 <input id="se-year" className="ef-input pp-input" aria-label="年" title={ENTRY_YEAR_HELP} disabled={ro} value={yr.year} onChange={(e) => yr.edit(e.target.value)} onFocus={(e) => e.currentTarget.select()} onKeyDown={onEnter(() => focusId('se-month'))} inputMode="numeric" autoComplete="off" style={{ ...dateInput, width: 38, padding: '5px 2px', fontWeight: 700 }} /> 年　入力中の伝票</span><EntryMonthNote month={f.month} year={yr.year} /></div>
+          <div style={{ margin: '14px 0 6px', fontSize: 14, color: PAPER.ink, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>令和 <input id="se-year" className="ef-input pp-input" aria-label="年" title={ENTRY_YEAR_HELP} disabled={ro} value={yr.year} onChange={(e) => yr.edit(e.target.value)} onFocus={(e) => e.currentTarget.select()} onKeyDown={onEnter(() => focusId('se-month'))} inputMode="numeric" autoComplete="off" style={{ ...dateInput, width: 38, padding: '5px 2px', fontWeight: 700 }} /> 年　入力中の伝票</span><EntryMonthNote month={f.month} year={yr.year} />
+            {/* 取引区分のバッジ＋資金モードの切替は、入力中の伝票と同じ行の右端に置く */}
+            <span style={{ marginLeft: 'auto', fontWeight: 400 }}><TorihikiBadge kari={f.kariKamoku} kashi={f.kashiKamoku} force={fundMode === '強制資金'} blocked={blocked} right={tools.fundSwitch} /></span></div>
           {/* 幅が足りないとき（1600px の画面で参照パネルを開いたときなど）は折り返し、右端の取引区分・Seq No の列を次の行に回す（確認メモ #243） */}
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch', gap: 12, margin: '0 0 8px', width: '100%' }}>
             {/* 入力区分：入力区分で起動中は固定表示、親区分で起動中は配下の入力区分から選ぶ（確認メモ #157／#181／#182）。残りの幅いっぱいに広げる */}
@@ -435,10 +437,10 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
                 </div>
               </PaperBox>
             </div>}
-            {/* 上に 取引区分のバッジ＋資金モードの切替（1行）、その下に Seq No などの枠 */}
+            {/* Seq No などの枠。操作説明の ? は枠の右下 */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'stretch', flex: 'none' }}>
-              <TorihikiBadge kari={f.kariKamoku} kashi={f.kashiKamoku} force={fundMode === '強制資金'} blocked={blocked} right={tools.fundSwitch} />
               <VoucherMarks seq="自動" flags={flags} onChange={(p) => setFlags((st) => ({ ...st, ...p }))} disabled={ro} viewOnly={tools.viewOnly} />
+              <span style={{ marginTop: 'auto', alignSelf: 'flex-end', display: 'inline-flex' }}><HelpTip text={[`Enter で進む順：${ENTER_ORDER.split('。')[0]}`, '金額で Enter を押すと、登録の確認へ移ります']} /></span>
             </div>
           </div>
           <div className="pp-table" style={{ gridTemplateColumns: '1fr', borderWidth: 2 }}>
@@ -533,7 +535,6 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10 }}>
-            <HelpTip text={[`Enter で進む順：${ENTER_ORDER.split('。')[0]}`, '金額で Enter を押すと、登録の確認へ移ります']} />
             <span style={{ marginLeft: 'auto', flex: 'none' }}>{tools.submitButton}</span>
           </div>
           {/* 未入力などのメッセージ（科目の組み合わせのエラーは各入力欄の直下、確認はモーダルで表示） */}

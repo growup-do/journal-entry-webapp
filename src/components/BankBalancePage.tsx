@@ -114,7 +114,7 @@ export function BankBalancePage({ variant, accent, onNavigate }: Props) {
               </tfoot>
             </table>
           </div>
-          <div style={{ padding: '10px 16px 14px', fontSize: 12, color: '#9aa5b1', lineHeight: 1.7 }}>※ 残高はサンプル値です。本番では預金出納（オプション）の銀行連携または通帳残高の入力を反映します。帳簿残高との突き合わせは「残高照合」で行います。</div>
+          <div style={{ padding: '10px 16px 14px', fontSize: 12, color: '#9aa5b1', lineHeight: 1.7 }}>※ 帳簿残高との突き合わせは「残高照合」で行います。</div>
         </section>
       </div>
     </main>

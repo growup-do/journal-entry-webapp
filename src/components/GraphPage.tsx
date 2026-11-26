@@ -74,7 +74,7 @@ export function GraphPage({ mode, variant, accent }: Props) {
       variant={variant}
       accent={accent}
       title={displayName(isYearly ? '経年グラフ' : '分析グラフ')}
-      subtitle={<>{isYearly ? '科目を選ぶと、直近8年度の推移グラフを表示します。横軸を「月」にすると当年度の月別（月次／累計）になります。' : '経営分析の指標を選ぶと、直近8年度の推移グラフを表示します。'}<span style={{ color: '#b7791f' }}>（値はサンプルです）</span></>}
+      subtitle={<>{isYearly ? '科目を選ぶと、直近8年度の推移グラフを表示します。横軸を「月」にすると当年度の月別（月次／累計）になります。' : '経営分析の指標を選ぶと、直近8年度の推移グラフを表示します。'}</>}
       extraTools={<ScreenPrintMenu page={isYearly ? '経年グラフ' : '分析グラフ'} accent={accent} />}
       period={
         <>

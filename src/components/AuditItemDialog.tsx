@@ -290,7 +290,7 @@ export function AuditItemDialog({ no, scope, onClose, onSaved, accent = '#1f7a52
             </div>
           ))}
         </div>
-        {def.provisional && <div style={{ fontSize: 12, color: '#9aa5b1' }}>※ この項目の条件式の構成は、現行画面を確認でき次第そろえます。科目の一覧はサンプルです。</div>}
+        
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {!viewOnly && <>
             <button type="button" onClick={() => setAll(true)} style={btn('#5b6773', false, true)}>すべて有効</button>

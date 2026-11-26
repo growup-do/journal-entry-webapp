@@ -83,8 +83,8 @@ export function ExportDialog({ spec, onClose, accent }: { spec: ExportSpec | nul
             <Field label="対象" span={2}><div style={{ ...input, background: '#f5f7f9' }}>{spec.title}{spec.meta ? <span style={{ color: '#7a8794', fontSize: 14 }}>　{spec.meta}</span> : null}</div></Field>
             {isFile && <Field label="ファイル名"><div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><input className="field-input ring" value={name} onChange={(e) => setName(e.target.value)} style={input} /><span style={{ fontSize: 14, color: '#7a8794' }}>{EXT[spec.kind]}</span></div></Field>}
             <Field label="形式"><div style={{ ...input, background: '#f5f7f9' }}>{KIND_LABEL[spec.kind]}</div></Field>
-            {isFile && <Field label="保存先"><select value={dest} onChange={(e) => setDest(e.target.value)} style={input}>{['ダウンロード（このパソコン）', '共有フォルダ（本番で設定）'].map((o) => <option key={o}>{o}</option>)}</select></Field>}
-            {(spec.kind === 'csv' || spec.kind === 'text') && <Field label="文字コード"><select value={enc} onChange={(e) => setEnc(e.target.value)} style={input}>{['UTF-8（BOM付き）', 'Shift_JIS（本番で対応）'].map((o) => <option key={o}>{o}</option>)}</select></Field>}
+            {isFile && <Field label="保存先"><select value={dest} onChange={(e) => setDest(e.target.value)} style={input}>{['ダウンロード（このパソコン）', '共有フォルダ'].map((o) => <option key={o}>{o}</option>)}</select></Field>}
+            {(spec.kind === 'csv' || spec.kind === 'text') && <Field label="文字コード"><select value={enc} onChange={(e) => setEnc(e.target.value)} style={input}>{['UTF-8（BOM付き）', 'Shift_JIS'].map((o) => <option key={o}>{o}</option>)}</select></Field>}
             {!isFile && <Field label="プリンター"><select style={input} defaultValue="既定のプリンター"><option>既定のプリンター</option><option>PDFに保存</option></select></Field>}
           </div>
           {preview.length > 0 && (
@@ -99,7 +99,7 @@ export function ExportDialog({ spec, onClose, accent }: { spec: ExportSpec | nul
             </div>
           )}
           {spec.kind === 'text' && spec.text && <pre style={{ margin: 0, padding: 10, background: '#f6f8fa', borderRadius: 8, fontSize: 12, maxHeight: 160, overflow: 'auto', whiteSpace: 'pre-wrap' }}>{spec.text.slice(0, 600)}{spec.text.length > 600 ? '…' : ''}</pre>}
-          <Notice>{spec.kind === 'excel' ? 'プロトタイプでは Excel が開ける .xls（HTML形式）で保存します。本番では .xlsx を生成します。' : spec.kind === 'pdf' || spec.kind === 'print' ? 'ブラウザの印刷ダイアログが開きます。PDFにする場合は送信先で「PDFに保存」を選んでください。' : 'ダウンロードフォルダに保存されます。'}</Notice>
+          <Notice>{spec.kind === 'excel' ? 'Excel ファイルとして保存します。' : spec.kind === 'pdf' || spec.kind === 'print' ? 'ブラウザの印刷ダイアログが開きます。PDFにする場合は送信先で「PDFに保存」を選んでください。' : 'ダウンロードフォルダに保存されます。'}</Notice>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
             <button type="button" onClick={onClose} style={btn()}>キャンセル</button>
             <button type="button" className="submit-btn" onClick={() => { const msg = runExport(spec, name.trim()); onClose(); toast.show(msg); }} style={btn(accent, true)}>{isFile ? '保存' : '印刷'}</button>

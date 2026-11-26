@@ -121,7 +121,7 @@ export function AccountBalanceModal({ open, onClose, accent, entries, month: ini
             {list.length > 0 && <tfoot><tr><td colSpan={3} style={{ ...TD, fontWeight: 700, background: '#f6f8fa', borderTop: '1px solid #e2e8ee' }}>合計（表示中の科目）</td><td style={{ ...NUM, fontWeight: 700, background: '#f6f8fa', borderTop: '1px solid #e2e8ee' }}>{yen(t.kari)}</td><td style={{ ...NUM, fontWeight: 700, background: '#f6f8fa', borderTop: '1px solid #e2e8ee' }}>{yen(t.kashi)}</td><td style={{ ...TD, background: '#f6f8fa', borderTop: '1px solid #e2e8ee' }} /></tr></tfoot>}
           </table>
         </div>
-        <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 8 }}>残高は 貸借科目＝期首残高＋当月までの増減、損益科目＝当年度の累計（借方残／貸方残）。期首残高はサンプル値です。</div>
+        <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 8 }}>残高は 貸借科目＝期首残高＋当月までの増減、損益科目＝当年度の累計（借方残／貸方残）。</div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}><button type="button" onClick={onClose} style={btn(accent, true)}>閉じる</button></div>
       </div>
     </Modal>

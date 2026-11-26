@@ -158,7 +158,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
   const draft: Draft = { rows, notes, inv, merge, perPage };
   const [saved, setSaved] = useState<Draft>(() => cloneDraft(draft));
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
-  const saveAll = () => { setSaved(cloneDraft(draft)); toast.show('別紙の内容を保存しました（プロトタイプ）'); };
+  const saveAll = () => { setSaved(cloneDraft(draft)); toast.show('別紙の内容を保存しました'); };
   const restoreSaved = () => { const d = cloneDraft(saved); setRows(d.rows); setNotes(d.notes); setInv(d.inv); setMerge(d.merge); setPerPage(d.perPage); setInvSel(null); toast.show('変更を破棄し、最後に保存した内容に戻しました'); };
   const cancelAll = () => { if (!dirty) { toast.show('保存していない変更はありません'); return; } setAsk({ msg: '保存していない変更（注記・明細・財産目録の行設定・合算テーブル）を破棄して、最後に保存した内容に戻しますか？', ok: '変更を破棄', run: restoreSaved }); };
 
@@ -252,7 +252,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
       {embedded && (
         <div data-appendix-bar style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '8px 16px', borderBottom: '1px solid #eef2f5', background: dirty ? '#fff8ea' : '#fff' }}>
           <span style={{ fontSize: 14, color: '#5b6773' }}>決算書に添付する別紙です。注記・明細・財産目録の行設定は、編集したあと「保存」で確定します。</span>
-          {dirty && <span style={{ fontSize: 12, fontWeight: 700, color: '#8a5a00' }}>保存していない変更があります</span>}
+          {dirty && <span style={{ fontSize: 12, fontWeight: 700, color: '#8a5a00' }}>保存で変更内容を確定してください。</span>}
           <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>{actions}</span>
         </div>
       )}

@@ -57,7 +57,7 @@ export function ImportExportDialog({ open, onClose, name, accent, notice, export
           <div style={card}><div style={cardHead}>インポート</div><div style={{ padding: 14, display: 'grid', gap: 10, fontSize: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><span style={{ flex: 1, color: '#5b6773' }}>{importDesc}</span><button type="button" data-ie-run="import" onClick={() => fileRef.current?.click()} style={btn(accent, true)}>ファイルを選択…</button></div>
             <input ref={fileRef} type="file" accept={accept} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) { onImport(f); onClose(); } }} style={{ display: 'none' }} />
-            {onSample && <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><span style={{ flex: 1, color: '#9aa5b1' }}>手元にファイルがない場合は、サンプルを読み込んで動作を確認できます。</span><button type="button" onClick={() => { onSample(); onClose(); }} style={btn()}>サンプルを読み込む</button></div>}
+            {onSample && <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><span style={{ flex: 1 }} /><button type="button" onClick={() => { onSample(); onClose(); }} style={btn()}>サンプルを読み込む</button></div>}
             {importWarn && <Notice tone="warn">{importWarn}</Notice>}
             {importExtra}
           </div></div>

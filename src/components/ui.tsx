@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ButtonHTMLAttributes, CSSProperties, HTMLAttributes, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { UNSAVED_BG } from '../store/unsaved';
+import { BackButton, useBackClaim, useBackNav } from './BackNav';
 
 export const btn = (color = '#5b6773', solid = false, small = false): CSSProperties => ({
   padding: small ? '6px 12px' : '10px 18px', borderRadius: 8, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color,
@@ -125,9 +126,17 @@ export function Notice({ children, tone = 'info' }: { children: ReactNode; tone?
  *  unsaved … 変更したのに保存していないあいだ true にすると、画面の色を薄い暖色に変える（確認メモ #224・#225） */
 export function SettingsShell({ variant, title, desc, badge = '設定', draft = false, actions, manual, unsaved = false, editing = false, children }: { variant: 'form' | 'sheet'; title: string; desc: ReactNode; badge?: string; draft?: boolean; actions?: ReactNode; /** 見出しの右に置くマニュアルのボタン（ManualButton） */ manual?: ReactNode; unsaved?: boolean; /** 入力中：画面の枠を光らせる */ editing?: boolean; children: ReactNode }) {
   const isSheet = variant === 'sheet';
+  // 画面内のリンクで移ってきたときは、画面の枠の上端に戻るの帯を出す（BackNav.tsx）
+  const backNav = useBackNav();
+  useBackClaim(!!backNav.from);
   return (
     <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
       <div data-unsaved={unsaved || undefined} data-editing={editing || undefined} className={editing ? 'edit-glow' : undefined} style={{ width: '100%', maxWidth: isSheet ? 'none' : 1240, background: unsaved ? UNSAVED_BG : '#fff', border: '1px solid ' + (unsaved ? '#ecd9b4' : '#dde4ea'), borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'hidden', transition: 'background .15s, border-color .15s' }}>
+        {backNav.from && (
+          <div data-return-bar style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 22px', background: '#f3f6f9', borderBottom: '1px solid #e2e8ee', borderRadius: '12px 12px 0 0' }}>
+            <BackButton from={backNav.from} onBack={backNav.back} accent="#1f7a52" />
+          </div>
+        )}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '22px 24px 16px', borderBottom: '1px solid ' + (unsaved ? '#f0e2c6' : '#eef2f5'), flexWrap: 'wrap' }}>
           <div>
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21 }}>

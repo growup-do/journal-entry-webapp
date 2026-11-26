@@ -267,7 +267,7 @@ export function ContinuityCheckModal({ info, accent, onClose }: { info: { year: 
               <thead><tr><th style={th}>項目</th><th style={{ ...th, textAlign: 'right' }}>{prev} 決算額</th><th style={{ ...th, textAlign: 'right' }}>{info.year} 繰越額</th><th style={{ ...th, textAlign: 'right' }}>差額</th></tr></thead>
               <tbody>{ROWS.map(([n, v]) => <tr key={n}><td style={td}>{n}</td><td style={num}>{v.toLocaleString('ja-JP')}</td><td style={num}>{v.toLocaleString('ja-JP')}</td><td style={{ ...num, color: '#1f7a52', fontWeight: 700 }}>0</td></tr>)}</tbody>
             </table>
-            <div style={{ fontSize: 14, color: '#7a8794' }}>差額があるときは金額を赤で表示し、「開始残高」を開くボタンを出します（サンプルの数値はすべて一致）。</div>
+            <div style={{ fontSize: 14, color: '#7a8794' }}>差額があるときは金額を赤で表示し、「開始残高」を開くボタンを出します。</div>
           </>
         )}
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" onClick={onClose} style={btn(accent, true)}>OK</button></div>

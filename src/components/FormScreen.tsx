@@ -6,7 +6,7 @@
 //   科目・取引先・摘要は入力欄の中で候補を絞り込み（5.3.5）、登録できない仕訳と確認して続行できる警告を科目の直下に表示（5.3.2）。
 //   機能ボタンは性質ごとにまとめて常に表示し、Alt＋英字のショートカットで操作する（5.3.6）。
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { DivisionPicker } from './DivisionPicker';
 import { FiscalYearBanner } from './FiscalYearPage';
@@ -27,6 +27,7 @@ import { SideNav, useSideNav } from './SideNav';
 import { renderPage } from './pages';
 import { Footer } from './Footer';
 import { HelpTip } from './ui';
+import { BackButton, BackNavContext } from './BackNav';
 
 const GREEN = '#1f7a52';
 const GREEN_RGB = '31,122,82';
@@ -79,18 +80,48 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
     };
   }, []);
 
+  // 画面の中のボタン・リンクから別の画面へ移ったときの戻り先（BackNav.tsx）。メニューから開いたときは消す
+  const [backStack, setBackStack] = useState<string[]>([]);
+  const pendingFrom = useRef<string | null>(null);
+  const backing = useRef(false);
+  const prevPage = useRef(page);
+  const [claimed, setClaimed] = useState(0);
+  // 画面の中の部品からの移動（goScreen）も、画面内のリンクとして扱う
+  useEffect(() => {
+    const h = () => { pendingFrom.current = page; backing.current = false; };
+    window.addEventListener('proto-navigate', h);
+    return () => window.removeEventListener('proto-navigate', h);
+  });
+  useEffect(() => {
+    const old = prevPage.current;
+    if (old === page) return;
+    prevPage.current = page;
+    const from = pendingFrom.current;
+    pendingFrom.current = null;
+    if (backing.current) { backing.current = false; setBackStack((st) => st.slice(0, -1)); return; }
+    // 戻り先と同じ画面へリンクで戻ったときは、戻り先を1つ減らす
+    setBackStack((st) => (from === old ? (st[st.length - 1] === page ? st.slice(0, -1) : [...st, old]) : []));
+  }, [page]);
+  const pageNav = useCallback((label: string) => { pendingFrom.current = page; backing.current = false; onNavigate(label); }, [page, onNavigate]);
+  const menuNav = (label: string) => { pendingFrom.current = null; backing.current = false; onNavigate(label); };
+  const backFrom = backStack.length ? backStack[backStack.length - 1] : null;
+  const goBack = useCallback(() => { if (!backFrom) return; pendingFrom.current = null; backing.current = true; onNavigate(backFrom); }, [backFrom, onNavigate]);
+  const claim = useCallback((on: boolean) => setClaimed((n) => n + (on ? 1 : -1)), []);
+  const backValue = useMemo(() => ({ from: backFrom, back: goBack, claim }), [backFrom, goBack, claim]);
+
   const body = page === '伝票入力' ? (
-    <VoucherEntry onNavigate={onNavigate} topOffset={topOffset} />
+    <VoucherEntry onNavigate={pageNav} topOffset={topOffset} />
   ) : page === '単一入力' || page === '振替入力' || page === '振替単一' ? (
-    <EntryWithPanel page={page} topOffset={topOffset} onNavigate={onNavigate}>{renderPage(page, 'form', GREEN, GREEN_RGB, onNavigate, onLogout)}</EntryWithPanel>
+    <EntryWithPanel page={page} topOffset={topOffset} onNavigate={pageNav}>{renderPage(page, 'form', GREEN, GREEN_RGB, pageNav, onLogout)}</EntryWithPanel>
   ) : (
-    renderPage(page, 'form', GREEN, GREEN_RGB, onNavigate, onLogout)
+    renderPage(page, 'form', GREEN, GREEN_RGB, pageNav, onLogout)
   );
 
   return (
+    <BackNavContext.Provider value={backValue}>
     <div style={{ minHeight: 'calc(100vh / var(--app-zoom, 1))', display: 'flex', alignItems: 'stretch' }}>
       {/* 左：メニュー列（画面の高さに固定。折りたたみ可） */}
-      <SideNav accent={GREEN} active={page} onSelect={onNavigate} collapsed={navCollapsed} onToggle={navToggle} />
+      <SideNav accent={GREEN} active={page} onSelect={menuNav} collapsed={navCollapsed} onToggle={navToggle} />
 
       {/* 右：本文列 */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
@@ -112,13 +143,15 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: '1 1 auto', maxWidth: '100%' }}>
+              {/* 画面内のリンクで移ってきたときの戻るボタン（画面の枠に戻るの帯がある画面では出さない） */}
+              {backFrom && claimed <= 0 && <BackButton from={backFrom} onBack={goBack} accent={GREEN} />}
               <DivisionPicker accent={GREEN} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: '#68757f', flex: 'none', marginLeft: 'auto' }}>
-              <HeaderTools accent={GREEN} page={page} onNavigate={onNavigate} />
-              <SettingsMenu accent={GREEN} active={page} onNavigate={onNavigate} />
+              <HeaderTools accent={GREEN} page={page} onNavigate={menuNav} />
+              <SettingsMenu accent={GREEN} active={page} onNavigate={menuNav} />
               <NoticeBell accent={GREEN} />
-              <UserMenu accent={GREEN} soft="#eef4f0" onNavigate={onNavigate} />
+              <UserMenu accent={GREEN} soft="#eef4f0" onNavigate={menuNav} />
             </div>
           </header>
           <FiscalYearBanner />
@@ -128,6 +161,7 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
         <Footer />
       </div>
     </div>
+    </BackNavContext.Provider>
   );
 }
 
@@ -500,7 +534,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
 
               {/* 内部取引相手区分の枠と、伝票の印（Seq No・チェック・証憑・付箋）の枠を横並びに置く（別々の枠。10/16 鈴木さん指示） */}
               <div style={{ display: 'flex', alignItems: 'stretch', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-              {tools.internalShown && <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} data-side={side || 'なし'} style={{ flex: '1 1 480px', display: 'grid', gridTemplateColumns: 'auto minmax(0,320px)', gap: 16, alignItems: 'center', padding: '10px 14px', border: '1px solid ' + (partner ? '#e0d6f3' : '#e2e8ee'), background: partner ? '#faf7ff' : '#f1f3f5', borderRadius: 12, transition: 'background .15s, border-color .15s' }}>
+              {tools.internalShown && <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} data-side={side || 'なし'} style={{ flex: '1 1 400px', display: 'grid', gridTemplateColumns: 'auto minmax(0,320px)', gap: 16, alignItems: 'center', padding: '10px 14px', border: '1px solid ' + (partner ? '#e0d6f3' : '#e2e8ee'), background: partner ? '#faf7ff' : '#f1f3f5', borderRadius: 12, transition: 'background .15s, border-color .15s' }}>
                 <div style={{ alignSelf: 'center' }}>{tools.internalSwitch}</div>
                 <div style={{ opacity: partner ? 1 : 0.5, transition: 'opacity .15s' }}>
                   <FieldLabel color={partner ? '#6b3fb5' : '#8895a3'}>内部取引相手区分{partner ? `（${side}が内部取引・必須）` : ''}</FieldLabel>
@@ -508,6 +542,8 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                 </div>
               </div>}
               <VoucherMarks variant="panel" seq={nextSeq} flags={flags} onChange={setFlags} disabled={!editable} viewOnly={tools.viewOnly} showShohyo={inp.shohyo} />
+              {/* 操作説明は明細（摘要の枠）の右上に置く */}
+              <span style={{ marginLeft: 'auto', alignSelf: 'flex-end', display: 'inline-flex' }}><HelpTip text={['金額欄で Enter：次の行へ（最後の行では行を追加）', '金額欄で Shift+Enter：この行の下に1行挿入', '入力が終わったら、空の行の摘要で Enter を押すと「登録する」へ移ります']} /></span>
               </div>
 
               {/* 3段目：明細（コード｜摘要／取引先｜金額｜行の操作）。はじめから 6 行目まで入力できる（確認メモ #155） */}
@@ -580,7 +616,6 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                   <div className="pp-cell" style={{ padding: '6px 10px', fontSize: 12, color: '#8290a0' }}>
                     {!tools.viewOnly && <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={rowAdd} title={editable ? '最後に1行追加します（最後の行の金額欄で Enter を押しても追加できます）' : tools.reason} style={{ padding: '4px 11px', borderRadius: 7, border: '1px dashed #b9c4cf', background: '#fff', color: '#48565f', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', marginRight: 10 }}>＋ 行追加</button>}
                     <span data-row-count>入力済み {filled} 行（全 {rows.length} 行）</span>
-                    <HelpTip style={{ marginLeft: 10 }} text={['金額欄で Enter：次の行へ（最後の行では行を追加）', '金額欄で Shift+Enter：この行の下に1行挿入', '入力が終わったら、空の行の摘要で Enter を押すと「登録する」へ移ります']} />
                   </div>
                 </div>
                 {/* 下段：小切手No（表示項目で有効なとき）｜合計。Seq No・チェック・証憑・付箋は上の内部取引の行に横並び */}

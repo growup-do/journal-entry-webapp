@@ -856,17 +856,6 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
             withAll
             range={range}
             onRange={setRange}
-            after={isPetty ? (
-              <span title="翌年度（令和9年度）の 4〜6月。年度をまたいで明細を入力できます" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: 4, padding: '2px 6px 2px 8px', border: '1px dashed #b98a2e', borderRadius: 8, background: '#fffaf0' }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#8a6516' }}>翌年度</span>
-                {['4', '5', '6'].map((m) => {
-                  const on = nyMonth === m;
-                  return (
-                    <button key={m} type="button" className="chip" onClick={() => selectNy(m)} aria-label={`翌年度 ${m}月`} title={`翌年度（令和9年）${m}月の予備月`} style={{ minWidth: 34, height: 26, padding: '0 10px', borderRadius: 6, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? '#b98a2e' : '#fff', color: on ? '#fff' : '#8a6516', border: '1px solid ' + (on ? '#b98a2e' : '#e0c98f') }}>{m}</button>
-                  );
-                })}
-              </span>
-            ) : undefined}
           />
           {/* 会計月と同じ行の右端に、枠のない「アイコン＋小さな文字」のボタンを置く */}
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
@@ -883,11 +872,22 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
             )}
           </div>
         </div>
-        {/* 月の範囲選択の案内と「4月〜○月の累計」は会計月の下の行に置く（会計月の行にボタンを収めるため） */}
-        {!range && (
-          <div style={{ paddingLeft: 84, display: 'flex', gap: 12, fontSize: 12 }}>
-            <HelpTip text={['月タブの上を、開始月から終了月までドラッグすると範囲になります', '開始月をクリックしてから、終了月を Shift＋クリックしても選べます']} />
-            {env.termFromStart && FISCAL_MONTHS.indexOf(month as typeof FISCAL_MONTHS[number]) > 0 && <span title="環境設定（全区分共通）「月範囲の選択で、期首から月を選択する」が有効です" style={{ fontWeight: 700, color: accent }}>4月〜{month}月の累計</span>}
+        {/* 翌年度の予備月と「4月〜○月の累計」は会計月の下の行に置く（会計月の行にボタンを収めるため） */}
+        {(isPetty || !range) && (
+          <div style={{ paddingLeft: 84, display: 'flex', alignItems: 'center', gap: 12, fontSize: 12 }}>
+            {/* 翌年度（令和9年度）の予備月は会計月の下の行に置く */}
+            {isPetty && (
+              <span title="翌年度（令和9年度）の 4〜6月。年度をまたいで明細を入力できます" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 6px 2px 8px', border: '1px dashed #b98a2e', borderRadius: 8, background: '#fffaf0' }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#8a6516' }}>翌年度</span>
+                {['4', '5', '6'].map((m) => {
+                  const on = nyMonth === m;
+                  return (
+                    <button key={m} type="button" className="chip" onClick={() => selectNy(m)} aria-label={`翌年度 ${m}月`} title={`翌年度（令和9年）${m}月の予備月`} style={{ minWidth: 34, height: 26, padding: '0 10px', borderRadius: 6, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? '#b98a2e' : '#fff', color: on ? '#fff' : '#8a6516', border: '1px solid ' + (on ? '#b98a2e' : '#e0c98f') }}>{m}</button>
+                  );
+                })}
+              </span>
+            )}
+            {!range && env.termFromStart && FISCAL_MONTHS.indexOf(month as typeof FISCAL_MONTHS[number]) > 0 && <span title="環境設定（全区分共通）「月範囲の選択で、期首から月を選択する」が有効です" style={{ fontWeight: 700, color: accent }}>4月〜{month}月の累計</span>}
           </div>
         )}
         </div>
@@ -1152,7 +1152,6 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
           <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 10 }}>システム年度：令和8年（2026年）　対象口座：{book}</div>
           <div onClick={importCsv} style={{ border: '3px dashed #e0b400', background: '#fff9c4', borderRadius: 12, padding: '46px 20px', textAlign: 'center', cursor: 'pointer' }}>
             <div style={{ fontSize: 20, fontWeight: 800, color: '#22303c' }}>CSVファイルをドロップしてください。</div>
-            <div style={{ fontSize: 14, color: '#7a8794', marginTop: 6 }}>（プロトタイプ：クリックするとサンプル3件を取り込みます）</div>
             <button type="button" className="btn-outline" onClick={(e) => { e.stopPropagation(); importCsv(); }} style={{ ...btn(), marginTop: 18 }}>CSVファイルを指定する</button>
           </div>
           <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}><button type="button" onClick={() => setCsvOpen(false)} style={btn()}>キャンセル</button></div>
@@ -1367,7 +1366,6 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
               <button type="button" className="btn-outline" disabled={idx === 0} onClick={() => go(idx - 1)} style={{ ...btn(), opacity: idx === 0 ? 0.5 : 1 }}>前の伝票</button>
               <button type="button" className="btn-outline" disabled={idx >= run.slips.length - 1} onClick={() => go(idx + 1)} style={{ ...btn(), opacity: idx >= run.slips.length - 1 ? 0.5 : 1 }}>次の伝票</button>
               <span style={{ fontSize: 14, color: '#7a8794' }}>{idx + 1} ／ {run.slips.length} 件目</span>
-              <span style={{ fontSize: 12, color: '#7a8794', marginLeft: 8 }}>※ 本番では会計の伝票画面を開いて表示します（プロトタイプでは、この画面で伝票の内容を表示します）。</span>
               <button type="button" onClick={() => setSlipView(null)} style={{ ...btn(), marginLeft: 'auto' }}>閉じる</button>
             </div>
           </div>

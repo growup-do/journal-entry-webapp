@@ -10,6 +10,7 @@ import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { PrintOutButton } from './PrintOutDialog';
 import { IconButton, ManualButton } from './ui';
 import { Modal } from './Modal';
+import { useBackNav } from './BackNav';
 import { ToastView, useToast } from './Toast';
 import { ACCOUNT_META } from '../lib/accounts';
 import { SUFFICIENCY_DEFAULT as D } from '../data';
@@ -57,6 +58,9 @@ interface Props {
 }
 
 export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
+  // キャンセル：画面内のリンクから来たときは元の画面へ、メニューから開いたときは伝票入力へ
+  const backNav = useBackNav();
+  const cancelOut = () => (backNav.from ? backNav.back() : onNavigate('伝票入力'));
   const [step, setStep] = useState<Step>('confirm');
   const [agreed, setAgreed] = useState(false);
   const [method, setMethod] = useState('');
@@ -133,7 +137,7 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
       <ToastView msg={toast.msg} />
 
       {/* ① 確認画面 */}
-      <Modal open={step === 'confirm'} onClose={() => onNavigate('伝票入力')} width={620} strict title="確認画面">
+      <Modal open={step === 'confirm'} onClose={() => cancelOut()} width={620} strict title="確認画面">
         <div style={{ padding: '22px 28px 24px', fontSize: 14.5, lineHeight: 1.8 }}>
           <p style={{ margin: 0 }}><span style={{ color: '#c0392b', fontWeight: 700 }}>当画面で設定した金額や科目設定の内容は保存されません。</span><br />算出結果を保存したい場合にはExcel出力を行ってください。</p>
           <p style={{ margin: '16px 0 0' }}><span style={{ color: '#c0392b', fontWeight: 700 }}>これはシミュレーターです。</span>【財務諸表等入力シート】との誤差が生じる場合がございます。差違の照合については弊社では出来かねます。ご了承ください。</p>
@@ -142,7 +146,7 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
             上記を確認し、了解しました
           </label>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 22 }}>
-            <button type="button" onClick={() => onNavigate('伝票入力')} style={btn()}>キャンセル</button>
+            <button type="button" onClick={() => cancelOut()} style={btn()}>キャンセル</button>
             <button type="button" disabled={!agreed} onClick={() => setStep('method')} style={{ ...btn(true), opacity: agreed ? 1 : 0.5 }}>次へ</button>
           </div>
         </div>
@@ -166,7 +170,7 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 18 }}>
             <span />
             <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" onClick={() => onNavigate('伝票入力')} style={btn()}>キャンセル</button>
+              <button type="button" onClick={() => cancelOut()} style={btn()}>キャンセル</button>
               <button type="button" disabled={!method} onClick={() => setStep(method === 'direct' ? 'main' : 'acctWarn')} style={{ ...btn(true), opacity: method ? 1 : 0.5 }} title={method && method !== 'direct' ? '実績を使う方式では、標準科目名と結び付かない科目があると科目警告画面を、実績の貸借が一致していないと警告画面を表示します' : undefined}>OK</button>
             </div>
           </div>
@@ -188,7 +192,7 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
             </table>
             <p style={{ margin: '12px 0 0' }}>なお、表示されました科目を使用されていない場合には問題ありませんが、<span style={{ color: '#c0392b', fontWeight: 700 }}>使用されている場合には、会計システムで科目名称を変更していただくか、簡易充実残額シミュレーターの科目設定ボタンより、該当される科目にチェックをつけていただきますと控除対象資産として計算できます。</span></p>
           </div>
-          <div style={{ fontSize: 12, color: '#8290a0', marginTop: 8, lineHeight: 1.7 }}>実績額方式・追加額方式で表示します。プロトタイプでは常にこの例を表示します。</div>
+          <div style={{ fontSize: 12, color: '#8290a0', marginTop: 8, lineHeight: 1.7 }}>実績額方式・追加額方式で表示します。</div>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 18 }}>
             <PrintOutButton name="科目警告画面" accent={accent} defaultDest="csv" fileName="充実残額_科目警告_令和8年度" meta="財務諸表等入力シートの標準科目名と結び付かなかった科目" data={() => ({ header: ['費目', '印刷科目名'], rows: ACCT_WARN.map(([h, n]) => [h, n]) })} />
             <button type="button" onClick={() => setStep('warn')} style={btn(true)}>次へ</button>
@@ -211,7 +215,7 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
               <div style={{ marginTop: 4 }}>残高入力や当年度仕訳を見直してください。</div>
             </div>
           </div>
-          <div style={{ fontSize: 12, color: '#8290a0', marginTop: 8, lineHeight: 1.7 }}>実績額方式・追加額方式は実績の金額から算出するため、貸借が一致していないと予想額が正しく計算できません。プロトタイプでは常にこの例を表示します。</div>
+          <div style={{ fontSize: 12, color: '#8290a0', marginTop: 8, lineHeight: 1.7 }}>実績額方式・追加額方式は実績の金額から算出するため、貸借が一致していないと予想額が正しく計算できません。</div>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 18 }}>
             <PrintOutButton name="警告画面" accent={accent} defaultDest="csv" fileName="充実残額_警告_令和8年度" meta="貸借対照表 決算額の借方合計と貸方合計が一致しておりません" data={() => ({ header: ['項目', '金額（円）'], rows: [['借方合計', WARN.debit], ['貸方合計', WARN.credit], ['差額', WARN.debit - WARN.credit]] })} />
             <button type="button" onClick={() => setStep('main')} style={btn(true)}>閉じる</button>
@@ -225,7 +229,7 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
           <div>
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21 }}>簡易充実残額シミュレーター<ManualButton onClick={() => setManualOpen(true)} style={{ marginLeft: 8 }} /></div>
             <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>
-              入力方式：<b style={{ color: '#22303c' }}>{METHODS.find((m) => m.key === method)?.label.split('（')[0] ?? '未選択'}</b>　{direct ? '金額を編集すると予想額が再計算されます。' : '金額は実績から表示します（手入力できるのは直接入力方式のときだけです）。'}<span style={{ color: '#b7791f' }}>（値はサンプルです）</span>
+              入力方式：<b style={{ color: '#22303c' }}>{METHODS.find((m) => m.key === method)?.label.split('（')[0] ?? '未選択'}</b>　{direct ? '金額を編集すると予想額が再計算されます。' : '金額は実績から表示します（手入力できるのは直接入力方式のときだけです）。'}
             </div>
           </div>
           {/* 科目設定・初期化・入力方式・過去年推移はアイコンのボタン（ほかの画面と同じ）。印刷は右端 */}
@@ -317,7 +321,6 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
               );
             })}
           </div>
-          <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 8 }}>※ プロトタイプの科目マスタはサンプル（現預金・未収金・事業費・人件費・事業収益）のため、負債・基本金・固定資産の科目は未登録です。本番では法人の勘定科目マスタから選択します。</div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
             <button type="button" className="btn-outline" onClick={() => setMapDraft(DEFAULT_MAP)} style={{ ...btn(), marginRight: 'auto' }}>初期値に戻す</button>
             <button type="button" onClick={() => setMapOpen(false)} style={btn()}>キャンセル</button>
@@ -405,7 +408,6 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
               })}
             </tbody>
           </table>
-          <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 8 }}>※ 過去年度の値はサンプルです。本番では各年度の決算データ（財産目録）から算出した値を表示します。</div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
             <button type="button" className="btn-outline" onClick={() => { setYearsDraft(years); setHistOpen(false); setYearsOpen(true); }} style={{ ...btn(), marginRight: 'auto' }}>表示年数の変更</button>
             <PrintOutButton name="充実残額の過去年推移" accent={accent} defaultDest="excel" fileName={historySpec().fileName} meta={historySpec().meta} data={() => { const x = historySpec(); return { header: x.header ?? [], rows: x.rows ?? [] }; }} />

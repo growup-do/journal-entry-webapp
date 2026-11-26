@@ -13,7 +13,7 @@
 //   資産の部のみサンプルデータあり。他の部は「サンプル未作成」。
 
 import type { CSSProperties, ReactNode } from 'react';
-import { rowClick } from './ui';
+import { rowClick, HelpTip } from './ui';
 import { useState } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { FISCAL_MONTHS, lastDayOf, periodLabel as periodText, type Period } from '../lib/period';
@@ -293,7 +293,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
   const [view, setView] = useViewState<View>(KEY, { month: '8', part: 0, depth: '細々区分', pattern: '標準', carry: true, debit: false, credit: false, balance: true, prev: true, diff: true, breakdown: true });
   const [graph, setGraph] = useState(false);
   // 貸借対照表の不一致（確認メモ #130）：unbalanced＝不一致の状態（プロトタイプ確認用の切り替え）、warn＝確認メッセージを表示中
-  const [unbalanced, setUnbalanced] = useState(false);
+  const [unbalanced] = useState(false);
   const [warn, setWarn] = useState(false);
   /** 集計し直したとき（月・期間の切り替え）に、不一致なら確認メッセージを出す */
   const recheck = () => { if (unbalanced) setWarn(true); };
@@ -398,19 +398,12 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
           <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="科目名の一部、または科目コードを入力すると一覧で強調します" autoComplete="off" style={{ width: 300, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
           {q.trim() && <span style={{ fontSize: 14, color: rows.some((r) => hit(r.name)) ? accent : '#c0392b', fontWeight: 700 }}>{rows.filter((r) => hit(r.name)).length ? `${rows.filter((r) => hit(r.name)).length} 件の科目を強調表示中` : '該当する科目がありません'}</span>}
           {q && <button type="button" onClick={() => setQ('')} style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid #cfd8e0', background: '#fff', color: '#5b6773', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>解除</button>}
-          <span style={{ fontSize: 12, color: '#9aa5b1' }}>科目の行の「元帳」で、右側に元帳を表示します</span>
+          <HelpTip text="科目の行の「元帳」で、右側に元帳を表示します" />
         </>
       }
       listNote={
         <>
           <span>{rows.length} 行{hiddenZero > 0 ? `（0データの ${hiddenZero} 行を非表示）` : ''}</span>
-          {/* 貸借対照表が不一致のときの確認メッセージを確かめるための切り替え（製品の機能ではない。確認メモ #130） */}
-          <span data-proto-unbalanced style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#9aa5b1', whiteSpace: 'nowrap' }}>
-            <span>プロトタイプ確認用：</span>
-            <label style={{ display: 'inline-flex', gap: 4, alignItems: 'center', cursor: 'pointer' }} title="チェックを入れると、貸借対照表の借方合計と貸方合計が一致しない状態になり、確認メッセージを表示します。入れたままにすると、集計期間（月）を切り替えるたびに表示します">
-              <input type="checkbox" checked={unbalanced} onChange={(e) => { setUnbalanced(e.target.checked); setWarn(e.target.checked); }} />貸借対照表が不一致の場合の表示
-            </label>
-          </span>
         </>
       }
       switches={
@@ -503,7 +496,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
           {(() => { const items = rows.filter((r) => r.level <= 1 && r.values[1] > 0).slice(0, 8); const max = Math.max(1, ...items.map((r) => r.values[1])); return (
             <div style={{ display: 'grid', gap: 8 }}>{items.map((r) => { const v = r.values[1]; return <div key={r.name} style={{ display: 'grid', gridTemplateColumns: '160px 1fr 120px', gap: 10, alignItems: 'center', fontSize: 14 }}><span style={{ fontWeight: r.level === 0 ? 700 : 500 }}>{r.name}</span><div style={{ height: 14, background: '#eef2f5', borderRadius: 7, overflow: 'hidden' }}><div style={{ width: `${(v / max) * 100}%`, height: '100%', background: accent }} /></div><span style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{money(v)}</span></div>; })}</div>
           ); })()}
-          <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 10 }}>{PARTS[view.part]}・当年度末残高（{s.division}）。値はサンプルです。</div>
+          <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 10 }}>{PARTS[view.part]}・当年度末残高（{s.division}）。</div>
         </div>
       </Modal>
 

@@ -116,7 +116,7 @@ export function LoginPage({ onLogin }: { onLogin: (kind: 'standard' | 'review', 
               <div>
                 <span style={lbl}>確認コード（6桁）</span>
                 <input className="field-input ring" value={reset.code} onChange={(e) => setReset({ ...reset, code: e.target.value.replace(/[^0-9]/g, '').slice(0, 6) })} onKeyDown={onResetEnter} inputMode="numeric" autoFocus placeholder="000000" style={{ ...input, textAlign: 'center', fontSize: 24, letterSpacing: '.3em', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }} />
-                <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 6 }}>コードの有効期限は10分です。届かない場合は迷惑メールフォルダをご確認ください。（プロトタイプでは6桁の数字であれば進めます）</div>
+                <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 6 }}>コードの有効期限は10分です。届かない場合は迷惑メールフォルダをご確認ください。</div>
               </div>
               <button type="button" onClick={() => toast.show('確認コードを再送しました')} style={{ alignSelf: 'flex-start', border: 'none', background: 'transparent', color: GREEN, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, padding: 0 }}>コードを再送する</button>
             </>
@@ -133,7 +133,7 @@ export function LoginPage({ onLogin }: { onLogin: (kind: 'standard' | 'review', 
             </>
           )}
           {reset.step === 3 && (
-            <Notice tone="ok">パスワードを再設定しました。新しいパスワードでログインしてください。（プロトタイプ：ログイン欄に反映済みです）</Notice>
+            <Notice tone="ok">パスワードを再設定しました。新しいパスワードでログインしてください。</Notice>
           )}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
             {reset.step > 0 && reset.step < 3 && <button type="button" onClick={() => setReset({ ...reset, step: reset.step - 1 })} style={{ marginRight: 'auto', padding: '9px 16px', border: '1px solid #cfd8e0', borderRadius: 8, background: '#fff', color: '#5b6773', fontWeight: 700, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' }}>戻る</button>}

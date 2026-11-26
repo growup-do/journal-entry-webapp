@@ -247,7 +247,7 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
           </div>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
             <button type="button" className="btn-outline" onClick={() => { setTitles(TITLES); setSigners(['会計責任者', '出納責任者', '担 当 者']); setSubjects(new Set()); setStamps([null, null, null]); }} style={{ ...btn(), marginRight: 'auto' }}>リセット</button>
-            <button type="button" className="submit-btn" onClick={() => { setDetailOpen(false); toast.show('詳細設定を保存しました（プロトタイプ）'); }} style={btn(true)}>決定</button>
+            <button type="button" className="submit-btn" onClick={() => { setDetailOpen(false); toast.show('詳細設定を保存しました'); }} style={btn(true)}>決定</button>
             <button type="button" onClick={() => setDetailOpen(false)} style={btn()}>中止</button>
           </div>
         </div>

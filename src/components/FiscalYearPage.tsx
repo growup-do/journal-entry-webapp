@@ -37,8 +37,8 @@ function UpdateView({ variant, depOnly, go, onNavigate }: { variant: 'form' | 's
   const s = useSession();
   const toast = useToast();
   const kind = startKindOf(s);
-  const [demoMulti, setDemoMulti] = useState(false);
-  const [hasNext, setHasNext] = useState(false);
+  const [demoMulti] = useState(false);
+  const [hasNext] = useState(false);
   const multi = kind !== '入力区分' || demoMulti;
   const keys: StepKey[] = ['backup', 'next', ...(multi ? ['members' as StepKey] : []), 'final', 'run', 'done'];
   const LABEL: Record<StepKey, string> = { backup: 'バックアップの確認', next: depOnly ? '翌年度の減価データの確認' : '翌年度データの確認', members: '構成区分の確認', final: '最終確認', run: '実行', done: '完了' };
@@ -229,7 +229,6 @@ function UpdateView({ variant, depOnly, go, onNavigate }: { variant: 'form' | 's
                 ))}
               </div>
             </div>
-            <div style={{ fontSize: 12, color: '#9aa5b1' }}>プロトタイプのため、実際のデータは変更していません。</div>
           </>
         )}
       </div>
@@ -242,15 +241,6 @@ function UpdateView({ variant, depOnly, go, onNavigate }: { variant: 'form' | 's
         </div>
       )}
 
-      {!running && (
-        <>
-          <div style={{ padding: '0 22px 10px', display: 'flex', gap: '4px 18px', flexWrap: 'wrap', fontSize: 12, color: '#9aa5b1' }}>
-            <span>プロトタイプ確認用：</span>
-            <label style={{ display: 'flex', gap: 4, alignItems: 'center', cursor: 'pointer' }}><input type="checkbox" checked={hasNext} onChange={(e) => { setHasNext(e.target.checked); setAgreeNext(false); }} disabled={at === 'done'} />翌年度データがある場合（再実行）の表示</label>
-            {kind === '入力区分' && <label style={{ display: 'flex', gap: 4, alignItems: 'center', cursor: 'pointer' }}><input type="checkbox" checked={demoMulti} onChange={(e) => { setDemoMulti(e.target.checked); setAt('backup'); }} disabled={at === 'done'} />合算区分・親区分で起動した場合の表示</label>}
-          </div>
-        </>
-      )}
     </SettingsShell>
   );
 }

@@ -670,7 +670,7 @@ export function PreviewModal({ open, onClose, title, opts, pages = 3, accent, ch
       </div>
       <div style={{ padding: '8px 16px', fontSize: 12, color: '#9aa5b1', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         {!children && <span style={{ color: '#5b6773' }}>金額の書式：桁区切り {s.env.thousandsSep}・負数 {formatAmount(-1234, s.env)}（{s.env.negativeColor}）　／　0円の行：{zero ? `表示しない${dropped ? `（${dropped} 行を省略）` : ''}` : '表示する'}</span>}
-        <span>レイアウトはサンプルです。プレビューは確認用で、出力は印刷画面の「出力先」で選んで行います。</span>
+        <span>プレビューは確認用で、出力は印刷画面の「出力先」で選んで行います。</span>
       </div>
     </Modal>
   );
@@ -826,7 +826,7 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
         <Notice>仕訳日記帳・元帳・試算表・予算書など、決算書以外の帳票は、それぞれの詳細設定だけで印刷の内容を決めます。決算書の帳票も、帳票ごとに変えたい項目は詳細設定で変更できます。「個別の設定を使う」にした項目は、各帳票の詳細設定のとおりに印刷します。</Notice>
         {/* 中止・決定は説明文のすぐ下に置く */}
         <div data-common-actions style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginTop: 12 }}>
-      {dirty && <span data-common-dirty style={{ fontSize: 12, fontWeight: 700, padding: '3px 8px', borderRadius: 8, background: '#fff7e6', color: '#8a5a00', alignSelf: 'center' }}>決定していない変更があります</span>}
+      {dirty && <span data-common-dirty style={{ fontSize: 12, fontWeight: 700, padding: '3px 8px', borderRadius: 8, background: '#fff7e6', color: '#8a5a00', alignSelf: 'center' }}>決定で変更内容を確定してください。</span>}
       <button type="button" data-common-cancel disabled={!dirty} onClick={() => { setSession({ print: base }); toast.show('変更を取り消し、最後に決定した設定に戻しました'); }} style={{ ...btn(), opacity: dirty ? 1 : 0.45, cursor: dirty ? 'pointer' : 'default' }}>中止</button>
       <button type="button" className="submit-btn" data-common-save onClick={() => { setBase(p); toast.show('決算書 共通印刷設定を保存しました'); }} style={btn(accent, true)}>決定</button>
         </div>

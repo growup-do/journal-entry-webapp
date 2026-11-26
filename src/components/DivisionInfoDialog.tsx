@@ -65,7 +65,7 @@ export function DivisionInfoDialog({ open, onClose, accent }: { open: boolean; o
 
       {tab === '集計区分の設定' && (
         <>
-          <div style={{ padding: '12px 22px 0' }}><Notice tone="warn">階層は「左上（社会福祉事業）を起点に右→下」の順に作成します。運用開始後に階層を変更する場合は、担当者またはカスタマーセンターへご相談ください（本番では確認ダイアログとバックアップを挟みます）。</Notice></div>
+          <div style={{ padding: '12px 22px 0' }}><Notice tone="warn">階層は「左上（社会福祉事業）を起点に右→下」の順に作成します。運用開始後に階層を変更する場合は、担当者またはカスタマーセンターへご相談ください。</Notice></div>
           <DivisionTreeEditor accent={accent} compact />
         </>
       )}

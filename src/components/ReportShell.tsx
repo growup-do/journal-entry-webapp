@@ -9,7 +9,8 @@ import type { CSSProperties, ReactNode } from 'react';
 import { NOT_IMPL, ToastView, useToast } from './Toast';
 import { displayName } from '../data';
 import { startKindOf, useSession, type EnvSettings } from '../store/session';
-import { Icon, IconButton, TabStrip, tabBtn, type IconName } from './ui';
+import { HelpTip, Icon, IconButton, TabStrip, tabBtn, type IconName } from './ui';
+import { useBackClaim, useBackNav } from './BackNav';
 
 export interface ToolButton {
   label: string;
@@ -122,19 +123,23 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
   const hasConditions = !!(periodInConditions || target || switches || controls);
   const row: CSSProperties = { display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' };
 
+  // 画面内のリンクで移ってきたときは、画面の枠の上端に戻るの帯を出す（画面が独自の戻り先を持つときはそちらを優先）
+  const backNav = useBackNav();
+  const rt: ReturnSpec | null = returnTo ?? (!embedded && backNav.from ? { from: backNav.from, onBack: backNav.back } : null);
+  useBackClaim(!embedded && !!rt);
   return (
     <main style={embedded ? { minWidth: 0 } : { flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, paddingRight: (isSheet ? 24 : 28) + asideWidth, transition: 'padding-right .28s ease', display: 'flex', justifyContent: 'center' }}>
       <ToastView msg={toast.msg} />
       <div data-editing={editing || undefined} className={editing && !embedded ? 'edit-glow' : undefined} style={embedded ? { width: '100%', background: '#fff', display: 'flex', flexDirection: 'column' } : { width: '100%', maxWidth: isSheet ? 'none' : 1280, background: '#fff', border: '1px solid #dde4ea', borderRadius: isSheet ? 14 : 16, boxShadow: '0 6px 26px rgba(30,50,70,.07)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        {returnTo && (
+        {rt && (
           <div data-return-bar style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 22px', background: '#f3f6f9', borderBottom: '1px solid #e2e8ee', flexWrap: 'wrap' }}>
-            <button type="button" className="btn-outline" onClick={returnTo.onBack} style={{ padding: '6px 14px', border: '1px solid ' + accent, borderRadius: 8, background: '#fff', color: accent, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-              ← {displayName(returnTo.from)}に戻る
+            <button type="button" className="btn-outline" onClick={rt.onBack} style={{ padding: '6px 14px', border: '1px solid ' + accent, borderRadius: 8, background: '#fff', color: accent, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              ← {displayName(rt.from)}に戻る
             </button>
             <span style={{ fontSize: 14, color: '#7a8794' }}>
-              {displayName(returnTo.from)} <span style={{ margin: '0 4px' }}>›</span> <b style={{ color: '#22303c' }}>{title}</b>{returnTo.here ? `（${returnTo.here}）` : ''}
+              {displayName(rt.from)} <span style={{ margin: '0 4px' }}>›</span> <b style={{ color: '#22303c' }}>{title}</b>{rt.here ? `（${rt.here}）` : ''}
             </span>
-            <span style={{ marginLeft: 'auto', fontSize: 12, color: '#9aa5b1' }}>{returnTo.hint ?? '戻ると、開く前と同じ表示条件（月・部・表示階層など）で表示します'}</span>
+            {(rt.hint || returnTo) && <HelpTip style={{ marginLeft: 'auto' }} text={rt.hint ?? '戻ると、開く前と同じ表示条件（月・部・表示階層など）で表示します'} />}
           </div>
         )}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '22px 24px 16px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>

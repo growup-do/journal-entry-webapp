@@ -34,7 +34,7 @@ export function PrevYearJournal({ accent, compact }: Props) {
       </div>
       <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
         {rows.length === 0 ? (
-          <div style={{ padding: '36px 14px', textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>この月の前年仕訳はありません（サンプルは決算仕訳のみ）。</div>
+          <div style={{ padding: '36px 14px', textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>この月の前年仕訳はありません。</div>
         ) : compact ? (
           rows.map((r) => (
             <div key={r.seq} style={{ display: 'grid', gridTemplateColumns: '40px minmax(0,1fr) 84px', gap: 8, padding: '10px 14px', borderBottom: '1px solid #f1f4f6', fontSize: 14, alignItems: 'center' }}>
