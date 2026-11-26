@@ -1,5 +1,5 @@
 // 画面の骨組み（フォーム型）
-// 上部に画面の幅いっぱいのアプリバー〔ロゴ・システム名・バージョン／区分・年度／調査・印刷／各種設定／ユーザー〕、その下に 左のメニュー列（名前付き／アイコンだけ／表示しない）＋ 本文列（中央に各画面、下にフッター）。
+// 上部に画面の幅いっぱいのアプリバー〔ロゴ・システム名・バージョン／区分・年度／調査・印刷／各種設定／ユーザー〕、その下に 左のメニュー列（アイコンだけ／表示しない）＋ 本文列（中央に各画面、下にフッター）。
 // 伝票入力の参照パネル・試算表などの元帳パネルは本文の右に重ねて表示する（本文を押し出さない）。1600×768 の画面で使う人が多いための構成（11/10）。
 // アクセント = 緑 #1f7a52。
 //   伝票入力（仕訳伝票形式）：借方・貸方の科目は伝票につき1組、その下に 摘要・取引先・金額 の行を複数入力する（依頼書 5.3.1）。
@@ -12,7 +12,7 @@ import { DivisionPicker } from './DivisionPicker';
 import { FiscalYearBanner } from './FiscalYearPage';
 import { AttachedStatementModal, BudgetGraphModal, BudgetHintLive, EntryConfirmModal, EntryDivisionField, SpecialAmountModal, TorihikiBadge, useEntryTools } from './EntryExtras';
 import { ComboField, ENTRY_MONTH_HELP, EntryMonthNote, EntryStyles, isIme, FieldLabel, FundAccountLine, PAPER, PaperBox, PaperDate, PaperStyles, PaperTitle, parseEntryDate, useEntryYear, ENTRY_DATE_RANGE, ENTRY_YEAR_HELP, INTERNAL_SIDES, autoInternalSide, isSpecialParent, specialChildrenOf, type InternalSide, fieldMessage, fieldState, fmtNum, focusId, hasError, isDepreciationAccount, judgeEntry, needsPartner, onEnter, scopeStyle, setPartner, toNum, watchedStatement, type FundMode, type FusenColor, FusenTab, VoucherMarks } from './EntryCommon';
-import { WIDE_TAB_SPACE, WIDE_WIDTH, WidePanel, usePanelPush, usePanelPushing, useWidePanel } from './WidePanel';
+import { WIDE_TAB_SPACE, WIDE_WIDTH, WidePanel, usePanelPush, useWidePanel } from './WidePanel';
 import { ToastView, useToast } from './Toast';
 import { judgeTorihiki, metaOf } from '../lib/accounts';
 import { TAX_OPTS, taxAmountOf, taxDefaultOf } from '../lib/transferTax';
@@ -58,12 +58,6 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
   const nav = useSideNav();
   /** サイドバーを表示しないとき、≡ から開くメニュー */
   const [drawer, setDrawer] = useState(false);
-  // 参照パネルが本文を押し出している間は、左メニューを自動でたたむ（確認メモ #243）。その間にメニューのボタンで広げることもできる（保存した開閉の状態は変えない）
-  const pushing = usePanelPushing();
-  const [navOverride, setNavOverride] = useState<boolean | null>(null);
-  useEffect(() => { if (!pushing) setNavOverride(null); }, [pushing]);
-  const navCollapsed = pushing ? (navOverride ?? true) : nav.collapsed;
-  const navToggle = pushing ? () => setNavOverride(!navCollapsed) : nav.toggle;
 
   // アプリバー（＋年度の帯）の高さを実測（折返しに追従）。右に重ねるパネルの上端に使う
   useLayoutEffect(() => {
@@ -157,8 +151,8 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
         </div>
 
       <div style={{ flex: 1, display: 'flex', alignItems: 'stretch' }}>
-        {/* 左：メニュー列（ヘッダーの下に固定。名前付き／アイコンだけ。表示しない設定のときは出さない） */}
-        {!nav.hidden && <SideNav accent={GREEN} active={page} onSelect={menuNav} collapsed={navCollapsed} onToggle={navToggle} top={topOffset} />}
+        {/* 左：メニュー列（ヘッダーの下に固定。アイコンだけの細い列。表示しない設定のときは出さない。確認メモ #387） */}
+        {!nav.hidden && <SideNav accent={GREEN} active={page} onSelect={menuNav} top={topOffset} />}
 
         {/* 右：本文列 */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>

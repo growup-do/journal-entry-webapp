@@ -1,17 +1,16 @@
 // メニューボタン表示設定（各種設定 › 各種設定）。左のメニュー（サイドバー）の出し方を選ぶ。
-//   名前付き：アイコンと名前のメニュー列／アイコンだけ：細い列（分類にマウスを載せると項目が出る）／表示しない：ヘッダーのロゴの左の ≡ から開く。
+//   アイコンだけ：細い列（分類にマウスを載せると項目が出る）／表示しない：ヘッダーのロゴの左の ≡ から開く。名前付きの形は廃止（確認メモ #387）。
 //   選んだ時点で画面に反映し、ブラウザに覚える。閉じるのは「閉じる」か × だけ（Esc・外側のクリックでは閉じない）。
 
 import { Modal } from './Modal';
 import { setSideNavMode, useSideNavMode, type SideNavMode } from './SideNav';
 
 const MODES: { key: SideNavMode; label: string; note: string }[] = [
-  { key: '名前付き', label: 'サイドバーを表示する（アイコンと名前）', note: '左にメニューの名前を並べて表示します。' },
   { key: 'アイコンだけ', label: 'サイドバーを表示する（アイコンだけ）', note: '左に細い列でアイコンだけを表示します。分類にマウスを載せると項目が出ます。' },
   { key: '表示しない', label: 'サイドバーを表示しない', note: '画面を広く使えます。メニューは、左上の会計基準システムのアイコンの左にある ≡ から開きます。' },
 ];
 
-/** サイドバーの見本（3つの出し方を小さな図で見せる） */
+/** サイドバーの見本（2つの出し方を小さな図で見せる） */
 function Sample({ mode, accent }: { mode: SideNavMode; accent: string }) {
   const bar = (w: number) => <span style={{ display: 'block', height: 4, width: w, borderRadius: 2, background: '#cfd8e0' }} />;
   return (
@@ -21,7 +20,7 @@ function Sample({ mode, accent }: { mode: SideNavMode; accent: string }) {
         <span style={{ width: 6, height: 6, borderRadius: 2, background: accent }} />{bar(22)}
       </span>
       <span style={{ display: 'flex', flex: 1 }}>
-        {mode !== '表示しない' && <span style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: 4, width: mode === '名前付き' ? 30 : 10, background: '#fff', borderRight: '1px solid #e2e8ee', boxSizing: 'border-box' }}>{[0, 1, 2, 3].map((i) => <span key={i} style={{ display: 'block', height: 3, borderRadius: 2, background: '#cfd8e0', width: mode === '名前付き' ? 20 : 3 }} />)}</span>}
+        {mode !== '表示しない' && <span style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: 4, width: 10, background: '#fff', borderRight: '1px solid #e2e8ee', boxSizing: 'border-box' }}>{[0, 1, 2, 3].map((i) => <span key={i} style={{ display: 'block', height: 3, borderRadius: 2, background: '#cfd8e0', width: 3 }} />)}</span>}
         <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, padding: 5 }}>{bar(34)}{bar(24)}{bar(30)}</span>
       </span>
     </span>

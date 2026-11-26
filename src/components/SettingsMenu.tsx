@@ -65,7 +65,7 @@ export function SettingsMenu({ accent, active, onNavigate }: Props) {
       <span style={{ flex: 1 }}>ダッシュボード表示オプション</span>
     </button>
   );
-  // 左のメニュー（サイドバー）の出し方：名前付き／アイコンだけ／表示しない（11/26）
+  // 左のメニュー（サイドバー）の出し方：アイコンだけ／表示しない（確認メモ #387）
   const menuDispItem = (
     <button key="メニューボタン表示設定" type="button" className="menu-sub" data-menu="メニューボタン表示設定" onClick={() => { setOpen(false); setMenuDisp(true); }} style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', textAlign: 'left', padding: '7px 10px', border: 'none', background: 'transparent', borderRadius: 7, fontSize: 14, fontFamily: 'inherit', color: '#22303c', fontWeight: 500, cursor: 'pointer' }}>
       <span style={{ flex: 1 }}>メニューボタン表示設定</span>

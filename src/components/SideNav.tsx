@@ -1,9 +1,9 @@
 // 左側のメニュー列（サイドバー）。1600×768 の画面で使う人が多いため、上部のメニューバーをやめてここに置いた（11/10）。
 //   ロゴ（ホームへ）＋システム名＋バージョンは、会計期間と同じヘッダーの左端に置く（AppBrand。名前を省略せずに出すため 11/26）
-//   サイドバーの表示は「各種設定 › メニューボタン表示設定」で 名前付き／アイコンだけ／表示しない を選ぶ。
+//   サイドバーは折りたたんだ形（アイコンだけの細い列）だけにした。「各種設定 › メニューボタン表示設定」で アイコンだけ／表示しない を選ぶ（確認メモ #387。名前付きの形と広げるボタンは廃止）。
 //   表示しないときは、ヘッダーのロゴの左の ≡ からメニュー（MenuDrawer）を開く。
 //   中：ホーム／お気に入りメニュー（ホームのすぐ下）／大メニュー（6分類）。「機能から探す」はホームと同じ一覧のため廃止
-//   下：折りたたみボタン。折りたたむとアイコンだけの細い列になり、分類にマウスを載せると項目が右に出る。開閉の状態はブラウザに覚える。
+//   分類にマウスを載せると項目が右に出る。表示する／しないはブラウザに覚える。
 // 画面の高さに合わせて固定（スクロールしない）。本文の右に出る参照パネル・元帳パネルは本文に重ねて表示する（本文を押し出さない）。
 
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
@@ -14,36 +14,30 @@ import { Chevron, Toggle } from './ui';
 import { useSession } from '../store/session';
 import { canOpen, firstAllowed } from '../store/access';
 
-export const SIDENAV_WIDTH = 228;
 export const SIDENAV_COMPACT = 60;
-const KEY = 'proto-sidenav:collapsed';
-const readCollapsed = () => { try { return localStorage.getItem(KEY) === '1'; } catch { return false; } };
-const writeCollapsed = (c: boolean) => { try { localStorage.setItem(KEY, c ? '1' : '0'); } catch { /* ignore */ } };
 
-/* サイドバーの表示（名前付き／アイコンだけ／表示しない）。ブラウザに覚え、設定画面・メニューの切替・サイドバーで同じ値を使う */
-export type SideNavMode = '名前付き' | 'アイコンだけ' | '表示しない';
+/* サイドバーの表示（アイコンだけ／表示しない）。ブラウザに覚え、設定画面・メニューの切替・サイドバーで同じ値を使う */
+export type SideNavMode = 'アイコンだけ' | '表示しない';
 const HIDE_KEY = 'proto-sidenav:hidden';
 const readHidden = () => { try { return localStorage.getItem(HIDE_KEY) === '1'; } catch { return false; } };
-let navState = { collapsed: readCollapsed(), hidden: readHidden() };
+let navState = { hidden: readHidden() };
 const subs = new Set<() => void>();
 const emit = () => subs.forEach((f) => f());
 const subscribe = (f: () => void) => { subs.add(f); return () => { subs.delete(f); }; };
-export const sideNavMode = (st = navState): SideNavMode => (st.hidden ? '表示しない' : st.collapsed ? 'アイコンだけ' : '名前付き');
+export const sideNavMode = (st = navState): SideNavMode => (st.hidden ? '表示しない' : 'アイコンだけ');
 export function setSideNavMode(m: SideNavMode) {
-  navState = { collapsed: m === 'アイコンだけ' ? true : m === '名前付き' ? false : navState.collapsed, hidden: m === '表示しない' };
-  writeCollapsed(navState.collapsed);
+  navState = { hidden: m === '表示しない' };
   try { localStorage.setItem(HIDE_KEY, navState.hidden ? '1' : '0'); } catch { /* ignore */ }
   emit();
 }
 /** サイドバーを表示するか（表示しないときはヘッダーの ≡ から開く） */
-export function setSideNavShown(on: boolean) { setSideNavMode(on ? (navState.collapsed ? 'アイコンだけ' : '名前付き') : '表示しない'); }
+export function setSideNavShown(on: boolean) { setSideNavMode(on ? 'アイコンだけ' : '表示しない'); }
 export function useSideNavMode(): SideNavMode { return useSyncExternalStore(subscribe, () => sideNavMode()); }
 
-/** 左メニューの開閉状態（ブラウザに覚える） */
+/** 左メニューを出すか（ブラウザに覚える） */
 export function useSideNav() {
   const mode = useSideNavMode();
-  const collapsed = mode === 'アイコンだけ';
-  return { collapsed, hidden: mode === '表示しない', width: collapsed ? SIDENAV_COMPACT : SIDENAV_WIDTH, toggle: () => setSideNavMode(collapsed ? '名前付き' : 'アイコンだけ') };
+  return { hidden: mode === '表示しない', width: SIDENAV_COMPACT };
 }
 
 const BRAND_FONT = "'Zen Kaku Gothic New', sans-serif";
@@ -104,14 +98,14 @@ interface Props {
   accent: string;
   active: string;
   onSelect: (label: string) => void;
-  collapsed: boolean;
-  onToggle: () => void;
   /** ヘッダー（＋年度の帯）の高さ。サイドバーはその下に固定する */
   top?: number;
 }
 
-export function SideNav({ accent, active, onSelect, collapsed, onToggle, top = 0 }: Props) {
-  const width = collapsed ? SIDENAV_COMPACT : SIDENAV_WIDTH;
+export function SideNav({ accent, active, onSelect, top = 0 }: Props) {
+  // 折りたたんだ形（アイコンだけ）だけにした（確認メモ #387）
+  const collapsed = true;
+  const width = SIDENAV_COMPACT;
   // 会計本体を使えないアカウント：お気に入りは出さない（使える機能だけのメニューにする）
   const core = useSession().access.core;
   return (
@@ -121,18 +115,11 @@ export function SideNav({ accent, active, onSelect, collapsed, onToggle, top = 0
       aria-label="メニュー"
       style={{ position: 'sticky', top, alignSelf: 'flex-start', height: `calc(100vh / var(--app-zoom, 1) - ${top}px)`, width, flex: 'none', background: '#fff', borderRight: '1px solid #dde4ea', display: 'flex', flexDirection: 'column', zIndex: 101, transition: 'width .2s ease' }}
     >
-      {/* メニュー本体。展開時は縦にスクロール、折りたたみ時はフライアウトが切れないよう overflow を解放 */}
+      {/* メニュー本体。フライアウトが切れないよう overflow を解放 */}
       <div style={{ flex: 1, minHeight: 0, overflowY: collapsed ? 'visible' : 'auto', overflowX: 'visible', padding: collapsed ? '8px 0' : '8px 8px 8px' }}>
         <SideMenu accent={accent} active={active} onSelect={onSelect} compact={collapsed} afterHome={core ? <Favorites accent={accent} active={active} onNavigate={onSelect} compact={collapsed} /> : undefined} />
       </div>
 
-      {/* 折りたたみ */}
-      <div style={{ flex: 'none', borderTop: '1px solid #eef2f5', padding: collapsed ? '6px 0' : '6px 8px' }}>
-        <button type="button" className="menu-item-v" data-menu={collapsed ? 'メニューを広げる' : 'メニューをたたむ'} data-sidenav-toggle onClick={onToggle} aria-expanded={!collapsed} title={collapsed ? 'メニューを広げる' : 'メニューをたたんでコンパクトにする'} style={collapsed ? { ...iconBtn, color: '#5b6773' } : { display: 'flex', alignItems: 'center', gap: 9, width: '100%', padding: '8px 10px', border: 'none', borderRadius: 8, background: 'transparent', color: '#5b6773', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none', transform: collapsed ? 'scaleX(-1)' : 'none' }}><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16" /><path d="M17 10l-2 2 2 2" /></svg>
-          {!collapsed && <span>メニューをたたむ</span>}
-        </button>
-      </div>
     </aside>
   );
 }
