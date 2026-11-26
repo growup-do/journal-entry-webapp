@@ -600,23 +600,19 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                 })}
                 {/* 下段：合計の行。左端に Seq No・チェック・証憑・付箋のまとまりと、内部取引（入力補助の［内部取引］で出したとき）、小切手No（表示項目で有効なとき）を並べる（確認メモ #391） */}
                 <div className="pp-row" style={{ gridTemplateColumns: 'minmax(0,1fr) 170px' }}>
-                  {/* 2段：上に Seq No・チェック・証憑・付箋（と小切手No）、下に内部取引。内部取引の段は出していないときも高さを取っておき、出しても枠の縦幅が変わらないようにする */}
-                  <div className="pp-cell" data-total-left style={{ padding: '6px 12px', background: PAPER.fill, display: 'grid', gridTemplateRows: 'auto 48px', rowGap: 6, alignContent: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px 16px', flexWrap: 'wrap', minHeight: 32 }}>
-                      <VoucherMarks variant="bare" seq={nextSeq} flags={flags} onChange={setFlags} disabled={!editable} viewOnly={tools.viewOnly} showShohyo={inp.shohyo} />
-                      {inp.cheque && <><span className="pp-lab" style={{ fontSize: 14 }}>小切手No</span><label className="ef-field" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><input className="ef-input pp-input" disabled={!editable} value={cheque} onChange={(e) => setCheque(e.target.value)} placeholder="任意" style={{ ...smallInput, width: 140 }} /></label></>}
-                    </div>
-                    <div data-internal-slot style={{ display: 'flex', alignItems: 'center' }}>
-                      {tools.internalShown && (
-                        <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} data-side={side || 'なし'} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '3px 10px', border: '1px solid ' + (partner ? '#e0d6f3' : '#dfe5ea'), background: partner ? '#faf7ff' : '#fff', borderRadius: 10, transition: 'background .15s, border-color .15s' }}>
-                          {tools.internalSwitch}
-                          <span style={{ fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', color: partner ? '#6b3fb5' : '#8895a3' }} title={partner ? `${side}が内部取引のため入力が必要です` : undefined}>相手区分{partner ? '（必須）' : ''}</span>
-                          <div style={{ width: 210, opacity: partner ? 1 : 0.5, transition: 'opacity .15s' }}>
-                            <ComboField id="fe-aite" title={!partner ? '「内部取引」で借方か貸方を選ぶと入力できます（内部取引科目を選ぶと、その側に自動で決まります）' : undefined} kind="service" value={aite} onChange={setAite} onCommit={() => focusId('fe-tek-0')} disabled={!editable || !partner} invalid={partner ? fieldState(issues, 'aite') : undefined} message={partner ? fieldMessage(issues, 'aite') : undefined} placeholder="コード・区分名・フリガナ" />
-                          </div>
+                  {/* 1行：Seq No・チェック・証憑・付箋（と小切手No）と、その右に内部取引（11/26 鈴木さん指示）。
+                      内部取引を出していないときも同じ高さを取り、出しても枠の縦幅が変わらないようにする */}
+                  <div className="pp-cell" data-total-left style={{ padding: '6px 12px', background: PAPER.fill, display: 'flex', alignItems: 'center', gap: '8px 12px', flexWrap: 'wrap', minHeight: 60 }}>
+                    <VoucherMarks variant="bare" seq={nextSeq} flags={flags} onChange={setFlags} disabled={!editable} viewOnly={tools.viewOnly} showShohyo={inp.shohyo} />
+                    {inp.cheque && <><span className="pp-lab" style={{ fontSize: 14 }}>小切手No</span><label className="ef-field" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><input className="ef-input pp-input" disabled={!editable} value={cheque} onChange={(e) => setCheque(e.target.value)} placeholder="任意" style={{ ...smallInput, width: 140 }} /></label></>}
+                    {tools.internalShown && (
+                      <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} data-side={side || 'なし'} style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '1 1 360px', minWidth: 0, maxWidth: 520, padding: '3px 8px', border: '1px solid ' + (partner ? '#e0d6f3' : '#dfe5ea'), background: partner ? '#faf7ff' : '#fff', borderRadius: 10, transition: 'background .15s, border-color .15s' }}>
+                        {tools.internalSwitch}
+                        <div style={{ flex: 1, minWidth: 140, opacity: partner ? 1 : 0.5, transition: 'opacity .15s' }}>
+                          <ComboField id="fe-aite" title={!partner ? '「内部取引」で借方か貸方を選ぶと入力できます（内部取引科目を選ぶと、その側に自動で決まります）' : undefined} kind="service" value={aite} onChange={setAite} onCommit={() => focusId('fe-tek-0')} disabled={!editable || !partner} invalid={partner ? fieldState(issues, 'aite') : undefined} message={partner ? fieldMessage(issues, 'aite') : undefined} placeholder={partner ? '相手区分（必須）' : '相手区分'} />
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                   <div className="pp-cell" style={{ padding: 0 }}>
                     <div className="pp-foot" style={{ width: '100%', height: '100%' }}>
