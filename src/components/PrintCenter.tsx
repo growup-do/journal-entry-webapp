@@ -188,8 +188,8 @@ function formatSpecOf(r: ReportDef): FormatSpec | null {
   if (r.cat === '予算' && r.budget && !r.rangeSumOnly) return { widths: ['60', '25'], rows: ['name', 'amount', 'remark'] };
   // 科目別消費税区分別集計表（現行の「印刷書式」：科目名 81mm・金額 25mm、ＭＳ 明朝 9）
   if (r.id === 'x3') return { widths: ['81', '25'], rows: ['name', 'amount'] };
-  // 前年度同月対比表：［印刷書式］（確認メモ #409）
-  if (r.id === 'a7') return { widths: ['49', '22'], rows: ['name', 'amount'] };
+  // 前年度同月対比表・３期連続資金収支比較表：現行の「印刷書式設定」（科目名 20mm・金額 13mm、ＭＳ 明朝 7／8、用紙サイズ・用紙方向。確認メモ #409・調査D）
+  if (r.id === 'a7' || r.id === 'a8') return { widths: ['20', '13'], rows: ['name', 'amount'], fonts: { name: ['ＭＳ 明朝', '7'], amount: ['ＭＳ 明朝', '8'] }, paper: true };
   return null;
 }
 /** 捺印欄の欄の数：仕訳伝票（伝票式）は 5 欄、そのほかは 4 欄（確認メモ #322） */

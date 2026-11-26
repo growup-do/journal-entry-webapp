@@ -51,10 +51,12 @@ function Foot({ accent, onReset, onCancel, onOk }: { accent: string; onReset: ()
 /* ---------------- 印刷書式設定 ---------------- */
 export type FmtRow = 'name' | 'amount' | 'remark';
 const ROW_LABEL: Record<FmtRow, string> = { name: '科目名', amount: '金額', remark: '摘要' };
-export interface FormatSpec { widths?: [string, string]; rows: FmtRow[] }
-export interface PrintFormat { widths?: [string, string]; fonts: Partial<Record<FmtRow, [string, string]>> }
-export const stdFormat = (spec: FormatSpec): PrintFormat => ({ widths: spec.widths ? [...spec.widths] : undefined, fonts: Object.fromEntries(spec.rows.map((r) => [r, [...STD_FONT]])) });
-export const formatSummary = (spec: FormatSpec, f: PrintFormat) => [f.widths ? `印刷幅 科目名 ${f.widths[0]}mm／金額 ${f.widths[1]}mm` : '', spec.rows.map((r) => `${ROW_LABEL[r]} ${(f.fonts[r] ?? STD_FONT).join(' ')}`).join('／')].filter(Boolean).join('・');
+/** fonts：帳票ごとの標準のフォントとサイズ（なければ ＭＳ 明朝 9）。paper：用紙サイズ・用紙方向を持つ */
+export interface FormatSpec { widths?: [string, string]; rows: FmtRow[]; fonts?: Partial<Record<FmtRow, [string, string]>>; paper?: boolean }
+export interface PrintFormat { widths?: [string, string]; fonts: Partial<Record<FmtRow, [string, string]>>; paper?: string; orient?: '縦' | '横' }
+const stdFont = (spec: FormatSpec, r: FmtRow): [string, string] => [...(spec.fonts?.[r] ?? STD_FONT)];
+export const stdFormat = (spec: FormatSpec): PrintFormat => ({ widths: spec.widths ? [...spec.widths] : undefined, fonts: Object.fromEntries(spec.rows.map((r) => [r, stdFont(spec, r)])), ...(spec.paper ? { paper: 'A4', orient: '縦' as const } : {}) });
+export const formatSummary = (spec: FormatSpec, f: PrintFormat) => [f.widths ? `印刷幅 科目名 ${f.widths[0]}mm／金額 ${f.widths[1]}mm` : '', spec.rows.map((r) => `${ROW_LABEL[r]} ${(f.fonts[r] ?? stdFont(spec, r)).join(' ')}`).join('／'), spec.paper ? `${f.paper ?? 'A4'}・${f.orient ?? '縦'}` : ''].filter(Boolean).join('・');
 
 export function FormatDialog({ spec, value, accent, onCancel, onOk }: { spec: FormatSpec; value: PrintFormat; accent: string; onCancel: () => void; onOk: (f: PrintFormat) => void }) {
   const [f, setF] = useState<PrintFormat>(value);
@@ -73,11 +75,20 @@ export function FormatDialog({ spec, value, accent, onCancel, onOk }: { spec: Fo
         )}
         <fieldset style={box}>
           <legend style={legend}>フォント</legend>
-          {spec.rows.map((r) => <FontRow key={r} label={ROW_LABEL[r]} value={f.fonts[r] ?? STD_FONT} onChange={(v) => setF({ ...f, fonts: { ...f.fonts, [r]: v } })} listId={listId} />)}
+          {spec.rows.map((r) => <FontRow key={r} label={ROW_LABEL[r]} value={f.fonts[r] ?? stdFont(spec, r)} onChange={(v) => setF({ ...f, fonts: { ...f.fonts, [r]: v } })} listId={listId} />)}
           <datalist id={listId}>{FORMAT_SIZES.map((o) => <option key={o} value={o} />)}</datalist>
           <div style={note}>サイズは一覧から選ぶか、数字を直接入力します。</div>
         </fieldset>
-        <Foot accent={accent} onReset={() => setF(stdFormat(spec))} onCancel={onCancel} onOk={() => onOk({ widths: f.widths ? [f.widths[0] || spec.widths![0], f.widths[1] || spec.widths![1]] : undefined, fonts: Object.fromEntries(spec.rows.map((r) => { const v = f.fonts[r] ?? STD_FONT; return [r, [v[0], v[1] || '9']]; })) })} />
+        {spec.paper && (
+          <fieldset style={box} data-format-paper>
+            <legend style={legend}>用紙サイズ・用紙方向</legend>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
+              <select aria-label="用紙サイズ" value={f.paper ?? 'A4'} onChange={(e) => setF({ ...f, paper: e.target.value })} style={{ ...input, padding: '6px 8px', width: 220 }}>{['A4', 'A3（A3対応プリンタのみ）'].map((o) => <option key={o}>{o}</option>)}</select>
+              <div role="radiogroup" aria-label="用紙方向" style={{ display: 'flex', gap: 14, fontSize: 14 }}>{(['縦', '横'] as const).map((o) => <label key={o} style={{ display: 'flex', gap: 5, alignItems: 'center', cursor: 'pointer' }}><input type="radio" checked={(f.orient ?? '縦') === o} onChange={() => setF({ ...f, orient: o })} />{o}</label>)}</div>
+            </div>
+          </fieldset>
+        )}
+        <Foot accent={accent} onReset={() => setF(stdFormat(spec))} onCancel={onCancel} onOk={() => onOk({ widths: f.widths ? [f.widths[0] || spec.widths![0], f.widths[1] || spec.widths![1]] : undefined, fonts: Object.fromEntries(spec.rows.map((r) => { const v = f.fonts[r] ?? stdFont(spec, r); return [r, [v[0], v[1] || stdFont(spec, r)[1]]]; })), ...(spec.paper ? { paper: f.paper ?? 'A4', orient: f.orient ?? '縦' } : {}) })} />
       </div>
     </Modal>
   );

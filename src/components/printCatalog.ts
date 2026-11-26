@@ -5,7 +5,7 @@
 //   表示条件を満たさない帳票は一覧に出さない（「表示条件を満たさない帳票も表示」で薄く表示し、条件を確かめられる）。
 //   詳細設定の項目は、現行の画面に合わせて種類（チェック／ラジオ／選択）を分ける。
 
-import { ACCOUNTS, ANALYSIS_ITEMS } from '../data';
+import { ANALYSIS_ITEMS, GRAPH_TREES } from '../data';
 import { divisionLabel, flattenDivisions, startKindOf, type DivisionNode, type PrintCommon, type Session } from '../store/session';
 
 /* ---------------- 詳細設定の項目 ---------------- */
@@ -207,6 +207,8 @@ function VOUCHER(kind: '伝票式' | '振替式'): DetailSection[] {
 /** 消費税区分（区分コード＋名称。現行の消費税区分コンボの並び） */
 const TAX_CODES = ['14 課税売上　第１種業種（みなし仕入率＝90%）(8%軽減)', '15 課税売上　第２種業種（みなし仕入率＝80%）(8%軽減)', '24 課税売上　第１種業種（みなし仕入率＝90%）(10%)', '25 課税売上　第２種業種（みなし仕入率＝80%）(10%)', '31 非課税売上', '41 課税仕入 (10%)', '42 課税仕入 (8%軽減)', '51 対象外'];
 const TAX_SHORT = ['014:課売　１種（8%軽減）', '015:課売　２種（8%軽減）', '024:課売　１種（10%）', '041:課仕 (10%)', '042:課仕 (8%軽減)'];
+const YOY_ITEMS = yoyItems();
+const PAST_YEARS = pastYears();
 const D: Record<string, DetailSection[]> = {
   // 仕訳日記帳・伝票・元帳は現行の［詳細設定］の項目・種類・初期値に合わせた（Windows の現行画面で確認。確認メモ #238）
   journal: [
@@ -255,15 +257,23 @@ const D: Record<string, DetailSection[]> = {
     { title: '印刷項目', items: [chk('title', 'タイトルを印刷する', true), chk('area', '伝票入力区分名を印刷する', true), chk('scale', '縦軸スケールを自動調整する', true), chk('avg', '平均値を表示する')] },
     { title: '分析項目', items: [lst('items', '分析項目', ANALYSIS_ITEMS.map((a) => a.name), ANALYSIS_ITEMS.slice(0, 6).map((a) => a.name))] },
   ],
-  // 前年度同月対比表：試算表と同じ系統の印刷項目（確認メモ #408）と、印刷位置・行の間隔・印刷位置調整（#409）
+  // 前年度同月対比表：現行の詳細設定どおり（確認メモ #408／#409、Windows の現行画面で確認 11/26）。0データは「印刷項目」の先頭
   analysisYoY: [
-    { title: '印刷項目', items: [
-      chk('shade', '費目行を網掛け、太字にする', true), chk('bold', '費目下を太線にする', true), chk('stamp', '捺印欄を印刷する'), chk('area', '区分名を印刷する', true),
-      chk('hline', '項目・科目毎に横線を印刷する', true), chk('foot', '脚注を印刷する'), chk('autofont', '科目名のフォントサイズを自動調整する', true), chk('page', 'ページ番号を印刷する'), txt('pageStart', 'ページ番号の開始番号', '1', '1', 80), chk('date', '印刷時の日付を印刷する'),
-      chk('addPrev', '前年度同月対比表　当期末支払資金残高に前月累計を加算'),
+    { title: '印刷項目', items: [...YOY_ITEMS, chk('addPrev', '前年度同月対比表　当期末支払資金残高に前月累計を加算', true)] },
+    DEPTH_SECTION('大区分までの印刷'),
+    GAP_WITH('上のみ空き', '4.8'),
+    POSITION('0', '0'),
+  ],
+  // ３期連続資金収支比較表：前年度同月対比表と同じ詳細設定に、当年度決算予想額の算出方法と千円単位（確認メモ #410、現行画面で確認 11/26）
+  threeYears: [
+    { title: '当年度決算予想額の算出方法', items: [
+      rad('forecast', '当年度決算予想額の算出方法', ['当月よりの倍率', '当月累計＋過去の年度の翌月以降の平均']),
+      // 過去の平均に使う年度（複数選ぶ。初期は選択なし。当月よりの倍率のときは押せない）
+      { ...lst('avgYears', '平均に使う年度', PAST_YEARS, [], 6), when: { k: 'forecast', v: '当月累計＋過去の年度の翌月以降の平均' } },
     ] },
-    DEPTH_SECTION(),
-    LINE_GAP(),
+    { title: '印刷項目', items: [...YOY_ITEMS, chk('thousand', '３期連続資金収支比較表　千円単位にする')] },
+    DEPTH_SECTION('中区分までの印刷'),
+    GAP_WITH('上・下空き', '6.4'),
     POSITION('0', '0'),
   ],
   // 財務分析内訳グラフ：合算の名称を印刷する（確認メモ #411）
@@ -311,6 +321,24 @@ function withPageStart(sections: DetailSection[]): DetailSection[] {
     const at = rest.findIndex((it) => it.k === 'page') + 1;
     return { ...sec, items: [...rest.slice(0, at), { ...start, label: '開始番号', when: { k: 'page', v: true } }, ...rest.slice(at)] };
   });
+}
+
+/** 取引先内訳表の印刷科目：貸借対照表の科目（資産・負債・純資産）の末端の科目。現行と同じく資金諸口・諸口（非資金）も並べる */
+function bsAccounts(): string[] {
+  const leaves = (rows: { name: string; level: number }[]) => rows.filter((r, i) => !(rows[i + 1] && rows[i + 1].level > r.level)).map((r) => r.name);
+  const list = [...leaves(GRAPH_TREES.資産), '資金諸口', '諸口（非資金）', ...leaves(GRAPH_TREES.負債), '基本金', '国庫補助金等特別積立金', '修繕費積立金', '備品等購入積立金', '保育所施設・設備整備積立金'];
+  return list.filter((x, i) => list.indexOf(x) === i);
+}
+/** 前年度同月対比表・３期連続資金収支比較表の印刷項目（現行の初期値。区分名だけ ON） */
+function yoyItems(): DetailItem[] {
+  return [
+    chk('shade', '費目行を網掛け、太字にする'), chk('bold', '費目下を太線にする'), chk('stamp', '捺印欄を印刷する'), chk('area', '区分名を印刷する', true),
+    chk('hline', '項目・科目毎に横線を印刷する'), chk('foot', '脚注を印刷する'), chk('autofont', '科目名のフォントサイズを自動調整する'), chk('page', 'ページ番号を印刷する'), txt('pageStart', 'ページ番号の開始番号', '1', '1', 80), chk('date', '印刷時の日付を印刷する'),
+  ];
+}
+/** ３期連続資金収支比較表：過去の平均に使う年度（当年度の前の10年度。現行の並びと表記） */
+function pastYears(): string[] {
+  return Array.from({ length: 10 }, (_, i) => 2016 + i).map((y) => (y >= 2019 ? (y === 2019 ? '令和元年' : `令和${y - 2018}年`) : `平成${y - 1988}年`));
 }
 
 /* ---------------- 別紙（現行の各明細書の詳細設定。行の間隔・印刷様式・印刷位置調整は共通の部品） ---------------- */
@@ -517,11 +545,9 @@ export const REPORTS: ReportDef[] = [
     ...([['財務分析一覧表', '各種財務分析事項の5年間の推移を一覧表形式で確認'], ['財務分析グラフ', '各種財務分析事項の10年間の推移を棒グラフで確認'], ['財務分析シート', '当年度の各種財務分析事項を円グラフで確認'], ['基本チェック表', '財務3表および選択した財務分析事項のグラフを確認'], ['経年推移グラフ', '各科目毎の推移を年別に棒グラフで確認'], ['経月推移グラフ', '各科目毎の推移を月別に棒グラフで確認'], ['前年度同月対比表', '各科目毎の前年度同月対比を一覧表形式で確認']] as const).map(([name, note], i): R => ({ id: 'a' + (i + 1), name, memo: note, noZero: true,
       // 経年推移グラフは基本条件に 資産・負債・事業・資金 の科目のリストボックス（確認メモ #406）
       ...(name === '経年推移グラフ' ? { graphPick: true } : {}),
-      ...(name === '前年度同月対比表' ? { noZero: false, zero: false } : {}),
+      ...(name === '前年度同月対比表' ? { noZero: false, zero: false, title: '前年度同月対比表' } : {}),
       detail: name === '財務分析一覧表' ? D.analysisList : name === '財務分析グラフ' ? D.analysisGraph : name === '経月推移グラフ' ? D.analysisMonthly : name === '前年度同月対比表' ? D.analysisYoY : D.analysis })),
-    { id: 'a8', name: '３期連続資金収支比較表', memo: '3期連続の資金収支を比較。決算予想ができる', noZero: true, detail: [{ title: '予想額', items: [rad('forecast', '当年度予算予想額の算出方法', ['当月より倍率', '当月累計＋過去の平均']),
-      // 当月累計＋過去の平均に付随する、平均に使う年度（確認メモ #410）
-      { ...lst('avgYears', '平均に使う年度', ['令和7年度', '令和6年度', '令和5年度', '令和4年度', '令和3年度'], ['令和7年度', '令和6年度'], 5), when: { k: 'forecast', v: '当月累計＋過去の平均' } }, chk('thousand', '千円単位にする')] }, ...D.analysis] },
+    { id: 'a8', name: '３期連続資金収支比較表', memo: '3期連続の資金収支を比較。決算予想ができる', zero: false, title: '３年度連続 資金収支比較表', detail: D.threeYears },
     ...([['財務分析内訳グラフ', '各経理区分の財務分析事項を円グラフで確認'], ['経月推移内訳グラフ', '各経理区分、各科目毎の推移を月別に棒グラフで確認'], ['経年推移内訳グラフ', '各経理区分、各科目毎の推移を年別に棒グラフで確認']] as const).map(([name, note], i): R => ({ id: 'a' + (i + 9), name, memo: note, noZero: true, cond: C.parent, detail: name === '財務分析内訳グラフ' ? D.analysisInner : name === '経月推移内訳グラフ' ? D.analysisMonthlyInner : D.analysis })),
   ]),
   ...group('内部取引 一覧表', '内部取引 一覧表', [
@@ -536,7 +562,7 @@ export const REPORTS: ReportDef[] = [
     { id: 'o3', name: '自動按分出力', cond: C.belowSite, detail: [{ title: '出力条件', items: [rad('kind', '出力種類', ['貸借対照表', '事業活動計算書', '資金収支計算書']), rad('cols', '出力する列', ['当年度末', '前年度末', '増減']), rad('round', '端数の加算区分', ['按分率の最も大きい区分', '最後の区分'])] }, { title: '印刷項目', items: [chk('sum', '合計値を印刷する', true)] }] },
     { id: 'o4', name: '取引先内訳表', memo: '旧 業者内訳表', cond: C.belowSite,
       // 基本条件に印刷科目のリストボックス（確認メモ #413）
-      basicList: { k: 'printAccts', label: '印刷科目', options: ACCOUNTS.flatMap((g) => g.items) }, detail: [{ title: '印刷項目', items: [chk('vsub', '取引先コード小計'), chk('zeroV', '0円の取引先を印刷しない', true), chk('area', '区分名を印刷する', true)] }] },
+      range: true, basicList: { k: 'printAccts', label: '印刷科目', options: bsAccounts() }, detail: [{ title: '印刷項目', items: [chk('vsub', '取引先コード小計'), chk('zeroV', '0円の取引先を印刷しない', true), chk('area', '区分名を印刷する', true)] }] },
   ]),
 ];
 /** 中区分の並び（現行の印刷メニューの順。別紙は決算書の次） */
