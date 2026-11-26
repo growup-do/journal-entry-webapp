@@ -21,6 +21,8 @@ import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { displayName } from '../data';
 import { TORIHIKI_COLOR, budgetSample, judgeTorihiki, type Torihiki7 } from '../lib/accounts';
 import { addVoucher, getVouchers, useVouchers, type Voucher } from '../store/journalStore';
+import { DONATION_KINDS, DONOR_ATTRS, addDonations, type DonationRow } from '../store/donationStore';
+export { DONATION_KINDS, DONOR_ATTRS };
 import { canEnterVoucher, entryBlockReason, entryDivisionsOf, type EntryDivisionCtl } from '../lib/entryDivision';
 import { allocate, allocationPages, isTransferForm, shareText, type AllocatedVoucher, type JournalTemplate } from '../store/session';
 import { isViewOnly, setSession, specialRatesOf, splitSpecialAmount, useSession, type AllocationTemplate, type InputSettings, type TemplateLine } from '../store/session';
@@ -330,17 +332,13 @@ export function SpecialAmountModal({ open, total, account, onClose, accent, onOk
 //   4形式（仕訳伝票・単一・振替伝票・振替単一）で共通。［終了］は最後の行まで進むと押せる。［キャンセル］はすべての行を登録せずに終える。
 //   寄附金収益明細書は、現行の登録画面に合わせて 受領年月日・寄附金額（表示）、寄附者の属性・区分（一覧から選ぶ）、うち基本金組入額 を入力する
 //   （確認メモ #418。Windows の現行画面で確認 11/26：初期値 法人の役職員／経常／0、基本金組入額は寄附金額まで）。
-export interface StatementItem { label: string; kari: string; kashi: string; tekiyo: string; amount: number; /** 伝票の日付（例 8/31） */ date: string; /** 伝票の何行目か（複数行の形式） */ row?: number }
-/** 寄附金収益明細書：寄附者の属性（現行の並び） */
-export const DONOR_ATTRS = ['法人の役職員', '利用者本人', '利用者の家族', '取引業者', 'その他'];
-/** 寄附金収益明細書：区分（現行の並び。経常経費・運営資金・施設整備等・借入金元金償還・固定資産受贈） */
-export const DONATION_KINDS = ['経常', '運営', '施設', '償還', '固定'];
+export interface StatementItem { label: string; kari: string; kashi: string; tekiyo: string; amount: number; /** 伝票の日付（例 8/31） */ date: string; /** 入力区分（例 002 保育事業） */ division: string; /** 伝票の何行目か（複数行の形式） */ row?: number }
 /** 登録した伝票の行から、明細書へ連動する行を拾う（金額のある行だけ。行ごとに1件） */
-export function statementItems(date: string, rows: { kari: string; kashi: string; tekiyo: string; amount: number }[]): StatementItem[] {
+export function statementItems(date: string, division: string, rows: { kari: string; kashi: string; tekiyo: string; amount: number }[]): StatementItem[] {
   const out: StatementItem[] = [];
   rows.forEach((r, i) => {
     const w = watchedStatement(r.kari, r.kashi);
-    if (w && r.amount > 0) out.push({ label: w.label, kari: r.kari, kashi: r.kashi, tekiyo: r.tekiyo, amount: r.amount, date, row: rows.length > 1 ? i + 1 : undefined });
+    if (w && r.amount > 0) out.push({ label: w.label, kari: r.kari, kashi: r.kashi, tekiyo: r.tekiyo, amount: r.amount, date, division, row: rows.length > 1 ? i + 1 : undefined });
   });
   return out;
 }
@@ -352,7 +350,9 @@ export function useStatementFlow(accent: string, toast: (m: string) => void) {
       items={items}
       accent={accent}
       onClose={() => { if (items.length) toast('明細書には登録しませんでした'); setItems([]); }}
-      onDone={(reg) => {
+      onDone={(reg, rows) => {
+        // 寄附金収益明細書は、別紙の明細入力に1件ずつ追加する（確認メモ #419）
+        if (rows.length) addDonations(rows);
         const labels = [...new Set(items.map((x) => x.label))].join('・');
         toast(reg > 0 ? `${labels}に ${reg} 件登録しました` : '明細書には登録しませんでした');
         setItems([]);
@@ -369,7 +369,7 @@ function receivedDate(fy: string, date: string) {
   const [m, d] = date.split('/').map((x) => parseInt(x, 10));
   return `令和${m <= 3 ? y + 1 : y}年${m}月${d}日`;
 }
-export function AttachedStatementModal({ items, onClose, onDone, accent }: { items: StatementItem[]; onClose: () => void; onDone: (registered: number) => void; accent: string }) {
+export function AttachedStatementModal({ items, onClose, onDone, accent }: { items: StatementItem[]; onClose: () => void; onDone: (registered: number, donations: DonationRow[]) => void; accent: string }) {
   const s = useSession();
   const [idx, setIdx] = useState(0);
   const [vals, setVals] = useState<StatementEntry[]>([]);
@@ -432,7 +432,7 @@ export function AttachedStatementModal({ items, onClose, onDone, accent }: { ite
           )}
           <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
             <button type="button" onClick={onClose} style={btn()}>キャンセル</button>
-            <button type="button" className="submit-btn" disabled={!last || firstErr >= 0} title={!last ? '最後の金額まで進むと押せます' : firstErr >= 0 ? `${firstErr + 1}件目の金額を直してください` : undefined} onClick={() => onDone(vals.filter((x) => x.reg).length)} style={{ ...btn(accent, true), opacity: !last || firstErr >= 0 ? 0.5 : 1 }}>終了</button>
+            <button type="button" className="submit-btn" disabled={!last || firstErr >= 0} title={!last ? '最後の金額まで進むと押せます' : firstErr >= 0 ? `${firstErr + 1}件目の金額を直してください` : undefined} onClick={() => onDone(vals.filter((x) => x.reg).length, items.flatMap((it, i) => (it.label === '寄附金収益明細書' && vals[i].reg ? [{ date: receivedDate(s.fiscalYear, it.date), attr: vals[i].attr, kind: vals[i].kind, amount: it.amount, kihon: toInt(vals[i].kihon), division: it.division }] : [])))} style={{ ...btn(accent, true), opacity: !last || firstErr >= 0 ? 0.5 : 1 }}>終了</button>
           </span>
         </div>
       </div>

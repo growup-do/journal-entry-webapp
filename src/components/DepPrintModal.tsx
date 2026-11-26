@@ -1,7 +1,8 @@
 // 減価償却：帳票印刷の条件画面と詳細設定（確認メモ #251）
 //   現行「減価償却オプションシステム」の印刷条件画面（出力先）と［詳細設定］の内容を、1 つのダイアログにまとめる。
 //   流れはほかの帳票と同じ「出力先（基本条件つき）と詳細設定のタブ」（PrintSteps。確認事項「印刷の画面遷移の統一」）。
-//   詳細設定の左：その帳票の設定（帳票ごとに項目が違う）／右：全帳票に共通のフォント・罫線・印刷位置調整。
+//   見た目は会計の印刷（PrintFlow）と同じにする（確認メモ #422）：題名「〇〇 の印刷」、出力先のタブに基本条件（印刷範囲・集計期間）、
+//   詳細設定のタブは「この帳票の詳細設定」の枠の中に、会計と同じ見出しの枠（フォント・罫線・印刷位置調整も同じ並び）を並べる。
 //   「償却方法の印字設定」は現行のアップデートで追加された項目（固定資産管理台帳（新会計版）と固定資産管理台帳のみ）。
 //   設定は帳票ごとに覚え、次に開いたときも引き継ぐ（実行したときに保存。キャンセルでは保存しない）。
 
@@ -9,6 +10,10 @@ import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { Modal } from './Modal';
 import { PrintSteps, type OutKind } from './PrintSteps';
+import { ScopeBlock } from './PrintCenter';
+import { btn as uiBtn } from './ui';
+
+const btnS = (c: string) => uiBtn(c, false, true);
 
 /** 実行の種類：出力先（プリンター／PDF／Excel／CSV）またはプレビュー */
 export type DepOutput = OutKind | 'preview';
@@ -93,111 +98,122 @@ function defaultsOf(name: string): DepValues {
 /** 帳票ごとの設定（開き直しても前回の設定を引き継ぐ） */
 const SAVED = new Map<string, { values: DepValues; output: OutKind }>();
 
-const LBL: CSSProperties = { fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 6, display: 'block' };
-const BOX: CSSProperties = { border: '1px solid #e2e8ee', borderRadius: 10, padding: '10px 12px', background: '#fff', minWidth: 0 };
-const IN: CSSProperties = { boxSizing: 'border-box', padding: '5px 8px', border: '1px solid #cfd8e0', borderRadius: 6, fontSize: 14, fontFamily: 'inherit', outline: 'none', background: '#fff', color: '#22303c' };
-const ROW: CSSProperties = { display: 'flex', alignItems: 'flex-start', gap: 7, fontSize: 14, lineHeight: 1.45, cursor: 'pointer' };
+/** 会計の印刷（DetailSections）と同じ見た目の枠・見出し（確認メモ #422） */
+const SEC: CSSProperties = { border: '1px solid #e2e8ee', borderRadius: 10, padding: '4px 12px 12px', margin: 0, minWidth: 0, background: '#fff' };
+const LEGEND: CSSProperties = { fontSize: 12, fontWeight: 800, color: '#5b6773', padding: '0 6px', letterSpacing: '.04em' };
+const SUB: CSSProperties = { fontSize: 12, fontWeight: 700, color: '#8290a0' };
+const IN: CSSProperties = { boxSizing: 'border-box', padding: '6px 8px', border: '1px solid #cfd8e0', borderRadius: 6, fontSize: 14, fontFamily: 'inherit', outline: 'none', background: '#fff', color: '#22303c' };
+const ROW: CSSProperties = { display: 'flex', alignItems: 'flex-start', gap: 7, fontSize: 14, lineHeight: 1.5, cursor: 'pointer' };
 
 export function DepPrintModal({ name, accent, onRun, onClose }: { name: string; accent: string; onRun: (values: DepValues, output: DepOutput) => void; onClose: () => void }) {
   const saved = SAVED.get(name);
   const [v, setV] = useState<DepValues>(() => ({ ...defaultsOf(name), ...(saved?.values ?? {}) }));
   const [output, setOutput] = useState<OutKind>(saved?.output ?? 'print');
   const set = (k: string, x: string | boolean) => setV((s) => ({ ...s, [k]: x }));
-  const sections = sectionsOf(name);
+  const all = sectionsOf(name);
+  /** 基本条件（出力先と同じ画面に置く）：印刷範囲と集計期間。会計の印刷の「期間・区分」に相当 */
+  const basicOf = all.filter((f) => f.t === 'range' || f.t === 'period');
+  const sections = all.filter((f) => f.t !== 'range' && f.t !== 'period');
   const run = (o: DepOutput) => { SAVED.set(name, { values: v, output }); onRun(v, o); };
-  const btn = (solid = false): CSSProperties => ({ padding: '8px 16px', borderRadius: 8, border: '1px solid ' + (solid ? accent : '#cfd8e0'), background: solid ? accent : '#fff', color: solid ? '#fff' : '#22303c', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' });
+  const title2 = name.replace(/\(/g, '（').replace(/\)/g, '）');
+  const onCount = all.reduce((n, f) => n + (f.t === 'checks' ? f.items.filter((it) => !!v[it.key]).length : 0), 0);
 
-  const box = (key: string, label: string, body: ReactNode, wide?: boolean) => <div key={key} style={{ ...BOX, gridColumn: wide ? '1 / -1' : undefined }}><span style={LBL}>{label}</span>{body}</div>;
+  const sec = (key: string, label: string, body: ReactNode, wide?: boolean) => (
+    <fieldset key={key} data-detail-section={label} style={{ ...SEC, gridColumn: wide ? '1 / -1' : undefined }}>
+      <legend style={LEGEND}>{label}</legend>
+      <div style={{ display: 'grid', gap: 9 }}>{body}</div>
+    </fieldset>
+  );
   const field = (f: F, i: number): ReactNode => {
     if (f.t === 'radio') {
       const cur = String(v[f.key]);
-      return box(f.key + i, f.label + (f.disabled ? '（この帳票では変更できません）' : ''), (
-        <div style={{ display: 'grid', gap: 5 }}>
-          {f.options.map((o, k) => (
-            <label key={o} style={{ ...ROW, color: f.disabled ? '#9aa5b1' : '#22303c', cursor: f.disabled ? 'default' : 'pointer' }}>
-              <input type="radio" checked={cur === o} disabled={f.disabled} onChange={() => set(f.key, o)} style={{ marginTop: 3 }} />
-              <span>{f.key === 'method' ? methodLabel(o) : o}{f.notes && <span style={{ display: 'block', fontSize: 12, color: '#7a8794' }}>{f.notes[k]}</span>}</span>
-            </label>
-          ))}
+      return sec(f.key + i, f.label, (
+        <>
+          {f.disabled && <span style={SUB}>この帳票では変更できません</span>}
+          <div role="radiogroup" aria-label={f.label} style={{ display: 'flex', gap: '2px 14px', flexWrap: 'wrap', flexDirection: f.notes ? 'column' : 'row' }}>
+            {f.options.map((o, k) => (
+              <label key={o} style={{ ...ROW, color: f.disabled ? '#9aa5b1' : '#22303c', cursor: f.disabled ? 'default' : 'pointer' }}>
+                <input type="radio" checked={cur === o} disabled={f.disabled} onChange={() => set(f.key, o)} style={{ marginTop: 4, accentColor: accent }} />
+                <span>{f.key === 'method' ? methodLabel(o) : o}{f.notes && <span style={{ display: 'block', fontSize: 12, color: '#7a8794' }}>{f.notes[k]}</span>}</span>
+              </label>
+            ))}
+          </div>
           {f.text && cur === f.text.when && <input className="field-input" value={String(v[f.text.key] ?? '')} onChange={(e) => set(f.text!.key, e.target.value)} placeholder={f.text.placeholder} style={{ ...IN, width: '100%' }} />}
-        </div>
+        </>
       ), f.wide);
     }
-    if (f.t === 'checks') return box('c' + i, f.label, (
-      <div style={{ display: 'grid', gridTemplateColumns: f.wide ? 'repeat(2, minmax(0, 1fr))' : '1fr', gap: '5px 14px' }}>
+    if (f.t === 'checks') return sec('c' + i, f.label, (
+      <div style={{ display: 'grid', gridTemplateColumns: f.wide ? 'repeat(auto-fill, minmax(260px, 1fr))' : '1fr', gap: '7px 16px' }}>
         {f.items.map((it) => (
-          <div key={it.key} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <label style={ROW}><input type="checkbox" checked={!!v[it.key]} onChange={(e) => set(it.key, e.target.checked)} style={{ marginTop: 3 }} />{it.label}</label>
-            {it.num && <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#5b6773' }}>{it.num.label}<input className="field-input" value={String(v[it.num.key])} disabled={!v[it.key]} onChange={(e) => set(it.num!.key, e.target.value.replace(/[^0-9]/g, '').slice(0, 4))} inputMode="numeric" style={{ ...IN, width: 56, textAlign: 'right' }} /></label>}
+          <div key={it.key} style={{ display: 'grid', gap: 4 }}>
+            <label style={ROW}><input type="checkbox" checked={!!v[it.key]} onChange={(e) => set(it.key, e.target.checked)} style={{ marginTop: 4, accentColor: accent }} />{it.label}</label>
+            {/* 付随する項目は親の項目の下に字下げして置く（会計の印刷と同じ） */}
+            {it.num && <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, paddingLeft: 20, color: v[it.key] ? '#22303c' : '#9aa5b1' }}>{it.num.label}<input className="field-input" value={String(v[it.num.key])} disabled={!v[it.key]} onChange={(e) => set(it.num!.key, e.target.value.replace(/[^0-9]/g, '').slice(0, 4))} inputMode="numeric" style={{ ...IN, width: 80, textAlign: 'right', opacity: v[it.key] ? 1 : 0.55 }} /></label>}
           </div>
         ))}
       </div>
     ), f.wide);
-    if (f.t === 'text') return box(f.key, f.label, <input className="field-input" value={String(v[f.key])} onChange={(e) => set(f.key, e.target.value)} style={{ ...IN, width: '100%' }} />);
-    if (f.t === 'number') return box(f.key, f.label, <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14 }}><input className="field-input" value={String(v[f.key])} onChange={(e) => set(f.key, e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} inputMode="numeric" style={{ ...IN, width: 64, textAlign: 'right' }} />{f.unit}</div>);
-    if (f.t === 'period') return box('period', '集計期間', (
-      <div style={{ display: 'grid', gap: 6 }}>
-        <label style={ROW}><input type="checkbox" checked={!!v.periodOn} onChange={(e) => set('periodOn', e.target.checked)} style={{ marginTop: 3 }} />集計期間を設定する</label>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, opacity: v.periodOn ? 1 : 0.5 }}>
-          <input className="field-input" value={String(v.periodFrom)} disabled={!v.periodOn} onChange={(e) => set('periodFrom', e.target.value)} aria-label="開始年月" style={{ ...IN, width: 120 }} />〜
-          <input className="field-input" value={String(v.periodTo)} disabled={!v.periodOn} onChange={(e) => set('periodTo', e.target.value)} aria-label="終了年月" style={{ ...IN, width: 120 }} />
+    if (f.t === 'text') return sec(f.key, f.label, <input className="field-input" value={String(v[f.key])} onChange={(e) => set(f.key, e.target.value)} style={{ ...IN, width: '100%' }} />);
+    if (f.t === 'number') return sec(f.key, f.label, <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14 }}><input className="field-input" value={String(v[f.key])} onChange={(e) => set(f.key, e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} inputMode="numeric" style={{ ...IN, width: 80, textAlign: 'right' }} />{f.unit}</div>);
+    return null;
+  };
+  /** 基本条件の項目（見出しは会計の印刷の基本条件と同じ小見出し） */
+  const basicField = (f: F): ReactNode => {
+    if (f.t === 'period') return (
+      <div key="period" data-dep-period style={{ display: 'grid', gap: 6 }}>
+        <span style={SUB}>集計期間</span>
+        <label style={ROW}><input type="checkbox" checked={!!v.periodOn} onChange={(e) => set('periodOn', e.target.checked)} style={{ marginTop: 4, accentColor: accent }} />集計期間を設定する</label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, paddingLeft: 20, opacity: v.periodOn ? 1 : 0.55 }}>
+          <input className="field-input" value={String(v.periodFrom)} disabled={!v.periodOn} onChange={(e) => set('periodFrom', e.target.value)} aria-label="開始年月" style={{ ...IN, width: 140 }} />〜
+          <input className="field-input" value={String(v.periodTo)} disabled={!v.periodOn} onChange={(e) => set('periodTo', e.target.value)} aria-label="終了年月" style={{ ...IN, width: 140 }} />
         </div>
       </div>
-    ));
-    // 印刷範囲
-    return box(f.key, '印刷範囲', (
-      <div style={{ display: 'grid', gap: 6 }}>
-        <label style={ROW}><input type="checkbox" checked={!!v[f.key]} onChange={(e) => set(f.key, e.target.checked)} style={{ marginTop: 3 }} />{f.label}</label>
+    );
+    if (f.t !== 'range') return null;
+    return (
+      <div key={f.key} data-dep-range style={{ display: 'grid', gap: 6 }}>
+        <span style={SUB}>印刷範囲</span>
+        <label style={ROW}><input type="checkbox" checked={!!v[f.key]} onChange={(e) => set(f.key, e.target.checked)} style={{ marginTop: 4, accentColor: accent }} />{f.label}</label>
         {f.fields.map((x) => (
-          <div key={x} style={{ display: 'grid', gridTemplateColumns: '72px 1fr auto 1fr', alignItems: 'center', gap: 6, fontSize: 14, opacity: v[f.key] ? 1 : 0.5 }}>
-            <span style={{ fontSize: 12, color: '#5b6773' }}>{x}</span>
-            <input className="field-input" value={String(v[f.key + x + 'From'])} disabled={!v[f.key]} onChange={(e) => set(f.key + x + 'From', e.target.value)} placeholder="先頭から" style={{ ...IN, width: '100%' }} />〜
-            <input className="field-input" value={String(v[f.key + x + 'To'])} disabled={!v[f.key]} onChange={(e) => set(f.key + x + 'To', e.target.value)} placeholder="最後まで" style={{ ...IN, width: '100%' }} />
+          <div key={x} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, paddingLeft: 20, opacity: v[f.key] ? 1 : 0.55 }}>
+            <span style={{ width: 80, flex: 'none', fontSize: 14, color: '#5b6773' }}>{x}</span>
+            <input className="field-input" value={String(v[f.key + x + 'From'])} disabled={!v[f.key]} onChange={(e) => set(f.key + x + 'From', e.target.value)} placeholder="先頭から" style={{ ...IN, width: 180 }} />〜
+            <input className="field-input" value={String(v[f.key + x + 'To'])} disabled={!v[f.key]} onChange={(e) => set(f.key + x + 'To', e.target.value)} placeholder="最後まで" style={{ ...IN, width: 180 }} />
           </div>
         ))}
       </div>
-    ));
+    );
   };
   const sel = (k: string, opts: string[], label: string) => (
-    <label style={{ display: 'grid', gridTemplateColumns: '1fr 86px', alignItems: 'center', gap: 8, fontSize: 14 }}>{label}<select value={String(v[k])} onChange={(e) => set(k, e.target.value)} style={IN}>{opts.map((o) => <option key={o}>{o}</option>)}</select></label>
+    <label key={k} style={{ display: 'grid', gridTemplateColumns: '1fr 90px', alignItems: 'center', gap: 8, fontSize: 14 }}>{label}<select value={String(v[k])} onChange={(e) => set(k, e.target.value)} style={IN}>{opts.map((o) => <option key={o}>{o}</option>)}</select></label>
   );
 
   return (
-    <Modal open onClose={onClose} width={1180} title={`印刷：${name.replace(/\(/g, '（').replace(/\)/g, '）')}`} style={{ maxHeight: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <div data-dep-print style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+    <Modal open onClose={onClose} width={880} title={<>{title2} の印刷 <span style={{ fontSize: 12, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>減価償却</span></>}>
+      <div data-dep-print>
         <PrintSteps
           accent={accent}
-          detailSummary="この帳票だけの設定と、全帳票共通のフォント・罫線・印刷位置"
+          detailSummary={`印刷項目 ${onCount} 件`}
           dest={output}
           onDest={setOutput}
           onPreview={() => run('preview')}
           onRun={() => run(output)}
           onClose={onClose}
-          detail={<div style={{ display: 'grid', gap: 10 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 14 }}>
-        {/* 左：この帳票の詳細設定 */}
-        <div style={{ minHeight: 0, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ fontSize: 14, fontWeight: 700 }}>この帳票の設定<span style={{ marginLeft: 8, fontSize: 12, fontWeight: 400, color: '#7a8794' }}>この帳票だけの設定です。次に開いたときも引き継ぎます。</span></div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, alignItems: 'start' }}>{sections.map(field)}</div>
-        </div>
-        {/* 右：全帳票共通のフォント・罫線・印刷位置 */}
-        <div style={{ minHeight: 0, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {box('font', 'フォント（ＭＳ ゴシック）', <div style={{ display: 'grid', gap: 6 }}>{sel('fName', SIZES, '各名称')}{sel('fItem', SIZES, '項目名')}{sel('fAmt', SIZES, '金額')}</div>)}
-          {box('line', '罫線', <div style={{ display: 'grid', gap: 6 }}>{sel('lIn', LINES, '内部')}{sel('lBranch', LINES, '分岐')}{sel('lOuter', LINES, '外周')}</div>)}
-          {box('pos', '印刷位置調整（mm）', (
-            <div style={{ display: 'grid', gap: 6 }}>
-              {([['offUp', '上方向への移動量'], ['offRight', '右方向への移動量']] as const).map(([k, l]) => (
-                <label key={k} style={{ display: 'grid', gridTemplateColumns: '1fr 86px', alignItems: 'center', gap: 8, fontSize: 14 }}>{l}<input className="field-input" value={String(v[k])} onChange={(e) => set(k, e.target.value.replace(/[^0-9.-]/g, '').slice(0, 5))} inputMode="decimal" style={{ ...IN, textAlign: 'right' }} /></label>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <button type="button" className="btn-outline" data-dep-print-reset onClick={() => setV(defaultsOf(name))} style={btn()}>リセット</button>
-        <span style={{ fontSize: 12, color: '#7a8794' }}>標準値がセットされます。</span>
-      </div>
-          </div>}
+          basic={basicOf.length ? <ScopeBlock title="基本条件" desc="印刷する範囲と集計期間です。"><div data-print-basic style={{ display: 'grid', gap: 14 }}>{basicOf.map(basicField)}</div></ScopeBlock> : undefined}
+          detail={
+            <ScopeBlock kind="帳票個別" title="この帳票の詳細設定" desc={`「${title2}」の印刷だけに反映されます。次に開いたときも引き継ぎます。`} right={<button type="button" data-dep-print-reset onClick={(e) => { e.stopPropagation(); setV(defaultsOf(name)); }} title="この帳票の詳細設定を標準値に戻します" style={{ ...btnS('#5b6773'), whiteSpace: 'nowrap' }}>標準に戻す</button>}>
+              <div data-detail-sections style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 10, alignItems: 'start' }}>
+                {sections.map(field)}
+                {sec('font', 'フォント（ＭＳ ゴシック）', <>{sel('fName', SIZES, '各名称')}{sel('fItem', SIZES, '項目名')}{sel('fAmt', SIZES, '金額')}</>)}
+                {sec('line', '罫線', <>{sel('lIn', LINES, '内部')}{sel('lBranch', LINES, '分岐')}{sel('lOuter', LINES, '外周')}</>)}
+                {sec('pos', '印刷位置調整（mm）', <>
+                  {([['offUp', '上方向への移動量'], ['offRight', '右方向への移動量']] as const).map(([k, l]) => (
+                    <label key={k} style={{ display: 'grid', gridTemplateColumns: '1fr 90px', alignItems: 'center', gap: 8, fontSize: 14 }}>{l}<input className="field-input" value={String(v[k])} onChange={(e) => set(k, e.target.value.replace(/[^0-9.-]/g, '').slice(0, 5))} inputMode="decimal" style={{ ...IN, textAlign: 'right' }} /></label>
+                  ))}
+                </>)}
+              </div>
+            </ScopeBlock>
+          }
         />
       </div>
     </Modal>

@@ -169,7 +169,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
     setInternalSide('');
     setAite('');
     toast.show('伝票を登録しました');
-    stmt.start(statementItems(date, [{ kari: f.kariKamoku, kashi: f.kashiKamoku, tekiyo: f.tekiyo, amount: toNum(f.amount) }]));
+    stmt.start(statementItems(date, division, [{ kari: f.kariKamoku, kashi: f.kashiKamoku, tekiyo: f.tekiyo, amount: toNum(f.amount) }]));
   };
 
   const tools = useEntryTools({

@@ -17,7 +17,9 @@ export type DetailItem =
   | { k: string; t: 'select'; label: string; options: string[]; def?: string; note?: string; when?: DetailWhen }
   | { k: string; t: 'text'; label: string; def?: string; placeholder?: string; width?: number; note?: string; when?: DetailWhen }
   /** リストボックス（複数を選ぶ。値は選んだ項目を LIST_SEP でつないだ文字列。確認メモ #405） */
-  | { k: string; t: 'list'; label: string; options: string[]; def?: string; rows?: number; note?: string; when?: DetailWhen };
+  | { k: string; t: 'list'; label: string; options: string[]; def?: string; rows?: number; note?: string; when?: DetailWhen }
+  /** スピンボタン（数値を直接入力でき、▲▼で step ずつ増減する。確認メモ #421） */
+  | { k: string; t: 'spin'; label: string; def?: string; min: number; max: number; step: number; unit?: string; note?: string; when?: DetailWhen };
 /** 詳細設定のまとまり（現行の画面の枠に相当） */
 export interface DetailSection { title: string; items: DetailItem[] }
 export type DetailValue = boolean | string;
@@ -46,6 +48,8 @@ const txt = (k: string, label: string, def = '', placeholder?: string, width?: n
 /** リストボックスの値の区切り */
 export const LIST_SEP = '\n';
 const lst = (k: string, label: string, options: string[], def: string[] = [], rows = 8): DetailItem => ({ k, t: 'list', label, options, def: def.join(LIST_SEP), rows });
+/** 行送り（mm）のスピンボタン。枠の見出し「行送り」と同じ名前なので小見出しは出さない（確認メモ #421） */
+const PITCH = (def: string): DetailItem => ({ k: 'pitch', t: 'spin', label: '行送り', def, min: 3.2, max: 6.4, step: 0.1, unit: 'mm' });
 
 const DEPTH_SECTION = (def = '細々区分までの印刷'): DetailSection => ({ title: '印刷位置', items: [rad('depth', '印刷する区分の深さ', DEPTH_OPTS, def)] });
 const LINE_GAP = (def = '上のみ空き', gap = '4.8'): DetailSection => ({ title: '行の間隔', items: [rad('lineGap', '行の間隔', ['上・下空き', '上のみ空き', '空きなし'], def), sel('gap', '空きの間隔（mm。空きなしは 3.2mm）', GAPS, gap)] });
@@ -240,7 +244,7 @@ const D: Record<string, DetailSection[]> = {
   // 売上仕入税額集計表：網掛け・捺印欄（確認メモ #398）、行送り（#399）、余白（#400）、フォントと文字サイズ（#401）
   salesTax: [
     { title: '印刷項目', items: [chk('shade', '費目行を網掛け、太字にする', true), chk('stamp', '捺印欄を印刷する'), chk('area', '区分名を印刷する', true), chk('autofont', '科目名のフォントサイズを自動調整する'), chk('page', 'ページ番号を印刷する'), txt('pageStart', 'ページ番号の開始番号', '1', '1', 80), chk('date', '印刷時の日付を印刷する')] },
-    { title: '行送り', items: [sel('pitch', '行送り（標準 6.4mm）', GAPS, '6.4')] },
+    { title: '行送り', items: [PITCH('6.4')] },
     { title: '余白', items: [txt('marginTop', '上（mm）', '15', '15', 80), txt('marginBottom', '下（mm）', '15', '15', 80), txt('marginLeft', '左（mm）', '15', '15', 80), txt('marginRight', '右（mm）', '15', '15', 80)] },
     { title: 'フォント', items: [sel('font', 'フォント', ['ＭＳ 明朝', 'ＭＳ ゴシック', 'ＭＳ Ｐ明朝', 'ＭＳ Ｐゴシック'], 'ＭＳ 明朝'), sel('fontSize', '文字サイズ（pt）', ['8', '9', '10', '10.5', '11', '12'], '10')] },
     POSITION('0', '0'),
@@ -391,7 +395,7 @@ const AP: Record<string, AppendixSpec> = {
   // 別紙4 財産目録（現行「財産目録設定」）
   inventory: { zero: true, range: true, detail: [
     { title: '印刷項目', items: [chk('netShade', '差引純資産行を網掛け、太字にする', true), chk('stamp', '捺印欄を印刷する'), chk('corp', '法人名を印刷する', true), chk('hline', '項目・科目毎に横線を印刷する', true), chk('foot', '脚注、注記を印刷する'), chk('page', 'ページ番号を印刷する'), txt('pageStart', 'ページ番号の開始番号', '1', '1', 80), chk('date', '印刷時の日付を印刷する')] },
-    { title: '行送り', items: [sel('pitch', '行送り（標準 6.4mm）', GAPS, '5.8')] },
+    { title: '行送り', items: [PITCH('5.8')] },
     POSITION('0', '2'),
   ] },
 };

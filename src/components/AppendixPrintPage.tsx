@@ -8,6 +8,7 @@
 //     小区分は 計算書類に対する注記／附属明細書（別紙3）／財産目録。表示条件（帳票選択・就労支援・授産）を満たさない別紙は一覧に出さない。
 //     ⑩⑪ は共通印刷設定＝有（印刷の詳細設定に「共通の印刷設定を反映」を置く）。
 
+import { DONATION_KINDS, DONOR_ATTRS, getDonations } from '../store/donationStore';
 import { useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { runExport } from './ExportDialog';
@@ -74,10 +75,14 @@ const condText = (x: Sheet) => x.cond ?? (x.form ? formCond(x.form).label : '');
 /** 明細入力の列と初期データ（num＝金額の列） */
 const KURIIRE_COLS = ['繰入元の区分', '繰入先の区分', '繰入金の財源', '金額', '使用目的等'];
 const KASHI_COLS = ['貸付元の区分', '借入先の区分', '前年度末残高', '当期増加額', '当期減少額', '期末残高', '使用目的等'];
-const DETAILS: Record<string, { cols: string[]; num: number[]; rows: string[][]; hint?: string }> = {
+const DETAILS: Record<string, { cols: string[]; num: number[]; rows: string[][]; hint?: string; /** 一覧から選ぶ列（列の番号 → 選択肢） */ choices?: Record<number, string[]> }> = {
   // 借入金明細書：行は科目に結び付く（先頭の列＝科目）。入力は KariireDetail（確認メモ #394）
   d1: { cols: KARIIRE_COLS, num: KARIIRE_NUM, rows: KARIIRE_ROWS },
-  d2: { cols: ['寄附者の属性', '区分', '件数', '寄附金額', 'うち基本金組入額', '拠点区分ごとの内訳'], num: [2, 3, 4], rows: [['利用者の家族', '経常', '3', '150000', '0', 'チャイルド保育園'], ['法人の役職員', '施設', '1', '500000', '500000', 'チャイルド保育園']], hint: '伝票入力時の監視を有効にしていると、伝票登録時に追加した明細がここに並びます。' },
+  // 寄附金収益明細書：明細は1件ずつ縦に並べる（件数の列はなし）。拠点区分ごとの内訳は「入力区分」（確認メモ #419）。
+  //   伝票入力の明細書への登録画面で「登録する」にした金額が、ここに1件ずつ追加される。印刷では寄附者の属性と区分ごとにまとめて件数を数える
+  d2: { cols: ['受領年月日', '寄附者の属性', '区分', '寄附金額', 'うち基本金組入額', '入力区分'], num: [3, 4], choices: { 1: DONOR_ATTRS, 2: DONATION_KINDS }, rows: [
+    ['令和8年5月10日', '利用者の家族', '経常', '50000', '0', '002 保育事業'], ['令和8年6月14日', '利用者の家族', '経常', '50000', '0', '002 保育事業'], ['令和8年7月12日', '利用者の家族', '経常', '50000', '0', '002 保育事業'],
+    ['令和8年8月3日', '法人の役職員', '施設', '500000', '500000', '002 保育事業']], hint: '伝票入力で寄附金の伝票を登録し、明細書への登録画面で「登録する」を選んだ金額は、ここに1件ずつ追加されます。' },
   d3: { cols: ['拠点名', '補助金の種類', '交付者', '目的', '当期収益額', '備考'], num: [4], rows: [['チャイルド保育園', '市区町村補助金', '○○市', '延長保育事業', '660000', ''], ['チャイルド保育園', '市区町村補助金', '○○市', '障害児保育事業', '0', '']], hint: '「科目から明細を作成する」（決算附属明細書設定）が有効な場合は、科目ごとに拠点名・目的を設定します。' },
   d4: { cols: KURIIRE_COLS, num: [3], rows: [['チャイルド保育園', '本部', '委託費収入', '1200000', '本部経費']] },
   d5: { cols: KASHI_COLS, num: [2, 3, 4, 5], rows: [['本部', 'チャイルド保育園', '0', '0', '0', '0', '運転資金']] },
@@ -88,6 +93,18 @@ const DETAILS: Record<string, { cols: string[]; num: number[]; rows: string[][];
   d13: { cols: KURIIRE_COLS, num: [3], rows: [['保育事業', '子育て支援', '委託費収入', '300000', '事業費の補填']] },
   d14: { cols: KASHI_COLS, num: [2, 3, 4, 5], rows: [['保育事業', '一時預かり', '0', '0', '0', '0', '運転資金']] },
 };
+
+/** 寄附金収益明細書の印刷：寄附者の属性と区分ごとにまとめ、件数・寄附金額・うち基本金組入額を集計する（明細は1件ずつ入力。確認メモ #419） */
+function donationTable(list: string[][]): TableData {
+  const map = new Map<string, { attr: string; kind: string; n: number; amt: number; kihon: number; divs: string[] }>();
+  list.forEach((r) => {
+    const key = r[1] + '|' + r[2];
+    const g = map.get(key) ?? { attr: r[1], kind: r[2], n: 0, amt: 0, kihon: 0, divs: [] };
+    g.n += 1; g.amt += toInt(r[3] ?? ''); g.kihon += toInt(r[4] ?? ''); if (r[5] && !g.divs.includes(r[5])) g.divs.push(r[5]);
+    map.set(key, g);
+  });
+  return { header: ['寄附者の属性', '区分', '件数', '寄附金額', 'うち基本金組入額', '入力区分'], rows: [...map.values()].map((g) => [g.attr, g.kind, g.n, g.amt, g.kihon, g.divs.join('・')]) };
+}
 
 const INVENTORY_TABS = ['流動資産', '固定資産（基本財産）', '固定資産（その他の固定資産）', '流動負債', '固定負債'];
 const INVENTORY_DEFAULT: Record<string, string[][]> = {
@@ -158,7 +175,12 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
   /** 就労支援・授産（⑮〜⑲）：条件を満たしたときの画面を見本として表示する（確認メモ #360） */
   const [peek, setPeek] = useState(false);
   const shown = (x: Sheet) => !hideNa || sheetOk(x, s);
-  const [rows, setRows] = useState<Record<string, string[][]>>(() => Object.fromEntries(Object.entries(DETAILS).map(([k, v]) => [k, v.rows.map((r) => [...r])])));
+  const [rows, setRows] = useState<Record<string, string[][]>>(() => {
+    const base: Record<string, string[][]> = Object.fromEntries(Object.entries(DETAILS).map(([k, v]) => [k, v.rows.map((r) => [...r])]));
+    // 伝票入力の明細書への登録画面で登録した寄附金（確認メモ #419）
+    base.d2 = [...base.d2, ...getDonations().map((d) => [d.date, d.attr, d.kind, String(d.amount), String(d.kihon), d.division])];
+    return base;
+  });
   const [notes, setNotes] = useState<Record<string, string>>({ 'note-corp': NOTE_DEFAULT, 'note-base': NOTE_BASE_DEFAULT });
   const [inv, setInv] = useState<Record<string, string[][]>>(cloneInv);
   const [invTab, setInvTab] = useState(INVENTORY_TABS[0]);
@@ -215,6 +237,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
   const invAmount = (tabs: string[]) => tabs.reduce((a, t) => a + (inv[t] ?? []).reduce((b, r) => b + toInt(r[2] ?? ''), 0), 0);
   const tableOf = (x: Sheet): TableData | undefined => {
     if (x.id === 'd1') return kariireTable(rows.d1 ?? [], s.kariireAccts ?? []);
+    if (x.id === 'd2') return donationTable(rows.d2 ?? []);
     if (x.editor === 'detail') { const d = DETAILS[x.id]; return { header: d.cols, rows: (rows[x.id] ?? []).map((r) => r.map((c, i) => (d.num.includes(i) ? toInt(c) : c))) }; }
     if (x.editor === 'inventory') {
       const assets = invAmount(INVENTORY_TABS.slice(0, 3)), debts = invAmount(INVENTORY_TABS.slice(3));
@@ -359,12 +382,12 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
               {sheet.editor === 'detail' && def && (
                 <>
                   {sheet.id === 'd1' ? <KariireDetail rows={myRows} accts={s.kariireAccts ?? []} tree={s.tree} accent={accent} onChange={(r) => setRows((d) => ({ ...d, d1: r }))} onOpenSettings={goSettings} /> : <div style={card}>
-                    <div style={cardHead}>明細入力 <span style={{ fontWeight: 500, color: '#8290a0', fontSize: 12 }}>金額を入力すると明細書に印刷されます</span><button type="button" onClick={() => setRows((d) => ({ ...d, [sheet.id]: [...(d[sheet.id] ?? []), def.cols.map(() => '')] }))} style={{ ...btn(accent, false, true), marginLeft: 'auto' }}>＋ 行を追加</button></div>
+                    <div style={cardHead}>明細入力 <span style={{ fontWeight: 500, color: '#8290a0', fontSize: 12 }}>金額を入力すると明細書に印刷されます</span><button type="button" onClick={() => setRows((d) => ({ ...d, [sheet.id]: [...(d[sheet.id] ?? []), def.cols.map((_, ci) => def.choices?.[ci]?.[0] ?? '')] }))} style={{ ...btn(accent, false, true), marginLeft: 'auto' }}>＋ 行を追加</button></div>
                     <div style={{ overflow: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead><tr>{def.cols.map((c, i) => <th key={c} style={{ ...TH, textAlign: def.num.includes(i) ? 'right' : 'left' }}>{c}</th>)}<th style={{ ...TH, width: 50 }} /></tr></thead>
                         <tbody>
-                          {myRows.map((r, ri) => <tr key={ri}>{r.map((c, ci) => { const numeric = def.num.includes(ci); return <td key={ci} style={numeric ? NUM : TD}><input className="field-input" aria-label={def.cols[ci]} value={numeric && c ? yen(toInt(c)) : c} onChange={(e) => setCell(ri, ci, numeric ? String(toInt(e.target.value)) : e.target.value)} inputMode={numeric ? 'numeric' : undefined} style={{ ...(numeric ? numInput : input), padding: '4px 8px', fontSize: 14, minWidth: numeric ? 96 : 110, color: numeric && toInt(c) < 0 ? '#c0392b' : undefined }} /></td>; })}<td style={TD}><button type="button" title="この行を削除" onClick={() => setRows((d) => ({ ...d, [sheet.id]: (d[sheet.id] ?? []).filter((_, i) => i !== ri) }))} style={btn('#c0392b', false, true)}>×</button></td></tr>)}
+                          {myRows.map((r, ri) => <tr key={ri}>{r.map((c, ci) => { const numeric = def.num.includes(ci); const ch = def.choices?.[ci]; if (ch) return <td key={ci} style={TD}><select className="field-input" aria-label={def.cols[ci]} value={c} onChange={(e) => setCell(ri, ci, e.target.value)} style={{ ...input, padding: '4px 8px', fontSize: 14, minWidth: 120 }}>{(ch.includes(c) ? ch : [c, ...ch]).map((o) => <option key={o}>{o}</option>)}</select></td>; return <td key={ci} style={numeric ? NUM : TD}><input className="field-input" aria-label={def.cols[ci]} value={numeric && c ? yen(toInt(c)) : c} onChange={(e) => setCell(ri, ci, numeric ? String(toInt(e.target.value)) : e.target.value)} inputMode={numeric ? 'numeric' : undefined} style={{ ...(numeric ? numInput : input), padding: '4px 8px', fontSize: 14, minWidth: numeric ? 96 : Math.max(110, Math.max(...myRows.map((x) => (x[ci] ?? '').length)) * 14 + 24), color: numeric && toInt(c) < 0 ? '#c0392b' : undefined }} /></td>; })}<td style={TD}><button type="button" title="この行を削除" onClick={() => setRows((d) => ({ ...d, [sheet.id]: (d[sheet.id] ?? []).filter((_, i) => i !== ri) }))} style={btn('#c0392b', false, true)}>×</button></td></tr>)}
                           {myRows.length === 0 && <tr><td colSpan={def.cols.length + 1} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 24 }}>明細がありません。「＋ 行を追加」で入力します。</td></tr>}
                         </tbody>
                       </table>

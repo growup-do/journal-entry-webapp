@@ -349,7 +349,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
     setHi(ids);
     const sum = list.reduce((s, r) => s + toNum(r.amount), 0);
     const dep = isDepreciationAccount(kari) || isDepreciationAccount(kashi);
-    stmt.start(statementItems(date, list.map((r) => ({ kari, kashi, tekiyo: r.tekiyo.trim(), amount: toNum(r.amount) }))));
+    stmt.start(statementItems(date, division, list.map((r) => ({ kari, kashi, tekiyo: r.tekiyo.trim(), amount: toNum(r.amount) }))));
     reset(sess.input.keepLast);
     toast.show(`伝票No ${no}（${list.length} 行・合計 ${sum.toLocaleString('ja-JP')} 円）を登録しました${dep ? '。固定資産の登録は「減価償却」メニューで行ってください' : ''}`);
     // 科目を残す設定のときは、次の伝票の1行目（摘要）から続けて入力できるようにする

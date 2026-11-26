@@ -254,6 +254,30 @@ export function PickList({ label, options, value, onChange, rows = 8, disabled, 
 }
 
 /** 詳細設定の項目（現行の画面の枠ごとに、チェック・ラジオ・選択・入力を描き分ける。確認メモ #238） */
+/** スピンボタン：数値を直接入力でき、▲▼で step ずつ増減する。入力欄を離れると範囲に収め、step の桁にそろえる（確認メモ #421） */
+export function SpinField({ value, min, max, step, unit, label, disabled, onChange }: { value: string; min: number; max: number; step: number; unit?: string; label: string; disabled?: boolean; onChange: (v: string) => void }) {
+  const digits = (String(step).split('.')[1] ?? '').length;
+  const fix = (n: number) => Math.min(max, Math.max(min, Math.round(n / step) * step)).toFixed(digits);
+  const num = parseFloat(value.replace(/[^0-9.\-]/g, ''));
+  const bump = (d: number) => onChange(fix((isNaN(num) ? min : num) + d * step));
+  const arrow: CSSProperties = { width: 26, height: 15, padding: 0, border: '1px solid #cfd8e0', background: '#f6f8fa', color: '#5b6773', fontSize: 8, lineHeight: 1, cursor: disabled ? 'default' : 'pointer', fontFamily: 'inherit' };
+  return (
+    <div data-spin style={{ display: 'flex', alignItems: 'center', gap: 6, opacity: disabled ? 0.55 : 1 }}>
+      <input className="field-input" role="spinbutton" aria-label={label} aria-valuemin={min} aria-valuemax={max} aria-valuenow={isNaN(num) ? undefined : num} inputMode="decimal" value={value} disabled={disabled}
+        onChange={(e) => onChange(e.target.value.replace(/[^0-9.]/g, ''))}
+        onBlur={() => onChange(isNaN(num) ? fix(min) : fix(num))}
+        onKeyDown={(e) => { if (e.key === 'ArrowUp') { e.preventDefault(); bump(1); } else if (e.key === 'ArrowDown') { e.preventDefault(); bump(-1); } }}
+        style={{ ...input, padding: '6px 8px', width: 80, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }} />
+      <span style={{ display: 'grid', gap: 2 }}>
+        <button type="button" tabIndex={-1} aria-label={`${label}を ${step} 増やす`} disabled={disabled || num >= max} onClick={() => bump(1)} style={{ ...arrow, borderRadius: '4px 4px 0 0' }}>▲</button>
+        <button type="button" tabIndex={-1} aria-label={`${label}を ${step} 減らす`} disabled={disabled || num <= min} onClick={() => bump(-1)} style={{ ...arrow, borderRadius: '0 0 4px 4px' }}>▼</button>
+      </span>
+      {unit && <span style={{ fontSize: 14, color: '#5b6773' }}>{unit}</span>}
+      <span style={{ fontSize: 12, color: '#8290a0' }}>{min.toFixed(digits)}〜{max.toFixed(digits)}</span>
+    </div>
+  );
+}
+
 export function DetailSections({ sections, values, onChange, accent, labelOf, optionsOf, buttons, lead }: { /** 選択肢を画面で決める項目（区分の一覧など） */ optionsOf?: (it: DetailItem) => string[] | undefined; sections: DetailSection[]; values: Record<string, DetailValue>; onChange: (k: string, v: DetailValue) => void; accent: string; /** 起動中の区分などで文言を変える項目 */ labelOf?: (it: DetailItem) => string; /** 項目の右のボタン（「捺印欄を印刷する」の［捺印欄］など。確認メモ #310・#336・#341） */ buttons?: Record<string, DetailButton>; /** 「印刷項目」の枠の先頭に置くもの（0データを表示しない。確認メモ #335） */ lead?: ReactNode }) {
   const uid = useId();
   const label = (it: DetailItem) => labelOf?.(it) ?? it.label;
@@ -302,6 +326,12 @@ export function DetailSections({ sections, values, onChange, accent, labelOf, op
               if (it.t === 'list') return (
                 <div key={it.k} data-detail-item={it.k} data-type="list">
                   <PickList label={dup ? undefined : label(it)} options={it.options} value={String(v ?? '').split(LIST_SEP).filter(Boolean)} onChange={(x) => onChange(it.k, x.join(LIST_SEP))} rows={it.rows} disabled={dis} accent={accent} />
+                </div>
+              );
+              if (it.t === 'spin') return (
+                <div key={it.k} data-detail-item={it.k} data-type="spin" style={{ display: 'grid', gap: 3 }}>
+                  {!dup && head(it, dis)}
+                  <SpinField value={String(v ?? '')} min={it.min} max={it.max} step={it.step} unit={it.unit} label={label(it)} disabled={dis} onChange={(x) => onChange(it.k, x)} />
                 </div>
               );
               if (it.t === 'select') return (
