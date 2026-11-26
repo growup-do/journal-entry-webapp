@@ -24,10 +24,10 @@ import { TargetCombo } from './TargetCombo';
 import { AreaPickDialog, toAreaRows, type AreaRow, DisplaySettingDialog, FUND_GROUPS, FormatDialog, InnerFormatDialog, RemarkDialog, STD_INNER_PRINT, formatSummary, stdFormat, type FormatSpec, type InnerPrintFormat, type PrintFormat } from './PrintDetailDialogs';
 import { PrintSteps, type OutKind } from './PrintSteps';
 import { LoadDivisionSettings } from './DivisionSettingsLoad';
-import { COMMON_LINK, FORM_GROUPS, REPORTS, formEnabled, omittable, type DetailItem, type DetailSection, type DetailValue, type ReportDef } from './printCatalog';
+import { COMMON_LINK, FORM_GROUPS, LIST_SEP, REPORTS, formEnabled, omittable, type DetailItem, type DetailSection, type DetailValue, type ReportDef } from './printCatalog';
 import { goScreen } from '../lib/nav';
 import { ACCOUNT_META } from '../lib/accounts';
-import { ACCOUNTS, displayName } from '../data';
+import { ACCOUNTS, GRAPH_PARTS, GRAPH_TREES, displayName } from '../data';
 import { DEFAULT_INNER_FORMAT, PRINT_ITEMS, divisionLabel, flattenDivisions, fusenLabel, setSession, startKindOf, useSession, type EnvSettings, type InnerFormat, type PrintCommon, type Session } from '../store/session';
 
 export { CATS, FORM_GROUPS, REPORTS, formEnabled } from './printCatalog';
@@ -175,6 +175,8 @@ interface FlowPrefs {
   disp?: Record<string, boolean>;
   /** 科目別消費税区分別集計表：印刷する勘定科目・資金科目（true＝印刷する。初期は未選択。確認メモ #366） */
   acctSel?: Record<string, boolean>; fundSel?: Record<string, boolean>;
+  /** 経年推移グラフ：グラフにする科目（キーは 部:行番号。未設定のときは各部の最上位の科目。確認メモ #406） */
+  graphSel?: Record<string, boolean>;
 }
 /** 印刷書式の中身（現行「印刷書式設定」。帳票ごとに印刷幅の有無と初期値、フォントの行が違う） */
 function formatSpecOf(r: ReportDef): FormatSpec | null {
@@ -240,6 +242,8 @@ export function DetailSections({ sections, values, onChange, accent, labelOf, op
       {sections.map((sec) => {
         // 項目の多い枠（元帳の印刷項目など）は横幅いっぱいに広げ、項目を複数列に並べる
         const wide = sec.items.length > 8;
+        /** 短い入力欄だけの枠（余白の上・下・左・右など）は横に並べる */
+        const row = sec.items.length > 1 && sec.items.every((it) => it.t === 'text' && (it.width ?? 999) <= 80);
         /** depth：同じ欄の親の項目からの段数（付随する項目だけ字下げする。確認メモ #381／#382） */
         const renderIt = (it: DetailItem, depth = 0) => {
               const v = values[it.k];
@@ -269,6 +273,28 @@ export function DetailSections({ sections, values, onChange, accent, labelOf, op
                   ); })()}
                 </div>
               );
+              if (it.t === 'list') {
+                // リストボックス：項目ごとにチェックを付けて複数選ぶ（確認メモ #405）
+                const chosen = String(v ?? '').split(LIST_SEP).filter(Boolean);
+                const put = (x: string[]) => onChange(it.k, it.options.filter((o) => x.includes(o)).join(LIST_SEP));
+                return (
+                <div key={it.k} data-detail-item={it.k} data-type="list" style={{ display: 'grid', gap: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {!dup && head(it, dis)}
+                    <span data-list-count style={{ fontSize: 12, color: '#8290a0' }}>{chosen.length} / {it.options.length} 件</span>
+                    <span style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+                      <button type="button" data-list-all-on disabled={dis} onClick={() => put(it.options)} style={btn('#5b6773', false, true)}>全てON</button>
+                      <button type="button" data-list-all-off disabled={dis} onClick={() => put([])} style={btn('#5b6773', false, true)}>全てOFF</button>
+                    </span>
+                  </div>
+                  <div role="listbox" aria-multiselectable aria-label={label(it)} style={{ border: '1px solid #d5dde5', borderRadius: 8, maxHeight: (it.rows ?? 8) * 27, overflowY: 'auto', padding: '2px 0', opacity: dis ? 0.55 : 1 }}>
+                    {it.options.map((o) => { const on = chosen.includes(o); return (
+                      <label key={o} role="option" aria-selected={on} style={{ display: 'flex', gap: 7, alignItems: 'center', fontSize: 14, padding: '3px 10px', cursor: dis ? 'default' : 'pointer', background: on ? '#eef4fb' : undefined }}><input type="checkbox" checked={on} disabled={dis} onChange={() => put(on ? chosen.filter((x) => x !== o) : [...chosen, o])} style={{ accentColor: accent }} />{o}</label>
+                    ); })}
+                  </div>
+                </div>
+                );
+              }
               if (it.t === 'select') return (
                 <label key={it.k} data-detail-item={it.k} data-type="select" style={{ display: 'grid', gap: 3 }}>
                   {!dup && head(it, dis)}
@@ -287,7 +313,7 @@ export function DetailSections({ sections, values, onChange, accent, labelOf, op
           <legend style={{ fontSize: 12, fontWeight: 800, color: '#5b6773', padding: '0 6px', letterSpacing: '.04em' }}>{sec.title}</legend>
           {lead && sec === sections.find((x) => x.title === '印刷項目') && <div data-detail-lead style={{ marginBottom: 9, paddingBottom: 9, borderBottom: '1px solid #eef2f6' }}>{lead}</div>}
           {/* 枠の見出しと同じ名前の小見出しは出さない（重複のため。確認メモ #312・#313） */}
-          <div style={{ display: 'grid', gap: wide ? '7px 16px' : 9, gridTemplateColumns: wide ? 'repeat(auto-fill, minmax(260px, 1fr))' : undefined }}>
+          <div style={{ display: 'grid', gap: wide ? '7px 16px' : 9, gridTemplateColumns: wide ? 'repeat(auto-fill, minmax(260px, 1fr))' : row ? `repeat(${sec.items.length}, minmax(0, 1fr))` : undefined }}>
             {/* 付随する項目（親の項目を選んだときだけ使える項目）は、親と同じ欄に縦に並べる。横の列に回り込んで別の項目に付随して見えないようにする（確認メモ #378） */}
             {sec.items.reduce<DetailItem[][]>((cells, it) => { const last = cells[cells.length - 1]; if (last && it.when && !it.when.not && last.some((x) => x.k === it.when!.k)) last.push(it); else cells.push([it]); return cells; }, []).map((cell) => cell.length === 1 ? renderIt(cell[0]) : <div key={`g-${cell[0].k}`} data-detail-group={cell[0].k} style={{ display: 'grid', gap: wide ? 7 : 9, alignContent: 'start' }}>{cell.map((it) => { let d = 0; for (let c: DetailItem | undefined = it; c?.when && !c.when.not; c = cell.find((x) => x.k === c!.when!.k)) d++; return renderIt(it, Math.min(d, cell.indexOf(it))); })}</div>)}
           </div>
@@ -342,6 +368,8 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
   /** 科目別消費税区分別集計表：チェックした科目の数 */
   const picked = (v?: Record<string, boolean>) => Object.values(v ?? {}).filter(Boolean).length;
   const noAcct = !!report.acctPick && picked(p.acctSel) + picked(p.fundSel) === 0;
+  /** 経年推移グラフ：グラフにする科目（未設定のときは各部の最上位の科目） */
+  const graphSel: Record<string, boolean> = p.graphSel ?? Object.fromEntries(GRAPH_PARTS.flatMap(({ key }) => GRAPH_TREES[key].map((r, i): [string, boolean] => [`${key}:${i}`, r.level === 0])));
   const innerOn = closingInner || hasInner;
   /** 予算書：［摘要］。「所属区分の摘要を使用する」のときは押せない（確認メモ #343・#348） */
   const hasRemarks = hasItem('ownRemark') || !!report.remarkBtn;
@@ -404,6 +432,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
     ['この帳票の詳細設定', `${report.noZero ? '' : `0データ：${p.zeroHide ? '表示しない' : '表示する'}／`}印刷項目 ${onCount} 件を有効${usesDepth(report) ? `／印刷範囲：${p.detail.depth}` : ''}${usesRemark(report) ? `／備考：${myUnit}${pr.unitRemarks[myUnit] ? '' : '（未入力）'}` : ''}`],
   ];
   if (report.acctPick) confirm.push(['印刷する科目', `勘定科目 ${picked(p.acctSel)} 件／資金科目 ${picked(p.fundSel)} 件`]);
+  if (report.graphPick) confirm.push(['グラフにする科目', GRAPH_PARTS.map(({ key }) => `${key} ${GRAPH_TREES[key].filter((_, i) => graphSel[`${key}:${i}`]).length} 件`).join('／')]);
   if (report.common) confirm.push(['決算書 共通印刷設定', `${diff ? `${diff} 項目が共通の設定と異なる` : '共通の設定どおり'}／行の間隔 ${pr.lineGap}・${pr.fontName}`]);
 
   return (
@@ -462,6 +491,34 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
                   })}
                 </div>
                 <div style={{ fontSize: 12, color: noAcct ? '#b03a2e' : '#8290a0', marginTop: 4 }}>{noAcct ? '印刷する科目にチェックを付けてください。' : 'チェックを付けた科目を印刷します。'}科目の選択は、他の伝票入力区分と共有しています。</div>
+              </div>
+            )}
+            {/* 経年推移グラフ：資産・負債・事業・資金のリストボックスで、グラフにする科目を選ぶ（現行どおり。確認メモ #406） */}
+            {report.graphPick && (
+              <div data-graph-pick>
+                <span style={lbl}>グラフにする科目</span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
+                  {GRAPH_PARTS.map(({ key }) => {
+                    const rows = GRAPH_TREES[key].map((r, i) => ({ ...r, id: `${key}:${i}` }));
+                    const n = rows.filter((r) => graphSel[r.id]).length;
+                    const put = (on: boolean) => set({ graphSel: { ...graphSel, ...Object.fromEntries(rows.map((r) => [r.id, on])) } });
+                    return (
+                      <div key={key} data-graph-list={key} style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'hidden', minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: '#f6f8fa', borderBottom: '1px solid #eef2f5' }}>
+                          <b style={{ fontSize: 14 }}>{key}</b>
+                          <span style={{ fontSize: 12, color: '#8290a0' }}>{n} / {rows.length} 件</span>
+                          <span style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+                            <button type="button" onClick={() => put(true)} style={btn('#5b6773', false, true)}>全てON</button>
+                            <button type="button" onClick={() => put(false)} style={btn('#5b6773', false, true)}>全てOFF</button>
+                          </span>
+                        </div>
+                        <div role="listbox" aria-multiselectable aria-label={key} style={{ maxHeight: 190, overflowY: 'auto', padding: '4px 10px' }}>
+                          {rows.map((r) => <label key={r.id} role="option" aria-selected={!!graphSel[r.id]} style={{ display: 'flex', gap: 7, alignItems: 'center', fontSize: 14, padding: '3px 0', paddingLeft: r.level * 14, cursor: 'pointer', fontWeight: r.level === 0 ? 700 : 400, whiteSpace: 'nowrap' }}><input type="checkbox" checked={!!graphSel[r.id]} onChange={() => set({ graphSel: { ...graphSel, [r.id]: !graphSel[r.id] } })} style={{ accentColor: accent }} /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span></label>)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
             {(report.cat === '仕訳日記帳' || report.cat === '元帳') && (
