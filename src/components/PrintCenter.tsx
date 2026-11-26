@@ -175,6 +175,8 @@ interface FlowPrefs {
   disp?: Record<string, boolean>;
   /** 科目別消費税区分別集計表：印刷する勘定科目・資金科目（true＝印刷する。初期は未選択。確認メモ #366） */
   acctSel?: Record<string, boolean>; fundSel?: Record<string, boolean>;
+  /** 基本条件のリストボックスで選んだもの（取引先内訳表の印刷科目。確認メモ #413） */
+  basicSel?: string[];
   /** 経年推移グラフ：グラフにする科目（キーは 部:行番号。未設定のときは各部の最上位の科目。確認メモ #406） */
   graphSel?: Record<string, boolean>;
 }
@@ -186,6 +188,8 @@ function formatSpecOf(r: ReportDef): FormatSpec | null {
   if (r.cat === '予算' && r.budget && !r.rangeSumOnly) return { widths: ['60', '25'], rows: ['name', 'amount', 'remark'] };
   // 科目別消費税区分別集計表（現行の「印刷書式」：科目名 81mm・金額 25mm、ＭＳ 明朝 9）
   if (r.id === 'x3') return { widths: ['81', '25'], rows: ['name', 'amount'] };
+  // 前年度同月対比表：［印刷書式］（確認メモ #409）
+  if (r.id === 'a7') return { widths: ['49', '22'], rows: ['name', 'amount'] };
   return null;
 }
 /** 捺印欄の欄の数：仕訳伝票（伝票式）は 5 欄、そのほかは 4 欄（確認メモ #322） */
@@ -226,6 +230,29 @@ const defaultPrefs = (r: ReportDef, fy: number, common: PrintCommon): FlowPrefs 
   checks: { check: false, red: false, blue: false, yellow: false, green: false },
   output: r.outs ? OUT_OF[r.outs[0]] : OUTPUTS[0], zeroHide: r.noZero ? false : r.zero ?? !!common.items.zero, title: r.title ?? r.name, detail: initDetail(r, common),
 });
+
+/** リストボックス（項目ごとにチェックを付けて複数選ぶ。全てON・全てOFF つき。確認メモ #405／#410／#413） */
+export function PickList({ label, options, value, onChange, rows = 8, disabled, accent }: { label?: string; options: string[]; value: string[]; onChange: (v: string[]) => void; rows?: number; disabled?: boolean; accent: string }) {
+  const put = (x: string[]) => onChange(options.filter((o) => x.includes(o)));
+  const n = options.filter((o) => value.includes(o)).length;
+  return (
+    <div data-pick-list style={{ display: 'grid', gap: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {label && <span style={{ fontSize: 12, fontWeight: 700, color: disabled ? '#b4bfca' : '#8290a0' }}>{label}</span>}
+        <span data-list-count style={{ fontSize: 12, color: '#8290a0' }}>{n} / {options.length} 件</span>
+        <span style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+          <button type="button" data-list-all-on disabled={disabled} onClick={() => put(options)} style={btn('#5b6773', false, true)}>全てON</button>
+          <button type="button" data-list-all-off disabled={disabled} onClick={() => put([])} style={btn('#5b6773', false, true)}>全てOFF</button>
+        </span>
+      </div>
+      <div role="listbox" aria-multiselectable aria-label={label} style={{ border: '1px solid #d5dde5', borderRadius: 8, maxHeight: rows * 27, overflowY: 'auto', padding: '2px 0', opacity: disabled ? 0.55 : 1, background: '#fff' }}>
+        {options.map((o) => { const on = value.includes(o); return (
+          <label key={o} role="option" aria-selected={on} style={{ display: 'flex', gap: 7, alignItems: 'center', fontSize: 14, padding: '3px 10px', cursor: disabled ? 'default' : 'pointer', background: on ? '#eef4fb' : undefined }}><input type="checkbox" checked={on} disabled={disabled} onChange={() => put(on ? value.filter((x) => x !== o) : [...value, o])} style={{ accentColor: accent }} />{o}</label>
+        ); })}
+      </div>
+    </div>
+  );
+}
 
 /** 詳細設定の項目（現行の画面の枠ごとに、チェック・ラジオ・選択・入力を描き分ける。確認メモ #238） */
 export function DetailSections({ sections, values, onChange, accent, labelOf, optionsOf, buttons, lead }: { /** 選択肢を画面で決める項目（区分の一覧など） */ optionsOf?: (it: DetailItem) => string[] | undefined; sections: DetailSection[]; values: Record<string, DetailValue>; onChange: (k: string, v: DetailValue) => void; accent: string; /** 起動中の区分などで文言を変える項目 */ labelOf?: (it: DetailItem) => string; /** 項目の右のボタン（「捺印欄を印刷する」の［捺印欄］など。確認メモ #310・#336・#341） */ buttons?: Record<string, DetailButton>; /** 「印刷項目」の枠の先頭に置くもの（0データを表示しない。確認メモ #335） */ lead?: ReactNode }) {
@@ -273,28 +300,11 @@ export function DetailSections({ sections, values, onChange, accent, labelOf, op
                   ); })()}
                 </div>
               );
-              if (it.t === 'list') {
-                // リストボックス：項目ごとにチェックを付けて複数選ぶ（確認メモ #405）
-                const chosen = String(v ?? '').split(LIST_SEP).filter(Boolean);
-                const put = (x: string[]) => onChange(it.k, it.options.filter((o) => x.includes(o)).join(LIST_SEP));
-                return (
-                <div key={it.k} data-detail-item={it.k} data-type="list" style={{ display: 'grid', gap: 4 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {!dup && head(it, dis)}
-                    <span data-list-count style={{ fontSize: 12, color: '#8290a0' }}>{chosen.length} / {it.options.length} 件</span>
-                    <span style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
-                      <button type="button" data-list-all-on disabled={dis} onClick={() => put(it.options)} style={btn('#5b6773', false, true)}>全てON</button>
-                      <button type="button" data-list-all-off disabled={dis} onClick={() => put([])} style={btn('#5b6773', false, true)}>全てOFF</button>
-                    </span>
-                  </div>
-                  <div role="listbox" aria-multiselectable aria-label={label(it)} style={{ border: '1px solid #d5dde5', borderRadius: 8, maxHeight: (it.rows ?? 8) * 27, overflowY: 'auto', padding: '2px 0', opacity: dis ? 0.55 : 1 }}>
-                    {it.options.map((o) => { const on = chosen.includes(o); return (
-                      <label key={o} role="option" aria-selected={on} style={{ display: 'flex', gap: 7, alignItems: 'center', fontSize: 14, padding: '3px 10px', cursor: dis ? 'default' : 'pointer', background: on ? '#eef4fb' : undefined }}><input type="checkbox" checked={on} disabled={dis} onChange={() => put(on ? chosen.filter((x) => x !== o) : [...chosen, o])} style={{ accentColor: accent }} />{o}</label>
-                    ); })}
-                  </div>
+              if (it.t === 'list') return (
+                <div key={it.k} data-detail-item={it.k} data-type="list">
+                  <PickList label={dup ? undefined : label(it)} options={it.options} value={String(v ?? '').split(LIST_SEP).filter(Boolean)} onChange={(x) => onChange(it.k, x.join(LIST_SEP))} rows={it.rows} disabled={dis} accent={accent} />
                 </div>
-                );
-              }
+              );
               if (it.t === 'select') return (
                 <label key={it.k} data-detail-item={it.k} data-type="select" style={{ display: 'grid', gap: 3 }}>
                   {!dup && head(it, dis)}
@@ -432,6 +442,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
     ['この帳票の詳細設定', `${report.noZero ? '' : `0データ：${p.zeroHide ? '表示しない' : '表示する'}／`}印刷項目 ${onCount} 件を有効${usesDepth(report) ? `／印刷範囲：${p.detail.depth}` : ''}${usesRemark(report) ? `／備考：${myUnit}${pr.unitRemarks[myUnit] ? '' : '（未入力）'}` : ''}`],
   ];
   if (report.acctPick) confirm.push(['印刷する科目', `勘定科目 ${picked(p.acctSel)} 件／資金科目 ${picked(p.fundSel)} 件`]);
+  if (report.basicList) confirm.push([report.basicList.label, `${(p.basicSel ?? report.basicList.def ?? []).length} 件`]);
   if (report.graphPick) confirm.push(['グラフにする科目', GRAPH_PARTS.map(({ key }) => `${key} ${GRAPH_TREES[key].filter((_, i) => graphSel[`${key}:${i}`]).length} 件`).join('／')]);
   if (report.common) confirm.push(['決算書 共通印刷設定', `${diff ? `${diff} 項目が共通の設定と異なる` : '共通の設定どおり'}／行の間隔 ${pr.lineGap}・${pr.fontName}`]);
 
@@ -491,6 +502,14 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
                   })}
                 </div>
                 <div style={{ fontSize: 12, color: noAcct ? '#b03a2e' : '#8290a0', marginTop: 4 }}>{noAcct ? '印刷する科目にチェックを付けてください。' : 'チェックを付けた科目を印刷します。'}科目の選択は、他の伝票入力区分と共有しています。</div>
+              </div>
+            )}
+            {/* 取引先内訳表：印刷科目のリストボックス（確認メモ #413） */}
+            {report.basicList && (
+              <div data-basic-list={report.basicList.k} style={{ maxWidth: 420 }}>
+                <span style={lbl}>{report.basicList.label}</span>
+                <PickList options={report.basicList.options} value={p.basicSel ?? report.basicList.def ?? []} onChange={(x) => set({ basicSel: x })} accent={accent} />
+                <div style={{ fontSize: 12, color: (p.basicSel ?? report.basicList.def ?? []).length ? '#8290a0' : '#b03a2e', marginTop: 4 }}>{(p.basicSel ?? report.basicList.def ?? []).length ? 'チェックを付けた科目を印刷します。' : '印刷する科目にチェックを付けてください。'}</div>
               </div>
             )}
             {/* 経年推移グラフ：資産・負債・事業・資金のリストボックスで、グラフにする科目を選ぶ（現行どおり。確認メモ #406） */}
@@ -615,7 +634,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
             {report.common && (
               <ScopeBlock kind="決算書共通" title="決算書 共通印刷設定から使う設定" desc="決算書の帳票に共通の設定です（ここでは確認のみ。変更は「決算書 共通印刷設定を開く」から）。">
                 <div data-common-summary style={{ display: 'flex', gap: '4px 16px', flexWrap: 'wrap', fontSize: 14, color: '#48565f' }}>
-                  <span>行の間隔：{pr.lineGap}{pr.lineGap === '空きなし' || pr.lineGap === '個別の設定を使う' ? '' : `（${pr.gapSize}）`}</span><span>位置調整：横 {pr.offsetX}mm／縦 {pr.offsetY}mm</span><span>印刷幅：科目 {pr.widthName}mm／金額 {pr.widthAmount}mm</span><span>フォント：{pr.fontHeader}／{pr.fontName}／{pr.fontAmount}</span><span>捺印欄の氏名：{pr.stamps.filter(Boolean).join('・') || '（なし）'}</span><span>ページ番号の開始：{pr.pageStart}</span>
+                  <span>行の間隔：{pr.lineGap}{pr.lineGap === '空きなし' ? '' : `（${pr.gapSize}）`}</span><span>位置調整：横 {pr.offsetX}mm／縦 {pr.offsetY}mm</span><span>印刷幅：科目 {pr.widthName}mm／金額 {pr.widthAmount}mm</span><span>フォント：{pr.fontHeader}／{pr.fontName}／{pr.fontAmount}</span><span>捺印欄の氏名：{pr.stamps.filter(Boolean).join('・') || '（なし）'}</span><span>ページ番号の開始：{pr.pageStart}</span>
                 </div>
               </ScopeBlock>
             )}
@@ -853,9 +872,9 @@ function FormSelectCard() {
 }
 
 /* 現行【共通の印刷設定】ダイアログ（マニュアル 7.1.2）と同じ並びにする */
-const COMMON_DEPTHS = ['大区分まで印刷', '中区分まで印刷', '小区分まで印刷', '細区分まで印刷', '細々区分まで印刷', '個別の設定を使う'];
-const COMMON_GAPS = ['上・下空き', '上のみ空き', '空きなし', '個別の設定を使う'];
-const KOBETSU = '個別の設定を使う';
+/** 印刷位置・行の間隔に「個別の設定を使う」は置かない（確認メモ #414／#415） */
+const COMMON_DEPTHS = ['大区分まで印刷', '中区分まで印刷', '小区分まで印刷', '細区分まで印刷', '細々区分まで印刷'];
+const COMMON_GAPS = ['上・下空き', '上のみ空き', '空きなし'];
 const FOOT_REPORTS = ['資金収支計算書（第一号第一様式）', '資金収支計算書（第一号第四様式）', '事業活動計算書', '貸借対照表'];
 const STD_FORMAT = { widthName: 60, widthAmount: 28, fontHeader: 'Noto Sans JP 11pt', fontHeaderItem: 'Noto Sans JP 9pt', fontName: 'Noto Sans JP 9pt', fontAmount: 'Noto Sans JP 9pt', fontRemark: 'Noto Sans JP 9pt' };
 type CommonFormat = typeof STD_FORMAT;
@@ -895,7 +914,8 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
   const [inner, setInner] = useState<InnerFormat | null>(null);
   const item = (k: string) => !!p.items[k];
   const setItem = (k: string, v: boolean) => set({ items: { ...p.items, [k]: v } });
-  const gapOff = p.lineGap === '空きなし' || p.lineGap === KOBETSU;
+  const gapNow = COMMON_GAPS.includes(p.lineGap) ? p.lineGap : '上・下空き';
+  const gapOff = gapNow === '空きなし';
   const note: CSSProperties = { fontSize: 12, color: '#8290a0', lineHeight: 1.6 };
   const small = (on: boolean): CSSProperties => ({ ...btn('#5b6773', false, true), opacity: on ? 1 : 0.45, cursor: on ? 'pointer' : 'default' });
   const inn = p.inner ?? DEFAULT_INNER_FORMAT;
@@ -909,7 +929,7 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
     </>}>
       <ToastView msg={toast.msg} />
       <div style={{ padding: '16px 22px 0' }}>
-        <Notice>仕訳日記帳・元帳・試算表・予算書など、決算書以外の帳票は、それぞれの詳細設定だけで印刷の内容を決めます。決算書の帳票も、帳票ごとに変えたい項目は詳細設定で変更できます。「個別の設定を使う」にした項目は、各帳票の詳細設定のとおりに印刷します。</Notice>
+        <Notice>仕訳日記帳・元帳・試算表・予算書など、決算書以外の帳票は、それぞれの詳細設定だけで印刷の内容を決めます。決算書の帳票も、帳票ごとに変えたい項目は詳細設定で変更できます。</Notice>
         {/* 中止・決定は説明文のすぐ下に置く */}
         <div data-common-actions style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginTop: 12 }}>
       {dirty && <span data-common-dirty style={{ fontSize: 12, fontWeight: 700, padding: '3px 8px', borderRadius: 8, background: '#fff7e6', color: '#8a5a00', alignSelf: 'center' }}>決定で変更内容を確定してください。</span>}
@@ -929,7 +949,7 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
           <div style={card} data-common-sec="行の間隔">
             <div style={cardHead}>行の間隔</div>
             <div style={{ padding: 14, display: 'grid', gap: 10 }}>
-              <RadioRow name="行の間隔" options={COMMON_GAPS} value={p.lineGap} onChange={(v) => set({ lineGap: v })} accent={accent} />
+              <RadioRow name="行の間隔" options={COMMON_GAPS} value={gapNow} onChange={(v) => set({ lineGap: v })} accent={accent} />
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: gapOff ? '#9aa5b1' : '#22303c' }}>空きの間隔
                 <select value={p.gapSize} onChange={(e) => set({ gapSize: e.target.value })} disabled={gapOff} style={{ ...input, width: 120 }}>{['1mm', '2mm', '3mm', '4mm'].map((o) => <option key={o}>{o}</option>)}</select>
                 <span style={note}>上・下空き／上のみ空きのとき選べます</span>
