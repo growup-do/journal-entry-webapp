@@ -8,16 +8,17 @@
 //     小区分は 計算書類に対する注記／附属明細書（別紙3）／財産目録。表示条件（帳票選択・就労支援・授産）を満たさない別紙は一覧に出さない。
 //     ⑩⑪ は共通印刷設定＝有（印刷の詳細設定に「共通の印刷設定を反映」を置く）。
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { runExport } from './ExportDialog';
 import { Modal } from './Modal';
 import { PreviewModal, PrintFlow, type ReportDef, type TableData } from './PrintCenter';
 import { appendixSpec, formCond, formEnabled } from './printCatalog';
 import { ImportExportButton, ImportExportDialog } from './ImportExportDialog';
+import { NOTE_TABLE_DEFS, NoteTablePickDialog, NoteTablesDialog, noteMarker, type NoteTables } from './NoteTables';
 import { NUM, TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
-import { Field, Notice, SettingsShell, Tabs, Toggle, btn, card, cardHead, input, numInput, toInt, yen } from './ui';
+import { Field, HelpTip, Notice, SettingsShell, Tabs, Toggle, btn, card, cardHead, input, numInput, toInt, yen } from './ui';
 import { SERVICES, displayName } from '../data';
 import { useSession, type Session } from '../store/session';
 
@@ -108,9 +109,11 @@ const NOTE_DEFAULT = `1. 継続事業の前提に関する注記
 　独立行政法人福祉医療機構の社会福祉施設職員等退職手当共済制度を採用している。
 5. 法人が作成する計算書類と拠点区分、サービス区分
 　当法人の作成する計算書類は以下のとおりになっている。
-[表]
+（1）法人全体の計算書類（会計基準省令第1号第1様式、第2号第1様式、第3号第1様式）
+（2）事業区分別内訳表（会計基準省令第1号第2様式、第2号第2様式、第3号第2様式）
 6. 基本財産の増減の内容及び金額
-[表]`;
+　基本財産の増減の内容及び金額は以下のとおりである。
+@@表1@@`;
 const NOTE_BASE_DEFAULT = `1. 重要な会計方針
 （1）固定資産の減価償却の方法　建物・器具及び備品：定額法
 （2）引当金の計上基準　賞与引当金：支給見込額のうち当期に帰属する額を計上。
@@ -119,16 +122,23 @@ const NOTE_BASE_DEFAULT = `1. 重要な会計方針
 3. 採用する退職給付制度
 　社会福祉施設職員等退職手当共済制度を採用している。
 4. 拠点が作成する計算書類とサービス区分
-[表]
+　チャイルド保育園拠点の計算書類は、保育事業・一時預かり・子育て支援のサービス区分ごとに作成している。
 5. 基本財産の増減の内容及び金額
-[表]`;
+　基本財産の増減の内容及び金額は以下のとおりである。
+@@表1@@`;
+/** 注記の表の初期値（表1.基本財産の増減。金額は会計データから集計する） */
+const NOTE_TABLES_DEFAULT = (): NoteTables => {
+  const amt = (accts: string[], amtKind: string) => ({ accts, amtKind, minus: false, add: '0' });
+  const row = (label: string, a: string[]) => ({ kind: '通常行' as const, label, amounts: [amt(a, '前年度決算額'), amt(a, '増加'), amt(a, '減少'), amt(a, '当年度決算額')] });
+  return { 1: [row('土地', ['土地']), row('建物', ['建物']), { kind: '合計行', label: '合計' }] };
+};
 
 const downloadJson = (name: string, obj: unknown) => {
   const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
 };
 /** 「保存」で確定する編集内容（キャンセルで戻す対象）。印刷書式はダイアログの OK で確定するので含めない */
-interface Draft { rows: Record<string, string[][]>; notes: Record<string, string>; inv: Record<string, string[][]>; merge: { code: string; name: string; formula: string }[]; perPage: number }
+interface Draft { rows: Record<string, string[][]>; notes: Record<string, string>; /** 注記の表（注記ごと・表ごと。確認メモ #390） */ tables: Record<string, NoteTables>; inv: Record<string, string[][]>; merge: { code: string; name: string; formula: string }[]; perPage: number }
 const cloneDraft = (d: Draft): Draft => JSON.parse(JSON.stringify(d));
 const stamp = () => { const d = new Date(); return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`; };
 
@@ -155,19 +165,34 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
   const [perPage, setPerPage] = useState(6);
   const [fmtOpen, setFmtOpen] = useState(false);
   const [fmt, setFmt] = useState({ orient: '縦', font: 'Noto Sans JP 9pt', shade: true, corp: true, page: true });
-  const [tableOpen, setTableOpen] = useState(false);
+  // 注記の表（確認メモ #390）：pickOpen＝挿入する表の選択画面、tablesOpen＝注記表 設定画面（開く表の番号）
+  const [tables, setTables] = useState<Record<string, NoteTables>>(() => ({ 'note-corp': NOTE_TABLES_DEFAULT(), 'note-base': NOTE_TABLES_DEFAULT() }));
+  const [pickOpen, setPickOpen] = useState(false);
+  const [tablesOpen, setTablesOpen] = useState<number | null>(null);
+  const noteRef = useRef<HTMLTextAreaElement>(null);
   const [load, setLoad] = useState<'inv' | 'note' | null>(null);
   const [ask, setAsk] = useState<{ msg: string; ok: string; run: () => void } | null>(null);
   const [preview, setPreview] = useState<{ title: string; opts: { from: string; to: string; output: string; hideZero?: boolean } } | null>(null);
   /** 最後に保存した内容。「保存」で更新し、「キャンセル」でここへ戻す */
-  const draft: Draft = { rows, notes, inv, merge, perPage };
+  const draft: Draft = { rows, notes, tables, inv, merge, perPage };
   const [saved, setSaved] = useState<Draft>(() => cloneDraft(draft));
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const saveAll = () => { setSaved(cloneDraft(draft)); toast.show('別紙の内容を保存しました'); };
-  const restoreSaved = () => { const d = cloneDraft(saved); setRows(d.rows); setNotes(d.notes); setInv(d.inv); setMerge(d.merge); setPerPage(d.perPage); setInvSel(null); toast.show('変更を破棄し、最後に保存した内容に戻しました'); };
+  const restoreSaved = () => { const d = cloneDraft(saved); setRows(d.rows); setNotes(d.notes); setTables(d.tables); setInv(d.inv); setMerge(d.merge); setPerPage(d.perPage); setInvSel(null); toast.show('変更を破棄し、最後に保存した内容に戻しました'); };
   const cancelAll = () => { if (!dirty) { toast.show('保存していない変更はありません'); return; } setAsk({ msg: '保存していない変更（注記・明細・財産目録の行設定・合算テーブル）を破棄して、最後に保存した内容に戻しますか？', ok: '変更を破棄', run: restoreSaved }); };
 
   const sheet = SHEETS.find((x) => x.id === cur && shown(x)) ?? SHEETS.find(shown) ?? SHEETS[0];
+  /** 本文のカーソル位置に表の目印を入れる（行の途中なら前後で改行する） */
+  const insertTable = (no: number) => {
+    const ta = noteRef.current; const text = notes[sheet.id] ?? '';
+    const at = ta ? ta.selectionStart : text.length;
+    const before = text.slice(0, at), after = text.slice(at);
+    const mark = (before && !before.endsWith('\n') ? '\n' : '') + noteMarker(no) + (after && !after.startsWith('\n') ? '\n' : '');
+    setNotes({ ...notes, [sheet.id]: before + mark + after });
+    setPickOpen(false);
+    toast.show(`表${no}.${NOTE_TABLE_DEFS[no - 1].name} の目印を本文に入れました`);
+    requestAnimationFrame(() => { if (ta) { ta.focus(); const p = before.length + mark.length; ta.setSelectionRange(p, p); } });
+  };
   const def = DETAILS[sheet.id];
   const myRows = rows[sheet.id] ?? [];
   const invRows = inv[invTab] ?? [];
@@ -192,7 +217,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
       const assets = invAmount(INVENTORY_TABS.slice(0, 3)), debts = invAmount(INVENTORY_TABS.slice(3));
       return { header: ['区分', '貸借対照表科目', '場所・物量等', '金額'], rows: [...INVENTORY_TABS.flatMap((t) => (inv[t] ?? []).map((r): (string | number)[] => [t, r[0], r[1], toInt(r[2] ?? '')])), ['資産合計', '', '', assets], ['負債合計', '', '', debts], ['差引純資産', '', '', assets - debts]] };
     }
-    if (x.editor === 'note') return { header: [x.name], rows: (notes[x.id] ?? '').split('\n').map((l) => [l]) };
+    if (x.editor === 'note') return { header: [x.name], rows: (notes[x.id] ?? '').split('\n').map((l) => [l.replace(/@@表(\d)@@/g, (_, n) => `［表${n}.${NOTE_TABLE_DEFS[Number(n) - 1]?.name ?? ''}］`)]) };
     return undefined;
   };
   // 詳細設定は現行の各明細書の画面に合わせる（確認メモ #238）
@@ -204,7 +229,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
   /* ---- 設定ファイル（財産目録の行設定／注記） ---- */
   const saveFile = (kind: 'inv' | 'note') => {
     if (kind === 'inv') { downloadJson(`財産目録行設定_${stamp()}.json`, { type: 'chappy-inventory', savedAt: new Date().toISOString(), rows: inv }); toast.show('財産目録の行設定を保存しました'); }
-    else { downloadJson(`注記_${stamp()}.json`, { type: 'chappy-note', savedAt: new Date().toISOString(), noteKind: sheet.name, note: notes[sheet.id] ?? '' }); toast.show('注記および表を保存しました'); }
+    else { downloadJson(`注記_${stamp()}.json`, { type: 'chappy-note', savedAt: new Date().toISOString(), noteKind: sheet.name, note: notes[sheet.id] ?? '', tables: tables[sheet.id] ?? {} }); toast.show('注記および表を保存しました'); }
   };
   const applyLoaded = (obj: unknown, label: string) => {
     const o = (obj ?? {}) as Record<string, unknown>;
@@ -217,6 +242,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
     } else {
       if (typeof o.note !== 'string') return toast.show('注記の設定ファイルではありません');
       setNotes((n) => ({ ...n, [sheet.id]: o.note as string }));
+      if (o.tables && typeof o.tables === 'object') setTables((t) => ({ ...t, [sheet.id]: o.tables as NoteTables }));
       toast.show(`${label} から注記および表を読み込みました`);
     }
     setLoad(null);
@@ -313,13 +339,13 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
               {sheet.editor === 'note' && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 200px', gap: 14, alignItems: 'start' }}>
                   <div style={{ display: 'grid', gap: 8 }}>
-                    <textarea aria-label={`${sheet.name}の本文`} value={notes[sheet.id] ?? ''} onChange={(e) => setNotes({ ...notes, [sheet.id]: e.target.value })} rows={18} style={{ ...input, resize: 'vertical', lineHeight: 1.8, fontSize: 14 }} />
-                    <div style={{ fontSize: 12, color: '#9aa5b1', lineHeight: 1.6 }}>[表] の位置に、「表挿入」で作成した表が入ります。法人全体用と拠点区分用は別々に保存します。</div>
+                    <textarea ref={noteRef} data-note-text aria-label={`${sheet.name}の本文`} value={notes[sheet.id] ?? ''} onChange={(e) => setNotes({ ...notes, [sheet.id]: e.target.value })} rows={18} style={{ ...input, resize: 'vertical', lineHeight: 1.8, fontSize: 14 }} />
                   </div>
                   <div style={{ display: 'grid', gap: 6 }}>
-                    <button type="button" onClick={() => setTableOpen(true)} style={btn(accent)}>表挿入</button>
-                    <button type="button" onClick={() => setTableOpen(true)} style={btn()}>表編集</button>
-                    <button type="button" onClick={() => setAsk({ msg: `${sheet.name} の本文と表を既定の内容に戻しますか？`, ok: '既定に戻す', run: () => setNotes((n) => ({ ...n, [sheet.id]: sheet.id === 'note-base' ? NOTE_BASE_DEFAULT : NOTE_DEFAULT })) })} style={btn()}>既定の設定に戻す</button>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, fontSize: 12, color: '#8290a0' }}>注記の表<HelpTip text={['［表挿入］で選んだ表の目印（例 @@表1@@）を、本文のカーソルの位置に入れます', '表の中身は［表編集］で作り、目印の位置に印刷します', '法人全体用と拠点区分用は、本文も表も別々に保存します']} /></div>
+                    <button type="button" data-note-insert onClick={() => setPickOpen(true)} style={btn(accent)}>表挿入</button>
+                    <button type="button" data-note-edit onClick={() => { const m = (notes[sheet.id] ?? '').match(/@@表(\d)@@/); setTablesOpen(m ? Number(m[1]) : 1); }} style={btn()}>表編集</button>
+                    <button type="button" onClick={() => setAsk({ msg: `${sheet.name} の本文と表を既定の内容に戻しますか？`, ok: '既定に戻す', run: () => { setNotes((n) => ({ ...n, [sheet.id]: sheet.id === 'note-base' ? NOTE_BASE_DEFAULT : NOTE_DEFAULT })); setTables((t) => ({ ...t, [sheet.id]: NOTE_TABLES_DEFAULT() })); } })} style={btn()}>既定の設定に戻す</button>
                     <button type="button" data-import-export-btn="注記" onClick={() => setLoad('note')} style={btn()}>インポート／エクスポート</button>
                     <button type="button" onClick={() => setMode('印刷')} style={{ ...btn(accent, true), marginTop: 8 }}>印刷へ進む</button>
                   </div>
@@ -418,13 +444,9 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
       <Modal open={!!ask} onClose={() => setAsk(null)} width={440} title="確認" strict>
         {ask && <div style={{ padding: '16px 22px 18px', display: 'grid', gap: 14 }}><div style={{ fontSize: 14, lineHeight: 1.8 }}>{ask.msg}</div><div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setAsk(null)} style={btn()}>キャンセル</button><button type="button" onClick={() => { ask.run(); setAsk(null); }} style={btn('#c0392b', true)}>{ask.ok}</button></div></div>}
       </Modal>
-      {/* 注記の表 */}
-      <Modal open={tableOpen} onClose={() => setTableOpen(false)} width={640} title="表の挿入／編集">
-        <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 10 }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}><thead><tr>{['拠点区分', 'サービス区分', '資金収支計算書', '事業活動計算書', '貸借対照表'].map((h) => <th key={h} style={TH}>{h}</th>)}</tr></thead><tbody>{[['本部', '本部', '○', '○', '○'], ['チャイルド保育園', '保育事業／一時預かり', '○', '○', '○'], ['チャイルド保育園', '子育て支援', '○', '○', '○']].map((r, i) => <tr key={i}>{r.map((c, k) => <td key={k} style={TD}><input className="field-input" defaultValue={c} style={{ ...input, padding: '4px 8px', fontSize: 14 }} /></td>)}</tr>)}</tbody></table>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setTableOpen(false)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { setTableOpen(false); toast.show('表を注記に挿入しました'); }} style={btn(accent, true)}>OK</button></div>
-        </div>
-      </Modal>
+      {/* 注記の表：挿入する表の選択画面／注記表 設定画面（確認メモ #390） */}
+      {pickOpen && <NoteTablePickDialog accent={accent} onCancel={() => setPickOpen(false)} onPick={insertTable} />}
+      {tablesOpen != null && <NoteTablesDialog value={tables[sheet.id] ?? {}} initial={tablesOpen} accent={accent} onCancel={() => setTablesOpen(null)} onOk={(v) => { setTables({ ...tables, [sheet.id]: v }); setTablesOpen(null); toast.show('注記の表を設定しました'); }} />}
       {/* 財産目録の行設定／注記のインポート／エクスポート（確認事項「インポート・エクスポート処理の統一」） */}
       <ImportExportDialog open={!!load} onClose={() => setLoad(null)} name={load === 'inv' ? '財産目録の行設定' : sheet.name} accent={accent} format="JSON"
         exportDesc="いまの内容を設定ファイルに書き出します。"
