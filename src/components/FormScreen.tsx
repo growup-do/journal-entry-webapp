@@ -1,5 +1,5 @@
 // 画面の骨組み（フォーム型）
-// 左にメニュー列（折りたたみ可）＋ 本文列（上部に薄いアプリバー〔区分・年度／調査・印刷／各種設定／ユーザー〕、中央に各画面、下にフッター）。
+// 上部に画面の幅いっぱいのアプリバー〔ロゴ・システム名・バージョン／区分・年度／調査・印刷／各種設定／ユーザー〕、その下に 左のメニュー列（名前付き／アイコンだけ／表示しない）＋ 本文列（中央に各画面、下にフッター）。
 // 伝票入力の参照パネル・試算表などの元帳パネルは本文の右に重ねて表示する（本文を押し出さない）。1600×768 の画面で使う人が多いための構成（11/10）。
 // アクセント = 緑 #1f7a52。
 //   伝票入力（仕訳伝票形式）：借方・貸方の科目は伝票につき1組、その下に 摘要・取引先・金額 の行を複数入力する（依頼書 5.3.1）。
@@ -23,7 +23,7 @@ import { HeaderTools } from './HeaderTools';
 import { UserMenu } from './UserMenu';
 import { NoticeBell } from './NoticeBell';
 import { SettingsMenu } from './SettingsMenu';
-import { SideNav, useSideNav } from './SideNav';
+import { AppBrand, MenuDrawer, SideNav, useSideNav } from './SideNav';
 import { renderPage } from './pages';
 import { Footer } from './Footer';
 import { HelpTip } from './ui';
@@ -56,6 +56,8 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
   const [topOffset, setTopOffset] = useState(52);
   const headerRef = useRef<HTMLDivElement>(null);
   const nav = useSideNav();
+  /** サイドバーを表示しないとき、≡ から開くメニュー */
+  const [drawer, setDrawer] = useState(false);
   // 参照パネルが本文を押し出している間は、左メニューを自動でたたむ（確認メモ #243）。その間にメニューのボタンで広げることもできる（保存した開閉の状態は変えない）
   const pushing = usePanelPushing();
   const [navOverride, setNavOverride] = useState<boolean | null>(null);
@@ -119,14 +121,9 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
 
   return (
     <BackNavContext.Provider value={backValue}>
-    <div style={{ minHeight: 'calc(100vh / var(--app-zoom, 1))', display: 'flex', alignItems: 'stretch' }}>
-      {/* 左：メニュー列（画面の高さに固定。折りたたみ可） */}
-      <SideNav accent={GREEN} active={page} onSelect={menuNav} collapsed={navCollapsed} onToggle={navToggle} />
-
-      {/* 右：本文列 */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        {/* アプリバー＋年度帯：上部に固定（スクロールしない） */}
-        <div ref={headerRef} data-app-top style={{ position: 'sticky', top: 0, zIndex: 100 }}>
+    <div style={{ minHeight: 'calc(100vh / var(--app-zoom, 1))', display: 'flex', flexDirection: 'column' }}>
+        {/* アプリバー＋年度帯：画面の幅いっぱい・上部に固定（スクロールしない）。ロゴとシステム名も同じ帯に置き、名前を省略せずに出す */}
+        <div ref={headerRef} data-app-top style={{ position: 'sticky', top: 0, zIndex: 102 }}>
           <header
             style={{
               background: '#fff',
@@ -139,10 +136,12 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
               flexWrap: 'wrap',
               rowGap: 6,
               columnGap: 12,
-              padding: '6px 20px',
+              padding: '6px 20px 6px 16px',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: '1 1 auto', maxWidth: '100%' }}>
+              <AppBrand accent={GREEN} onSelect={menuNav} onMenu={nav.hidden ? () => setDrawer((o) => !o) : undefined} menuOpen={drawer} />
+              <span aria-hidden style={{ width: 1, height: 26, background: '#e2e8ee', flex: 'none' }} />
               {/* 画面内のリンクで移ってきたときの戻るボタン（画面の枠に戻るの帯がある画面では出さない） */}
               {backFrom && claimed <= 0 && <BackButton from={backFrom} onBack={goBack} accent={GREEN} />}
               <DivisionPicker accent={GREEN} />
@@ -157,9 +156,17 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
           <FiscalYearBanner />
         </div>
 
-        {body}
-        <Footer />
+      <div style={{ flex: 1, display: 'flex', alignItems: 'stretch' }}>
+        {/* 左：メニュー列（ヘッダーの下に固定。名前付き／アイコンだけ。表示しない設定のときは出さない） */}
+        {!nav.hidden && <SideNav accent={GREEN} active={page} onSelect={menuNav} collapsed={navCollapsed} onToggle={navToggle} top={topOffset} />}
+
+        {/* 右：本文列 */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+          {body}
+          <Footer />
+        </div>
       </div>
+      {nav.hidden && <MenuDrawer open={drawer} onClose={() => setDrawer(false)} accent={GREEN} active={page} onSelect={menuNav} />}
     </div>
     </BackNavContext.Provider>
   );

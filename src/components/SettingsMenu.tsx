@@ -11,6 +11,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { SETTINGS_GROUPS, SETTINGS_MENU, settingsMenuName, type SettingsGroup } from '../data';
 import { startKindOf, useSession } from '../store/session';
 import { HomeOptionsModal } from './HomeOptionsModal';
+import { MenuDisplayModal } from './MenuDisplayModal';
 
 interface Props {
   accent: string;
@@ -26,6 +27,7 @@ export function SettingsMenu({ accent, active, onNavigate }: Props) {
   const [open, setOpen] = useState(false);
   // ダッシュボード表示オプション（確認メモ #152）：ホームの右上から、各種設定へ移した。画面ではなくモーダルで開く
   const [homeOpt, setHomeOpt] = useState(false);
+  const [menuDisp, setMenuDisp] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const session = useSession();
   const kind = startKindOf(session);
@@ -61,6 +63,12 @@ export function SettingsMenu({ accent, active, onNavigate }: Props) {
   const homeOptItem = (
     <button key="ダッシュボード表示オプション" type="button" className="menu-sub" data-menu="ダッシュボード表示オプション" onClick={() => { setOpen(false); setHomeOpt(true); }} style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', textAlign: 'left', padding: '7px 10px', border: 'none', background: 'transparent', borderRadius: 7, fontSize: 14, fontFamily: 'inherit', color: '#22303c', fontWeight: 500, cursor: 'pointer' }}>
       <span style={{ flex: 1 }}>ダッシュボード表示オプション</span>
+    </button>
+  );
+  // 左のメニュー（サイドバー）の出し方：名前付き／アイコンだけ／表示しない（11/26）
+  const menuDispItem = (
+    <button key="メニューボタン表示設定" type="button" className="menu-sub" data-menu="メニューボタン表示設定" onClick={() => { setOpen(false); setMenuDisp(true); }} style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', textAlign: 'left', padding: '7px 10px', border: 'none', background: 'transparent', borderRadius: 7, fontSize: 14, fontFamily: 'inherit', color: '#22303c', fontWeight: 500, cursor: 'pointer' }}>
+      <span style={{ flex: 1 }}>メニューボタン表示設定</span>
     </button>
   );
   const group = (g: SettingsGroup, extra?: ReactNode) => (
@@ -108,7 +116,7 @@ export function SettingsMenu({ accent, active, onNavigate }: Props) {
               {group(by('master'))}
               {group(by('register'))}
             </div>
-            {group(by('config'), homeOptItem)}
+            {group(by('config'), <>{homeOptItem}{menuDispItem}</>)}
             <div style={{ display: 'grid', gap: 12 }}>
               {group(by('maint'))}
               {group(by('update'))}
@@ -117,6 +125,7 @@ export function SettingsMenu({ accent, active, onNavigate }: Props) {
         </div>
       )}
       <HomeOptionsModal open={homeOpt} onClose={() => setHomeOpt(false)} accent={accent} />
+      <MenuDisplayModal open={menuDisp} onClose={() => setMenuDisp(false)} accent={accent} />
     </div>
   );
 }
