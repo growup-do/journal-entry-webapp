@@ -89,8 +89,9 @@ export function PrintSteps({ accent, basic, detail, detailSummary, dest, onDest,
         {showTab === '詳細設定' && detail}
       </div>
 
-      {/* ボタンは画面の下に固定し、スクロールしなくても［印刷］を押せるようにする */}
-      <div data-print-foot style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 18px 14px', flexWrap: 'wrap', position: 'sticky', bottom: 'var(--print-foot-bottom, 0px)', zIndex: 2, background: '#fff', borderTop: '1px solid #e8edf2', borderRadius: '0 0 12px 12px' }}>
+      {/* ボタンは画面の下に固定し、スクロールしなくても［印刷］を押せるようにする。
+          ページで開くときは、親が --print-foot-bottom（確認バーの高さ）と --print-foot-radius（カードの角）を渡す。モーダルでは下端にそろえる */}
+      <div data-print-foot style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 18px 14px', flexWrap: 'wrap', position: 'sticky', bottom: 'var(--print-foot-bottom, 0px)', zIndex: 2, background: '#fff', borderTop: '1px solid #e8edf2', borderRadius: 'var(--print-foot-radius, 0)' }}>
         {onClose && <button type="button" onClick={onClose} style={btn()}>キャンセル</button>}
         <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }} title={blocked}>
           {onPreview && <button type="button" className="btn-outline" data-print-preview disabled={!!blocked} onClick={onPreview} style={{ ...btn(accent), opacity: blocked ? 0.5 : 1 }}>プレビュー</button>}

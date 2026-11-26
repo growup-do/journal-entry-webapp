@@ -332,7 +332,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
 
           {mode === '印刷' && canPrint ? (
             <div style={{ padding: '14px 22px 22px' }}>
-              <div style={{ ...card, overflow: 'visible' }}>
+              <div style={{ ...card, overflow: 'visible', ['--print-foot-bottom' as string]: 'var(--proto-dock-space, 0px)', ['--print-foot-radius' as string]: '0 0 12px 12px' }}>
                 <PrintFlow key={sheet.id} report={reportOf(sheet)} accent={accent} data={tableOf(sheet)} onPreview={(title, opts) => setPreview({ title, opts })} />
               </div>
             </div>

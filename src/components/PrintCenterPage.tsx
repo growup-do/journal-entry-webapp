@@ -119,7 +119,7 @@ export function PrintCenterPage({ variant, accent, onNavigate, initialCat }: { v
                     <div><button type="button" className="submit-btn" onClick={() => setWamnet(WAMNET_ITEMS.find((w) => w.name === cur.name) ?? null)} style={btn(accent, true)}>{cur.name}を開く</button></div>
                   </div>
                 ) : (
-                  <div style={{ ...card, overflow: 'visible' }}>
+                  <div style={{ ...card, overflow: 'visible', ['--print-foot-bottom' as string]: 'var(--proto-dock-space, 0px)', ['--print-foot-radius' as string]: '0 0 12px 12px' }}>
                     <PrintFlow key={cur.id} report={cur} accent={accent} onPreview={(title, opts) => setPreview({ title, opts })} />
                   </div>
                 )}

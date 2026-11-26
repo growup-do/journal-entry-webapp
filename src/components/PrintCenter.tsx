@@ -437,7 +437,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
 
   return (
     // 画面の中に置くので、下に固定するボタンはプロトタイプの確認バーの上に出す
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, ['--print-foot-bottom' as string]: 'var(--proto-dock-space, 0px)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       <ToastView msg={toast.msg} />
       <PrintSteps
         accent={accent}
