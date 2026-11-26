@@ -64,6 +64,8 @@ interface Row {
   special?: '小計行' | '改ページ' | '締切線' | '摘要行';
   aggregated?: boolean;
   imported?: boolean;
+  /** 取込の単位（インポート伝票一括削除の「コメント（取込単位）」に出す名前） */
+  impUnit?: string;
   /** 会計連動で仕訳伝票を作成済み */
   linked?: boolean;
   /** 集計時に指定した伝票日付（'M/D'）。未指定のときは明細の日付で仕訳伝票を作る */
@@ -99,12 +101,20 @@ const PETTY_SEED: Row[] = [
   R('8', '29', 'インク代', '消耗器具備品費', 0, 4864),
   R('8', '30', 'FAX代', '通信運搬費', 0, 6303),
 ];
+/** 銀行CSV取込の単位（取り込んだ日時とファイル名） */
+const BANK_IMPORT_UNITS = ['銀行CSV取込　令和8年8月10日 9:12　普通預金_202608前半.csv', '銀行CSV取込　令和8年8月24日 14:30　普通預金_202608後半.csv'];
 const BANK_SEED: Row[] = [
   R('8', '5', '払い出し－当座へ', '当座預金（保育園）', 0, 500000),
   R('8', '5', '電話料金', '通信運搬費', 0, 8936),
   R('8', '19', '委託費－８月分', '委託費収益', 2732430, 0),
   R('8', '19', '職員俸給', '職員俸給', 0, 1502512),
-];
+  // 銀行CSVから取り込んだ明細（取込の単位は2つ。インポート伝票一括削除で単位ごとに削除できる）
+  R('8', '3', '（CSV）ﾌﾘｺﾐ ｼﾞﾖｳｹﾞｽｲﾄﾞｳ', '水道光熱費（事業）', 0, 48620, { imported: true, impUnit: BANK_IMPORT_UNITS[0] }),
+  R('8', '7', '（CSV）ﾃｽｳﾘﾖｳ', '手数料', 0, 440, { imported: true, impUnit: BANK_IMPORT_UNITS[0] }),
+  R('8', '9', '（CSV）ﾌﾘｺﾐ ﾏﾙﾏﾙｼﾖｳｼﾞ', '保育材料費', 0, 23100, { imported: true, impUnit: BANK_IMPORT_UNITS[0] }),
+  R('8', '22', '（CSV）ﾌﾘｺﾐ ｼｸﾞﾏﾘｰｽ', '賃借料（事業）', 0, 18216, { imported: true, impUnit: BANK_IMPORT_UNITS[1] }),
+  R('8', '24', '（CSV）ﾃｽｳﾘﾖｳ', '手数料', 0, 660, { imported: true, impUnit: BANK_IMPORT_UNITS[1] }),
+].sort((a, b) => Number(a.month) - Number(b.month) || Number(a.day) - Number(b.day));
 const BANK_ACCOUNTS = ['普通預金（本部）', '普通預金（保育園）', '当座預金（保育園）', '定期預金'];
 /** 預金出納：はじめから出納帳のある預金科目（残りは「区分の切替」の「＋出納帳追加」で追加する。確認メモ #215） */
 const BANK_BOOKS_SEED = ['普通預金（保育園）', '普通預金（本部）'];
@@ -587,21 +597,24 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
     toast.show(`${ids.size} 件の集計を取り消しました（訂正・削除・行の挿入ができます）`);
   };
   const importCsv = () => {
+    const now = new Date();
+    const unit = `銀行CSV取込　令和8年${now.getMonth() + 1}月${now.getDate()}日 ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}　普通預金_明細.csv`;
     const imp: Row[] = [
-      R('8', '20', '（CSV）ﾌﾘｺﾐ ｼｸﾞﾏﾘｰｽ', '賃借料（事業）', 0, 18216, { imported: true }),
-      R('8', '25', '（CSV）ﾌﾘｺﾐ NTT', '通信運搬費', 0, 8936, { imported: true }),
-      R('8', '28', '（CSV）ｲﾀｸﾋ ｼﾔｸｼｮ', '委託費収益', 662400, 0, { imported: true }),
+      R('8', '25', '（CSV）ﾌﾘｺﾐ NTT', '通信運搬費', 0, 8936, { imported: true, impUnit: unit }),
+      R('8', '28', '（CSV）ｲﾀｸﾋ ｼﾔｸｼｮ', '委託費収益', 662400, 0, { imported: true, impUnit: unit }),
+      R('8', '29', '（CSV）ﾃｽｳﾘﾖｳ', '手数料', 0, 440, { imported: true, impUnit: unit }),
     ];
     setRows((rs) => [...rs, ...imp]);
     setCsvOpen(false);
     toast.show(`CSVから ${imp.length} 件を取り込みました（勘定科目は摘要から自動判定・要確認）`);
   };
-  const bulkDelete = () => {
-    const n = rows.filter((r) => r.imported).length;
-    setRows((rs) => rs.filter((r) => !r.imported));
-    setBulkOpen(false);
-    toast.show(`インポート伝票 ${n} 件を一括削除しました`);
+  /** 取込の単位（コメント）ごとに、取り込んだ明細をまとめて削除する */
+  const bulkDelete = (unit: string) => {
+    const n = rows.filter((r) => r.imported && (r.impUnit ?? '銀行CSV取込') === unit).length;
+    setRows((rs) => rs.filter((r) => !(r.imported && (r.impUnit ?? '銀行CSV取込') === unit)));
+    toast.show(`インポート伝票 ${n} 件を一括削除しました（${unit.split('　').slice(0, 2).join(' ')}）`);
   };
+  const importUnits = Array.from(new Set(rows.filter((r) => r.imported && !r.ai).map((r) => r.impUnit ?? '銀行CSV取込')));
 
   // ---- 会計連動：集計済み（未連動）の明細を仕訳伝票にする。翌年度の予備月の明細は、翌年度の伝票になるため対象にしない ----
   const cashAccount = isPetty ? '小口現金' : book; // 出納帳の相手科目
@@ -1163,11 +1176,16 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
         <div style={{ padding: '14px 22px 20px' }}>
           <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, minHeight: 160, maxHeight: 260, overflow: 'auto' }}>
             <div style={{ padding: '8px 12px', background: '#f6f8fa', fontSize: 12, fontWeight: 700, color: '#8290a0', borderBottom: '1px solid #eef2f5' }}>コメント（取込単位）</div>
-            {rows.some((r) => r.imported) ? (
-              <div onDoubleClick={(e) => { if (e.shiftKey) bulkDelete(); else toast.show('[Shift] キーを押しながらダブルクリックしてください'); }} title="Shift + ダブルクリックで一括削除" style={{ padding: '10px 12px', fontSize: 14, cursor: 'pointer' }}>
-                銀行CSV取込　{rows.filter((r) => r.imported).length} 件　（{book}）
-              </div>
-            ) : (
+            {importUnits.length ? importUnits.map((u) => {
+              const list = rows.filter((r) => r.imported && (r.impUnit ?? '銀行CSV取込') === u);
+              const days = list.map((r) => `${r.month}/${r.day}`);
+              return (
+                <div key={u} data-import-unit={u} onDoubleClick={(e) => { if (e.shiftKey) bulkDelete(u); else toast.show('[Shift] キーを押しながらダブルクリックしてください'); }} style={{ padding: '9px 12px', fontSize: 14, cursor: 'pointer', borderBottom: '1px solid #f1f4f6', userSelect: 'none' }}>
+                  <div style={{ fontWeight: 700 }}>{u}</div>
+                  <div style={{ fontSize: 12, color: '#7a8794', marginTop: 2 }}>{list.length} 件　{days[0]}〜{days[days.length - 1]}　出金 {list.reduce((a, r) => a + r.outAmt, 0).toLocaleString('ja-JP')}　入金 {list.reduce((a, r) => a + r.inAmt, 0).toLocaleString('ja-JP')}　（{book}）</div>
+                </div>
+              );
+            }) : (
               <div style={{ padding: '30px 12px', textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>インポートされた伝票はありません。</div>
             )}
           </div>
