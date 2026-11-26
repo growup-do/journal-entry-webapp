@@ -28,6 +28,7 @@ import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { FISCAL_MONTHS, inPeriod, lastDayOf, parseMD, periodLabel as periodText, type Period } from '../lib/period';
 import { Modal } from './Modal';
+import { askConfirm } from './ConfirmDialog';
 import { ToastView, useToast } from './Toast';
 import { SECTION_TAG, NUM, ReportShell, TD, TH } from './ReportShell';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
@@ -351,6 +352,8 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
   const [aggMonthEnd, setAggMonthEnd] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+  /** 一括削除で選んだ取込の単位 */
+  const [bulkPick, setBulkPick] = useState<string[]>([]);
   const assist = useAssist();
   const toast = useToast();
 
@@ -609,10 +612,22 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
     toast.show(`CSVから ${imp.length} 件を取り込みました（勘定科目は摘要から自動判定・要確認）`);
   };
   /** 取込の単位（コメント）ごとに、取り込んだ明細をまとめて削除する */
-  const bulkDelete = (unit: string) => {
-    const n = rows.filter((r) => r.imported && (r.impUnit ?? '銀行CSV取込') === unit).length;
-    setRows((rs) => rs.filter((r) => !(r.imported && (r.impUnit ?? '銀行CSV取込') === unit)));
-    toast.show(`インポート伝票 ${n} 件を一括削除しました（${unit.split('　').slice(0, 2).join(' ')}）`);
+  const unitOf = (r: Row) => (r.imported && !r.ai ? r.impUnit ?? '銀行CSV取込' : null);
+  const unitRows = (u: string) => rows.filter((r) => unitOf(r) === u);
+  const bulkCount = rows.filter((r) => { const u = unitOf(r); return u != null && bulkPick.includes(u); }).length;
+  const bulkDelete = async () => {
+    const ok = await askConfirm({
+      title: 'インポート伝票一括削除',
+      message: <>{book}　{bulkPick.length} 単位の明細 <b>{bulkCount} 件</b>を、すべて削除しますか？<br /><span style={{ color: '#c0392b' }}>削除すると取り消せません。</span></>,
+      okLabel: '削除する',
+      danger: true,
+    });
+    if (!ok) return;
+    const n = bulkCount;
+    setRows((rs) => rs.filter((r) => { const u = unitOf(r); return u == null || !bulkPick.includes(u); }));
+    setBulkPick([]);
+    setBulkOpen(false);
+    toast.show(`インポート伝票 ${n} 件を一括削除しました`);
   };
   const importUnits = Array.from(new Set(rows.filter((r) => r.imported && !r.ai).map((r) => r.impUnit ?? '銀行CSV取込')));
 
@@ -880,7 +895,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
             ) : (
               <>
                 <MonthRowAction icon="import" label="CSVファイルの取り込み" data-csv-import onClick={() => setCsvOpen(true)} />
-                <MonthRowAction icon="trash" label="インポート伝票一括削除" data-bulk-delete danger onClick={() => setBulkOpen(true)} />
+                <MonthRowAction icon="trash" label="インポート伝票一括削除" data-bulk-delete danger onClick={() => { setBulkPick([]); setBulkOpen(true); }} />
               </>
             )}
           </div>
@@ -1174,26 +1189,33 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       {/* ---- 預金出納：インポート一括削除 ---- */}
       <Modal open={bulkOpen} onClose={() => setBulkOpen(false)} width={560} title="インポート伝票一括削除">
         <div style={{ padding: '14px 22px 20px' }}>
+          <div style={{ fontSize: 14, color: '#48565f', lineHeight: 1.7, marginBottom: 10 }}>銀行CSVから取り込んだ明細を、取込の単位ごとにまとめて削除します（{book}）。<b style={{ color: '#c0392b' }}>削除した明細は元に戻せません。</b></div>
           <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, minHeight: 160, maxHeight: 260, overflow: 'auto' }}>
-            <div style={{ padding: '8px 12px', background: '#f6f8fa', fontSize: 12, fontWeight: 700, color: '#8290a0', borderBottom: '1px solid #eef2f5' }}>コメント（取込単位）</div>
+            <div style={{ padding: '8px 12px', background: '#f6f8fa', fontSize: 12, fontWeight: 700, color: '#8290a0', borderBottom: '1px solid #eef2f5' }}>取込の単位</div>
             {importUnits.length ? importUnits.map((u) => {
-              const list = rows.filter((r) => r.imported && (r.impUnit ?? '銀行CSV取込') === u);
+              const list = unitRows(u);
               const days = list.map((r) => `${r.month}/${r.day}`);
+              const on = bulkPick.includes(u);
               return (
-                <div key={u} data-import-unit={u} onDoubleClick={(e) => { if (e.shiftKey) bulkDelete(u); else toast.show('[Shift] キーを押しながらダブルクリックしてください'); }} style={{ padding: '9px 12px', fontSize: 14, cursor: 'pointer', borderBottom: '1px solid #f1f4f6', userSelect: 'none' }}>
-                  <div style={{ fontWeight: 700 }}>{u}</div>
-                  <div style={{ fontSize: 12, color: '#7a8794', marginTop: 2 }}>{list.length} 件　{days[0]}〜{days[days.length - 1]}　出金 {list.reduce((a, r) => a + r.outAmt, 0).toLocaleString('ja-JP')}　入金 {list.reduce((a, r) => a + r.inAmt, 0).toLocaleString('ja-JP')}　（{book}）</div>
-                </div>
+                <label key={u} data-import-unit={u} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '9px 12px', fontSize: 14, cursor: 'pointer', borderBottom: '1px solid #f1f4f6', background: on ? '#fff7cc' : undefined }}>
+                  <input type="checkbox" checked={on} onChange={() => setBulkPick((p) => (on ? p.filter((x) => x !== u) : [...p, u]))} style={{ marginTop: 4 }} aria-label={`${u} を選択`} />
+                  <span>
+                    <span style={{ display: 'block', fontWeight: 700 }}>{u}</span>
+                    <span style={{ display: 'block', fontSize: 12, color: '#7a8794', marginTop: 2 }}>{list.length} 件　{days[0]}〜{days[days.length - 1]}　出金 {list.reduce((a, r) => a + r.outAmt, 0).toLocaleString('ja-JP')}　入金 {list.reduce((a, r) => a + r.inAmt, 0).toLocaleString('ja-JP')}</span>
+                  </span>
+                </label>
               );
             }) : (
               <div style={{ padding: '30px 12px', textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>インポートされた伝票はありません。</div>
             )}
           </div>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginTop: 12, fontSize: 14, color: '#48565f', lineHeight: 1.7 }}>
-            <span style={{ flex: 'none', width: 28, height: 28, borderRadius: '50%', background: '#e8f0fb', color: '#2c5f9e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>i</span>
-            <span>一括削除は大変危険な操作のため、通常のクリックでは実行されません。<HelpTip style={{ marginLeft: 6 }} text="[Shift] キーを押しながら、コメント行をダブルクリックすると一括削除します" /></span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14 }}>
+            <span style={{ fontSize: 14, color: '#48565f' }}>{bulkPick.length} 単位・{bulkCount} 件を選択中</span>
+            <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+              <button type="button" onClick={() => setBulkOpen(false)} style={btn()}>キャンセル</button>
+              <button type="button" data-bulk-confirm disabled={bulkCount === 0} onClick={bulkDelete} style={{ ...btn(true), background: '#c0392b', opacity: bulkCount === 0 ? 0.5 : 1, cursor: bulkCount === 0 ? 'default' : 'pointer' }}>選択した {bulkCount} 件を削除</button>
+            </span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 14 }}><button type="button" onClick={() => setBulkOpen(false)} style={btn()}>閉じる</button></div>
         </div>
       </Modal>
 
