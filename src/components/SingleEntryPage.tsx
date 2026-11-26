@@ -420,7 +420,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
           {/* 幅が足りないとき（1600px の画面で参照パネルを開いたときなど）は折り返し、右端の取引区分・Seq No の列を次の行に回す（確認メモ #243） */}
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch', gap: 12, margin: '0 0 8px', width: '100%' }}>
             {/* 入力区分：入力区分で起動中は固定表示、親区分で起動中は配下の入力区分から選ぶ（確認メモ #157／#181／#182）。残りの幅いっぱいに広げる */}
-            <div className="ef-field" style={{ display: 'flex', flex: '1 1 200px', minWidth: 200 }}>
+            <div className="ef-field" style={{ display: 'flex', flex: '0 1 300px', minWidth: 200 }}>
               <PaperBox label="入力区分" grow>
                 <EntryDivisionField ctl={ed} id="se-service" disabled={ro} onCommit={() => focusId('se-month')} />
               </PaperBox>
@@ -437,10 +437,10 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
                 </div>
               </PaperBox>
             </div>}
-            {/* Seq No などの枠。操作説明の ? は枠の右下 */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'stretch', flex: 'none' }}>
-              <VoucherMarks seq="自動" flags={flags} onChange={(p) => setFlags((st) => ({ ...st, ...p }))} disabled={ro} viewOnly={tools.viewOnly} />
-              <span style={{ marginTop: 'auto', alignSelf: 'flex-end', display: 'inline-flex' }}><HelpTip text={[`Enter で進む順：${ENTER_ORDER.split('。')[0]}`, '金額で Enter を押すと、登録の確認へ移ります']} /></span>
+            {/* Seq No などの枠（詰めて表示）。操作説明の ? は枠の右 */}
+            <div style={{ display: 'flex', alignItems: 'center', alignSelf: 'flex-start', gap: 8, flex: 'none' }}>
+              <VoucherMarks compact seq="自動" flags={flags} onChange={(p) => setFlags((st) => ({ ...st, ...p }))} disabled={ro} viewOnly={tools.viewOnly} />
+              <span style={{ display: 'inline-flex' }}><HelpTip text={[`Enter で進む順：${ENTER_ORDER.split('。')[0]}`, '金額で Enter を押すと、登録の確認へ移ります']} /></span>
             </div>
           </div>
           <div className="pp-table" style={{ gridTemplateColumns: '1fr', borderWidth: 2 }}>

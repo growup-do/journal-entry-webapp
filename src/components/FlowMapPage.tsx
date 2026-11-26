@@ -80,7 +80,7 @@ const NODES: Node[] = [
   N('vtrend', '取引先推移表', 'page', 'trend', { open: '業者推移' }),
   N('trendgraph', 'グラフ作成', 'dialog', 'trend', { open: '科目推移' }),
   // 試算表・決算書
-  N('trial', '試算表（月次試算）', 'page', 'compare', { open: '月次試算' }),
+  N('trial', '試算表（月次試算）', 'page', 'compare', { open: '月次試算', note: '一覧の右上のコメント（プロトタイプのみ）で、貸借が合わない状態と警告を試せる' }),
   N('budgetcmp', '予算対比表', 'page', 'compare', { open: '予算対比' }),
   N('closing', '決算書（月次決算）', 'page', 'compare', { open: '月次決算' }),
   N('balgraph', '残高グラフ', 'dialog', 'compare', { open: '月次決算' }),

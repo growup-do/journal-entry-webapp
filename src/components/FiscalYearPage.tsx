@@ -10,6 +10,7 @@ import { TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
 import { Notice, SettingsShell, Steps, btn, card, cardHead, input } from './ui';
 import { divisionLabel, flattenDivisions, setSession, startKindOf, useSession } from '../store/session';
+import { ProtoComment } from './ProtoComment';
 
 export type FiscalOp = 'update' | 'dep';
 const OP_LABEL: Record<FiscalOp, string> = { update: '年度更新', dep: '年度更新（減価のみ）' };
@@ -37,8 +38,8 @@ function UpdateView({ variant, depOnly, go, onNavigate }: { variant: 'form' | 's
   const s = useSession();
   const toast = useToast();
   const kind = startKindOf(s);
-  const [demoMulti] = useState(false);
-  const [hasNext] = useState(false);
+  const [demoMulti, setDemoMulti] = useState(false);
+  const [hasNext, setHasNext] = useState(false);
   const multi = kind !== '入力区分' || demoMulti;
   const keys: StepKey[] = ['backup', 'next', ...(multi ? ['members' as StepKey] : []), 'final', 'run', 'done'];
   const LABEL: Record<StepKey, string> = { backup: 'バックアップの確認', next: depOnly ? '翌年度の減価データの確認' : '翌年度データの確認', members: '構成区分の確認', final: '最終確認', run: '実行', done: '完了' };
@@ -241,6 +242,21 @@ function UpdateView({ variant, depOnly, go, onNavigate }: { variant: 'form' | 's
         </div>
       )}
 
+      {/* プロトタイプのコメント（実際のシステムには出ない）：条件によって変わる表示を試す */}
+      {!running && (
+        <div style={{ padding: '0 22px 14px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <ProtoComment>
+            <span>翌年度のデータがあるときは、再実行の確認が表示されます。</span>
+            <label style={{ display: 'inline-flex', gap: 4, alignItems: 'center', cursor: 'pointer', fontWeight: 700 }}><input type="checkbox" checked={hasNext} onChange={(e) => { setHasNext(e.target.checked); setAgreeNext(false); }} disabled={at === 'done'} />翌年度データがある状態を試す</label>
+          </ProtoComment>
+          {kind === '入力区分' && (
+            <ProtoComment>
+              <span>合算区分・親区分で起動したときは、対象の区分を選ぶ手順が加わります。</span>
+              <label style={{ display: 'inline-flex', gap: 4, alignItems: 'center', cursor: 'pointer', fontWeight: 700 }}><input type="checkbox" checked={demoMulti} onChange={(e) => { setDemoMulti(e.target.checked); setAt('backup'); }} disabled={at === 'done'} />合算区分・親区分での起動を試す</label>
+            </ProtoComment>
+          )}
+        </div>
+      )}
     </SettingsShell>
   );
 }

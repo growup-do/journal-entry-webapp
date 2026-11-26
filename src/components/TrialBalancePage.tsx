@@ -31,6 +31,7 @@ import { PrintSteps, type OutKind } from './PrintSteps';
 import { WAMNET_ITEMS, WamnetDialog, type WamnetItem } from './WamnetDialog';
 import { runExport } from './ExportDialog';
 import { ToastView, useToast } from './Toast';
+import { ProtoComment } from './ProtoComment';
 
 const PARTS = ['資産の部', '負債の部', '事業活動', '資金の部'];
 /** 表示階層（「就労授産」は不要のため廃止。確認メモ #133） */
@@ -293,7 +294,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
   const [view, setView] = useViewState<View>(KEY, { month: '8', part: 0, depth: '細々区分', pattern: '標準', carry: true, debit: false, credit: false, balance: true, prev: true, diff: true, breakdown: true });
   const [graph, setGraph] = useState(false);
   // 貸借対照表の不一致（確認メモ #130）：unbalanced＝不一致の状態（プロトタイプ確認用の切り替え）、warn＝確認メッセージを表示中
-  const [unbalanced] = useState(false);
+  const [unbalanced, setUnbalanced] = useState(false);
   const [warn, setWarn] = useState(false);
   /** 集計し直したとき（月・期間の切り替え）に、不一致なら確認メッセージを出す */
   const recheck = () => { if (unbalanced) setWarn(true); };
@@ -404,6 +405,13 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
       listNote={
         <>
           <span>{rows.length} 行{hiddenZero > 0 ? `（0データの ${hiddenZero} 行を非表示）` : ''}</span>
+          {/* プロトタイプのコメント（実際のシステムには出ない）：貸借が合わない状態を試す（確認メモ #130） */}
+          <ProtoComment style={{ marginLeft: 'auto' }}>
+            <span>貸借が合わない時は警告が表示されます。</span>
+            <label data-proto-unbalanced style={{ display: 'inline-flex', gap: 4, alignItems: 'center', cursor: 'pointer', fontWeight: 700 }}>
+              <input type="checkbox" checked={unbalanced} onChange={(e) => { setUnbalanced(e.target.checked); setWarn(e.target.checked); }} />合わない貸借を試す
+            </label>
+          </ProtoComment>
         </>
       }
       switches={

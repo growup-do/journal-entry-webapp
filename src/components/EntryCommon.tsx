@@ -723,11 +723,11 @@ export function FusenTab({ color, offset = -30, top = '50%' }: { color: FusenCol
 
 /** 伝票の印：Seq No・チェック・証憑・付箋（伝票1枚につき1つ）。内部取引の枠と横並びに置く独立した枠（10/16 鈴木さん指示）。
  *  variant 'paper'＝伝票用紙の PaperBox、'panel'＝仕訳伝票形式の内部取引と同じグレーの枠 */
-export function VoucherMarks({ seq, flags, onChange, disabled, viewOnly, showShohyo = true, variant = 'paper' }: { seq: ReactNode; flags: { check: boolean; fusen: FusenColor; shohyo: boolean }; onChange: (p: Partial<{ check: boolean; fusen: FusenColor; shohyo: boolean }>) => void; disabled?: boolean; viewOnly?: boolean; showShohyo?: boolean; variant?: 'paper' | 'panel' }) {
+export function VoucherMarks({ seq, flags, onChange, disabled, viewOnly, showShohyo = true, variant = 'paper', compact = false }: { /** 枠を詰める（単一式入力） */ compact?: boolean;  seq: ReactNode; flags: { check: boolean; fusen: FusenColor; shohyo: boolean }; onChange: (p: Partial<{ check: boolean; fusen: FusenColor; shohyo: boolean }>) => void; disabled?: boolean; viewOnly?: boolean; showShohyo?: boolean; variant?: 'paper' | 'panel' }) {
   const lab: CSSProperties = { fontSize: 12, fontWeight: 700, color: '#8290a0', whiteSpace: 'nowrap' };
-  const item: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 8 };
+  const item: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: compact ? 5 : 8 };
   const body = (
-    <div data-voucher-marks style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'nowrap', fontSize: 14, color: '#22303c', minHeight: 32, whiteSpace: 'nowrap' }}>
+    <div data-voucher-marks style={{ display: 'flex', alignItems: 'center', gap: compact ? 8 : 12, flexWrap: 'nowrap', fontSize: 14, color: '#22303c', minHeight: 32, whiteSpace: 'nowrap' }}>
       <span style={item}><span style={lab}>Seq No</span><b className="pp-num">{seq}</b></span>
       <span style={item}><span style={lab}>チェック</span>{viewOnly ? <span className="pp-ro pp-ro-s">{flags.check ? '☑' : '☐'}</span> : <PaperToggle on={flags.check} onLabel="☑" offLabel="☐" disabled={disabled} title="チェック（この伝票）" onChange={(v) => onChange({ check: v })} />}</span>
       {showShohyo && <span style={item}><span style={lab}>証憑</span>{viewOnly ? <span className="pp-ro pp-ro-s">{flags.shohyo ? '有' : '無'}</span> : <PaperToggle on={flags.shohyo} onLabel="有" offLabel="無" disabled={disabled} title="証憑 有／無（この伝票）" onChange={(v) => onChange({ shohyo: v })} />}</span>}
@@ -741,7 +741,7 @@ export function VoucherMarks({ seq, flags, onChange, disabled, viewOnly, showSho
   return (
     <div className="ef-field" data-voucher-marks-box style={{ display: 'flex' }}>
       <div className="pp-row" style={{ gridTemplateColumns: 'minmax(0,1fr)', border: `1px solid ${PAPER.line}`, display: 'inline-grid', minWidth: 0 }}>
-        <div className="pp-cell" style={{ padding: '2px 12px', minHeight: 38, fontSize: 14, display: 'flex', alignItems: 'center' }}>{body}</div>
+        <div className="pp-cell" style={{ padding: compact ? '2px 8px' : '2px 12px', minHeight: 38, fontSize: 14, display: 'flex', alignItems: 'center' }}>{body}</div>
       </div>
     </div>
   );
