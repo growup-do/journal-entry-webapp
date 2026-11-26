@@ -45,10 +45,11 @@ export function DivisionOrgChart({ tree, accent, isSelected, onSelect, onConfirm
     const k = kindOf(n);
     const on = isSelected(n);
     // 枠線は border のショートハンド1本で指定する（選択・非使用の状態もここで切り替える）
+    // 区分のカラーはカード全体の背景にする（合算区分のボタンと同じ見せ方。確認メモ #372）
     const off = n.use === false;
     const bw = tier === 'root' ? '2px' : tier === 'head' ? '1.5px' : '1px';
     const bc = on ? accent : off ? '#cfd8e0' : tier === 'root' ? '#22303c' : tier === 'head' ? '#7a8794' : '#cfd8e0';
-    const base: CSSProperties = { border: `${bw} ${off ? 'dashed' : 'solid'} ${bc}`, background: on ? accent : off ? '#f6f8fa' : tier === 'head' ? '#f3f6f8' : '#fff', color: on ? '#fff' : off ? '#9aa5b1' : '#22303c', boxShadow: on ? `0 0 0 3px ${accent}33` : 'none' };
+    const base: CSSProperties = { border: `${bw} ${off ? 'dashed' : 'solid'} ${bc}`, background: on ? accent : off ? '#f6f8fa' : n.color ?? (tier === 'head' ? '#f3f6f8' : '#fff'), color: on ? '#fff' : off ? '#9aa5b1' : '#22303c', boxShadow: on ? `0 0 0 3px ${accent}33` : 'none' };
     const act = action?.(n);
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, position: 'relative', zIndex: 1 }}>
@@ -65,7 +66,6 @@ export function DivisionOrgChart({ tree, accent, isSelected, onSelect, onConfirm
           title={selectable ? hint : 'この区分は使用しない設定です'}
           style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0, minHeight: CARD_H, padding: '6px 12px', borderRadius: 10, textAlign: 'left', fontFamily: 'inherit', cursor: selectable ? 'pointer' : 'not-allowed', ...base }}
         >
-          {n.color && n.use !== false && <span style={{ flex: 'none', width: 12, height: 12, borderRadius: 3, background: n.color, border: '1px solid ' + (on ? 'rgba(255,255,255,.7)' : '#c3ccd4') }} />}
           <span style={{ minWidth: 0, flex: 1 }}>
             <span style={{ display: 'flex', flexWrap: 'wrap', columnGap: 8, fontSize: 12, fontWeight: 700, color: on ? 'rgba(255,255,255,.85)' : '#8290a0', lineHeight: 1.3 }}><span style={{ whiteSpace: 'nowrap' }}>{n.kind}</span>{n.code && <span style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{n.code}</span>}</span>
             <span style={{ display: 'block', fontSize: tier === 'root' ? 14.5 : 14, fontWeight: 700, lineHeight: 1.35, overflowWrap: 'anywhere' }}>{n.name}</span>

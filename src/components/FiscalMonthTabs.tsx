@@ -8,7 +8,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent as RKeyboardEvent, PointerEvent as RPointerEvent, ReactNode } from 'react';
 import type { MonthFilter } from '../types';
-import { useSession } from '../store/session';
 import { FISCAL_MONTHS, monthRange, monthsIn, parseMD, periodLabel, type Period } from '../lib/period';
 import { CalendarModal } from './SingleEntryTools';
 import { HelpTip } from './ui';
@@ -37,9 +36,6 @@ const isMonth = (v: MonthFilter | undefined): v is string => v != null && v !== 
 const MONTHS = FISCAL_MONTHS.filter((m) => m !== '決');
 
 export function FiscalMonthTabs({ current, accent, onSelect, withAll, range, onRange, pickRange = true, after }: Props) {
-  // 環境設定（全区分共通）「月範囲の選択で、期首から月を選択する」：期首〜選択月を帯で示す（依頼書 2.5）
-  const fromStart = useSession().env.termFromStart;
-  const curIdx = current == null || current === '決' ? -1 : FISCAL_MONTHS.indexOf(current);
   const [pickOpen, setPickOpen] = useState(false);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -156,10 +152,9 @@ export function FiscalMonthTabs({ current, accent, onSelect, withAll, range, onR
         const on = ranged ? false : current === o.value;
         const inSel = ranged && o.value != null && selMonths.includes(o.value);
         const edge = inSel && (o.value === selMonths[0] || o.value === selMonths[selMonths.length - 1]);
-        const inRange = !ranged && fromStart && !on && o.value != null && o.value !== '決' && curIdx > 0 && FISCAL_MONTHS.indexOf(o.value) < curIdx;
         const inAll = allLit && o.value != null;
         const allEdge = inAll && (o.value === MONTHS[0] || o.value === MONTHS[MONTHS.length - 1]);
-        const hi = inSel || inRange || inAll;
+        const hi = inSel || inAll;
         const solid = on || edge || allEdge;
         return (
           <button
@@ -171,7 +166,7 @@ export function FiscalMonthTabs({ current, accent, onSelect, withAll, range, onR
             onClick={(e) => { if (dragged.current) return; pick(o.value, e.shiftKey); }}
             onKeyDown={(e) => onKey(o.label, e)}
             aria-pressed={onRange || withAll ? on || inSel || inAll : undefined}
-            title={inAll ? (allEdge && onRange ? `全月を表示中です。クリックすると全月の選択が外れ、${o.value}月を除いた ${o.value === MONTHS[0] ? `${MONTHS[1]}〜${MONTHS[MONTHS.length - 1]}` : `${MONTHS[0]}〜${MONTHS[MONTHS.length - 2]}`}月になります` : `全月を表示中です。クリックすると${o.value === '決' ? '決算月' : `${o.value}月`}だけの表示になります`) : inSel ?'選択中の期間に含まれる月（別の月をクリックすると1か月に戻ります）' : inRange ? '期首からの累計に含まれる月（環境設定「期首から月を選択する」）' : onRange && isMonth(o.value) ? 'クリックで1か月。ドラッグ、または Shift＋クリックで月の範囲（キーボードは ←→ で月を移動、Shift＋←→ で範囲）' : undefined}
+            title={inAll ? (allEdge && onRange ? `全月を表示中です。クリックすると全月の選択が外れ、${o.value}月を除いた ${o.value === MONTHS[0] ? `${MONTHS[1]}〜${MONTHS[MONTHS.length - 1]}` : `${MONTHS[0]}〜${MONTHS[MONTHS.length - 2]}`}月になります` : `全月を表示中です。クリックすると${o.value === '決' ? '決算月' : `${o.value}月`}だけの表示になります`) : inSel ?'選択中の期間に含まれる月（別の月をクリックすると1か月に戻ります）' : onRange && isMonth(o.value) ? 'クリックで1か月。ドラッグ、または Shift＋クリックで月の範囲（キーボードは ←→ で月を移動、Shift＋←→ で範囲）' : undefined}
             data-in-range={hi || undefined}
             data-edge={edge || allEdge || undefined}
             style={{
@@ -224,7 +219,6 @@ export function FiscalMonthTabs({ current, accent, onSelect, withAll, range, onR
         </span>
       )}
       {onRange && pickRange && !range && <span data-range-hint style={{ alignSelf: 'center', display: 'inline-flex' }}><HelpTip text={['月タブの上を、開始月から終了月までドラッグすると範囲になります', '開始月をクリックしてから、終了月を Shift＋クリックしても選べます']} /></span>}
-      {!range && fromStart && curIdx > 0 && <span data-from-start style={{ alignSelf: 'center', fontSize: 12, fontWeight: 700, color: accent, whiteSpace: 'nowrap' }} title="環境設定（全区分共通）「月範囲の選択で、期首から月を選択する」が有効です">4月〜{current}月の累計</span>}
     </div>
   );
 }

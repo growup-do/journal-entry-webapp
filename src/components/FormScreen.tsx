@@ -508,7 +508,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
               <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 14, marginBottom: 12 }}>
                 {([
                   { side: '借方', id: 'fe-kari', color: BLUE, value: kari, other: kashi, set: (v: string) => { setKari(v); setKariTax(''); }, commit: () => focusId('fe-kashi'), state: fieldState(issues, 'kari', 'pair'), msg: fieldMessage(issues, 'kari'), taxOn: kariTaxOn, tax: kTax, setTax: setKariTax },
-                  { side: '貸方', id: 'fe-kashi', color: PINK, value: kashi, other: kari, set: (v: string) => { setKashi(v); setKashiTax(''); }, commit: () => focusId('fe-internal'), state: bothParent ? 'error' as const : fieldState(issues, 'kashi', 'pair'), msg: bothParent ? '借方と貸方の両方を特殊摘要科目（親）にすることはできません' : fieldMessage(issues, 'kashi', 'pair'), taxOn: kashiTaxOn, tax: sTax, setTax: setKashiTax },
+                  { side: '貸方', id: 'fe-kashi', color: PINK, value: kashi, other: kari, set: (v: string) => { setKashi(v); setKashiTax(''); }, commit: () => focusId(tools.internalShown && partner ? 'fe-aite' : 'fe-tek-0'), state: bothParent ? 'error' as const : fieldState(issues, 'kashi', 'pair'), msg: bothParent ? '借方と貸方の両方を特殊摘要科目（親）にすることはできません' : fieldMessage(issues, 'kashi', 'pair'), taxOn: kashiTaxOn, tax: sTax, setTax: setKashiTax },
                 ]).map((s) => (
                   <div key={s.id} className="pp-table ef-field" style={{ gridTemplateColumns: '1fr' }}>
                     <div className="pp-row" style={{ gridTemplateColumns: '64px minmax(0,1fr)' }}>
@@ -537,20 +537,6 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                     </div>
                   </div>
                 ))}
-              </div>
-
-              {/* 内部取引相手区分の枠と、伝票の印（Seq No・チェック・証憑・付箋）の枠を横並びに置く（別々の枠。10/16 鈴木さん指示） */}
-              <div style={{ display: 'flex', alignItems: 'stretch', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-              {tools.internalShown && <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} data-side={side || 'なし'} style={{ flex: '1 1 400px', display: 'grid', gridTemplateColumns: 'auto minmax(0,320px)', gap: 16, alignItems: 'center', padding: '10px 14px', border: '1px solid ' + (partner ? '#e0d6f3' : '#e2e8ee'), background: partner ? '#faf7ff' : '#f1f3f5', borderRadius: 12, transition: 'background .15s, border-color .15s' }}>
-                <div style={{ alignSelf: 'center' }}>{tools.internalSwitch}</div>
-                <div style={{ opacity: partner ? 1 : 0.5, transition: 'opacity .15s' }}>
-                  <FieldLabel color={partner ? '#6b3fb5' : '#8895a3'}>内部取引相手区分{partner ? `（${side}が内部取引・必須）` : ''}</FieldLabel>
-                  <ComboField id="fe-aite" title={!partner ? '左の「内部取引」で借方か貸方を選ぶと入力できます（内部取引科目を選ぶと、その側に自動で決まります）' : undefined} kind="service" value={aite} onChange={setAite} onCommit={() => focusId('fe-tek-0')} disabled={!editable || !partner} invalid={partner ? fieldState(issues, 'aite') : undefined} message={partner ? fieldMessage(issues, 'aite') : undefined} placeholder="コード・区分名・フリガナ" />
-                </div>
-              </div>}
-              <VoucherMarks variant="panel" seq={nextSeq} flags={flags} onChange={setFlags} disabled={!editable} viewOnly={tools.viewOnly} showShohyo={inp.shohyo} />
-              {/* 操作説明は明細（摘要の枠）の右上に置く */}
-              <span style={{ marginLeft: 'auto', alignSelf: 'flex-end', display: 'inline-flex' }}><HelpTip text={['金額欄で Enter：次の行へ（最後の行では行を追加）', '金額欄で Shift+Enter：この行の下に1行挿入', '入力が終わったら、空の行の摘要で Enter を押すと「登録する」へ移ります']} /></span>
               </div>
 
               {/* 3段目：明細（コード｜摘要／取引先｜金額｜行の操作）。はじめから 6 行目まで入力できる（確認メモ #155） */}
@@ -618,16 +604,19 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                     </div>
                   );
                 })}
-                {/* 行追加・行数 */}
-                <div className="pp-row" style={{ gridTemplateColumns: '1fr' }}>
-                  <div className="pp-cell" style={{ padding: '6px 10px', fontSize: 12, color: '#8290a0' }}>
-                    {!tools.viewOnly && <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={rowAdd} title={editable ? '最後に1行追加します（最後の行の金額欄で Enter を押しても追加できます）' : tools.reason} style={{ padding: '4px 11px', borderRadius: 7, border: '1px dashed #b9c4cf', background: '#fff', color: '#48565f', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', marginRight: 10 }}>＋ 行追加</button>}
-                    <span data-row-count>入力済み {filled} 行（全 {rows.length} 行）</span>
-                  </div>
-                </div>
-                {/* 下段：小切手No（表示項目で有効なとき）｜合計。Seq No・チェック・証憑・付箋は上の内部取引の行に横並び */}
+                {/* 下段：合計の行。左端に Seq No・チェック・証憑・付箋のまとまりと、内部取引（入力補助の［内部取引］で出したとき）、小切手No（表示項目で有効なとき）を並べる（確認メモ #391） */}
                 <div className="pp-row" style={{ gridTemplateColumns: 'minmax(0,1fr) 170px' }}>
-                  <div className="pp-cell" style={{ padding: '6px 12px', background: PAPER.fill, display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div className="pp-cell" data-total-left style={{ padding: '6px 12px', background: PAPER.fill, display: 'flex', alignItems: 'center', gap: '8px 16px', flexWrap: 'wrap' }}>
+                    <VoucherMarks variant="bare" seq={nextSeq} flags={flags} onChange={setFlags} disabled={!editable} viewOnly={tools.viewOnly} showShohyo={inp.shohyo} />
+                    {tools.internalShown && (
+                      <div className="ef-field" data-internal-area data-on={partner ? '1' : '0'} data-side={side || 'なし'} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '3px 10px', border: '1px solid ' + (partner ? '#e0d6f3' : '#dfe5ea'), background: partner ? '#faf7ff' : '#fff', borderRadius: 10, transition: 'background .15s, border-color .15s' }}>
+                        {tools.internalSwitch}
+                        <span style={{ fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', color: partner ? '#6b3fb5' : '#8895a3' }} title={partner ? `${side}が内部取引のため入力が必要です` : undefined}>相手区分{partner ? '（必須）' : ''}</span>
+                        <div style={{ width: 210, opacity: partner ? 1 : 0.5, transition: 'opacity .15s' }}>
+                          <ComboField id="fe-aite" title={!partner ? '「内部取引」で借方か貸方を選ぶと入力できます（内部取引科目を選ぶと、その側に自動で決まります）' : undefined} kind="service" value={aite} onChange={setAite} onCommit={() => focusId('fe-tek-0')} disabled={!editable || !partner} invalid={partner ? fieldState(issues, 'aite') : undefined} message={partner ? fieldMessage(issues, 'aite') : undefined} placeholder="コード・区分名・フリガナ" />
+                        </div>
+                      </div>
+                    )}
                     {inp.cheque && <><span className="pp-lab" style={{ fontSize: 14 }}>小切手No</span><label className="ef-field" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><input className="ef-input pp-input" disabled={!editable} value={cheque} onChange={(e) => setCheque(e.target.value)} placeholder="任意" style={{ ...smallInput, width: 140 }} /></label></>}
                   </div>
                   <div className="pp-cell" style={{ padding: 0 }}>
@@ -638,11 +627,14 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
-              <div role="alert" style={{ flex: 1, minHeight: 20, color: '#c0392b', fontSize: 14, fontWeight: 600 }}>{err}</div>
-              {tools.submitButton}
+              {/* 合計の下：行追加と登録する を横に並べる（振替伝票形式と同じ。確認メモ #373／#374） */}
+              <div data-entry-foot style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
+                {!tools.viewOnly && <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={rowAdd} title={editable ? '最後に1行追加します（最後の行の金額欄で Enter を押しても追加できます）' : tools.reason} style={{ padding: '4px 11px', borderRadius: 7, border: '1px dashed #b9c4cf', background: '#fff', color: '#48565f', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>＋ 行追加</button>}
+                <span data-row-count style={{ fontSize: 12, color: '#8290a0' }}>入力済み {filled} 行（全 {rows.length} 行）</span>
+                <HelpTip text={['金額欄で Enter：次の行へ（最後の行では行を追加）', '金額欄で Shift+Enter：この行の下に1行挿入', '入力が終わったら、空の行の摘要で Enter を押すと「登録する」へ移ります']} />
+                {err && <span role="alert" style={{ color: '#c0392b', fontSize: 14, fontWeight: 600 }}>{err}</span>}
+                <span style={{ marginLeft: 'auto' }}>{tools.submitButton}</span>
+              </div>
             </div>
           </div>
 

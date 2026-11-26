@@ -101,13 +101,13 @@ export function ScopeBlock({ kind, title, desc, right, children, toggle, descBel
     </>
   );
   return (
-    <section data-scope={kind} style={{ border: '1px solid ' + c.bd, borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
+    <section data-scope={kind} style={{ border: '1px solid ' + c.bd, borderRadius: 12, background: '#fff' }}>
       {toggle ? (
-        <button type="button" aria-expanded={toggle.open} onClick={toggle.onToggle} title={toggle.open ? 'このブロックを閉じます' : 'このブロックを開いて設定を変更します'} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', background: c.bg, flexWrap: 'wrap', width: '100%', border: 'none', borderBottom: toggle.open ? '1px solid ' + c.bd : 'none', textAlign: 'left', fontFamily: 'inherit', color: 'inherit', cursor: 'pointer' }}>
+        <button type="button" aria-expanded={toggle.open} onClick={toggle.onToggle} title={toggle.open ? 'このブロックを閉じます' : 'このブロックを開いて設定を変更します'} style={{ borderRadius: toggle.open ? '11px 11px 0 0' : 11, display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', background: c.bg, flexWrap: 'wrap', width: '100%', border: 'none', borderBottom: toggle.open ? '1px solid ' + c.bd : 'none', textAlign: 'left', fontFamily: 'inherit', color: 'inherit', cursor: 'pointer' }}>
           {head}
         </button>
       ) : (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', background: c.bg, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', background: c.bg, flexWrap: 'wrap', borderRadius: '11px 11px 0 0' }}>
         {head}
       </div>
       )}
@@ -143,7 +143,8 @@ function remarkUnitOf(s: Session): string {
   const k = flattenDivisions(s.tree).find((x) => divisionLabel(x.node) === s.division)?.node.kind;
   return k === '法人' || k === '事業区分' ? REMARK_UNITS[0] : k === 'サービス区分' || k === '小サービス区分' ? REMARK_UNITS[2] : REMARK_UNITS[1];
 }
-const usesRemark = (r: ReportDef) => r.cat === '決算書' || r.cat === '準決算書' || r.cat === '予算' || /資金収支計算書/.test(r.name);
+/** 備考・摘要欄を使う帳票（資金収支計算書（試算表）は使わない。確認メモ #377） */
+const usesRemark = (r: ReportDef) => r.cat === '決算書' || r.cat === '準決算書' || r.cat === '予算' || (r.cat !== '試算表' && /資金収支計算書/.test(r.name));
 const itemsOf = (r: ReportDef): DetailItem[] => r.detail.flatMap((sec) => sec.items);
 const usesDepth = (r: ReportDef) => itemsOf(r).some((it) => it.k === 'depth');
 
@@ -239,13 +240,8 @@ export function DetailSections({ sections, values, onChange, accent, labelOf, op
       {sections.map((sec) => {
         // 項目の多い枠（元帳の印刷項目など）は横幅いっぱいに広げ、項目を複数列に並べる
         const wide = sec.items.length > 8;
-        return (
-        <fieldset key={sec.title} data-detail-section={sec.title} style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: '4px 12px 12px', margin: 0, minWidth: 0, background: '#fff', gridColumn: wide ? '1 / -1' : undefined }}>
-          <legend style={{ fontSize: 12, fontWeight: 800, color: '#5b6773', padding: '0 6px', letterSpacing: '.04em' }}>{sec.title}</legend>
-          {lead && sec === sections.find((x) => x.title === '印刷項目') && <div data-detail-lead style={{ marginBottom: 9, paddingBottom: 9, borderBottom: '1px solid #eef2f6' }}>{lead}</div>}
-          {/* 枠の見出しと同じ名前の小見出しは出さない（重複のため。確認メモ #312・#313） */}
-          <div style={{ display: 'grid', gap: wide ? '7px 16px' : 9, gridTemplateColumns: wide ? 'repeat(auto-fill, minmax(260px, 1fr))' : undefined }}>
-            {sec.items.map((it) => {
+        /** depth：同じ欄の親の項目からの段数（付随する項目だけ字下げする。確認メモ #381／#382） */
+        const renderIt = (it: DetailItem, depth = 0) => {
               const v = values[it.k];
               const dis = off(it);
               // 枠の見出しと同じ名前、または枠に選択が1つだけで見出しに含まれる名前の小見出しは出さない（確認メモ #312・#313・#315・#321・#326・#344）
@@ -253,7 +249,7 @@ export function DetailSections({ sections, values, onChange, accent, labelOf, op
               if (it.t === 'check') {
                 const xb = buttons?.[it.k];
                 return (
-                <div key={it.k} data-detail-item={it.k} data-type="check" style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap', paddingLeft: it.when && !it.when.not ? 20 : 0 }}>
+                <div key={it.k} data-detail-item={it.k} data-type="check" style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap', paddingLeft: depth * 20 }}>
                   <label style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7, alignItems: 'flex-start', fontSize: 14, cursor: dis ? 'default' : 'pointer', lineHeight: 1.5, color: dis ? '#9aa5b1' : undefined }}>
                     <input type="checkbox" checked={!!v} disabled={dis} onChange={() => onChange(it.k, !v)} style={{ marginTop: 4, accentColor: accent }} /><span style={{ flex: 1 }}>{label(it)}{xb && v && xb.note && <span data-button-note={it.k} style={{ display: 'block', fontSize: 12, color: '#8290a0' }}>{xb.note}</span>}</span>
                   </label>
@@ -285,7 +281,15 @@ export function DetailSections({ sections, values, onChange, accent, labelOf, op
                   <input className="field-input" value={String(v ?? '')} disabled={dis} placeholder={it.placeholder} onChange={(e) => onChange(it.k, e.target.value)} style={{ ...input, padding: '6px 8px', width: it.width ?? '100%', maxWidth: '100%', opacity: dis ? 0.55 : 1 }} />
                 </label>
               );
-            })}
+        };
+        return (
+        <fieldset key={sec.title} data-detail-section={sec.title} style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: '4px 12px 12px', margin: 0, minWidth: 0, background: '#fff', gridColumn: wide ? '1 / -1' : undefined }}>
+          <legend style={{ fontSize: 12, fontWeight: 800, color: '#5b6773', padding: '0 6px', letterSpacing: '.04em' }}>{sec.title}</legend>
+          {lead && sec === sections.find((x) => x.title === '印刷項目') && <div data-detail-lead style={{ marginBottom: 9, paddingBottom: 9, borderBottom: '1px solid #eef2f6' }}>{lead}</div>}
+          {/* 枠の見出しと同じ名前の小見出しは出さない（重複のため。確認メモ #312・#313） */}
+          <div style={{ display: 'grid', gap: wide ? '7px 16px' : 9, gridTemplateColumns: wide ? 'repeat(auto-fill, minmax(260px, 1fr))' : undefined }}>
+            {/* 付随する項目（親の項目を選んだときだけ使える項目）は、親と同じ欄に縦に並べる。横の列に回り込んで別の項目に付随して見えないようにする（確認メモ #378） */}
+            {sec.items.reduce<DetailItem[][]>((cells, it) => { const last = cells[cells.length - 1]; if (last && it.when && !it.when.not && last.some((x) => x.k === it.when!.k)) last.push(it); else cells.push([it]); return cells; }, []).map((cell) => cell.length === 1 ? renderIt(cell[0]) : <div key={`g-${cell[0].k}`} data-detail-group={cell[0].k} style={{ display: 'grid', gap: wide ? 7 : 9, alignContent: 'start' }}>{cell.map((it) => { let d = 0; for (let c: DetailItem | undefined = it; c?.when && !c.when.not; c = cell.find((x) => x.k === c!.when!.k)) d++; return renderIt(it, Math.min(d, cell.indexOf(it))); })}</div>)}
           </div>
         </fieldset>
         );
@@ -475,13 +479,14 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
               const pick = vend ? '取引先指定' : '科目指定';
               const on = p.scope === pick || p.scope === '科目指定';
               return (
-              <div data-print-scope={vend ? 'vendor' : 'account'}><span style={lbl}>{vend ? '取引先の指定' : '科目の範囲'}</span><div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>{['全て', pick].map((o) => <label key={o} style={radio(o === '全て' ? !on : on)}><input type="radio" checked={o === '全て' ? !on : on} onChange={() => set({ scope: o })} />{o}</label>)}</div>
-                {on && <div data-scope-range style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 8, fontSize: 14 }}>
-                  <TargetCombo id={uidFmt + 'scopeFrom'} kind={vend ? 'vendor' : 'account'} value={p.scopeFrom ?? ''} onChange={(v) => set({ scopeFrom: v })} accent={accent} placeholder={vend ? '開始の取引先（コード・名称）' : '開始科目（コード・科目名・フリガナ）'} width={300} hint={false} />
+              <div data-print-scope={vend ? 'vendor' : 'account'}><span style={lbl}>{vend ? '取引先の指定' : '科目の範囲'}</span><div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>{['全て', pick].map((o) => <label key={o} style={radio(o === '全て' ? !on : on)}><input type="radio" checked={o === '全て' ? !on : on} onChange={() => set({ scope: o })} />{o}</label>)}
+                {/* 科目の検索は「科目指定」の右に並べる（確認メモ #379） */}
+                {on && <div data-scope-range style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'nowrap', marginLeft: 8, fontSize: 14 }}>
+                  <TargetCombo id={uidFmt + 'scopeFrom'} kind={vend ? 'vendor' : 'account'} value={p.scopeFrom ?? ''} onChange={(v) => set({ scopeFrom: v })} accent={accent} placeholder={vend ? '開始の取引先（コード・名称）' : '開始科目（コード・科目名）'} width={250} hint={false} />
                   <span>〜</span>
-                  <TargetCombo id={uidFmt + 'scopeTo'} kind={vend ? 'vendor' : 'account'} value={p.scopeTo ?? ''} onChange={(v) => set({ scopeTo: v })} accent={accent} placeholder={vend ? '終了の取引先（コード・名称）' : '終了科目（コード・科目名・フリガナ）'} width={300} hint={false} />
-                  <span style={{ fontSize: 12, color: '#8290a0', flexBasis: '100%' }}>コードを入力するか、候補から選びます（ほかの画面の{vend ? '取引先' : '科目'}検索と同じ操作です）。</span>
-                </div>}
+                  <TargetCombo id={uidFmt + 'scopeTo'} kind={vend ? 'vendor' : 'account'} value={p.scopeTo ?? ''} onChange={(v) => set({ scopeTo: v })} accent={accent} placeholder={vend ? '終了の取引先（コード・名称）' : '終了科目（コード・科目名）'} width={250} hint={false} />
+                  <HelpTip text={[vend ? 'コード・名称で検索し、候補から選びます' : 'コード・科目名・フリガナで検索し、候補から選びます', `ほかの画面の${vend ? '取引先' : '科目'}検索と同じ操作です`]} />
+                </div>}</div>
               </div>
               );
             })()}
@@ -590,20 +595,13 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
   );
 }
 
-/** 帳票の色・印字。動作環境にあった印刷関連の項目を、印刷の詳細設定と共通の印刷設定に集約（依頼書 5.5.1） */
+/** 帳票の印字。動作環境にあった印刷関連の項目を、印刷の詳細設定と共通の印刷設定に集約（依頼書 5.5.1）。帳票色（カラー帳票・罫線の色・網掛け色）は環境設定に置く（確認メモ #376） */
 export function ReportStyleSettings({ accent, compact }: { accent: string; compact?: boolean }) {
   const s = useSession();
   const e = s.env;
   const set = (patch: Partial<EnvSettings>) => setSession({ env: { ...e, ...patch } });
-  const colorLbl: CSSProperties = { fontSize: 14, display: 'flex', gap: 6, alignItems: 'center' };
   return (
     <div data-report-style style={{ display: 'grid', gap: compact ? 8 : 10 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <Toggle on={e.colorReports} onChange={(v) => set({ colorReports: v })} accent={accent} label="カラー帳票を有効にする" />
-        <label style={colorLbl}>罫線色<input type="color" value={e.lineColor} onChange={(ev) => set({ lineColor: ev.target.value })} disabled={!e.colorReports} /></label>
-        <label style={colorLbl}>網掛け色<input type="color" value={e.shadeColor} onChange={(ev) => set({ shadeColor: ev.target.value })} disabled={!e.colorReports} /></label>
-        <span style={{ fontSize: 12, color: '#7a8794' }}>決算書・予算書・試算表・仕訳日記帳の罫線と網掛け。元帳・伝票は帳票ごとの固定色</span>
-      </div>
       <Toggle on={e.printSpeed} onChange={(v) => set({ printSpeed: v })} accent={accent} label="帳票印刷の速度を重視する（大量ページの作成を優先）" />
       <Toggle on={e.onePageRow} onChange={(v) => set({ onePageRow: v })} accent={accent} label="1行のみの改ページを抑制する（1行だけが次ページに送られないようにする）" />
       <Toggle on={e.noteOnExcel} onChange={(v) => set({ noteOnExcel: v })} accent={accent} label="Excel／PDF出力で明細書の注意書きを印字する" />
@@ -944,7 +942,7 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
           <div style={{ display: 'grid', gap: 18 }}>
             <ZeroExcludeCard accent={accent} />
             <div style={card}>
-              <div style={cardHead}>帳票の色・印字 <span style={{ fontSize: 12, fontWeight: 500, color: '#8290a0', marginLeft: 6 }}>予算書・試算表・仕訳日記帳の罫線と網掛けにも使います</span></div>
+              <div style={cardHead}>帳票の印字</div>
               <div style={{ padding: 14 }}><ReportStyleSettings accent={accent} /></div>
             </div>
           </div>

@@ -6,7 +6,7 @@
 //   一覧表のヘッダー行はスクロールしても上に固定する（確認メモ #135）。
 //   決算書のみ「残高グラフ」。印刷メニューは決算書を計算書の種類ごと、準決算書を区分ごとに点線で区切り、拠点区分の帳票名に区分の名称を付ける（確認メモ #139／#140）。
 //   決算書の印刷は、メニューで帳票を選ぶと「帳票一括印刷」ダイアログ（年月指定＝月ボタンと開始・終了年月／出力先の指定）を開く（現行と同じ。確認メモ #141）。
-//   貸借対照表の借方合計と貸方合計が一致しないときは、確認メッセージ（借方合計・貸方合計・差額）を出す（確認メモ #130。プロトタイプでは一覧見出しの切り替えで不一致の状態にして確認する）。
+//   貸借対照表の借方合計と貸方合計が一致しないときは、確認メッセージ（借方合計・貸方合計・差額）を出す（確認メモ #130。プロトタイプのサンプルは貸借が一致しているため表示されない。切り替えのコメントは 11/26 に削除。確認メモ #384／#385）。
 //   科目行から元帳へドリルダウン：画面遷移せず右側の元帳パネルに表示（押した行を見たまま内訳を確認。別の行を押すと差し替わる）。
 //   パネルの「元帳の画面で開く」で全画面の元帳へ移り、その「← 戻る」で同じ月・部・階層に戻る（表示状態は sessionStorage に保持）。
 //   金額書式（桁区切り・負の表記・0円行のカット）は動作環境の設定に従う。
@@ -31,7 +31,6 @@ import { PrintSteps, type OutKind } from './PrintSteps';
 import { WAMNET_ITEMS, WamnetDialog, type WamnetItem } from './WamnetDialog';
 import { runExport } from './ExportDialog';
 import { ToastView, useToast } from './Toast';
-import { ProtoComment } from './ProtoComment';
 
 const PARTS = ['資産の部', '負債の部', '事業活動', '資金の部'];
 /** 表示階層（「就労授産」は不要のため廃止。確認メモ #133） */
@@ -135,8 +134,6 @@ function closingPrints(s: Session): PrintGroup[] {
   });
   return groups;
 }
-/** サンプル：貸借対照表が不一致のときの差額（確認メモ #130。プロトタイプ確認用の値） */
-const BS_GAP = 12_600;
 
 /* ---------------- 帳票一括印刷（月次決算の印刷。確認メモ #141） ----------------
  *  流れはほかの帳票と同じ「1. 詳細設定（年月指定）→ 2. 出力先 → 3. 印刷／プレビュー」（PrintSteps。確認事項「印刷の画面遷移の統一」） */
@@ -293,8 +290,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
   const money = useMoney();
   const [view, setView] = useViewState<View>(KEY, { month: '8', part: 0, depth: '細々区分', pattern: '標準', carry: true, debit: false, credit: false, balance: true, prev: true, diff: true, breakdown: true });
   const [graph, setGraph] = useState(false);
-  // 貸借対照表の不一致（確認メモ #130）：unbalanced＝不一致の状態（プロトタイプ確認用の切り替え）、warn＝確認メッセージを表示中
-  const [unbalanced, setUnbalanced] = useState(false);
+  // 貸借対照表の不一致（確認メモ #130）：warn＝確認メッセージを表示中
   const [warn, setWarn] = useState(false);
   /** 集計し直したとき（月・期間の切り替え）に、不一致なら確認メッセージを出す */
   const recheck = () => { if (unbalanced) setWarn(true); };
@@ -366,9 +362,10 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
   ];
   /** 帳票一括印刷の月の初期値：画面で選んでいる月（範囲を選んでいるときは、その開始月〜終了月） */
   const batchInit: [string, string] = range ? [range.from.split('/')[0], range.to.split('/')[0]] : [view.month, view.month];
-  // 貸借対照表の借方合計・貸方合計（サンプル。不一致の状態では貸方合計を差額の分だけずらす）
+  // 貸借対照表の借方合計・貸方合計（サンプルは貸借が一致している）
   const debitTotal = total[1];
-  const creditTotal = debitTotal - (unbalanced ? BS_GAP : 0);
+  const creditTotal = debitTotal;
+  const unbalanced = debitTotal !== creditTotal;
 
   return (
     <>
@@ -405,13 +402,6 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
       listNote={
         <>
           <span>{rows.length} 行{hiddenZero > 0 ? `（0データの ${hiddenZero} 行を非表示）` : ''}</span>
-          {/* プロトタイプのコメント（実際のシステムには出ない）：貸借が合わない状態を試す（確認メモ #130） */}
-          <ProtoComment style={{ marginLeft: 'auto' }}>
-            <span>貸借が合わない時は警告が表示されます。</span>
-            <label data-proto-unbalanced style={{ display: 'inline-flex', gap: 4, alignItems: 'center', cursor: 'pointer', fontWeight: 700 }}>
-              <input type="checkbox" checked={unbalanced} onChange={(e) => { setUnbalanced(e.target.checked); setWarn(e.target.checked); }} />合わない貸借を試す
-            </label>
-          </ProtoComment>
         </>
       }
       switches={

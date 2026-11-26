@@ -135,8 +135,13 @@ const stamp = () => { const d = new Date(); return `${d.getFullYear()}${String(d
 export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { variant: 'form' | 'sheet'; accent: string; /** メニュー項目名で別画面へ移動（決算附属明細書設定へのリンクに使用） */ onNavigate?: (label: string) => void; /** 帳票の印刷の中区分「別紙」として、画面の枠（SettingsShell）なしで描く */ embedded?: boolean }) {
   const s = useSession();
   const toast = useToast();
-  const [cur, setCur] = useState('note-corp');
-  const [mode, setMode] = useState('設定・編集');
+  // 選んでいる帳票と「設定・編集／印刷」はブラウザのタブの間だけ覚える（決算附属明細書設定へ移って戻ったときに、同じ帳票を開いたままにする。確認メモ #392）
+  const remembered = (k: string, d: string) => { try { return sessionStorage.getItem('proto-appendix:' + k) ?? d; } catch { return d; } };
+  const remember = (k: string, v: string) => { try { sessionStorage.setItem('proto-appendix:' + k, v); } catch { /* ignore */ } };
+  const [cur, setCurRaw] = useState(() => remembered('cur', 'note-corp'));
+  const setCur = (v: string) => { setCurRaw(v); remember('cur', v); };
+  const [mode, setModeRaw] = useState(() => remembered('mode', '設定・編集'));
+  const setMode = (v: string) => { setModeRaw(v); remember('mode', v); };
   const [hideNa, setHideNa] = useState(true);
   /** 就労支援・授産（⑮〜⑲）：条件を満たしたときの画面を見本として表示する（確認メモ #360） */
   const [peek, setPeek] = useState(false);

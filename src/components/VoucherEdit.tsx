@@ -242,6 +242,8 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
   const [msg, setMsg] = useState<{ tone: 'error' | 'info'; text: string } | null>(null);
   const [rowErr, setRowErr] = useState<Record<string, string>>({});
   const [delOpen, setDelOpen] = useState(false);
+  /** 内部取引の欄を出しているか（入力画面と同じく［内部取引］ボタンで出す。確認メモ #393） */
+  const [inOpen, setInOpen] = useState(false);
   /** 前の伝票／次の伝票へ移動したとき、その伝票の id（確認メモ #263） */
   const [navId, setNavId] = useState<number | null>(null);
   /** 訂正中の内容に変更があるか（移動の前に破棄の確認を出す） */
@@ -275,6 +277,7 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
     setMsg(null);
     setRowErr({});
     setDelOpen(false);
+    setInOpen(false);
     setDirty(false);
   }
 
@@ -333,6 +336,9 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
   const partner = !!st && !isTs && (st.shared ? needsPartner({ kari: st.kari, kashi: st.kashi, internal: st.internal }) : st.internal || st.rows.some((r) => needsPartner({ kari: r.kari, kashi: r.kashi })));
   /** 内部取引科目を使っているため、内部取引をオフにできない */
   const internalLocked = !!st && !isTs && (st.shared ? needsPartner({ kari: st.kari, kashi: st.kashi }) : st.rows.some((r) => needsPartner({ kari: r.kari, kashi: r.kashi })));
+  /** 内部取引の欄：［内部取引］で出したとき、または内部取引の伝票のときに出す（振替単一形式は行ごとなので対象外。確認メモ #393） */
+  const internalShown = !isTs && (inOpen || partner);
+  const toggleInternal = () => { if (internalLocked) return; if (internalShown) { setInOpen(false); if (st?.internal) set({ internal: false, aite: '' }); } else setInOpen(true); };
   /** 税区分（空＝科目からの既定）と、税額の基礎になる金額（借方は借方金額、貸方は貸方金額。振替単一形式は行の金額） */
   const taxKindOf = (r: EditRow, side: 'kari' | 'kashi') => (side === 'kari' ? r.kariTax || taxDefaultOf(r.kari) : r.kashiTax || taxDefaultOf(r.kashi));
   const taxBase = (r: EditRow, side: 'kari' | 'kashi') => toNum(side === 'kashi' && isTr ? r.kashiAmount : r.amount);
@@ -407,6 +413,7 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
     [
       { key: 'S', label: '伝票登録（訂正を保存）', group: '伝票の操作', run: () => save(false), disabled: !editable },
       { key: 'X', label: '伝票削除', group: '伝票の操作', run: () => setDelOpen(true), disabled: !editable },
+      { key: 'U', label: '内部取引（内部取引相手区分の欄を出す／しまう）', group: '伝票の操作', run: () => toggleInternal(), disabled: !editable || isTs || internalLocked },
       { key: 'N', label: '行追加', group: '行の操作', run: () => addRow(rowsN), disabled: !canRow },
       { key: 'I', label: '行挿入', group: '行の操作', run: () => addRow(act), disabled: !canRow },
       { key: 'D', label: '行削除', group: '行の操作', run: () => delRow(act), disabled: !canRow },
@@ -519,7 +526,7 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
             </div>
           )}
           {/* 内部取引のオン／オフ（確認メモ #265）。振替単一形式は行ごとに持つので、各行の下段で切り替える */}
-          {!isTs && (
+          {internalShown && (
             <div data-internal-area data-on={partner ? '1' : '0'} style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0,340px)', gap: 16, alignItems: 'center', padding: '8px 14px', border: '1px solid ' + (partner ? '#e0d6f3' : '#e2e8ee'), background: partner ? '#faf7ff' : '#f6f8fa', borderRadius: 10, justifySelf: 'start' }}>
               {viewOnly ? <span style={{ fontSize: 14, fontWeight: 700, color: partner ? '#6b3fb5' : '#8895a3' }}>内部取引 {partner ? 'オン' : 'オフ'}</span> : <InternalSwitch on={partner} locked={internalLocked} disabled={ro} title={ro ? reason : undefined} onToggle={() => set(st.internal ? { internal: false, aite: '' } : { internal: true })} />}
               <div style={{ opacity: partner ? 1 : 0.5 }}>
@@ -624,6 +631,7 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
           {msg && <div role={msg.tone === 'error' ? 'alert' : 'status'} style={{ padding: '8px 12px', borderRadius: 9, fontSize: 14, fontWeight: 700, background: msg.tone === 'error' ? '#fdeee9' : '#eef4fb', color: msg.tone === 'error' ? '#a5281b' : '#2c5f9e', border: '1px solid ' + (msg.tone === 'error' ? '#f0b9ae' : '#c9dcf2') }}>{msg.text}</div>}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {!viewOnly && !isTs && <ActButton label={internalShown ? '内部取引：あり' : '内部取引'} k="U" menu="内部取引" active={internalShown} accent={accent} disabled={ro || internalLocked} title={internalLocked ? '内部取引科目を使っているため、内部取引の欄は閉じられません' : internalShown ? '内部取引の欄をしまいます（内部取引をオフにします）' : '内部取引相手区分の欄を出します'} onClick={toggleInternal} />}
             {!viewOnly && <ActButton label="伝票削除" k="X" tone="danger" disabled={ro} title={ro ? reason : 'この伝票（全行）を削除します。確認画面を表示します'} onClick={() => setDelOpen(true)} />}
             {!viewOnly && <ActDivider />}
             <span style={{ fontSize: 12, color: '#9aa5b1' }}>{viewOnly ? '参照のみの権限のため、内容の表示だけができます。' : '削除は確認画面のあとに実行します。元に戻せません。'}</span>

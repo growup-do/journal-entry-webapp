@@ -723,7 +723,7 @@ export function FusenTab({ color, offset = -30, top = '50%' }: { color: FusenCol
 
 /** 伝票の印：Seq No・チェック・証憑・付箋（伝票1枚につき1つ）。内部取引の枠と横並びに置く独立した枠（10/16 鈴木さん指示）。
  *  variant 'paper'＝伝票用紙の PaperBox、'panel'＝仕訳伝票形式の内部取引と同じグレーの枠 */
-export function VoucherMarks({ seq, flags, onChange, disabled, viewOnly, showShohyo = true, variant = 'paper', compact = false }: { /** 枠を詰める（単一式入力） */ compact?: boolean;  seq: ReactNode; flags: { check: boolean; fusen: FusenColor; shohyo: boolean }; onChange: (p: Partial<{ check: boolean; fusen: FusenColor; shohyo: boolean }>) => void; disabled?: boolean; viewOnly?: boolean; showShohyo?: boolean; variant?: 'paper' | 'panel' }) {
+export function VoucherMarks({ seq, flags, onChange, disabled, viewOnly, showShohyo = true, variant = 'paper', compact = false }: { /** 枠を詰める（単一式入力） */ compact?: boolean;  seq: ReactNode; flags: { check: boolean; fusen: FusenColor; shohyo: boolean }; onChange: (p: Partial<{ check: boolean; fusen: FusenColor; shohyo: boolean }>) => void; disabled?: boolean; viewOnly?: boolean; showShohyo?: boolean; variant?: 'paper' | 'panel' | 'bare' }) {
   const lab: CSSProperties = { fontSize: 12, fontWeight: 700, color: '#8290a0', whiteSpace: 'nowrap' };
   const item: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: compact ? 5 : 8 };
   const body = (
@@ -734,6 +734,8 @@ export function VoucherMarks({ seq, flags, onChange, disabled, viewOnly, showSho
       <span style={item}><span style={lab}>付箋</span>{viewOnly ? <span className="pp-ro pp-ro-s">{flags.fusen || 'なし'}</span> : <button type="button" tabIndex={-1} className="pp-toggle" disabled={disabled} title={`付箋：${fusenLabel(flags.fusen)}（クリックで 赤→青→黄→緑→なし）。伝票1枚につき1つ`} onClick={() => onChange({ fusen: nextFusen(flags.fusen) })} style={{ background: flags.fusen ? FUSEN_HEX[flags.fusen] : '#fff', color: flags.fusen ? '#fff' : '#8290a0', minWidth: 44 }}>{flags.fusen || 'なし'}</button>}</span>
     </div>
   );
+  // 枠なし：合計行の左端などに並べる（確認メモ #391）
+  if (variant === 'bare') return body;
   if (variant === 'panel') {
     return <div className="ef-field" data-voucher-marks-box style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', border: '1px solid #e2e8ee', background: '#f1f3f5', borderRadius: 12 }}>{body}</div>;
   }

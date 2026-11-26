@@ -71,7 +71,7 @@ export interface EnvSettings {
   wideInitial: string; wideMonth: string; ledger1Init: string; ledger2Init: string; order: '日付順' | '入力順';
   eraGannen: boolean; trialCalc: string; reserveOutput: string; noteOnExcel: boolean;
   /** 帳票・繰入金・注意書き（動作環境 4.2.2） */
-  budgetInternalOffset: boolean; onePageRow: boolean; termFromStart: boolean; hideCorpName: boolean;
+  budgetInternalOffset: boolean; onePageRow: boolean; hideCorpName: boolean;
   transferWatch: '収入で監視' | '支払いで監視';
   /** 依頼書 2.6／5.5.1：動作環境の残り項目（全区分共通：フリガナ検索の無効化・帳票印刷の速度重視／区分ごと：負数の表記位置・バックアップ先・画面背景・金額フォントの自動調整）。
    *  確認メモ #170・#172・#173・#174：noFurigana／oneSideInternal／specialPopup／backupDest／backupFolder の設定欄は環境設定の画面から削除した（保存済みデータとの互換のためフィールドは残す） */
@@ -88,10 +88,10 @@ export const DEFAULT_ENV: EnvSettings = {
   autoComplete: true, autoCompleteAdd: true, specialPopup: true,
   budgetCheck: true, budgetThreshold: 90, oneSideInternal: false, searchTotal: true,
   thousandsSep: 'カンマ', negativeSign: '△', negativeColor: '赤', zeroCut: true,
-  colorReports: true, lineColor: '#c8d3de', shadeColor: '#eef2f6',
+  colorReports: false, lineColor: '#0080ff', shadeColor: '#f7ffff',
   wideInitial: '仕訳日記帳', wideMonth: '最新月', ledger1Init: '普通預金（保育園）', ledger2Init: '', order: '日付順',
   eraGannen: true, trialCalc: '費目行に表記されている計算方式で計算する', reserveOutput: '予備費を標準方式で印字', noteOnExcel: true,
-  budgetInternalOffset: true, onePageRow: false, termFromStart: false, hideCorpName: false, transferWatch: '収入で監視',
+  budgetInternalOffset: true, onePageRow: false, hideCorpName: false, transferWatch: '収入で監視',
   noFurigana: false, printSpeed: false,
   negativePos: '前', backupDest: 'クラウド（標準）', backupFolder: '', bgMode: '色', bgColor: '#f3f6f9', bgColorRight: '#eef5fb', autoAmountFont: true,
   supplementMode: '補正額',

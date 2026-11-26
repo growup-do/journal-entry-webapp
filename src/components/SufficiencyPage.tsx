@@ -12,7 +12,6 @@ import { IconButton, ManualButton } from './ui';
 import { Modal } from './Modal';
 import { useBackNav } from './BackNav';
 import { ToastView, useToast } from './Toast';
-import { ProtoComment } from './ProtoComment';
 import { ACCOUNT_META } from '../lib/accounts';
 import { SUFFICIENCY_DEFAULT as D } from '../data';
 
@@ -33,10 +32,10 @@ const HISTORY = [
   { y: '令和7年度', usable: 12_100_000, deduct: 40_100_000 },
 ];
 
-/** 起動の流れ：確認画面 → 入力方式の選択 →（実績を使う方式のとき）科目警告画面 → 警告画面（貸借が合わないとき。プロトタイプでは入力方式選択画面のコメントで切り替える）→ 本体 */
+/** 起動の流れ：確認画面 → 入力方式の選択 →（実績を使う方式のとき）科目警告画面 → 警告画面（貸借が合わないとき）→ 本体 */
 type Step = 'confirm' | 'method' | 'acctWarn' | 'warn' | 'main';
-/** 警告画面のサンプル値（確認メモ #111 ①）：貸借対照表 決算額の借方合計・貸方合計が一致していない例 */
-const WARN = { debit: 48_436_500, credit: 48_400_000 };
+/** 実績の貸借対照表 決算額の借方合計・貸方合計（サンプル。一致しているため警告画面は出ない。確認メモ #111 ①／#386） */
+const WARN = { debit: 48_436_500, credit: 48_436_500 };
 /** 科目警告画面のサンプル（確認メモ #111 ② ／ #240）：【財務諸表等入力シート】の標準科目名と結び付かなかった科目（費目・印刷科目名） */
 const ACCT_WARN: [string, string][] = [
   ['50', '医薬品'], ['50', '診療・療養費等材料'], ['50', '給食用材料'], ['50', '商品・製品'], ['50', '仕掛品'], ['50', '原材料'],
@@ -65,8 +64,8 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
   const [step, setStep] = useState<Step>('confirm');
   const [agreed, setAgreed] = useState(false);
   const [method, setMethod] = useState('');
-  /** プロトタイプ確認用：実績の貸借が合わない状態（ON のときだけ警告画面を出す） */
-  const [unbalanced, setUnbalanced] = useState(false);
+  /** 実績の貸借対照表 決算額が合わないか（サンプルは一致しているため警告画面は出ない） */
+  const unbalanced = WARN.debit !== WARN.credit;
   /** 科目警告画面のあと：貸借が合わないときは警告画面、合うときは本体へ */
   const afterAcct = () => setStep(unbalanced ? 'warn' : 'main');
   const [a, setA] = useState(D.assets);
@@ -172,13 +171,6 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
               </label>
             ))}
           </div>
-          {/* プロトタイプのコメント（実際のシステムには出ない）：貸借が合わない状態を試す */}
-          <ProtoComment style={{ marginTop: 12 }}>
-            <span>貸借が合わない時は警告が表示されます。</span>
-            <label data-proto-unbalanced style={{ display: 'inline-flex', gap: 4, alignItems: 'center', cursor: 'pointer', fontWeight: 700 }}>
-              <input type="checkbox" checked={unbalanced} onChange={(e) => setUnbalanced(e.target.checked)} />合わない貸借を試す
-            </label>
-          </ProtoComment>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 18 }}>
             <span />
             <div style={{ display: 'flex', gap: 8 }}>

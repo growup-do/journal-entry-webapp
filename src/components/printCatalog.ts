@@ -147,9 +147,11 @@ function LEDGER(kind: '総勘定元帳' | '資金元帳' | '取引先元帳'): D
   return [
     { title: '印刷項目', items: [
       // 残高のみも印刷する は 月計を印刷する のときだけ、残高 0 も印刷する は 残高のみも印刷する のときだけ（確認メモ #328。取引先元帳にもある）
+      //   付随する項目は親のすぐ下に段を下げて並べる（確認メモ #381／#382）
+      chk('month', '月計を印刷する', true),
       { ...chk('balOnly', '残高のみも印刷する', kind !== '取引先元帳'), when: { k: 'month', v: true } },
       { ...chk('zeroBal', '残高 0 も印刷する'), when: { k: 'balOnly', v: true } },
-      chk('month', '月計を印刷する', true), chk('total', '合計を印刷する', gl), chk('totalYear', '合計の集計は年間でする', true),
+      chk('total', '合計を印刷する', gl), chk('totalYear', '合計の集計は年間でする', true),
       ...(gl ? [] : [chk('budgetRest', '合計印刷時に予算残を印刷する', true)]),
       chk('monthBreak', '月次で改頁する', kind === '取引先元帳'), chk('monthOnly', '月計だけ印刷する'),
       ...(gl ? [chk('dispCode', '表示コードを印刷する')] : []),

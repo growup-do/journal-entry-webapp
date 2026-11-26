@@ -98,7 +98,6 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
             <div style={card}><div style={cardHead}>試算表・予算の集計方法</div><div style={{ padding: 14, display: 'grid', gap: 12 }}>
               <Field label="試算表：費目行の計算方式"><select value={v.trialCalc} onChange={(e) => set({ trialCalc: e.target.value })} style={input}>{['費目行に表記されている計算方式で計算する', '収入の借方と支出の借方を加算する（貸方も同様）'].map((o) => <option key={o}>{o}</option>)}</select></Field>
               {T('budgetInternalOffset', '予算の内部取引消去（内部取引を相殺する）')}
-              {T('termFromStart', '月範囲の選択で、期首から月を選択する')}
             </div></div>
             <div style={card}><div style={cardHead}>付箋の色の意味</div><div style={{ padding: 14, display: 'grid', gap: 8 }}>
               {(['赤', '青', '黄', '緑'] as const).map((f) => (
@@ -111,6 +110,18 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
             </div></div>
             <div style={card}><div style={cardHead}>日付の表記</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
               {T('eraGannen', '和暦の1年を「元年」と表記する')}
+            </div></div>
+            {/* 帳票色（現行の動作環境「帳票色」と同じ3項目と初期値。確認メモ #376） */}
+            <div style={card} data-report-color><div style={cardHead}>帳票色</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
+              {T('colorReports', 'カラー帳票を有効にする')}
+              <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
+                {([['lineColor', '罫線の色'], ['shadeColor', '網掛け色']] as const).map(([k, l]) => (
+                  <label key={k} data-report-color-item={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, cursor: 'pointer' }}>
+                    <input type="color" value={v[k]} onChange={(e) => set(k === 'lineColor' ? { lineColor: e.target.value } : { shadeColor: e.target.value })} style={{ width: 34, height: 26, padding: 0, border: '1px solid #cfd8e0', borderRadius: 4, background: '#fff', cursor: 'pointer' }} />{l}
+                  </label>
+                ))}
+              </div>
+              <div style={{ fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>決算表・予算表・試算表・仕訳日記帳の罫線の色と網掛け色です。元帳と伝票は、帳票ごとに決まった色で印刷します（印刷の詳細設定で変えられます）。</div>
             </div></div>
           </div>
         </ScopeBlock>

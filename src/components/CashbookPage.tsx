@@ -289,7 +289,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
   const isPetty = kind === 'petty';
   const title = isPetty ? '小口現金出納帳' : '預金出納帳';
   /** 消費税を使う設定（消費税の処理方式が「通常モード」以外）のときは「消費税コード」「税額」の列を出す（確認メモ #216） */
-  const { taxEntry, env } = useSession();
+  const { taxEntry } = useSession();
   const [book, setBook] = useState(isPetty ? PETTY_BOOKS[0].name : '普通預金（保育園）');
   /** 出納帳の一覧（「区分の切替」の中の「＋出納帳追加」で増やせる。確認メモ #211／#215） */
   const [pettyBooks, setPettyBooks] = useState<PettyBook[]>(PETTY_BOOKS);
@@ -915,7 +915,6 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
                 })}
               </span>
             )}
-            {!range && env.termFromStart && FISCAL_MONTHS.indexOf(month as typeof FISCAL_MONTHS[number]) > 0 && <span title="環境設定（全区分共通）「月範囲の選択で、期首から月を選択する」が有効です" style={{ fontWeight: 700, color: accent }}>4月〜{month}月の累計</span>}
           </div>
         )}
         </div>
