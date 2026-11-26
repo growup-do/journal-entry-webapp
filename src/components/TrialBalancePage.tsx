@@ -137,7 +137,7 @@ function closingPrints(s: Session): PrintGroup[] {
 }
 
 /* ---------------- 帳票一括印刷（月次決算の印刷。確認メモ #141） ----------------
- *  流れはほかの帳票と同じ「1. 詳細設定（年月指定）→ 2. 出力先 → 3. 印刷／プレビュー」（PrintSteps。確認事項「印刷の画面遷移の統一」） */
+ *  流れはほかの帳票と同じ「出力先（基本条件つき）と詳細設定のタブ」（PrintSteps。確認事項「印刷の画面遷移の統一」） */
 /** 年月（令和 y 年 m 月）。m は 1〜12、または「決」（決算月） */
 interface YM { y: string; m: string }
 interface BatchOpts { from: string; to: string; out: OutKind | 'preview' }
@@ -211,12 +211,11 @@ function BatchPrintForm({ item, fy, init, accent, onCancel, onRun }: { item: Pri
         detailSummary={err ? '年月を確かめてください' : `${ymText(from)}〜${ymText(to)}`}
         dest={dest}
         onDest={setDest}
-        confirm={[['帳票', item.name], ['年月', `${ymText(from)} 〜 ${ymText(to)}`]]}
         blocked={err || undefined}
         onPreview={() => run('preview')}
         onRun={() => run(dest)}
         onClose={onCancel}
-        detail={<div style={{ display: 'grid', gap: 14 }}>
+        basic={<div style={{ display: 'grid', gap: 14 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '8px 12px', borderRadius: 8, background: '#f6f8fa', border: '1px solid #e2e8ee', fontSize: 14 }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', flex: 'none' }}>印刷する帳票</span>
         <span data-batch-report style={{ fontWeight: 700 }}>{item.name}</span>

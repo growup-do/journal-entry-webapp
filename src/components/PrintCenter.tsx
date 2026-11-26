@@ -1,5 +1,5 @@
 // 帳票の印刷（提案C／依頼書 5.1.1・5.5.1・6.3・6.5）
-//   印刷の流れは「1. 詳細設定 → 2. 出力先 → 3. 印刷／プレビュー」に統一（確認事項「印刷の画面遷移の統一」。枠は PrintSteps と共通）。
+//   印刷の流れは「出力先（基本条件つき）と詳細設定のタブ」に統一（確認事項「印刷の画面遷移の統一」。枠は PrintSteps と共通）。
 //   帳票選択は印刷画面に入れない。帳票は印刷画面を開く前（各画面の「印刷 ▾」、帳票の印刷の一覧）で決める。期間・区分は詳細設定の先頭に置く。
 //   詳細設定は影響範囲で分けて表示する：
 //     ① この帳票の詳細設定（帳票個別。現行の画面の枠ごとにチェック・ラジオ・選択を描き分ける）
@@ -146,7 +146,6 @@ function remarkUnitOf(s: Session): string {
 /** 備考・摘要欄を使う帳票（資金収支計算書（試算表）は使わない。確認メモ #377） */
 const usesRemark = (r: ReportDef) => r.cat === '決算書' || r.cat === '準決算書' || r.cat === '予算' || (r.cat !== '試算表' && /資金収支計算書/.test(r.name));
 const itemsOf = (r: ReportDef): DetailItem[] => r.detail.flatMap((sec) => sec.items);
-const usesDepth = (r: ReportDef) => itemsOf(r).some((it) => it.k === 'depth');
 
 
 const eraYear = (fy: string) => parseInt(fy.replace(/[^0-9]/g, ''), 10) || 8;
@@ -435,32 +434,22 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
   };
 
   const radio = (on: boolean): CSSProperties => ({ display: 'flex', gap: 6, alignItems: 'center', padding: '5px 8px', borderRadius: 8, background: on ? '#eef2f6' : 'transparent', fontSize: 14, cursor: 'pointer' });
-  const confirm: [string, string][] = [
-    ['帳票', report.name],
-    ['期間', `${p.from} 〜 ${p.to}${report.range ? `（${p.range}）` : ''}`],
-    ['区分', `${s.division}${kind !== '入力区分' ? `（${p.target === '起動中の区分' ? '合計で印刷' : '構成する区分ごとに印刷'}）` : ''}`],
-    ['この帳票の詳細設定', `${report.noZero ? '' : `0データ：${p.zeroHide ? '表示しない' : '表示する'}／`}印刷項目 ${onCount} 件を有効${usesDepth(report) ? `／印刷範囲：${p.detail.depth}` : ''}${usesRemark(report) ? `／備考：${myUnit}${pr.unitRemarks[myUnit] ? '' : '（未入力）'}` : ''}`],
-  ];
-  if (report.acctPick) confirm.push(['印刷する科目', `勘定科目 ${picked(p.acctSel)} 件／資金科目 ${picked(p.fundSel)} 件`]);
-  if (report.basicList) confirm.push([report.basicList.label, `${(p.basicSel ?? report.basicList.def ?? []).length} 件`]);
-  if (report.graphPick) confirm.push(['グラフにする科目', GRAPH_PARTS.map(({ key }) => `${key} ${GRAPH_TREES[key].filter((_, i) => graphSel[`${key}:${i}`]).length} 件`).join('／')]);
-  if (report.common) confirm.push(['決算書 共通印刷設定', `${diff ? `${diff} 項目が共通の設定と異なる` : '共通の設定どおり'}／行の間隔 ${pr.lineGap}・${pr.fontName}`]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+    // 画面の中に置くので、下に固定するボタンはプロトタイプの確認バーの上に出す
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, ['--print-foot-bottom' as string]: 'var(--proto-dock-space, 0px)' }}>
       <ToastView msg={toast.msg} />
       <PrintSteps
         accent={accent}
-        detailSummary={`${p.from}〜${p.to}／印刷項目 ${onCount} 件${report.common ? (diff ? `／共通と異なる ${diff} 項目` : '／共通の設定どおり') : ''}`}
+        detailSummary={`印刷項目 ${onCount} 件${report.common ? (diff ? `／共通と異なる ${diff} 項目` : '／共通の設定どおり') : ''}`}
         dest={destKind}
         dests={report.outs}
         onDest={(k) => set({ output: OUT_OF[k] })}
         onPreview={preview}
         onRun={run}
         onClose={onClose}
-        confirm={confirm}
-        detail={<>
-          <ScopeBlock title="基本条件" desc="印刷する期間と区分です。">
+        // 基本条件は出力先と同じ画面に置く（確認事項「「帳票の印刷」画面の構成について」）
+        basic={<ScopeBlock title="基本条件" desc="印刷する期間と区分です。">
             <div data-print-basic style={{ display: 'grid', gap: 14 }}>
             <div>
               <span style={lbl}>{report.annual ? '期間（年次の帳票のため、会計年度の期首〜期末）' : fixStart ? <>期間（最初の月は 4月で固定） <HelpTip text="月のボタンで最後の月を選びます" /></> : <>期間 <HelpTip text={['月のボタンで1か月を選びます', 'ドラッグか Shift＋クリックで月の範囲を選びます', '「全月」で年度全体を選びます']} /></>}</span>
@@ -577,7 +566,8 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
               <div data-budget-rev><span style={lbl}>補正予算の年月</span><div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', fontSize: 14 }}>第<input className="field-input" aria-label="補正の回数" defaultValue="1" style={{ ...input, width: 60 }} />次補正　令和<input className="field-input" aria-label="年" style={{ ...input, width: 60 }} />年<input className="field-input" aria-label="月" style={{ ...input, width: 60 }} />月</div></div>
             )}
             </div>
-          </ScopeBlock>
+          </ScopeBlock>}
+        detail={<>
             <ScopeBlock kind="帳票個別" title="この帳票の詳細設定" desc={`「${report.name}」の印刷だけに反映されます。`} right={report.common ? <>
               <button type="button" data-apply-common onClick={(e) => { e.stopPropagation(); applyCommon(); }} title="決算書 共通印刷設定の値を、この帳票の詳細設定に写します" style={{ ...btn(accent, true, true), whiteSpace: 'nowrap' }}>共通の印刷設定を反映</button>
               <button type="button" data-open-common onClick={(e) => { e.stopPropagation(); goScreen('共通の印刷設定'); }} title="決算書 共通印刷設定の画面を開きます" style={{ ...btn('#5b6773', false, true), whiteSpace: 'nowrap' }}>決算書 共通印刷設定を開く</button>

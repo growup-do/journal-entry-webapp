@@ -131,7 +131,8 @@ export function SettingsShell({ variant, title, desc, badge = '設定', draft = 
   useBackClaim(!!backNav.from);
   return (
     <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
-      <div data-unsaved={unsaved || undefined} data-editing={editing || undefined} className={editing ? 'edit-glow' : undefined} style={{ width: '100%', maxWidth: isSheet ? 'none' : 1240, background: unsaved ? UNSAVED_BG : '#fff', border: '1px solid ' + (unsaved ? '#ecd9b4' : '#dde4ea'), borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'hidden', transition: 'background .15s, border-color .15s' }}>
+      {/* 角丸の外にはみ出す部分は切るが、スクロールの枠にはしない（clip）。中の position: sticky（印刷画面の下のボタンなど）が画面に対して効くようにする */}
+      <div data-unsaved={unsaved || undefined} data-editing={editing || undefined} className={editing ? 'edit-glow' : undefined} style={{ width: '100%', maxWidth: isSheet ? 'none' : 1240, background: unsaved ? UNSAVED_BG : '#fff', border: '1px solid ' + (unsaved ? '#ecd9b4' : '#dde4ea'), borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'clip', transition: 'background .15s, border-color .15s' }}>
         {backNav.from && (
           <div data-return-bar style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 22px', background: '#f3f6f9', borderBottom: '1px solid #e2e8ee', borderRadius: '12px 12px 0 0' }}>
             <BackButton from={backNav.from} onBack={backNav.back} accent="#1f7a52" />

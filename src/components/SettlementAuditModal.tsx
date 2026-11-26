@@ -275,7 +275,7 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
       </div>
     </Modal>
 
-    {/* 結果印刷：ほかの帳票と同じ「1. 詳細設定 → 2. 出力先 → 3. 印刷／プレビュー」（確認事項「印刷の画面遷移の統一」） */}
+    {/* 結果印刷：ほかの帳票と同じ「出力先（基本条件つき）と詳細設定のタブ」（確認事項「印刷の画面遷移の統一」） */}
     <PrintOutDialog open={print} onClose={() => setPrint(false)} name="決算チェック結果" accent="#1f7a52" meta={`${s.fiscalYear} 4月1日〜3月31日`}
       data={() => ({ header: ['No', '項目', '結果', '内容'], rows: AUDIT_ITEMS.map((it) => [String(it.no).padStart(2, '0'), it.name, stateOf(it.no), stateOf(it.no) === '要調査' ? '要調査（結果詳細を参照）' : stateOf(it.no) === 'OK' ? '一致' : '']) })}
       previewOpts={{ from: `${s.fiscalYear} 4月1日`, to: '3月31日', output: '画面へプレビューする' }}

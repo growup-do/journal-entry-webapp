@@ -239,6 +239,8 @@ export default function App() {
  *  参照のみ権限のときの見え方（訂正・削除・入換の無効表示）を確認するための仕掛けで、本番の画面要素ではない */
 function RoleSwitchBar({ review, guard }: { /** 確認用アカウント：確認事項・やりとりへの入口を出さない */ review: boolean; /** 未保存の変更があれば確認してから実行する */ guard: (go: () => void) => void }) {
   const s = useSession();
+  // このバーが画面の下を覆う高さを、画面の下に固定する部品（印刷画面のボタンなど）に知らせる
+  useEffect(() => { const r = document.documentElement.style; r.setProperty('--proto-dock-space', '84px'); return () => { r.removeProperty('--proto-dock-space'); }; }, []);
   const ROLES: { key: typeof s.role; label: string; hint: string; accent: string }[] = [
     { key: '入力可', label: '入力権限', hint: '伝票の入力・訂正・削除ができる', accent: '#1f7a52' },
     { key: '参照のみ', label: '参照のみ権限', hint: '閲覧のみ（訂正・削除・入換は無効表示）', accent: '#b7791f' },

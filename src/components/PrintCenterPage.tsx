@@ -168,8 +168,8 @@ export function PrintCenterPage({ variant, accent, onNavigate, initialCat }: { v
         </div>
       </Modal>
       <PrintOutDialog open={batchOpen} onClose={() => setBatchOpen(false)} name={`まとめて印刷（${picked.length}帳票）`} accent={accent} data={batchData} fileName="まとめて印刷_令和8年8月" meta={`令和8年8月1日〜8月31日　対象：${picked.map((r) => r.name).join('、')}`}
-        previewOpts={{ from: '令和8年8月1日', to: '令和8年8月31日', output: OUTPUTS[1] }} detailSummary={`${picked.length} 帳票`} confirm={[['選んだ帳票', picked.map((r) => r.name).join('、')], ['期間', '令和8年8月1日〜8月31日']]}
-        detail={<div style={{ display: 'grid', gap: 10 }}>
+        previewOpts={{ from: '令和8年8月1日', to: '令和8年8月31日', output: OUTPUTS[1] }} detailSummary={`${picked.length} 帳票`}
+        basic={<div style={{ display: 'grid', gap: 10 }}>
           <span style={lbl}>まとめて印刷する帳票（{picked.length}）</span>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{picked.map((r) => <span key={r.id} style={{ padding: '4px 10px', borderRadius: 8, background: '#eef2f6', fontSize: 14 }}>{r.name}</span>)}</div>
           <div style={{ fontSize: 12, color: '#8290a0' }}>期間：令和8年8月1日〜8月31日。帳票ごとの詳細設定は、各帳票で決めた内容を使います。帳票を変えるときは、この画面を閉じて「まとめて印刷」から選び直します。</div>

@@ -1,7 +1,7 @@
 // 小口現金出納帳／預金出納帳の印刷の条件画面（確認メモ #235）
 //   集計内訳表・仕訳伝票：「集計内訳表を印刷する明細を選んでください」。◉集計単位で選ぶ（期間・明細の一覧）／○月で選ぶ（集計した年月）
 //   出納帳印刷：印刷ページ範囲指定／印刷ページの様式／用紙位置調整。［出納帳設定］
-//   どちらも共通の印刷の流れ「1. 詳細設定 → 2. 出力先 → 3. 印刷／プレビュー」（PrintSteps）で、Excel 出力は出力先で選ぶ（確認事項「印刷の画面遷移の統一」）。
+//   どちらも共通の印刷の流れ「出力先（基本条件つき）と詳細設定のタブ」（PrintSteps）で、Excel 出力は出力先で選ぶ（確認事項「印刷の画面遷移の統一」）。
 //   印刷・ファイル出力は ExportDialog（runExport）、プレビューは PreviewModal に渡す（CashbookPage 側で組み立てる）。
 //   入力のあるモーダルなので、閉じるのは × と「キャンセル」だけ（Esc・外側のクリックでは閉じない）。
 
@@ -71,12 +71,11 @@ export function AggPrintDialog({ open, report, units, accent, onRun, onClose }: 
           detailSummary={ok ? `明細 ${units.filter((u) => ids.includes(u.id)).reduce((a, u) => a + u.count, 0)} 件` : '明細を選んでください'}
           dest={dest}
           onDest={setDest}
-          confirm={[['帳票', report], ['印刷する明細', cond]]}
           blocked={ok ? undefined : '印刷する明細を選んでください。'}
           onPreview={() => run('preview')}
           onRun={() => run(dest)}
           onClose={onClose}
-          detail={<div>
+          basic={<div>
         <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 10 }}>{report}を印刷する明細を選んでください</div>
         <div style={{ ...box, marginBottom: 10 }}>
           <label style={row}><input type="radio" name="agg-print-mode" checked={mode === 'unit'} onChange={() => setMode('unit')} />集計単位で選ぶ</label>
@@ -165,12 +164,11 @@ export function LedgerPrintDialog({ open, report, pageCount, accent, onRun, onSe
           detailSummary={err ? err : all ? `すべて（${pageCount} ページ）` : `${f}〜${t} ページ`}
           dest={dest}
           onDest={setDest}
-          confirm={[['帳票', report], ['印刷するページ', all ? `すべて（${pageCount} ページ）` : `${f}〜${t} ページ`], ['印刷ページの様式', style], ['用紙位置調整', `左余白 ${parseFloat(left) || 0} ミリ／上余白 ${parseFloat(top) || 0} ミリ`]]}
           blocked={err || undefined}
           onPreview={() => run('preview')}
           onRun={() => run(dest)}
           onClose={onClose}
-          detail={<div style={{ display: 'grid', gap: 12 }}>
+          basic={<div style={{ display: 'grid', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ fontSize: 14, fontWeight: 700, flex: 1 }}>{report}<span style={{ fontSize: 12, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>総ページ数 {pageCount}（「改ページ」の行でページを区切ります）</span></div>
           <button type="button" className="btn-outline" onClick={onSettings} title="印刷する欄・表題・捺印欄などの設定（小口の設定の「印刷設定」）" style={btn()}>出納帳設定</button>

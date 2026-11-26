@@ -89,7 +89,7 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
   const isOn = (r: JournalRow) => !checked.has('off:' + rowKey(r));
   const toggle = (r: JournalRow) => setChecked((s) => { const n = new Set(s); const key = 'off:' + rowKey(r); n.has(key) ? n.delete(key) : n.add(key); return n; });
   const setAll = (on: boolean) => setChecked((s) => { const n = new Set(s); rows.forEach((r) => (on ? n.delete('off:' + rowKey(r)) : n.add('off:' + rowKey(r)))); return n; });
-  // 印刷（確認メモ #213）：「Excel出力」と「印刷」を 1 つにまとめた。流れはほかの帳票と同じ「1. 詳細設定 → 2. 出力先 → 3. 印刷／プレビュー」
+  // 印刷（確認メモ #213）：「Excel出力」と「印刷」を 1 つにまとめた。流れはほかの帳票と同じ「出力先（基本条件つき）と詳細設定のタブ」
   //   （PrintSteps。確認事項「印刷の画面遷移の統一」）。
   //   この画面から出せるのは収入・支出調書（伺書）だけ。日記帳・伝票・振替伝票は選べない
   const [printOpen, setPrintOpen] = useState(false);
@@ -171,7 +171,7 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
         <span style={{ marginLeft: 'auto', fontSize: 14, color: '#7a8794', alignSelf: 'center' }}>対象 <b style={{ color: '#22303c' }}>{rows.filter(isOn).length}</b> ／ {rows.length} 件</span>
       </div>
 
-      {/* 印刷（確認メモ #213）：1. 詳細設定 → 2. 出力先 → 3. 印刷／プレビュー */}
+      {/* 印刷（確認メモ #213）：出力先（基本条件つき）と詳細設定のタブ */}
       <Modal open={printOpen} onClose={() => setPrintOpen(false)} width={700} title={<>収入・支出調書の印刷 <span style={{ fontSize: 14, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>{k.label}</span></>}>
         <div data-receipt-print>
           <PrintSteps
@@ -179,12 +179,11 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
             detailSummary={`対象 ${targets.length} 件`}
             dest={dest}
             onDest={setDest}
-            confirm={[['帳票', docTitle], ['会計月', monthText], ['対象の伝票', `${targets.length} 件`]]}
             destNote={<div style={{ fontSize: 12, color: '#8290a0' }}>出力すると、対象の伝票を「出力済み」にします。プレビューでは出力済みになりません。</div>}
             onPreview={() => setPreviewOpen(true)}
             onRun={doOutput}
             onClose={() => setPrintOpen(false)}
-            detail={<div style={{ display: 'grid', gap: 12 }}>
+            basic={<div style={{ display: 'grid', gap: 12 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr', gap: '6px 12px', padding: '10px 14px', background: '#f6f8fa', borderRadius: 10, fontSize: 14 }}>
                 <span style={{ color: '#7a8794' }}>印刷する帳票</span><b>{docTitle}</b>
                 <span style={{ color: '#7a8794' }}>会計月</span><span>{monthText}</span>

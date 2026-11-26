@@ -1,6 +1,6 @@
 // 減価償却：帳票印刷の条件画面と詳細設定（確認メモ #251）
 //   現行「減価償却オプションシステム」の印刷条件画面（出力先）と［詳細設定］の内容を、1 つのダイアログにまとめる。
-//   流れはほかの帳票と同じ「1. 詳細設定 → 2. 出力先 → 3. 印刷／プレビュー」（PrintSteps。確認事項「印刷の画面遷移の統一」）。
+//   流れはほかの帳票と同じ「出力先（基本条件つき）と詳細設定のタブ」（PrintSteps。確認事項「印刷の画面遷移の統一」）。
 //   詳細設定の左：その帳票の設定（帳票ごとに項目が違う）／右：全帳票に共通のフォント・罫線・印刷位置調整。
 //   「償却方法の印字設定」は現行のアップデートで追加された項目（固定資産管理台帳（新会計版）と固定資産管理台帳のみ）。
 //   設定は帳票ごとに覚え、次に開いたときも引き継ぐ（実行したときに保存。キャンセルでは保存しない）。
@@ -170,7 +170,6 @@ export function DepPrintModal({ name, accent, onRun, onClose }: { name: string; 
           detailSummary="この帳票だけの設定と、全帳票共通のフォント・罫線・印刷位置"
           dest={output}
           onDest={setOutput}
-          confirm={[['帳票', name.replace(/\(/g, '（').replace(/\)/g, '）')], ['タイトル', String(v.title ?? '')], ['フォント・罫線', `各名称 ${v.fName}／項目名 ${v.fItem}／金額 ${v.fAmt}・罫線 ${v.lIn}`], ['印刷位置調整', `上 ${v.offUp} mm／右 ${v.offRight} mm`]].filter(([, x]) => x) as [string, string][]}
           onPreview={() => run('preview')}
           onRun={() => run(output)}
           onClose={onClose}

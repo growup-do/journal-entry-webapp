@@ -641,7 +641,7 @@ export function useEntryTools(o: EntryToolsOptions) {
         <div data-register-confirm style={{ marginTop: 8, padding: '8px 12px', borderRadius: 8, background: '#f3f6f9', fontSize: 14, lineHeight: 1.8 }}>入力区分：<b>{o.service || '（未指定）'}</b><br />伝票日付：<b>{entryDateText(o.month, o.day, o.year)}</b></div>
       </ConfirmModal>
       {/* 登録した伝票の印刷（確認メモ #187） */}
-      {/* 登録して印刷：ほかの帳票と同じ「1. 詳細設定 → 2. 出力先 → 3. 印刷／プレビュー」（確認事項「印刷の画面遷移の統一」） */}
+      {/* 登録して印刷：ほかの帳票と同じ「出力先（基本条件つき）と詳細設定のタブ」（確認事項「印刷の画面遷移の統一」） */}
       {printed && printData && <PrintOutDialog open onClose={() => setPrinted(null)} name={/振替/.test(o.format) ? '振替伝票' : '仕訳伝票'} accent={o.accent} data={() => printData} meta={`登録した伝票 ${printed.length} 件`} />}
       <ConfirmModal open={dlg === '中止'} title="伝票中止の確認" okLabel="入力中の伝票を破棄する" danger accent={o.accent} onClose={() => setDlg(null)} onOk={() => { setDlg(null); o.onCancel(); o.toast('入力中の伝票を破棄しました'); }}>
         入力中の伝票を破棄します。<b>登録済みの伝票には影響しません。</b>

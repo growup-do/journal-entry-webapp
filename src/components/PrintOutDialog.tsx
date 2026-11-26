@@ -1,6 +1,6 @@
 // 一覧・結果などを出力する「印刷」画面（確認事項「印刷の画面遷移の統一」）
 //   画面にあった「Excel出力」「CSV出力」「PDF出力」のボタンをやめ、「印刷」ボタン 1 つから開く。
-//   流れは帳票と同じ「1. 詳細設定 → 2. 出力先 → 3. 印刷／プレビュー」（PrintSteps）。出力の形式は「2. 出力先」で選ぶ。
+//   流れは帳票と同じ「出力先（基本条件つき）と詳細設定のタブ」（PrintSteps）。出力の形式は「2. 出力先」で選ぶ。
 //   詳細設定を渡さない画面は、タイトルと出力する内容（件数）だけを表示する。
 
 import { useEffect, useState } from 'react';
@@ -10,7 +10,7 @@ import { Modal } from './Modal';
 import { PreviewModal, type TableData } from './PrintCenter';
 import { PrintSteps, type OutKind } from './PrintSteps';
 import { ToastView, useToast } from './Toast';
-import { Field, Notice, PrintIcon, btn, input } from './ui';
+import { Field, PrintIcon, btn, input } from './ui';
 
 export interface PrintOutProps {
   open: boolean;
@@ -26,8 +26,8 @@ export interface PrintOutProps {
   /** 詳細設定（省略時はタイトルと出力する件数） */
   detail?: ReactNode;
   detailSummary?: string;
-  /** 確認表に足す行（帳票・タイトル・出力する内容の行は自動） */
-  confirm?: [string, ReactNode][];
+  /** 基本条件（印刷する帳票・期間など）。出力先と同じ画面に置く */
+  basic?: ReactNode;
   /** 出力できない理由 */
   blocked?: string;
   /** 選べる出力先（省略時は 4 つ） */
@@ -39,7 +39,7 @@ export interface PrintOutProps {
   previewOpts?: { from: string; to: string; output: string };
 }
 
-export function PrintOutDialog({ open, onClose, name, accent, data, meta, fileName, detail, detailSummary, confirm = [], blocked, dests, defaultDest = 'print', width = 760, previewChildren, previewOpts }: PrintOutProps) {
+export function PrintOutDialog({ open, onClose, name, accent, data, meta, fileName, basic, detail, detailSummary, blocked, dests, defaultDest = 'print', width = 760, previewChildren, previewOpts }: PrintOutProps) {
   const toast = useToast();
   const [dest, setDest] = useState<OutKind>(defaultDest);
   const [title, setTitle] = useState(name);
@@ -66,7 +66,7 @@ export function PrintOutDialog({ open, onClose, name, accent, data, meta, fileNa
             dest={dest}
             onDest={setDest}
             dests={dests}
-            confirm={[['帳票', name], ...(detail ? [] : [['タイトル', title.trim() || name] as [string, ReactNode], ['出力する内容', `${rowsN} 行`] as [string, ReactNode]]), ...confirm]}
+            basic={basic}
             blocked={blocked}
             onPreview={() => setPreview(true)}
             onRun={run}
@@ -75,7 +75,6 @@ export function PrintOutDialog({ open, onClose, name, accent, data, meta, fileNa
               <div style={{ display: 'grid', gap: 12 }}>
                 <Field label="タイトル"><input className="field-input" value={title} onChange={(e) => setTitle(e.target.value)} style={input} /></Field>
                 <div style={note}>{meta ? `${meta}　` : ''}画面に表示中の内容（{rowsN} 行）を出力します。</div>
-                <Notice>出力の形式（プリンター／PDF／Excel／CSV）は「次へ：出力先」で選びます。</Notice>
               </div>
             )}
           />

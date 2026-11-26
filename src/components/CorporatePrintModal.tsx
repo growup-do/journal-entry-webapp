@@ -1,5 +1,5 @@
 // 法人印刷（既存「決算書・決算附属明細書 一覧」の再現）
-//   流れはほかの帳票と同じ「1. 詳細設定 → 2. 出力先 → 3. 印刷／プレビュー」（PrintOutDialog。確認事項「印刷の画面遷移の統一」）。
+//   流れはほかの帳票と同じ「出力先（基本条件つき）と詳細設定のタブ」（PrintOutDialog。確認事項「印刷の画面遷移の統一」）。
 //   詳細設定で区分 × 帳票のマトリクスから出力する帳票を選ぶ。Excel／PDF は個別のボタンを置かず、出力先で選ぶ。
 
 import { useState } from 'react';
@@ -56,9 +56,8 @@ export function CorporatePrintModal({ open, onClose }: Props) {
       meta={`法人印刷　${period}`}
       detailSummary={`選択 ${checked.size} 帳票`}
       blocked={checked.size ? undefined : '出力する帳票を選んでください（詳細設定の一覧でチェックします）。'}
-      confirm={[['選択した帳票', `${checked.size} 帳票`], ['対象期間', period]]}
       previewOpts={{ from: `${s.fiscalYear} 4月1日`, to: '3月31日', output: '画面へプレビューする' }}
-      detail={<div>
+      basic={<div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <button type="button" className="btn-outline" onClick={() => toggleGroup('required')} style={btn()}>✓ 必須帳票のON/OFF</button>
           <button type="button" className="btn-outline" onClick={() => toggleGroup('optional')} style={btn()}>✓ 省略可能帳票のON/OFF</button>
