@@ -15,9 +15,11 @@ const AMBER = '#d97706';
 const AMBER_SOFT = '#fff7e6';
 /** Claude（システム）が登録した確認メモの作成者名。人が書いたメモ（GROW UP／チャイルド社）と区別して表示する */
 export const SYSTEM_AUTHOR = 'システムからの確認';
-const SYS = '#4f5fd9';
-const SYS_SOFT = '#eceefb';
+const SYS = '#2563c9';
+const SYS_SOFT = '#e8f0fb';
 const isSys = (author: string) => author === SYSTEM_AUTHOR;
+/** 番号の色：GROW UP とシステムからの確認は青、チャイルド社はオレンジ（11/26 鈴木さん指示） */
+const noColor = (author: string) => (isSys(author) || author === 'GROW UP' ? SYS : AMBER);
 const AuthorChip = ({ author }: { author: string }) => (
   <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: isSys(author) ? SYS_SOFT : '#f1f4f6', color: isSys(author) ? SYS : '#3d4a56', whiteSpace: 'nowrap' }}>{isSys(author) ? '🤖 ' : ''}{author || '—'}</span>
 );
@@ -333,7 +335,7 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
                 ...pinStyle(p),
                 pointerEvents: 'auto',
                 border: '2px solid #fff',
-                background: resolved ? '#9aa5b1' : isSys(m.author) ? SYS : AMBER,
+                background: resolved ? '#9aa5b1' : noColor(m.author),
                 color: '#fff',
                 fontWeight: 700,
                 fontSize: 14,
@@ -354,7 +356,7 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
         {openMemo && openPos && (
           <div style={{ ...popoverPos(openPos), ...cardStyle }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <span style={noBadge(openMemo.status === 'resolved')}>#{openMemo.no}</span>
+              <span style={noBadge(openMemo.status === 'resolved', openMemo.author)}>#{openMemo.no}</span>
               <AuthorChip author={openMemo.author} />
               <span style={{ fontSize: 12, color: '#9aa5b1' }}>{fmtDate(openMemo.createdAt)}</span>
               <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: openMemo.status === 'resolved' ? '#f1f4f6' : AMBER_SOFT, color: openMemo.status === 'resolved' ? '#7a8794' : AMBER }}>
@@ -475,7 +477,7 @@ export function MemoLayer({ screenKey, screenLabel, onNavigate }: Props) {
                   style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 14px', border: 'none', borderBottom: '1px solid #f1f4f6', background: m.id === openId ? AMBER_SOFT : '#fff', cursor: 'pointer', fontFamily: 'inherit', opacity: resolved ? 0.6 : 1 }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
-                    <span style={noBadge(resolved)}>#{m.no}</span>
+                    <span style={noBadge(resolved, m.author)}>#{m.no}</span>
                     <AuthorChip author={m.author} />
                     <span style={{ fontSize: 12, color: '#8290a0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{screenLabel(m.screen)}</span>
                     {m.reply && <span style={{ marginLeft: 'auto', fontSize: 12, color: '#1f7a52', fontWeight: 700, flex: 'none' }}>回答あり</span>}
@@ -546,7 +548,7 @@ const toolBtn: CSSProperties = {
   cursor: 'pointer',
   boxShadow: '0 6px 22px rgba(30,50,70,.16)',
 };
-const noBadge = (resolved: boolean): CSSProperties => ({
+const noBadge = (resolved: boolean, author: string): CSSProperties => ({
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -554,7 +556,7 @@ const noBadge = (resolved: boolean): CSSProperties => ({
   height: 20,
   padding: '0 6px',
   borderRadius: 10,
-  background: resolved ? '#9aa5b1' : AMBER,
+  background: resolved ? '#9aa5b1' : noColor(author),
   color: '#fff',
   fontSize: 12,
   fontWeight: 700,
