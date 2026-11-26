@@ -10,6 +10,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { COPYRIGHT, backToApp, goStatic } from './Footer';
 import { displayName } from '../data';
+import { HelpTip } from './ui';
 
 type Kind = 'page' | 'modal' | 'dialog' | 'panel' | 'external';
 interface Node { id: string; label: string; kind: Kind; group: string; /** クリックで開く画面キー（?open=） */ open?: string; url?: string; note?: string }
@@ -299,7 +300,8 @@ export function FlowMapPage() {
       {/* ツールバー */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', background: '#fff', borderBottom: '1px solid #dde4ea', flexWrap: 'wrap' }}>
         <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16 }}>画面遷移図</div>
-        <span style={{ fontSize: 12, color: '#7a8794' }}>Web チャッピー プロトタイプ　ページ {counts.page}／ダイアログ等 {counts.other}　ドラッグで移動・ホイールで拡大縮小・クリックで画面を開く</span>
+        <span style={{ fontSize: 12, color: '#7a8794' }}>Web チャッピー プロトタイプ　ページ {counts.page}／ダイアログ等 {counts.other}</span>
+        <HelpTip text={['ドラッグで移動します', 'ホイールで拡大・縮小します', 'クリックで画面を開きます']} />
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           {(Object.keys(KIND_LABEL) as Kind[]).map((k) => (
             <label key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#48565f', padding: '3px 8px', borderRadius: 8, ...KIND_STYLE[k], cursor: 'pointer' }}>

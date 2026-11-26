@@ -22,6 +22,7 @@ import { addVoucher, updateVoucher } from '../store/journalStore';
 import { setSession, useSession } from '../store/session';
 import { useEntryDivision } from '../lib/entryDivision';
 import { TAX_OPTS, taxAmountOf, taxDefaultOf } from '../lib/transferTax';
+import { HelpTip } from './ui';
 
 const PINK = '#b0426a';
 const BLUE = '#2c5f9e';
@@ -669,7 +670,8 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
                 {!tools.viewOnly && <button type="button" className="ef-act" tabIndex={-1} disabled={ro} onClick={() => { const n = rows.length; setRows((rs) => [...rs, emptyRow()]); setActive(n); focusId(fid(n, 'ka')); }} title={ro ? tools.reason : '最後に1行追加します'} style={{ ...rowBtn, padding: '4px 11px', borderStyle: 'dashed', borderColor: '#b9c4cf', fontSize: 14 }}>＋ 行追加</button>}
-                <span style={{ fontSize: 12, color: '#8290a0' }}>{rows.length} 行　取引先で Enter → 次の行（最後の行なら行を追加）／摘要で Shift+Enter → 下に行追加／何も入力していない行の{single ? '金額' : '借方金額'}で Enter → 伝票登録ボタン</span>
+                <span style={{ fontSize: 12, color: '#8290a0' }}>{rows.length} 行</span>
+                <HelpTip text={['取引先で Enter：次の行へ（最後の行なら行を追加）', '摘要で Shift+Enter：下に行を追加', `何も入力していない行の${single ? '金額' : '借方金額'}で Enter：伝票登録ボタンへ`]} />
                 {err && <span role="alert" style={{ color: '#c0392b', fontSize: 14, fontWeight: 600 }}>{err}</span>}
                 <span style={{ marginLeft: 'auto' }}>{tools.submitButton}</span>
               </div>

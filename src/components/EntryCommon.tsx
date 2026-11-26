@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
 import { Modal } from './Modal';
-import { btn } from './ui';
+import { btn, HelpTip } from './ui';
 import { ACCOUNTS, JOURNAL_ROWS, SERVICES, SUMMARIES, VENDORS, displayName } from '../data';
 import { ACCOUNT_META, budgetSample, judgeTorihiki, metaOf, toKatakana } from '../lib/accounts';
 import { fusenLabel, type EnvSettings } from '../store/session';
@@ -331,8 +331,8 @@ export function ComboField({ id, kind, value, onChange, onCommit, placeholder, f
             })}
             {list.length === 0 && <div style={{ padding: '12px 14px', fontSize: 14, color: miss ? '#c0392b' : '#9aa5b1' }}>{freeText ? '候補はありません（入力した文字のまま登録できます）' : '該当する候補がありません。コード・名称・フリガナを確認してください'}</div>}
           </div>
-          <div style={{ padding: '5px 12px', borderTop: '1px solid #eef2f5', background: '#fafcfd', fontSize: 12, color: '#8290a0', whiteSpace: 'nowrap' }}>
-            コード・名称・フリガナで絞り込み　↑↓ 選択　Enter 決定　Esc 閉じる
+          <div style={{ padding: '4px 10px', borderTop: '1px solid #eef2f5', background: '#fafcfd', display: 'flex', justifyContent: 'flex-end' }}>
+            <HelpTip size={15} text={['コード・名称・フリガナで絞り込めます', '↑↓ で選び、Enter で決定します', 'Esc で閉じます']} />
           </div>
         </div>
       )}

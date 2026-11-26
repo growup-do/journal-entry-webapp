@@ -11,6 +11,7 @@ import type { MonthFilter } from '../types';
 import { useSession } from '../store/session';
 import { FISCAL_MONTHS, monthRange, monthsIn, parseMD, periodLabel, type Period } from '../lib/period';
 import { CalendarModal } from './SingleEntryTools';
+import { HelpTip } from './ui';
 
 export { FISCAL_MONTHS };
 
@@ -209,7 +210,7 @@ export function FiscalMonthTabs({ current, accent, onSelect, withAll, range, onR
                 <span>〜</span>
                 <input className="field-input" value={to} onChange={(e) => setTo(e.target.value)} onClick={() => setCal('to')} placeholder="6/30" aria-label="終了日（月/日）" title="クリックでカレンダーから選べます" style={inp} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) applyPick(); }} />
               </div>
-              <div style={{ fontSize: 12, color: '#8290a0' }}>日付の欄をクリックするとカレンダーから選べます。日付の範囲は「4/15〜6/30」のように指定します。月の範囲は、月タブをドラッグするか、開始月をクリックしてから終了月を Shift＋クリックすると選べます。</div>
+              <div style={{ fontSize: 12, color: '#8290a0', display: 'flex', alignItems: 'center', gap: 6 }}>日付の範囲は「4/15〜6/30」のように指定します。<HelpTip text={['日付の欄をクリックするとカレンダーから選べます', '月の範囲は、月タブをドラッグするか、開始月をクリックしてから終了月を Shift＋クリックすると選べます']} /></div>
               {err && <div style={{ fontSize: 14, color: '#c0392b' }}>{err}</div>}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
                 <button type="button" onClick={() => setPickOpen(false)} style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid #cfd8e0', background: '#fff', color: '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>キャンセル</button>
@@ -222,7 +223,7 @@ export function FiscalMonthTabs({ current, accent, onSelect, withAll, range, onR
           ); })()}
         </span>
       )}
-      {onRange && pickRange && !range && <span data-range-hint title="月タブの上を、開始月から終了月までドラッグすると範囲になります。開始月をクリックしてから、終了月を Shift＋クリックしても選べます" style={{ alignSelf: 'center', fontSize: 12, color: '#8290a0', whiteSpace: 'nowrap', cursor: 'help' }}>月はドラッグで範囲を選べます</span>}
+      {onRange && pickRange && !range && <span data-range-hint style={{ alignSelf: 'center', display: 'inline-flex' }}><HelpTip text={['月タブの上を、開始月から終了月までドラッグすると範囲になります', '開始月をクリックしてから、終了月を Shift＋クリックしても選べます']} /></span>}
       {!range && fromStart && curIdx > 0 && <span data-from-start style={{ alignSelf: 'center', fontSize: 12, fontWeight: 700, color: accent, whiteSpace: 'nowrap' }} title="環境設定（全区分共通）「月範囲の選択で、期首から月を選択する」が有効です">4月〜{current}月の累計</span>}
     </div>
   );

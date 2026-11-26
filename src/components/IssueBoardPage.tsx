@@ -9,6 +9,7 @@ import { Modal } from './Modal';
 import { COPYRIGHT, backToApp, goStatic } from './Footer';
 import { HOME_CHECKS, MENU_GROUPS, SETTINGS_GROUPS, displayName } from '../data';
 import { ISSUE_STATUSES, REPLY_KINDS, useIssues, type Issue, type IssueStatus, type Priority, type ReplyKind } from '../issues/useIssues';
+import { HelpTip } from './ui';
 
 const AUTHORS = ['GROW UP', 'チャイルド社'];
 const GREEN = '#1f7a52';
@@ -178,7 +179,8 @@ export function IssueBoardPage() {
                 </div>
                 <textarea value={rText} onChange={(e) => setRText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !isIme(e)) { e.preventDefault(); void submitReply(); } }} rows={3} placeholder={rKind === '提案' ? 'こういうのはどうか、という案を書きます' : rKind === '解決' ? 'どう解決したかを書きます（状態が「解決」になります）' : rKind === '対応' ? 'どう対応したかを書きます' : '内容を書きます'} style={{ ...input, resize: 'vertical', lineHeight: 1.7 }} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                  <span style={{ fontSize: 12, color: '#9aa5b1' }}>{author} として投稿　（⌘／Ctrl＋Enter で送信）</span>
+                  <span style={{ fontSize: 12, color: '#9aa5b1' }}>{author} として投稿</span>
+                  <HelpTip text="⌘／Ctrl＋Enter で送信します" />
                   <button type="button" disabled={!rText.trim()} onClick={() => void submitReply()} style={{ ...btn(GREEN, true), marginLeft: 'auto', opacity: rText.trim() ? 1 : 0.5 }}>スレッドに追加</button>
                 </div>
               </div>

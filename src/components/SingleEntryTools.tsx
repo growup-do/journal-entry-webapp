@@ -9,7 +9,7 @@ import { useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Modal } from './Modal';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
-import { btn, input, lbl, yen } from './ui';
+import { btn, input, lbl, yen, HelpTip } from './ui';
 import { ACCOUNT_META, accountMatches, metaOf } from '../lib/accounts';
 import type { JournalEntry } from '../types';
 
@@ -257,7 +257,7 @@ export function CalendarModal({ open, onClose, accent, entries, month, day, onPi
         </div>
         {!compact && <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10, fontSize: 12, color: '#7a8794' }}>
           <span>当月 <b style={{ color: '#22303c' }}>{monthTotal.n}</b> 件　<b style={{ color: '#22303c', fontVariantNumeric: 'tabular-nums' }}>{yen(monthTotal.amt)}</b> 円</span>
-          <span style={{ marginLeft: 'auto' }}>←→↑↓ で日を選び Enter で決定（PageUp／PageDown で月を移動）。クリックでも選べます{extended && '。3月の次は決算月、その次は翌年4〜6月（予備月）です'}</span>
+          <HelpTip style={{ marginLeft: 'auto' }} text={['←→↑↓ で日を選び、Enter で決定します', 'PageUp／PageDown で月を移動します', 'クリックでも選べます', ...(extended ? ['3月の次は決算月、その次は翌年4〜6月（予備月）です'] : [])]} />
         </div>}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: compact ? 8 : 12 }}><button type="button" onClick={onClose} style={btn('#5b6773', false, compact)}>閉じる</button></div>
       </div>

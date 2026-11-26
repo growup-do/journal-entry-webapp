@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { HOME_NOTICES } from '../data';
 import { markAllNoticesRead, markNoticeRead, noticeId, useNoticeRead } from '../store/notices';
+import { HelpTip } from './ui';
 
 const TAG_COLOR: Record<string, { bg: string; fg: string }> = {
   システム: { bg: '#e8f0fb', fg: '#2c5f9e' },
@@ -111,7 +112,7 @@ export function NoticeBell({ accent }: Props) {
               );
             })}
           </div>
-          <div style={{ padding: '8px 14px', fontSize: 12, color: '#9aa5b1', background: '#fbfcfd' }}>件名を押すと本文を開き、既読にします。</div>
+          <div style={{ padding: '6px 14px', background: '#fbfcfd', display: 'flex', justifyContent: 'flex-end' }}><HelpTip text="件名を押すと本文を開き、既読にします" /></div>
         </div>
       )}
     </div>

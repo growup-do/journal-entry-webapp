@@ -16,7 +16,7 @@ import { PrintOutButton } from './PrintOutDialog';
 import { DepPrintModal, printMethod, type DepValues } from './DepPrintModal';
 import { PreviewModal } from './PrintCenter';
 import type { ExportSpec } from './ExportDialog';
-import { IconButton, ManualButton, Notice, PrintIcon, SelectionBar, TabStrip, btn as uiBtn, tabBtn } from './ui';
+import { IconButton, ManualButton, Notice, PrintIcon, SelectionBar, TabStrip, btn as uiBtn, tabBtn, HelpTip } from './ui';
 import { askConfirm } from './ConfirmDialog';
 import { ExplainModal } from './ExplainModal';
 import { WIDE_TAB_SPACE, WIDE_WIDTH, usePanelPush } from './WidePanel';
@@ -1064,7 +1064,7 @@ export function DepreciationPage({ variant, accent }: Props) {
                 {(['すべて', '償却中', '償却終了', '対象外', '除却', '売却', '移管取込', '移管年度'] as const).map((st) => <button key={st} type="button" className="chip" onClick={() => setStatusFilter(st)} style={{ padding: '5px 12px', borderRadius: 14, border: '1px solid ' + (statusFilter === st ? accent : '#d3dbe3'), background: statusFilter === st ? accent : '#fff', color: statusFilter === st ? '#fff' : '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{st}</button>)}
                 <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="名称・コード・科目で検索" autoComplete="off" style={{ marginLeft: 'auto', width: 240, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
               </div>
-              <SelectionBar count={sel.size} unit="件" hint="行頭のチェックで追加・解除" style={{ padding: '8px 22px', borderTop: '1px solid #f3e3a0' }} onClear={() => setSel(new Set())} actions={<><button type="button" onClick={() => { setTab('disposal'); }} style={uiBtn('#5b6773', false, true)}>除却・売却・移管へ</button><button type="button" onClick={deleteSel} style={uiBtn('#c0392b', true, true)}>削除</button></>} />
+              <SelectionBar count={sel.size} unit="件" hint={<HelpTip text="行頭のチェックで追加・解除します" />} style={{ padding: '8px 22px', borderTop: '1px solid #f3e3a0' }} onClear={() => setSel(new Set())} actions={<><button type="button" onClick={() => { setTab('disposal'); }} style={uiBtn('#5b6773', false, true)}>除却・売却・移管へ</button><button type="button" onClick={deleteSel} style={uiBtn('#c0392b', true, true)}>削除</button></>} />
               <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 470px)' }}>
                 <table className="dense-table" data-asset-table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead><tr><th style={{ ...TH, width: 36 }}><input type="checkbox" checked={list.length > 0 && list.every((a) => sel.has(a.code))} onChange={(e) => setSel(e.target.checked ? new Set(list.map((a) => a.code)) : new Set())} /></th>{([['状態', 'status'], ['コード', 'code'], ['固定資産名称', 'name'], ['科目', 'account'], ['取得年月日', 'acquired']] as const).map(([l, k]) => <SortTh key={k} label={l} k={k} sort={assetSort} onSort={setAssetSort} />)}{([['耐用', 'life'], ['取得価額', 'cost'], ['期首帳簿価額', 'opening'], ['当期償却額', 'dep'], ['期末帳簿価額', 'closing']] as const).map(([l, k]) => <SortTh key={k} label={l} k={k} sort={assetSort} onSort={setAssetSort} right />)}</tr></thead>
@@ -1638,7 +1638,7 @@ function AssetForm({ accent, asset, manual, dispCalc, capexFor, onAddCapex, onRe
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <button type="button" className="btn-outline" disabled={mCount >= MAX_YEARS} onClick={() => setExtraYears((n) => n + 1)} style={{ ...btn(), padding: '4px 10px', opacity: mCount >= MAX_YEARS ? 0.5 : 1 }}>＋ 1年追加</button>
             <button type="button" className="btn-outline" disabled={mCount >= MAX_YEARS} onClick={() => setExtraYears(MAX_YEARS)} style={{ ...btn(), padding: '4px 10px', opacity: mCount >= MAX_YEARS ? 0.5 : 1 }}>{MAX_YEARS}年まで表示</button>
-            <span style={{ fontSize: 12, color: '#7a8794' }}>Enter で次の欄へ進みます。</span>
+            <HelpTip text="Enter で次の欄へ進みます" />
           </div>
         )}
         <div style={{ fontSize: 12, color: '#9aa5b1', lineHeight: 1.6 }}>
@@ -1661,7 +1661,7 @@ function AssetForm({ accent, asset, manual, dispCalc, capexFor, onAddCapex, onRe
         <button type="button" className="btn-outline" onClick={() => onLog(f.code)} style={fbtn}>操作ログ・詳細情報</button>
         <button type="button" className="btn-outline" onClick={() => onImage(f.code, f.name)} style={{ ...fbtn, display: 'inline-flex', alignItems: 'center', gap: 6 }}>{imageSrc && <img src={imageSrc} alt="" style={{ width: 18, height: 18, objectFit: 'cover', borderRadius: 3 }} />}資産画像</button>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
-          <span style={{ fontSize: 12, color: '#7a8794' }}>Enter で次の項目へ</span>
+          <HelpTip text="Enter で次の項目へ進みます" />
           {!asset && !capexFor && <button type="button" className="btn-outline" data-asset-next onClick={() => save(true)} title="登録して、続けて次の固定資産を入力します" style={{ ...btn(accent), padding: '8px 18px', fontSize: 14 }}>登録して次を入力</button>}
           {capexFor && onReset && <button type="button" className="btn-outline" data-capex-reset onClick={() => { onReset(); toast('開いたときの内容に戻しました'); }} title="入力した内容を、開いたときの状態に戻します" style={{ ...btn(), padding: '8px 18px', fontSize: 14 }}>変更リセット</button>}
           <button type="button" className="submit-btn" data-asset-save onClick={() => save()} style={{ ...btn(accent, true), padding: '8px 26px', fontSize: 14 }}>登録</button>
@@ -2073,7 +2073,7 @@ function ClosingView({ accent, vouchers, setVouchers, onCreated, toast }: { acce
           </tbody>
         </table>
       </div>
-      <div style={{ fontSize: 12, color: '#7a8794', marginTop: 6 }}>借方・貸方・摘要はクリックで変更できます（黄色は既定から変更した項目）。「伝票を作成する」を押すと、会計の仕訳伝票に登録し、最後に会計の伝票画面と同じ画面で内容を表示します。</div>
+      <div style={{ fontSize: 12, color: '#7a8794', marginTop: 6 }}><HelpTip text="借方・貸方・摘要はクリックで変更できます" style={{ marginRight: 6 }} />黄色は既定から変更した項目です。「伝票を作成する」を押すと、会計の仕訳伝票に登録し、最後に会計の伝票画面と同じ画面で内容を表示します。</div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
         <button type="button" onClick={() => setStep(2)} style={btn()}>戻る</button>
         <button type="button" className="submit-btn" onClick={finish} style={btn(accent, true)}>伝票を作成する</button>

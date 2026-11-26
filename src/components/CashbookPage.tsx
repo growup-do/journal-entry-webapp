@@ -31,7 +31,7 @@ import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
 import { SECTION_TAG, NUM, ReportShell, TD, TH } from './ReportShell';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
-import { Icon, PrintIcon, type IconName } from './ui';
+import { Icon, PrintIcon, type IconName, HelpTip } from './ui';
 import { useAssist } from '../hooks/useAssist';
 import { addVoucher } from '../store/journalStore';
 import { useSession } from '../store/session';
@@ -886,7 +886,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
         {/* 月の範囲選択の案内と「4月〜○月の累計」は会計月の下の行に置く（会計月の行にボタンを収めるため） */}
         {!range && (
           <div style={{ paddingLeft: 84, display: 'flex', gap: 12, fontSize: 12 }}>
-            <span title="月タブの上を、開始月から終了月までドラッグすると範囲になります。開始月をクリックしてから、終了月を Shift＋クリックしても選べます" style={{ color: '#8290a0', cursor: 'help' }}>月はドラッグで範囲を選べます</span>
+            <HelpTip text={['月タブの上を、開始月から終了月までドラッグすると範囲になります', '開始月をクリックしてから、終了月を Shift＋クリックしても選べます']} />
             {env.termFromStart && FISCAL_MONTHS.indexOf(month as typeof FISCAL_MONTHS[number]) > 0 && <span title="環境設定（全区分共通）「月範囲の選択で、期首から月を選択する」が有効です" style={{ fontWeight: 700, color: accent }}>4月〜{month}月の累計</span>}
           </div>
         )}
@@ -1174,7 +1174,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
           </div>
           <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginTop: 12, fontSize: 14, color: '#48565f', lineHeight: 1.7 }}>
             <span style={{ flex: 'none', width: 28, height: 28, borderRadius: '50%', background: '#e8f0fb', color: '#2c5f9e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>i</span>
-            <span>一括削除は大変危険な操作です。この為削除をするには、[Shift]キーを押しながら、コメント行をダブルクリックすると一括削除を継続する様になっております。</span>
+            <span>一括削除は大変危険な操作のため、通常のクリックでは実行されません。<HelpTip style={{ marginLeft: 6 }} text="[Shift] キーを押しながら、コメント行をダブルクリックすると一括削除します" /></span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'center', marginTop: 14 }}><button type="button" onClick={() => setBulkOpen(false)} style={btn()}>閉じる</button></div>
         </div>
@@ -1584,7 +1584,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
                 <b data-denom-diff style={{ textAlign: 'right', fontSize: 16, borderTop: '1px solid #eef2f5', paddingTop: 8, color: !denomValid ? '#7a8794' : denomTotal === denomBook ? '#1f7a52' : '#c0392b' }}>{denomValid ? `${yen(denomTotal - denomBook)} 円` : '―'}</b>
               </div>
               {denomValid && <div style={{ padding: '8px 12px', borderRadius: 10, fontSize: 14, fontWeight: 700, background: denomTotal === denomBook ? '#eaf5ef' : '#fdeee9', color: denomTotal === denomBook ? '#1f7a52' : '#c0392b' }}>{denomTotal === denomBook ? '帳簿残高と一致しています' : `帳簿残高と一致していません（${denomTotal > denomBook ? '実際の残高が多い' : '実際の残高が少ない'}）`}</div>}
-              <div style={{ fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>枚数を入力して「登録」を押すと、この日付の金種別表として保存します。Enter で次の金種へ進みます。帳簿残高は、この日付までの明細から計算しています。</div>
+              <div style={{ fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>枚数を入力して「登録」を押すと、この日付の金種別表として保存します。帳簿残高は、この日付までの明細から計算しています。<HelpTip style={{ marginLeft: 6 }} text="Enter で次の金種へ進みます" /></div>
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>

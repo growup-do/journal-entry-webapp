@@ -5,6 +5,7 @@ import { Modal } from './Modal';
 import { HOME_CHECKS, IMPLEMENTED_MENU, MENU_GROUPS, SETTINGS_MENU, displayName } from '../data';
 import { setSession, useSession } from '../store/session';
 import { canOpen } from '../store/access';
+import { HelpTip } from './ui';
 
 /** 登録できる機能（プロトタイプで画面があるもの） */
 const CANDIDATES = [...MENU_GROUPS.flatMap((g) => g.items), ...HOME_CHECKS, '元帳１', '元帳２', '残高照合', '法人印刷', ...SETTINGS_MENU].filter((l) => IMPLEMENTED_MENU.includes(l) || l === '印刷センター' || l === '予算' || SETTINGS_MENU.includes(l));
@@ -22,7 +23,7 @@ export function FavoritesEditModal({ open, onClose, accent }: { open: boolean; o
     <Modal open={open} onClose={onClose} width={640} title="お気に入りメニューの設定">
       <div style={{ padding: '12px 22px 18px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 6 }}>登録済み（上から順に表示・ドラッグ＆ドロップで並べ替え）</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>登録済み（上から順に表示）<HelpTip text="ドラッグ＆ドロップで並べ替えます" size={14} /></div>
           <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, minHeight: 200 }}>
             {s.favorites.map((l, i) => (
               <div
@@ -44,7 +45,7 @@ export function FavoritesEditModal({ open, onClose, accent }: { open: boolean; o
           </div>
         </div>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 6 }}>登録できる機能（クリックで追加）</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>登録できる機能<HelpTip text="クリックで追加します" size={14} /></div>
           <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: 300, overflow: 'auto' }}>
             {CANDIDATES.filter((c) => !s.favorites.includes(c) && canOpen(c, s.access)).map((c) => <button key={c} type="button" onClick={() => setSession({ favorites: [...s.favorites, c] })} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', border: 'none', borderBottom: '1px solid #f1f4f6', background: '#fff', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', color: '#22303c' }}>＋ {displayName(c)}</button>)}
           </div>

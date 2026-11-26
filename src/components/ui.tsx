@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ButtonHTMLAttributes, CSSProperties, HTMLAttributes, ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { UNSAVED_BG } from '../store/unsaved';
 
 export const btn = (color = '#5b6773', solid = false, small = false): CSSProperties => ({
@@ -164,6 +165,32 @@ export function Chevron({ open = false, color = '#9aa5b1', size = 12 }: { open?:
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transition: 'transform .15s', transform: open ? 'rotate(180deg)' : 'none', flex: 'none' }}>
       <path d="M6 9l6 6 6-6" />
     </svg>
+  );
+}
+
+/** 操作説明の ? アイコン。マウスを載せる（またはフォーカスする）と操作説明をツールチップで表示する。
+ *  画面に常に出していた操作の説明文（Enter で次の行へ など）は、これに置き換える。text を配列にすると 1 行ずつ表示 */
+export function HelpTip({ text, size = 16, style }: { text: ReactNode | string[]; size?: number; style?: CSSProperties }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [pos, setPos] = useState<{ x: number; y: number; up: boolean } | null>(null);
+  const show = () => {
+    const r = ref.current?.getBoundingClientRect();
+    if (!r) return;
+    const up = r.bottom + 170 > window.innerHeight;
+    setPos({ x: Math.min(Math.max(r.left + r.width / 2, 175), window.innerWidth - 175), y: up ? r.top - 8 : r.bottom + 8, up });
+  };
+  const hide = () => setPos(null);
+  const lines = Array.isArray(text) ? text : null;
+  const label = lines ? lines.join('。') : typeof text === 'string' ? text : '操作説明';
+  return (
+    <>
+      <span ref={ref} data-help-tip role="img" aria-label={label} tabIndex={-1} onMouseEnter={show} onMouseLeave={hide} onFocus={show} onBlur={hide}
+        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: size, height: size, boxSizing: 'border-box', borderRadius: '50%', border: '1px solid #b9c4cf', background: '#fff', color: '#7a8794', fontSize: Math.round(size * 0.7), fontWeight: 700, lineHeight: 1, cursor: 'help', flex: 'none', verticalAlign: 'middle', userSelect: 'none', fontFamily: 'inherit', ...style }}>?</span>
+      {pos && createPortal(
+        <div role="tooltip" data-help-tip-body style={{ position: 'fixed', left: pos.x, top: pos.y, transform: `translate(-50%, ${pos.up ? '-100%' : '0'})`, width: 'max-content', maxWidth: 330, padding: '8px 12px', background: '#22303c', color: '#fff', fontSize: 12, fontWeight: 500, lineHeight: 1.7, borderRadius: 8, boxShadow: '0 6px 18px rgba(20,30,40,.22)', zIndex: 100000, pointerEvents: 'none', textAlign: 'left', whiteSpace: 'normal' }}>
+          {lines ? lines.map((l, i) => <div key={i}>{l}</div>) : text}
+        </div>, document.body)}
+    </>
   );
 }
 

@@ -11,7 +11,7 @@ import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { PrevYearJournal } from './PrevYearJournal';
 import { ComboField, EntryStyles, FieldLabel, scopeStyle } from './EntryCommon';
 import { EditVoucherModal } from './VoucherEdit';
-import { yen, rowClick } from './ui';
+import { yen, rowClick, HelpTip } from './ui';
 import { BALANCE_ACCOUNTS } from '../data';
 import { metaOf } from '../lib/accounts';
 import { inPeriod, matchPeriod, type Period } from '../lib/period';
@@ -276,7 +276,7 @@ export function WidePanel({ accent, layout, state, top = 0, highlightIds, return
       {(view === '日記帳' || slot > 0) && (
         <div style={{ flex: 'none', padding: '7px 14px', borderTop: '1px solid #eef2f5', background: '#fbfcfd', fontSize: 12, color: '#8290a0', display: 'flex', gap: 10 }}>
           <span>{view === '日記帳' ? journal.length : lines.length} 件</span>
-          <span style={{ marginLeft: 'auto' }}>行をクリック、または「{editable ? '訂正' : '表示'}」で伝票を開きます</span>
+          <HelpTip style={{ marginLeft: 'auto' }} text={`行をクリック、または「${editable ? '訂正' : '表示'}」で伝票を開きます`} />
         </div>
       )}
     </>

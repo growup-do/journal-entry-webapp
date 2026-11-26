@@ -16,7 +16,7 @@ import { TargetCombo } from './TargetCombo';
 import { ACTION_HEAD, ACTION_TH, InternalTag, useRowActions } from './RowActions';
 import { ToastView, useToast } from './Toast';
 import { AdvancedSearchModal, DeleteVoucherModal, EMPTY_COND, applyCond, condActive, type SearchCond } from './VoucherEdit';
-import { Chevron, Notice, SelectionBar, btn } from './ui';
+import { Chevron, Notice, SelectionBar, btn, HelpTip } from './ui';
 import { Modal } from './Modal';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { displayName } from '../data';
@@ -129,7 +129,7 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
         </span>
       }
       targetLabel="絞り込み"
-      listNote={<span>行をクリックすると伝票を訂正できます。行にマウスを載せると、表示順の入換（↑↓・左端のつまみをドラッグ）と削除のボタンが出ます{selectable && '。行頭のチェックで複数行を選び、まとめて削除できます'}</span>}
+      listNote={<HelpTip text={['行をクリックすると伝票を訂正できます', '行にマウスを載せると、表示順の入換（↑↓・左端のつまみをドラッグ）と削除のボタンが出ます', ...(selectable ? ['行頭のチェックで複数行を選び、まとめて削除できます'] : [])]} />}
       target={
         <>
           <span style={LABEL}>指定科目</span>
@@ -150,7 +150,7 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
       notice={markNotice || ra.notice ? <>{markNotice}{ra.notice}</> : undefined}
     >
       <ToastView msg={toast.msg} />
-      <SelectionBar count={sel.length} unit="行" hint="Shift＋クリックで範囲、Ctrl／⌘＋クリックで追加・解除" onClear={() => setSel([])} actions={<button type="button" data-action="選択した行を削除" onClick={() => setDelOpen(true)} style={btn('#c0392b', true, true)}>選択した行を削除</button>} />
+      <SelectionBar count={sel.length} unit="行" hint={<HelpTip text={['Shift＋クリックで範囲を選びます', 'Ctrl／⌘＋クリックで追加・解除します']} />} onClear={() => setSel([])} actions={<button type="button" data-action="選択した行を削除" onClick={() => setDelOpen(true)} style={btn('#c0392b', true, true)}>選択した行を削除</button>} />
       <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 330px)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead style={{ position: 'sticky', top: 0, zIndex: 2 }}>

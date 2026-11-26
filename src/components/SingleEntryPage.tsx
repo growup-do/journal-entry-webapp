@@ -20,6 +20,7 @@ import { useSession, setSession } from '../store/session';
 import { useEntryDivision } from '../lib/entryDivision';
 import { inPeriod, type Period } from '../lib/period';
 import type { FormState, JournalEntry } from '../types';
+import { HelpTip } from './ui';
 
 const PINK = '#b0426a';
 const BLUE = '#2c5f9e';
@@ -532,7 +533,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10 }}>
-            <span style={{ fontSize: 12, color: '#7a8794', minWidth: 0 }}>Enter：{ENTER_ORDER.split('。')[0]}。金額で Enter → 登録の確認</span>
+            <HelpTip text={[`Enter で進む順：${ENTER_ORDER.split('。')[0]}`, '金額で Enter を押すと、登録の確認へ移ります']} />
             <span style={{ marginLeft: 'auto', flex: 'none' }}>{tools.submitButton}</span>
           </div>
           {/* 未入力などのメッセージ（科目の組み合わせのエラーは各入力欄の直下、確認はモーダルで表示） */}

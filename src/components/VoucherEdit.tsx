@@ -8,7 +8,7 @@ import { useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Modal } from './Modal';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
-import { Field, Notice, btn, input, numInput, toInt, yen } from './ui';
+import { Field, Notice, btn, input, numInput, toInt, yen, HelpTip } from './ui';
 import { ActButton, ActDivider, ComboField, ConfirmModal, EntryMonthNote, EntryStyles, FieldLabel, FlagButtons, FundAccountLine, IssueList, ReadOnlyBanner, fieldState, fmtNum, focusId, hasError, hasWarn, judgeEntry, needsPartner, onEnter, parseEntryMonth, entryYearOf, partnerOf, scopeStyle, setPartner, toNum, useShortcuts, type Issue, FusenTab } from './EntryCommon';
 import { SERVICES } from '../data';
 import { InternalSwitch } from './EntryExtras';
@@ -164,7 +164,7 @@ export function VoucherPickerModal({ open, mode, onClose, onPick, accent }: { op
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 12, color: '#7a8794' }}>↑↓ で選び Enter で{danger ? '削除の確認へ進みます（この時点では削除されません）' : '訂正画面を開きます'}。Esc で閉じます。</span>
+          <HelpTip text={['↑↓ で伝票を選びます', danger ? 'Enter で削除の確認へ進みます（この時点では削除されません）' : 'Enter で訂正画面を開きます', 'Esc で閉じます']} />
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
             <button type="button" className="ef-act" onClick={onClose} style={btn()}>閉じる</button>
             <button type="button" className="ef-act" disabled={!groups[cur]} onClick={() => groups[cur] && onPick(groups[cur])} style={{ ...btn(danger ? '#c0392b' : accent, true), opacity: groups[cur] ? 1 : 0.5 }}>{danger ? '選んだ伝票の削除確認へ' : '選んだ伝票を訂正'}</button>

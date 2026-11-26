@@ -17,7 +17,7 @@ import type { MonthFilter } from '../types';
 import { Modal } from './Modal';
 import { TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
-import { Field, IconButton, Notice, SettingsShell, Toggle, btn, card, cardHead, input, lbl, numInput } from './ui';
+import { Field, IconButton, Notice, SettingsShell, Toggle, btn, card, cardHead, input, lbl, numInput, HelpTip } from './ui';
 import { ExportDialog, runExport, type ExportKind, type ExportSpec } from './ExportDialog';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { TargetCombo } from './TargetCombo';
@@ -410,7 +410,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
           <ScopeBlock title="基本条件" desc="印刷する期間と区分です。">
             <div data-print-basic style={{ display: 'grid', gap: 14 }}>
             <div>
-              <span style={lbl}>{report.annual ? '期間（年次の帳票のため、会計年度の期首〜期末）' : fixStart ? '期間（最初の月は 4月で固定です。月のボタンで最後の月を選びます）' : '期間（月のボタンで1か月。ドラッグか Shift＋クリックで月の範囲、「全月」で年度全体）'}</span>
+              <span style={lbl}>{report.annual ? '期間（年次の帳票のため、会計年度の期首〜期末）' : fixStart ? <>期間（最初の月は 4月で固定） <HelpTip text="月のボタンで最後の月を選びます" /></> : <>期間 <HelpTip text={['月のボタンで1か月を選びます', 'ドラッグか Shift＋クリックで月の範囲を選びます', '「全月」で年度全体を選びます']} /></>}</span>
               {!report.annual && <div data-print-months style={{ marginBottom: 8 }}><FiscalMonthTabs current={curMonth} accent={accent} onSelect={selectMonth} withAll range={p.mRange ?? null} onRange={fixStart ? undefined : selectRange} pickRange={false} /></div>}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}><input className="field-input" value={p.from} readOnly={fixStart} title={fixStart ? '最初の月は 4月で固定です' : undefined} onChange={(e) => set({ from: e.target.value })} style={{ ...input, width: 170, ...(fixStart ? { background: '#f3f6f9', color: '#5b6773' } : {}) }} aria-label="開始日" /><span>〜</span><input className="field-input" value={p.to} onChange={(e) => set({ to: e.target.value })} style={{ ...input, width: 170 }} aria-label="終了日" /><span style={{ fontSize: 12, color: '#8290a0' }}>会計年度：{s.fiscalYear}</span></div>
             </div>
@@ -932,7 +932,7 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
       {/* 脚注編集：帳票一覧 */}
       <Modal open={footList} onClose={() => setFootList(false)} width={620} title="脚注編集">
         <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 10 }}>
-          <div style={note}>帳票をクリックすると、脚注を編集できます。</div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}><HelpTip text="帳票をクリックすると、脚注を編集できます" /></div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}><tbody>{FOOT_REPORTS.map((r) => (
             <tr key={r} data-foot-report={r} className="row-hover" onClick={() => { setFoot(r); setFootText(p.footnotes[r] ?? ''); }}>
               <td style={{ ...TD, fontSize: 14 }}>{r}</td>

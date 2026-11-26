@@ -9,7 +9,7 @@ import type { CSSProperties } from 'react';
 import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
 import { PrintOutDialog } from './PrintOutDialog';
-import { Notice, PrintIcon, btn as uiBtn } from './ui';
+import { Notice, PrintIcon, btn as uiBtn, HelpTip } from './ui';
 import { AUDIT_EXPLANATIONS, AUDIT_ITEMS, displayName } from '../data';
 import { isViewOnly, setSession, useSession } from '../store/session';
 import { AuditChecklist, AuditItemDialog } from './AuditItemDialog';
@@ -247,7 +247,7 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
     <Modal open={settings} onClose={() => setSettings(false)} width={1080} title={corpTab === '区分' ? '決算チェック設定' : '法人決算チェック設定'}>
       <div style={{ padding: '12px 22px 18px' }} data-audit-settings={corpTab}>
         <div style={{ fontSize: 14, color: '#7a8794', marginBottom: 10 }}>
-          {viewOnly ? '参照のみの権限のため、設定の変更はできません。項目名をクリックすると設定内容を表示します。' : 'チェックする項目を有効／無効に切り替え、項目名をクリックすると診断用条件式を構成する勘定科目を選択できます。'}
+          {viewOnly ? <>参照のみの権限のため、設定の変更はできません。<HelpTip style={{ marginLeft: 6 }} text="項目名をクリックすると設定内容を表示します" /></> : <HelpTip text={['チェックする項目を有効／無効に切り替えます', '項目名をクリックすると、診断用条件式を構成する勘定科目を選択できます']} />}
         </div>
         {/* 一覧の構成は現行【決算チェックシステム ― 設定】と同じ 3 列（確認メモ #117）。各種設定の「決算チェック設定」と共通 */}
         <AuditChecklist scope={corpTab} isOn={cfgOn} setOn={setCfgOn} onOpen={setItemCfg} onSwitch={() => setCorpTab(corpTab === '区分' ? '法人' : '区分')} />

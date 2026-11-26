@@ -11,7 +11,7 @@ import { TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
 import { EditVoucherModal, FlagCell } from './VoucherEdit';
 import { needsPartner } from './EntryCommon';
-import { btn } from './ui';
+import { btn, HelpTip } from './ui';
 import { deleteVoucher, getVouchers, moveVoucher, type Voucher } from '../store/journalStore';
 import { canEdit, canReorder, editBlockReason, isViewOnly, startKindOf, useSession, type Session } from '../store/session';
 
@@ -235,7 +235,7 @@ export function useRowActions({ rows, accent, returnTo }: { /** 画面に表示�
       <span style={{ padding: '1px 8px', borderRadius: 6, background: '#fff', border: '1px solid #f3d9b0', fontWeight: 700, fontSize: 12 }}>{s.role !== '入力可' ? '参照のみ' : startKindOf(s)}</span>
       <span>
         {editReason || reorderReason}。
-        {isViewOnly(s) ? '行をクリックすると伝票の内容を表示します。削除・表示順の入換のボタンは表示されません。' : !editable ? `訂正・削除${!reorderable ? '・表示順の入換' : ''}は使えません（無効表示）。` : '表示順の入換は使えません（無効表示）。'}
+        {isViewOnly(s) ? <>削除・表示順の入換のボタンは表示されません。<HelpTip style={{ marginLeft: 6 }} text="行をクリックすると伝票の内容を表示します" /></> : !editable ? `訂正・削除${!reorderable ? '・表示順の入換' : ''}は使えません（無効表示）。` : '表示順の入換は使えません（無効表示）。'}
       </span>
     </>
   ) : null;

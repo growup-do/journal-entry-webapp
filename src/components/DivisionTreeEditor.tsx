@@ -8,7 +8,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
-import { Field, Notice, btn, card, cardHead, input, lbl } from './ui';
+import { Field, Notice, btn, card, cardHead, input, lbl, HelpTip } from './ui';
 import { DivisionOrgChart, OrgChartLegend, kindOf } from './DivisionOrgChart';
 import { WIDE_NARROW, WIDE_WIDTH } from './WidePanel';
 import { divisionLabel, flattenDivisions, setSession, useSession, type DivisionNode } from '../store/session';
@@ -234,7 +234,7 @@ export function DivisionTreeEditor({ accent, compact }: { accent: string; compac
       <div style={card}>
         <div style={{ ...cardHead, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           区分階層
-          <span style={{ fontSize: 12, fontWeight: 500, color: '#8290a0' }}>カードを押すと{compact ? '下' : '右側'}に設定欄を表示・親区分の右の「＋」で配下に追加</span>
+          <HelpTip text={[`カードを押すと${compact ? '下' : '右側'}に設定欄を表示します`, '親区分の右の「＋」で配下に区分を追加します']} />
           <span style={{ marginLeft: 'auto' }}><OrgChartLegend /></span>
         </div>
         <div style={{ padding: 12 }}>

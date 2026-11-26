@@ -15,6 +15,7 @@ import { periodLabel, type Period } from '../lib/period';
 import { useVouchers, type Voucher } from '../store/journalStore';
 import { canEdit, setSession, useSession } from '../store/session';
 import type { MonthFilter } from '../types';
+import { HelpTip } from './ui';
 
 export type LedgerKind = 'account' | 'fund' | 'vendor';
 export interface LedgerDrawerTarget { account: string; month: MonthFilter; kind: LedgerKind; /** 呼び出し元の画面キー（全画面の元帳の「← 戻る」に使う） */ from: string }
@@ -130,7 +131,7 @@ export function LedgerDrawer({ state, accent, onNavigate, disabled, disabledNote
         </div>
         <div style={{ flex: 'none', padding: '8px 16px', borderTop: '1px solid #eef2f5', background: '#fbfcfd', fontSize: 12, color: '#8290a0', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <span><b style={{ color: '#22303c' }}>{monthLabel}</b>　{lines.length} 件　{vendor ? '支払' : '増減'} <b style={{ color: total < 0 ? '#c0392b' : '#22303c', fontVariantNumeric: 'tabular-nums' }}>{total.toLocaleString('ja-JP')}</b></span>
-          <span style={{ marginLeft: 'auto' }}>別の行を押すと、その{vendor ? '取引先' : '科目'}に差し替わります。行をクリック、または「{editable ? '訂正' : '表示'}」で伝票を開きます</span>
+          <HelpTip style={{ marginLeft: 'auto' }} text={[`別の行を押すと、その${vendor ? '取引先' : '科目'}に差し替わります`, `行をクリック、または「${editable ? '訂正' : '表示'}」で伝票を開きます`]} />
         </div>
       </aside>
       )}

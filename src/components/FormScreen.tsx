@@ -26,6 +26,7 @@ import { SettingsMenu } from './SettingsMenu';
 import { SideNav, useSideNav } from './SideNav';
 import { renderPage } from './pages';
 import { Footer } from './Footer';
+import { HelpTip } from './ui';
 
 const GREEN = '#1f7a52';
 const GREEN_RGB = '31,122,82';
@@ -579,7 +580,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                   <div className="pp-cell" style={{ padding: '6px 10px', fontSize: 12, color: '#8290a0' }}>
                     {!tools.viewOnly && <button type="button" className="ef-act" tabIndex={-1} disabled={!editable} onClick={rowAdd} title={editable ? '最後に1行追加します（最後の行の金額欄で Enter を押しても追加できます）' : tools.reason} style={{ padding: '4px 11px', borderRadius: 7, border: '1px dashed #b9c4cf', background: '#fff', color: '#48565f', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', marginRight: 10 }}>＋ 行追加</button>}
                     <span data-row-count>入力済み {filled} 行（全 {rows.length} 行）</span>
-                    <span style={{ marginLeft: 12, color: '#9aa5b1' }}>金額欄で Enter：次の行へ（最後の行では行を追加）／入力が終わったら、空の行の摘要で Enter を押すと「登録する」へ移ります</span>
+                    <HelpTip style={{ marginLeft: 10 }} text={['金額欄で Enter：次の行へ（最後の行では行を追加）', '金額欄で Shift+Enter：この行の下に1行挿入', '入力が終わったら、空の行の摘要で Enter を押すと「登録する」へ移ります']} />
                   </div>
                 </div>
                 {/* 下段：小切手No（表示項目で有効なとき）｜合計。Seq No・チェック・証憑・付箋は上の内部取引の行に横並び */}

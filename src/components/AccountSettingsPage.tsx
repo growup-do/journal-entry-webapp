@@ -13,7 +13,7 @@ import { ImportExportButton } from './ImportExportDialog';
 import { Modal } from './Modal';
 import { TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
-import { Field, ManualButton, Notice, SelectionBar, SettingsShell, Tabs, Toggle, btn, card, cardHead, input, lbl } from './ui';
+import { Field, ManualButton, Notice, SelectionBar, SettingsShell, Tabs, Toggle, btn, card, cardHead, input, lbl, HelpTip } from './ui';
 import { ACCOUNT_META, accountMatches, toKatakana, type AccountMeta } from '../lib/accounts';
 import { ACCOUNTS, SERVICES, SUMMARIES, displayName } from '../data';
 import { setSession, useSession } from '../store/session';
@@ -498,7 +498,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
               </div>
             </div>
             {/* 複数科目を選んだときの操作（日記帳と同じ選択バー） */}
-            <SelectionBar count={bulk.length} unit="科目" hint="行頭のチェックで追加・解除" onClear={() => setBulk([])} actions={<button type="button" onClick={() => setBulkOpen(true)} style={btn(accent, true, true)} data-bulk-open>まとめて設定</button>} />
+            <SelectionBar count={bulk.length} unit="科目" hint={<HelpTip text="行頭のチェックで追加・解除します" />} onClear={() => setBulk([])} actions={<button type="button" onClick={() => setBulkOpen(true)} style={btn(accent, true, true)} data-bulk-open>まとめて設定</button>} />
             <div style={{ overflow: 'auto', maxHeight: scrollH }}>
               <div role="row" style={{ display: 'grid', gridTemplateColumns: cols, alignItems: 'center', height: 32, background: '#f6f8fa', borderBottom: '1px solid #e2e8ee', position: 'sticky', top: 0, zIndex: 1 }}>
                 <span style={hcell}>{fundTab ? '資金科目' : '科目名称'}</span><span style={hcell}>表示コード</span><span style={hcell}>区分コード</span><span style={hcell}>貸借</span>
@@ -689,7 +689,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
           {[['勘定費目（貸借対照表と事業活動計算書）', HIMOKU_BS], ['資金費目（資金収支計算書）', HIMOKU_FUND]].map(([title, list]) => (
             <div key={title as string} style={card}>
               <div style={cardHead}>{title as string}</div>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}><thead><tr><th style={{ ...TH, width: 70 }}>費目No</th><th style={TH}>費目名称（ダブルクリックで編集）</th></tr></thead>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}><thead><tr><th style={{ ...TH, width: 70 }}>費目No</th><th style={TH}>費目名称 <HelpTip text="ダブルクリックで編集します" size={14} /></th></tr></thead>
                 <tbody>{(list as readonly (readonly [number, string])[]).map(([n, l]) => <tr key={n}><td style={{ ...TD, fontVariantNumeric: 'tabular-nums' }}>{n}</td><td style={{ ...TD, background: '#fff1b8' }}>{l}</td></tr>)}
                   {[14, 15, 16].map((n) => <tr key={n}><td style={{ ...TD, fontVariantNumeric: 'tabular-nums' }}>{n}</td><td style={TD}><input className="field-input" value={himokuNames[n] ?? ''} onChange={(e) => setHimokuNames({ ...himokuNames, [n]: e.target.value })} placeholder="（空白）Enterで確定して新規登録" style={{ ...input, padding: '3px 8px', fontSize: 14 }} /></td></tr>)}
                 </tbody></table>
@@ -960,7 +960,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
       <Modal open={!!swap} onClose={() => setSwap(null)} width={560} title={`▲入換▼ 科目の並び順（項目：${swap?.group ?? ''}）`}>
         {swap && (
           <div style={{ padding: '12px 22px 18px', display: 'grid', gap: 10 }}>
-            <Notice>行をドラッグするか、選択して「▲上へ」「▼下へ」で並び順を変えます。OK で一覧・帳票の印刷順に反映します（表示コードは変わりません）。</Notice>
+            <Notice>OK で一覧・帳票の印刷順に反映します（表示コードは変わりません）。<HelpTip style={{ marginLeft: 6 }} text="行をドラッグするか、選択して「▲上へ」「▼下へ」で並び順を変えます" /></Notice>
             <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: 360, overflow: 'auto' }}>
               {swap.keys.map((k, i) => { const r = rows.find((x) => x.key === k)!; const on = i === swap.cur; return (
                 <div key={k} draggable onDragStart={() => setSwap({ ...swap, drag: i, cur: i })} onDragOver={(e) => { e.preventDefault(); }} onDrop={(e) => { e.preventDefault(); if (swap.drag != null) moveSwap(swap.drag, i); }} onDragEnd={() => setSwap((sw) => (sw ? { ...sw, drag: null } : sw))} onClick={() => setSwap({ ...swap, cur: i })}
