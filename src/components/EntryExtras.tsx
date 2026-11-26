@@ -8,7 +8,7 @@ import { useMemo, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
-import { Field, Notice, Toggle, btn, input, numInput, toInt, yen } from './ui';
+import { Field, HelpTip, Notice, Toggle, btn, input, numInput, toInt, yen } from './ui';
 import { ActButton, ActionGroup, ConfirmModal, ENTRY_FORMATS, FORMAT_KIND, FUND_MODES, FUND_MODE_NOTE, INTERNAL_SIDES, ReadOnlyBanner, ShortcutHelpModal, entryDateOfKey, entryMonthKey, nextFusen, openCandidatesOfFocused, parseEntryDate, parseEntryMonth, useShortcuts, type EntryFormat, type FundMode, type FusenColor, type InternalSide, type Shortcut } from './EntryCommon';
 import { AccountBalanceModal, CalendarModal, CashBalanceModal } from './SingleEntryTools';
 import { AllocationWizardModal, blankAllocation, type AllocationWiz } from './TemplateWizards';
@@ -326,31 +326,32 @@ export function SpecialAmountModal({ open, total, account, onClose, accent, onOk
 }
 
 /* ---------------- 決算附属明細書への登録（伝票入力時の監視） ---------------- */
-//   登録した伝票の行のうち、監視する科目（寄附金・補助金・基本金・繰入金）を使う行ごとに、明細書への登録画面を順に出す（確認メモ #419）。
-//   1枚の伝票に対象の行が2つあれば2回出す。4形式（仕訳伝票・単一・振替伝票・振替単一）で共通。
-//   寄附金収益明細書は、明細書の列（寄附者の属性・区分・うち基本金組入額）をここで入力する（確認メモ #418）。
-export interface StatementItem { label: string; kari: string; kashi: string; tekiyo: string; amount: number; /** 伝票の何行目か（複数行の形式） */ row?: number }
-/** 寄附金収益明細書：寄附者の属性 */
-export const DONOR_ATTRS = ['法人の役員等', '利用者本人', '利用者の家族', '取引業者', 'その他'];
-/** 寄附金収益明細書：区分 */
-export const DONATION_KINDS = ['経常経費寄附金', '長期運営資金借入金元金償還寄附金', '施設整備等寄附金', '設備資金借入金元金償還寄附金', '固定資産受贈額'];
+//   登録した伝票の行のうち、監視する科目（寄附金・補助金・基本金・繰入金）を使う行を、1つの画面で「1/2」「2/2」と切り替えて入力する（確認メモ #419）。
+//   4形式（仕訳伝票・単一・振替伝票・振替単一）で共通。［終了］は最後の行まで進むと押せる。［キャンセル］はすべての行を登録せずに終える。
+//   寄附金収益明細書は、現行の登録画面に合わせて 受領年月日・寄附金額（表示）、寄附者の属性・区分（一覧から選ぶ）、うち基本金組入額 を入力する
+//   （確認メモ #418。Windows の現行画面で確認 11/26：初期値 法人の役職員／経常／0、基本金組入額は寄附金額まで）。
+export interface StatementItem { label: string; kari: string; kashi: string; tekiyo: string; amount: number; /** 伝票の日付（例 8/31） */ date: string; /** 伝票の何行目か（複数行の形式） */ row?: number }
+/** 寄附金収益明細書：寄附者の属性（現行の並び） */
+export const DONOR_ATTRS = ['法人の役職員', '利用者本人', '利用者の家族', '取引業者', 'その他'];
+/** 寄附金収益明細書：区分（現行の並び。経常経費・運営資金・施設整備等・借入金元金償還・固定資産受贈） */
+export const DONATION_KINDS = ['経常', '運営', '施設', '償還', '固定'];
 /** 登録した伝票の行から、明細書へ連動する行を拾う（金額のある行だけ。行ごとに1件） */
-export function statementItems(rows: { kari: string; kashi: string; tekiyo: string; amount: number }[]): StatementItem[] {
+export function statementItems(date: string, rows: { kari: string; kashi: string; tekiyo: string; amount: number }[]): StatementItem[] {
   const out: StatementItem[] = [];
   rows.forEach((r, i) => {
     const w = watchedStatement(r.kari, r.kashi);
-    if (w && r.amount > 0) out.push({ label: w.label, kari: r.kari, kashi: r.kashi, tekiyo: r.tekiyo, amount: r.amount, row: rows.length > 1 ? i + 1 : undefined });
+    if (w && r.amount > 0) out.push({ label: w.label, kari: r.kari, kashi: r.kashi, tekiyo: r.tekiyo, amount: r.amount, date, row: rows.length > 1 ? i + 1 : undefined });
   });
   return out;
 }
-/** 明細書への登録の流れ：start(items) で開き、全件終わるとトーストで結果を出す */
+/** 明細書への登録の流れ：start(items) で開き、終了するとトーストで結果を出す */
 export function useStatementFlow(accent: string, toast: (m: string) => void) {
   const [items, setItems] = useState<StatementItem[]>([]);
   const node = (
     <AttachedStatementModal
       items={items}
       accent={accent}
-      onClose={() => setItems([])}
+      onClose={() => { if (items.length) toast('明細書には登録しませんでした'); setItems([]); }}
       onDone={(reg) => {
         const labels = [...new Set(items.map((x) => x.label))].join('・');
         toast(reg > 0 ? `${labels}に ${reg} 件登録しました` : '明細書には登録しませんでした');
@@ -360,60 +361,82 @@ export function useStatementFlow(accent: string, toast: (m: string) => void) {
   );
   return { start: (list: StatementItem[]) => setItems(list), node };
 }
-export function AttachedStatementModal({ items, onClose, onDone, accent }: { items: StatementItem[]; onClose: () => void; onDone: (registered: number) => void; accent: string }) {
-  const [idx, setIdx] = useState(0);
-  const [count, setCount] = useState(0);
-  const [prev, setPrev] = useState(items);
-  if (prev !== items) { setPrev(items); setIdx(0); setCount(0); }
-  const cur = items[idx];
-  if (!cur) return null;
-  const last = idx === items.length - 1;
-  const next = (reg: boolean) => {
-    const n = count + (reg ? 1 : 0);
-    if (last) onDone(n);
-    else { setCount(n); setIdx(idx + 1); }
-  };
-  return (
-    <Modal open onClose={onClose} width={600} title={<>{cur.label}への登録{items.length > 1 && <span style={{ fontSize: 14, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>{idx + 1} 件目／全 {items.length} 件</span>}</>} strict>
-      <StatementForm key={idx} item={cur} last={last} accent={accent} onCancel={onClose} onNext={next} />
-    </Modal>
-  );
+interface StatementEntry { reg: boolean; attr: string; kind: string; kihon: string; purpose: string }
+const newEntry = (): StatementEntry => ({ reg: true, attr: DONOR_ATTRS[0], kind: DONATION_KINDS[0], kihon: '0', purpose: '' });
+/** 受領年月日（会計年度の 1〜3月は翌年） */
+function receivedDate(fy: string, date: string) {
+  const y = parseInt(fy.replace(/[^0-9]/g, ''), 10) || 8;
+  const [m, d] = date.split('/').map((x) => parseInt(x, 10));
+  return `令和${m <= 3 ? y + 1 : y}年${m}月${d}日`;
 }
-function StatementForm({ item, last, accent, onCancel, onNext }: { item: StatementItem; last: boolean; accent: string; onCancel: () => void; onNext: (reg: boolean) => void }) {
-  const kifu = item.label === '寄附金収益明細書';
-  const [reg, setReg] = useState(true);
-  const [purpose, setPurpose] = useState('');
-  const [attr, setAttr] = useState('');
-  const [kind, setKind] = useState('');
-  const [kihon, setKihon] = useState('0');
-  const kihonNum = toInt(kihon);
-  const err = !reg || !kifu ? '' : !attr ? '寄附者の属性を選んでください。' : !kind ? '区分を選んでください。' : kihonNum > item.amount ? 'うち基本金組入額は、寄附金額以下にしてください。' : '';
+export function AttachedStatementModal({ items, onClose, onDone, accent }: { items: StatementItem[]; onClose: () => void; onDone: (registered: number) => void; accent: string }) {
+  const s = useSession();
+  const [idx, setIdx] = useState(0);
+  const [vals, setVals] = useState<StatementEntry[]>([]);
+  const [prev, setPrev] = useState(items);
+  if (prev !== items) { setPrev(items); setIdx(0); setVals(items.map(newEntry)); }
+  const cur = items[idx];
+  const v = vals[idx];
+  if (!cur || !v) return null;
+  const set = (p: Partial<StatementEntry>) => setVals((list) => list.map((x, i) => (i === idx ? { ...x, ...p } : x)));
+  const kifu = cur.label === '寄附金収益明細書';
+  const last = idx === items.length - 1;
+  /** うち基本金組入額は 0 から寄附金額まで */
+  const errOf = (it: StatementItem, e: StatementEntry) => (it.label === '寄附金収益明細書' && e.reg && toInt(e.kihon) > it.amount ? '寄附金額を超える金額は設定できません。' : '');
+  const err = errOf(cur, v);
+  const firstErr = items.findIndex((it, i) => !!errOf(it, vals[i]));
+  const lbl: CSSProperties = { fontSize: 14, color: '#5b6773', whiteSpace: 'nowrap' };
+  const shown: CSSProperties = { fontSize: 14, fontWeight: 700, fontVariantNumeric: 'tabular-nums' };
   return (
-    <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
-      <Notice>登録した伝票を{item.label}へ追加しますか？（設定「決算附属明細書」で「伝票入力時に監視する」が有効のため表示しています）</Notice>
-      <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: 12, fontSize: 14 }}>
-        {item.row && <span style={{ fontSize: 12, color: '#7a8794', marginRight: 8 }}>{item.row}行目</span>}
-        <b>{item.kari}</b> ／ <b>{item.kashi}</b>　{item.tekiyo}　<span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>{yen(item.amount)}</span> 円
-      </div>
-      <div style={{ display: 'grid', gap: 6, fontSize: 14 }}>
-        <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="radio" checked={reg} onChange={() => setReg(true)} />この金額を、{item.label}データに登録する</label>
-        <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="radio" checked={!reg} onChange={() => setReg(false)} />この金額を、{item.label}データに登録しない</label>
-      </div>
-      {reg && kifu && (
-        <div data-stmt-kifu style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <Field label="寄附者の属性（必須）"><select className="field-input" value={attr} onChange={(e) => setAttr(e.target.value)} style={input}><option value="">選んでください</option>{DONOR_ATTRS.map((o) => <option key={o}>{o}</option>)}</select></Field>
-          <Field label="区分（必須）"><select className="field-input" value={kind} onChange={(e) => setKind(e.target.value)} style={input}><option value="">選んでください</option>{DONATION_KINDS.map((o) => <option key={o}>{o}</option>)}</select></Field>
-          <Field label="寄附金額"><div style={{ ...input, background: '#f6f8fa', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{yen(item.amount)}</div></Field>
-          <Field label="うち基本金組入額"><input className="field-input" inputMode="numeric" value={kihon} onChange={(e) => setKihon(e.target.value.replace(/[^0-9,]/g, ''))} onBlur={() => setKihon(yen(toInt(kihon)))} style={{ ...numInput, width: '100%' }} /></Field>
+    <Modal open onClose={onClose} width={600} title={`${cur.label}への登録`} strict>
+      <div data-stmt-dialog style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
+          <span>登録した伝票を、{s.fiscalYear}の{cur.label}へ追加します。</span>
+          <HelpTip style={{ marginLeft: 'auto' }} text={['初期は、すべての金額を「登録する」にしています', '［キャンセル］で、すべての金額を明細書に登録せずに終了します', '［終了］は最後の金額まで進むと押せます']} />
         </div>
-      )}
-      {reg && !kifu && <Field label="明細書に出す内容（拠点名・目的など）"><input className="field-input ring" value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="例：市区町村補助金／延長保育事業" style={input} /></Field>}
-      {err && <Notice tone="warn">{err}</Notice>}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-        <button type="button" onClick={onCancel} style={btn()}>キャンセル</button>
-        <button type="button" className="submit-btn" disabled={!!err} onClick={() => onNext(reg)} style={{ ...btn(accent, true), opacity: err ? 0.5 : 1 }}>{last ? '終了' : '次へ'}</button>
+        <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: 12, fontSize: 14 }}>
+          {cur.row && <span style={{ fontSize: 12, color: '#7a8794', marginRight: 8 }}>{cur.row}行目</span>}
+          <b>{cur.kari}</b> ／ <b>{cur.kashi}</b>　{cur.tekiyo}
+        </div>
+        <div role="radiogroup" style={{ display: 'grid', gap: 6, fontSize: 14 }}>
+          <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="radio" checked={v.reg} onChange={() => set({ reg: true })} />この金額を、{cur.label}データに登録する</label>
+          <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="radio" checked={!v.reg} onChange={() => set({ reg: false })} />この金額を、{cur.label}データに登録しない</label>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', alignItems: 'center', gap: '10px 14px' }}>
+          <span style={lbl}>受領年月日</span><span style={shown}>{receivedDate(s.fiscalYear, cur.date)}</span>
+          <span style={lbl}>{kifu ? '寄附金額' : '金額'}</span><span style={shown}>{yen(cur.amount)} 円</span>
+          {kifu ? (
+            <>
+              <span style={lbl}>寄附者の属性</span>
+              <select data-stmt-attr className="field-input" disabled={!v.reg} value={v.attr} onChange={(e) => set({ attr: e.target.value })} style={{ ...input, width: 220, opacity: v.reg ? 1 : 0.5 }}>{DONOR_ATTRS.map((o) => <option key={o}>{o}</option>)}</select>
+              <span style={lbl}>区分</span>
+              <select data-stmt-kind className="field-input" disabled={!v.reg} value={v.kind} onChange={(e) => set({ kind: e.target.value })} style={{ ...input, width: 220, opacity: v.reg ? 1 : 0.5 }}>{DONATION_KINDS.map((o) => <option key={o}>{o}</option>)}</select>
+              <span style={lbl}>うち基本金組入額</span>
+              <input data-stmt-kihon className="field-input" inputMode="numeric" disabled={!v.reg} value={v.kihon} onChange={(e) => set({ kihon: e.target.value.replace(/[^0-9,]/g, '') })} onBlur={() => set({ kihon: yen(toInt(v.kihon)) })} aria-invalid={!!err} style={{ ...numInput, width: 220, opacity: v.reg ? 1 : 0.5, borderColor: err ? '#c0392b' : undefined }} />
+            </>
+          ) : (
+            <>
+              <span style={lbl}>明細書に出す内容</span>
+              <input className="field-input" disabled={!v.reg} value={v.purpose} onChange={(e) => set({ purpose: e.target.value })} placeholder="例：市区町村補助金／延長保育事業" style={{ ...input, opacity: v.reg ? 1 : 0.5 }} />
+            </>
+          )}
+        </div>
+        {err && <Notice tone="warn">{err}</Notice>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {items.length > 1 && (
+            <>
+              <button type="button" disabled={idx === 0} onClick={() => setIdx(idx - 1)} style={{ ...btn(), opacity: idx === 0 ? 0.5 : 1 }}>戻る</button>
+              <span data-stmt-count style={{ fontSize: 14, fontWeight: 700, fontVariantNumeric: 'tabular-nums', minWidth: 48, textAlign: 'center' }}>{idx + 1}／{items.length}</span>
+              <button type="button" disabled={last} onClick={() => setIdx(idx + 1)} style={{ ...btn(), opacity: last ? 0.5 : 1 }}>次へ</button>
+            </>
+          )}
+          <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+            <button type="button" onClick={onClose} style={btn()}>キャンセル</button>
+            <button type="button" className="submit-btn" disabled={!last || firstErr >= 0} title={!last ? '最後の金額まで進むと押せます' : firstErr >= 0 ? `${firstErr + 1}件目の金額を直してください` : undefined} onClick={() => onDone(vals.filter((x) => x.reg).length)} style={{ ...btn(accent, true), opacity: !last || firstErr >= 0 ? 0.5 : 1 }}>終了</button>
+          </span>
+        </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 

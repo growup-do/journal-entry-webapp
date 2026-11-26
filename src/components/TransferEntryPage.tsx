@@ -232,7 +232,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
     resetEntry(sess.input.keepLast);
     toast.show(`${title}を登録しました（${used.length}行）`);
     // 振替伝票形式は、明細書へ連動する側の金額（借方科目なら借方金額）で登録する
-    stmt.start(statementItems(used.map((r) => { const ka = toNum(r.kariAmt), sa = single ? ka : toNum(r.kashiAmt); return { kari: r.kari, kashi: r.kashi, tekiyo: r.tekiyo, amount: single ? ka : watchedStatement(r.kari, '') ? ka : sa }; })));
+    stmt.start(statementItems(date, used.map((r) => { const ka = toNum(r.kariAmt), sa = single ? ka : toNum(r.kashiAmt); return { kari: r.kari, kashi: r.kashi, tekiyo: r.tekiyo, amount: single ? ka : watchedStatement(r.kari, '') ? ka : sa }; })));
     focusId(fid(0, 'ka'));
   };
 
