@@ -7,6 +7,10 @@ import { divisionLabel, type DivisionNode } from '../store/session';
 const LINE = '#b3bfc9';
 const CARD_H = 44;
 const GAP = 8;
+/** 事業区分1列の幅 */
+export const ORG_COL_W = 340;
+/** 事業区分が少ないときは列を固定幅にする（ボタンを横に伸ばさず、画面の幅を列に合わせる。確認メモ #371） */
+export const ORG_FIT_MAX = 2;
 /** 伝票を入力できる区分か、集計・参照用の親区分か */
 /** 種類は区分を追加するときに決め、後から変わらない（配下の有無では切り替えない。確認メモ #69／#70） */
 export const kindOf = (n: DivisionNode) => (n.entry ? '入力区分' : '親区分');
@@ -35,9 +39,11 @@ interface Props {
   /** カードのツールチップ */
   hint?: string;
   maxHeight?: number | string;
+  /** 事業区分が ORG_FIT_MAX 個以下のとき、列を固定幅にして中央に寄せる（区分の選択で使う） */
+  fit?: boolean;
 }
 
-export function DivisionOrgChart({ tree, accent, isSelected, onSelect, onConfirm, canSelect = (n) => n.use !== false, action, hint, maxHeight = '54vh' }: Props) {
+export function DivisionOrgChart({ tree, accent, isSelected, onSelect, onConfirm, canSelect = (n) => n.use !== false, action, hint, maxHeight = '54vh', fit }: Props) {
   /** 組織図の1枚（法人・事業区分・拠点区分・サービス区分…） */
   /** link：ぶら下がる区分の罫線（mid＝途中の区分、last＝最後の区分。縦線をカードの中央で止める） */
   const card = (n: DivisionNode, tier: 'root' | 'head' | 'leaf', link?: 'mid' | 'last') => {
@@ -89,12 +95,13 @@ export function DivisionOrgChart({ tree, accent, isSelected, onSelect, onConfirm
     </div>
   );
   const heads = tree.children ?? [];
+  const fixed = !!fit && heads.length <= ORG_FIT_MAX;
   return (
     <div data-org-chart style={{ border: '1px solid #e2e8ee', borderRadius: 12, padding: '18px 18px 20px', maxHeight, overflow: 'auto', background: '#fbfcfd' }}>
-      <div style={{ minWidth: heads.length * 340 }}>
+      <div style={{ minWidth: heads.length * ORG_COL_W }}>
         <div style={{ width: action ? 420 : 380, maxWidth: '100%', margin: '0 auto' }}>{card(tree, 'root')}</div>
         {heads.length > 0 && <div style={{ width: 0, height: 18, margin: '0 auto', borderLeft: `1.5px solid ${LINE}` }} />}
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(heads.length, 1)}, minmax(0, 1fr))` }}>
+        <div style={{ display: 'grid', gridTemplateColumns: fixed ? `repeat(${Math.max(heads.length, 1)}, ${ORG_COL_W}px)` : `repeat(${Math.max(heads.length, 1)}, minmax(0, 1fr))`, justifyContent: 'center' }}>
           {heads.map((h, i) => (
             <div key={h.id} style={{ padding: '0 12px 0', minWidth: 0 }}>
               {/* 上の横罫線（左右の事業区分とつなぐ）と、事業区分へ降りる縦罫線 */}

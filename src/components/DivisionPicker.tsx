@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Modal } from './Modal';
 import { DivisionInfoDialog } from './DivisionInfoDialog';
-import { DivisionOrgChart, OrgChartLegend } from './DivisionOrgChart';
+import { DivisionOrgChart, ORG_COL_W, ORG_FIT_MAX, OrgChartLegend } from './DivisionOrgChart';
 import { ToastView, useToast } from './Toast';
 import { Chevron, Notice, btn, input, lbl } from './ui';
 import { divisionLabel, flattenDivisions, setSession, startKindOf, useSession, type DivisionNode } from '../store/session';
@@ -122,9 +122,12 @@ export function DivisionDialog({ open, onClose, accent, startup, onApplied }: { 
   };
 
   const skipDate = skipUntil ? new Date(skipUntil) : null;
+  // 事業区分が1〜2個のときは、ボタンを横に伸ばさず、ウィンドウの幅を組織図に合わせて縮める（確認メモ #371）
+  const heads = (s.tree.children ?? []).length;
+  const width = heads <= ORG_FIT_MAX ? Math.max(640, heads * ORG_COL_W + 124) : 1280;
 
   return (
-    <Modal open={open} onClose={onClose} width={1280} title="伝票入力区分の選択">
+    <Modal open={open} onClose={onClose} width={width} title="伝票入力区分の選択">
       <ToastView msg={toast.msg} />
       <div style={{ padding: '12px 22px 18px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
@@ -138,7 +141,7 @@ export function DivisionDialog({ open, onClose, accent, startup, onApplied }: { 
 
         {/* 組織図：法人 → 事業区分（横に並ぶ）→ 拠点区分・サービス区分（各事業区分の下に縦につながる） */}
         {view === 'ツリー'
-          ? <DivisionOrgChart tree={s.tree} accent={accent} isSelected={(n) => sel === divisionLabel(n)} onSelect={(n) => setSel(divisionLabel(n))} onConfirm={(n) => apply(divisionLabel(n))} hint="クリックで選択、ダブルクリックで確定" />
+          ? <DivisionOrgChart fit tree={s.tree} accent={accent} isSelected={(n) => sel === divisionLabel(n)} onSelect={(n) => setSel(divisionLabel(n))} onConfirm={(n) => apply(divisionLabel(n))} hint="クリックで選択、ダブルクリックで確定" />
           : <DivisionList items={all} accent={accent} selected={sel} onSelect={setSel} onConfirm={apply} />}
 
         {s.merges.length > 0 && (

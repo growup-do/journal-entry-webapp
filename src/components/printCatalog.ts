@@ -274,7 +274,8 @@ const AP_INNER = (twoLine: boolean): DetailSection => ({ title: '内訳表', ite
 const AP_LINKED = (activity: boolean): DetailSection[] => [
   { title: '印刷項目', items: [
     chk('shade', '費目行を網掛け、太字にする', true), chk('bold', '費目下を太線にする', true), chk('stamp', '捺印欄を印刷する'), chk('corp', '法人名を印刷する', true), chk('hline', '項目・科目毎に横線を印刷する', true), chk('foot', '脚注を印刷する'),
-    chk('autofont', '科目名のフォントサイズを自動調整する', true), chk('page', 'ページ番号を印刷する'), chk('date', '印刷時の日付を印刷する'),
+    // ページ番号の開始番号を「ページ番号を印刷する」に付随させる（確認メモ #396）
+    chk('autofont', '科目名のフォントサイズを自動調整する', true), chk('page', 'ページ番号を印刷する'), txt('pageStart', 'ページ番号の開始番号', '1', '1', 80), chk('date', '印刷時の日付を印刷する'),
     chk('bottom', '常に最下行の下に横線を印刷する', true), chk('top', '常に最上行の上に横線を印刷する', true), chk('head2', '２ページ目以降も項目名を印刷する', true),
     ...(activity ? [chk('special', '事業活動明細書 特別増減の部を印刷する', true)] : []),
   ] },
@@ -289,7 +290,8 @@ const AP: Record<string, AppendixSpec> = {
   // ２ページ目以降も項目名を印刷する（確認メモ #358）
   'note-corp': { noZero: true, outs: ['print', 'excel', 'pdf'], detail: [{ title: '印刷項目', items: [chk('corp', '法人名を印刷する'), chk('page', 'ページ番号を印刷する'), txt('pageStart', 'ページ番号の開始番号', '1', '1', 80), chk('date', '印刷時の日付を印刷する'), chk('head2', '２ページ目以降も項目名を印刷する', true)] }, POSITION('0', '0')] },
   'note-base': { noZero: true, outs: ['print', 'excel', 'pdf'], detail: [{ title: '印刷項目', items: [chk('corp', '法人名を印刷する'), chk('site', '拠点名を印刷する'), chk('page', 'ページ番号を印刷する'), txt('pageStart', 'ページ番号の開始番号', '1', '1', 80), chk('date', '印刷時の日付を印刷する'), chk('head2', '２ページ目以降も項目名を印刷する', true)] }, POSITION('0', '0')] },
-  d1: { zero: false, range: true, detail: [{ title: '印刷項目', items: apItems({ shade: true, autofont: true }) }, AP_GAP('空きなし'), POSITION('-13', '0')] },
+  // 借入金明細書：２ページ目以降も項目名を印刷する（確認メモ #395）
+  d1: { zero: false, range: true, detail: [{ title: '印刷項目', items: apItems({ shade: true, autofont: true, extra: [chk('head2', '２ページ目以降も項目名を印刷する')] }) }, AP_GAP('空きなし'), POSITION('-13', '0')] },
   d2: { noZero: true, range: true, detail: [{ title: '印刷項目', items: apItems({ shade: true, autofont: true }) }, AP_INNER(true), AP_GAP('上・下空き'), POSITION('0', '0')] },
   d3: { zero: true, range: true, detail: [{ title: '印刷項目', items: apItems({ shade: true, autofont: true }) }, AP_INNER(false), AP_GAP('上・下空き'), POSITION('0', '0')] },
   d4: { noZero: true, range: true, detail: [{ title: '印刷項目', items: apItems({ autofont: true }) }, AP_GAP('上・下空き'), POSITION('0', '0')] },
