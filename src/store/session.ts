@@ -385,6 +385,8 @@ export interface Session {
    *  subLedger＝伝票を印刷時に明細として指定（科目名、項目は '#'+項目名）／subBlue＝項目以下の科目を明細とする（項目名） */
   subLedger: Record<string, boolean>;
   subBlue: Record<string, boolean>;
+  /** 決算附属明細書設定「借入金明細書用　中区分項目の指定」の5段（設備資金借入金〜役員等短期借入金。'' は指定なし）。別紙の借入金明細書の行に使う（確認メモ #394） */
+  kariireAccts: string[];
 }
 
 const KEY = 'proto-session-v2'; // v2：区分ツリーの見直し（入力区分／親区分）に伴い保存形式を更新
@@ -408,6 +410,7 @@ const DEFAULT: Session = {
   role: '入力可', startScreen: '伝票入力', homeSections: DEFAULT_HOME_SECTIONS, taxEntry: false,
   taxMode: '通常モード', specialRatesByAccount: DEFAULT_SPECIAL_RATES_BY_ACCOUNT, specialRoundTo: DEFAULT_SPECIAL_RATES[DEFAULT_SPECIAL_RATES.length - 1].division, openingMidTerm: false,
   access: FULL_ACCESS, memberAccess: DEFAULT_MEMBER_ACCESS, accountId: 'me', subLedger: {}, subBlue: {},
+  kariireAccts: ['設備資金借入金', '長期運営資金借入金', '短期運営資金借入金', '', ''],
 };
 
 let state: Session = (() => {

@@ -15,6 +15,7 @@ import { Modal } from './Modal';
 import { PreviewModal, PrintFlow, type ReportDef, type TableData } from './PrintCenter';
 import { appendixSpec, formCond, formEnabled } from './printCatalog';
 import { ImportExportButton, ImportExportDialog } from './ImportExportDialog';
+import { KARIIRE_COLS, KARIIRE_NUM, KARIIRE_ROWS, KariireDetail, kariireTable } from './KariireDetail';
 import { NOTE_TABLE_DEFS, NoteTablePickDialog, NoteTablesDialog, noteMarker, type NoteTables } from './NoteTables';
 import { NUM, TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
@@ -74,7 +75,8 @@ const condText = (x: Sheet) => x.cond ?? (x.form ? formCond(x.form).label : '');
 const KURIIRE_COLS = ['繰入元の区分', '繰入先の区分', '繰入金の財源', '金額', '使用目的等'];
 const KASHI_COLS = ['貸付元の区分', '借入先の区分', '前年度末残高', '当期増加額', '当期減少額', '期末残高', '使用目的等'];
 const DETAILS: Record<string, { cols: string[]; num: number[]; rows: string[][]; hint?: string }> = {
-  d1: { cols: ['借入先', '期首残高', '当期借入金', '当期償還額', '期末残高', '利率（%）', '返済期限', '使途'], num: [1, 2, 3, 4], rows: [['○○銀行（設備資金）', '0', '0', '0', '0', '—', '—', '—']] },
+  // 借入金明細書：行は科目に結び付く（先頭の列＝科目）。入力は KariireDetail（確認メモ #394）
+  d1: { cols: KARIIRE_COLS, num: KARIIRE_NUM, rows: KARIIRE_ROWS },
   d2: { cols: ['寄附者の属性', '区分', '件数', '寄附金額', 'うち基本金組入額', '拠点区分ごとの内訳'], num: [2, 3, 4], rows: [['保護者', '経常経費寄附金', '3', '150000', '0', 'チャイルド保育園'], ['法人役員', '施設整備等寄附金', '1', '500000', '500000', 'チャイルド保育園']], hint: '伝票入力時の監視を有効にしていると、伝票登録時に追加した明細がここに並びます。' },
   d3: { cols: ['拠点名', '補助金の種類', '交付者', '目的', '当期収益額', '備考'], num: [4], rows: [['チャイルド保育園', '市区町村補助金', '○○市', '延長保育事業', '660000', ''], ['チャイルド保育園', '市区町村補助金', '○○市', '障害児保育事業', '0', '']], hint: '「科目から明細を作成する」（決算附属明細書設定）が有効な場合は、科目ごとに拠点名・目的を設定します。' },
   d4: { cols: KURIIRE_COLS, num: [3], rows: [['チャイルド保育園', '本部', '委託費収入', '1200000', '本部経費']] },
@@ -212,6 +214,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
   /** 印刷に使う表データ */
   const invAmount = (tabs: string[]) => tabs.reduce((a, t) => a + (inv[t] ?? []).reduce((b, r) => b + toInt(r[2] ?? ''), 0), 0);
   const tableOf = (x: Sheet): TableData | undefined => {
+    if (x.id === 'd1') return kariireTable(rows.d1 ?? [], s.kariireAccts ?? []);
     if (x.editor === 'detail') { const d = DETAILS[x.id]; return { header: d.cols, rows: (rows[x.id] ?? []).map((r) => r.map((c, i) => (d.num.includes(i) ? toInt(c) : c))) }; }
     if (x.editor === 'inventory') {
       const assets = invAmount(INVENTORY_TABS.slice(0, 3)), debts = invAmount(INVENTORY_TABS.slice(3));
@@ -355,7 +358,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
               {/* ---- 附属明細書：明細入力 ---- */}
               {sheet.editor === 'detail' && def && (
                 <>
-                  <div style={card}>
+                  {sheet.id === 'd1' ? <KariireDetail rows={myRows} accts={s.kariireAccts ?? []} tree={s.tree} accent={accent} onChange={(r) => setRows((d) => ({ ...d, d1: r }))} onOpenSettings={goSettings} /> : <div style={card}>
                     <div style={cardHead}>明細入力 <span style={{ fontWeight: 500, color: '#8290a0', fontSize: 12 }}>金額を入力すると明細書に印刷されます</span><button type="button" onClick={() => setRows((d) => ({ ...d, [sheet.id]: [...(d[sheet.id] ?? []), def.cols.map(() => '')] }))} style={{ ...btn(accent, false, true), marginLeft: 'auto' }}>＋ 行を追加</button></div>
                     <div style={{ overflow: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -367,7 +370,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
                       </table>
                     </div>
                     {def.hint && <div style={{ padding: '8px 14px', fontSize: 12, color: '#9aa5b1' }}>{def.hint}</div>}
-                  </div>
+                  </div>}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 14, color: '#5b6773' }}>
                     <span>集計する科目・伝票入力時の監視は「{displayName('決算附属明細書')}」で設定します。</span>
                     <button type="button" onClick={goSettings} style={btn('#5b6773', false, true)}>{displayName('決算附属明細書')}を開く</button>

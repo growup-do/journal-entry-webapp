@@ -182,8 +182,10 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
   const ti = TABS.indexOf(tab);
   const side: Side = s.env.transferWatch === '支払いで監視' ? '支出' : '収入';
   const setSide = (v: Side) => { setSession({ env: { ...s.env, transferWatch: v === '支出' ? '支払いで監視' : '収入で監視' } }); toast.show(`設定２・設定３ を「${v}に合わせる」に切り替えました（全区分共通）`); };
-  const [saved, setSaved] = useState<Conf>(defaultConf);
-  const [draft, setDraft] = useState<Conf>(defaultConf);
+  // 借入金明細書の5段は全体の設定（session）から読む。別紙の借入金明細書の行に使う（確認メモ #394）
+  const initConf = (): Conf => { const c = defaultConf(); (s.kariireAccts ?? []).forEach((v, i) => { c.combo[`kariire/${i}`] = v; }); return c; };
+  const [saved, setSaved] = useState<Conf>(initConf);
+  const [draft, setDraft] = useState<Conf>(initConf);
   const [oneYearOpen, setOneYearOpen] = useState(false);
   const [titlesDraft, setTitlesDraft] = useState<string[] | null>(null);
   const [grantsDraft, setGrantsDraft] = useState<Grant[] | null>(null);
@@ -203,7 +205,7 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
     setDraft((d) => ({ ...d, combo: { ...d.combo, ...mine(d0.combo) }, checks: { ...d.checks, ...mine(d0.checks) }, watch: { ...d.watch, ...mine(d0.watch) }, kihon2: sec === 'hojo' ? d0.kihon2 : d.kihon2 }));
     toast.show(`「${name}」をデフォルト設定にしました（未保存：保存で確定）`);
   };
-  const saveAll = () => { setSaved(draft); toast.show(`${displayName('決算附属明細書')}を保存しました`); };
+  const saveAll = () => { setSaved(draft); setSession({ kariireAccts: COMBO.kariire.rows.map((_, i) => draft.combo[`kariire/${i}`] ?? '') }); toast.show(`${displayName('決算附属明細書')}を保存しました`); };
   const cancelAll = () => { setDraft(saved); toast.show('変更を取り消しました'); };
   const goAppendix = () => { if (onNavigate) onNavigate('別紙（注記・明細書・財産目録）'); else toast.show('「帳票・印刷 ＞ 帳票の印刷 ＞ 別紙」を開いてください'); };
 
