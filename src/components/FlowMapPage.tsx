@@ -97,6 +97,7 @@ const NODES: Node[] = [
   N('ygraph', '経年グラフ', 'page', 'trend', { open: '経年グラフ' }),
   N('agraph', '分析グラフ', 'page', 'trend', { open: '分析グラフ' }),
   N('suff', '社会福祉充実残額', 'page', 'trend', { open: '充実残額', note: '算定方式の選択 → シミュレーター' }),
+  N('suffwarn', '警告画面（貸借対照表の不一致）', 'dialog', 'trend', { open: '充実残額', note: '実績額方式・追加額方式で貸借が合わないとき。借方合計・貸方合計・差額' }),
   N('suffhist', '過去年推移（表示年数の選択 → 推移）', 'dialog', 'trend', { open: '充実残額', note: '2〜8 年を選択／印刷（出力先の既定は Excel）' }),
   N('bankbal', '預金残高', 'page', 'trend', { open: '預金残高', note: '口座ごとの残高と前日比、月末残高の推移' }),
   // 帳票・印刷
@@ -180,7 +181,7 @@ const EDGES: Edge[] = [
   E('ledger', 'vedit', '訂正'), E('ledger', 'printflow', '印刷', true), E('journal', 'printflow', '印刷 ▾', true), E('trial', 'printflow', '印刷 ▾', true), E('closing', 'batchprint', '印刷 ▾ → 帳票を選ぶ', true), E('batchprint', 'preview', '画面へプレビューする', true), E('closing', 'wamnet', '印刷 ▾ → WAMNET連携出力', true), E('printc', 'wamnet', 'WAMNET連携出力', true), E('closing', 'commonprint', '印刷 ▾ → 様式設定', true), E('budgetcmp', 'printflow', '印刷 ▾', true), E('e-voucher', 'printflow', '印刷 ▾', true), E('s-budget', 'printflow', '印刷 ▾', true), E('s-tax', 'printflow', '印刷 ▾', true), E('receipt', 'printflow', '印刷', true),
   E('daily', 'journal', '伝票表示（不一致の日）'), E('journal', 'daily', '← 戻る', true),
   E('trial', 'ledgerpanel', '科目 → 元帳'), E('closing', 'ledgerpanel', '科目 → 元帳'), E('budgetcmp', 'ledgerpanel', '科目 → 資金元帳'), E('ledgerpanel', 'fundledger', '元帳の画面で開く', true), E('trend', 'ledgerpanel', '月 → 元帳', true), E('ledgerpanel', 'ledger', '元帳の画面で開く'), E('ledgerpanel', 'vedit', '訂正', true), E('ledger', 'trial', '← 戻る', true),
-  E('trend', 'trendgraph', 'グラフ作成', true), E('closing', 'balgraph', '残高グラフ', true), E('trial', 'bsunbalanced', '貸借が不一致のとき', true), E('closing', 'bsunbalanced', '貸借が不一致のとき', true), E('closing', 'suff', '充実残額', true), E('suff', 'suffhist', '過去年推移'),
+  E('trend', 'trendgraph', 'グラフ作成', true), E('closing', 'balgraph', '残高グラフ', true), E('trial', 'bsunbalanced', '貸借が不一致のとき', true), E('closing', 'bsunbalanced', '貸借が不一致のとき', true), E('closing', 'suff', '充実残額', true), E('suff', 'suffhist', '過去年推移'), E('suff', 'suffwarn', '貸借が不一致のとき', true),
   E('auditm', 'auditexp', '説明／結果詳細', true), E('auditm', 'auditset', '決算チェック設定'), E('auditset', 'auditrange', '設定／表示'), E('auditm', 'auditrange', '項目名', true), E('auditm', 'printflow', '結果印刷', true),
   E('printc', 'printflow', '中区分 › 帳票を選ぶ'), E('printflow', 'preview', 'プレビュー', true), E('printflow', 'saveas', 'CSV／Excel／PDF', true), E('printc', 'printflow', 'まとめて印刷', true), E('printc', 'appendix', '中区分「別紙」'), E('appendix', 'printflow', '印刷', true), E('printflow', 'commonprint', '決算書 共通印刷設定を開く', true), E('printc', 'commonprint', '決算書 共通印刷設定', true),
   E('s-update', 'division', '完了後：会計期間を開く', true), E('s-update', 's-backup', 'バックアップの確認', true),

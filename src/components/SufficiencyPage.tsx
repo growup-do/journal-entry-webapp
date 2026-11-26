@@ -12,6 +12,7 @@ import { IconButton, ManualButton } from './ui';
 import { Modal } from './Modal';
 import { useBackNav } from './BackNav';
 import { ToastView, useToast } from './Toast';
+import { ProtoComment } from './ProtoComment';
 import { ACCOUNT_META } from '../lib/accounts';
 import { SUFFICIENCY_DEFAULT as D } from '../data';
 
@@ -32,7 +33,7 @@ const HISTORY = [
   { y: '令和7年度', usable: 12_100_000, deduct: 40_100_000 },
 ];
 
-/** 起動の流れ：確認画面 → 入力方式の選択 →（実績を使う方式のとき）科目警告画面 → 警告画面（貸借が合わないとき）→ 本体 */
+/** 起動の流れ：確認画面 → 入力方式の選択 →（実績を使う方式のとき）科目警告画面 → 警告画面（貸借が合わないとき。プロトタイプでは入力方式選択画面のコメントで切り替える）→ 本体 */
 type Step = 'confirm' | 'method' | 'acctWarn' | 'warn' | 'main';
 /** 警告画面のサンプル値（確認メモ #111 ①）：貸借対照表 決算額の借方合計・貸方合計が一致していない例 */
 const WARN = { debit: 48_436_500, credit: 48_400_000 };
@@ -64,6 +65,10 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
   const [step, setStep] = useState<Step>('confirm');
   const [agreed, setAgreed] = useState(false);
   const [method, setMethod] = useState('');
+  /** プロトタイプ確認用：実績の貸借が合わない状態（ON のときだけ警告画面を出す） */
+  const [unbalanced, setUnbalanced] = useState(false);
+  /** 科目警告画面のあと：貸借が合わないときは警告画面、合うときは本体へ */
+  const afterAcct = () => setStep(unbalanced ? 'warn' : 'main');
   const [a, setA] = useState(D.assets);
   const [b, setB] = useState(D.liabilities);
   const [c, setC] = useState(D.kihonkin);
@@ -167,6 +172,13 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
               </label>
             ))}
           </div>
+          {/* プロトタイプのコメント（実際のシステムには出ない）：貸借が合わない状態を試す */}
+          <ProtoComment style={{ marginTop: 12 }}>
+            <span>貸借が合わない時は警告が表示されます。</span>
+            <label data-proto-unbalanced style={{ display: 'inline-flex', gap: 4, alignItems: 'center', cursor: 'pointer', fontWeight: 700 }}>
+              <input type="checkbox" checked={unbalanced} onChange={(e) => setUnbalanced(e.target.checked)} />合わない貸借を試す
+            </label>
+          </ProtoComment>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 18 }}>
             <span />
             <div style={{ display: 'flex', gap: 8 }}>
@@ -179,7 +191,7 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
 
       {/* ③ 科目警告画面（確認メモ #111 ②／#240）：シミュレーターの参照科目は【財務諸表等入力シート】の標準科目名と結び付けているため、
              会計システムに無い・名前が違う科目を一覧で知らせる。「次へ」で先へ進む。値（科目の一覧）はサンプル */}
-      <Modal open={step === 'acctWarn'} onClose={() => setStep('warn')} width={680} strict title="科目警告画面">
+      <Modal open={step === 'acctWarn'} onClose={afterAcct} width={680} strict title="科目警告画面">
         <div style={{ padding: '18px 28px 22px' }} data-sufficiency-acct-warn>
           <div style={{ border: '1px solid #cfd8e0', borderRadius: 10, padding: '14px 18px', fontSize: 14.5, lineHeight: 1.85, maxHeight: '52vh', overflowY: 'auto' }}>
             <p style={{ margin: 0 }}>簡易充実残額シミュレーターの参照科目ですが、「社会福祉法人の財務諸表等電子開示システム」【財務諸表等入力シート】の標準科目名と結び付けております。</p>
@@ -195,7 +207,7 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
           <div style={{ fontSize: 12, color: '#8290a0', marginTop: 8, lineHeight: 1.7 }}>実績額方式・追加額方式で表示します。</div>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 18 }}>
             <PrintOutButton name="科目警告画面" accent={accent} defaultDest="csv" fileName="充実残額_科目警告_令和8年度" meta="財務諸表等入力シートの標準科目名と結び付かなかった科目" data={() => ({ header: ['費目', '印刷科目名'], rows: ACCT_WARN.map(([h, n]) => [h, n]) })} />
-            <button type="button" onClick={() => setStep('warn')} style={btn(true)}>次へ</button>
+            <button type="button" onClick={afterAcct} style={btn(true)}>次へ</button>
           </div>
         </div>
       </Modal>
