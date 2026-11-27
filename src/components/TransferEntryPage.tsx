@@ -510,11 +510,12 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                   </div>
                 )}
                 <VoucherMarks seq="自動" flags={flags} onChange={setFlags} disabled={ro} viewOnly={tools.viewOnly} />
+                {/* 操作説明の ? は Seq No の行（Seq No の枠の右） */}
+                <span style={{ alignSelf: 'center', display: 'inline-flex' }}><HelpTip text={['取引先で Enter：次の行へ（最後の行なら行を追加）', '摘要で Shift+Enter：下に行を追加', `何も入力していない行の${single ? '金額' : '借方金額'}で Enter：伝票登録ボタンへ`]} /></span>
               </div>
-                {/* 資金モードの切替（自動資金⇄強制資金）と、操作説明の ?（伝票入力の枠の右上） */}
+                {/* 資金モードの切替（自動資金⇄強制資金） */}
                 <div data-entry-head-right style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 8, minHeight: 'var(--entry-head-h, 44px)' }}>
                   {tools.fundSwitch}
-                  <span style={{ display: 'inline-flex' }}><HelpTip text={['取引先で Enter：次の行へ（最後の行なら行を追加）', '摘要で Shift+Enter：下に行を追加', `何も入力していない行の${single ? '金額' : '借方金額'}で Enter：伝票登録ボタンへ`]} /></span>
                 </div>
               </div>
 
