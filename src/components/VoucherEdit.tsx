@@ -713,7 +713,7 @@ export function AdvancedSearchModal({ open, onClose, cond, onApply, accent }: { 
         <Notice>複数の条件は AND で絞り込みます。「検索合計」が有効なとき、一致した金額の合計を画面右上に表示します。</Notice>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
           <button type="button" onClick={() => setC({ ...EMPTY_COND, fusen: new Set() })} style={btn()}>条件をクリア</button>
-          <div style={{ display: 'flex', gap: 8 }}><button type="button" onClick={onClose} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { onApply(c); onClose(); }} style={btn(accent, true)}>OK</button></div>
+          <div style={{ display: 'flex', gap: 8 }}><button type="button" onClick={onClose} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { onApply(c); onClose(); }} style={btn(accent, true)}>決定</button></div>
         </div>
       </div>
     </Modal>

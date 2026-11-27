@@ -135,7 +135,7 @@ export function NoteTablesDialog({ value, accent, initial = 1, onOk, onCancel }:
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
             <button type="button" onClick={onCancel} style={btn()}>キャンセル</button>
-            <button type="button" className="submit-btn" onClick={() => onOk(tables)} style={btn(accent, true)}>OK</button>
+            <button type="button" className="submit-btn" onClick={() => onOk(tables)} style={btn(accent, true)}>決定</button>
           </div>
         </div>
       </div>
@@ -264,7 +264,7 @@ function RowEditDialog({ def, row, accent, onOk, onCancel }: { def: (typeof NOTE
         )}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button type="button" onClick={onCancel} style={btn()}>キャンセル</button>
-          <button type="button" className="submit-btn" data-note-row-ok onClick={() => onOk(r)} style={btn(accent, true)}>OK</button>
+          <button type="button" className="submit-btn" data-note-row-ok onClick={() => onOk(r)} style={btn(accent, true)}>決定</button>
         </div>
       </div>
     </Modal>

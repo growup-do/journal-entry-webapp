@@ -333,7 +333,7 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
             <button type="button" className="btn-outline" onClick={() => setMapDraft(DEFAULT_MAP)} style={{ ...btn(), marginRight: 'auto' }}>初期値に戻す</button>
             <button type="button" onClick={() => setMapOpen(false)} style={btn()}>キャンセル</button>
-            <button type="button" className="submit-btn" onClick={() => { setMapping(mapDraft); setMapOpen(false); toast.show('科目設定を反映しました（この画面を閉じるまで有効）'); }} style={btn(true)}>OK</button>
+            <button type="button" className="submit-btn" onClick={() => { setMapping(mapDraft); setMapOpen(false); toast.show('科目設定を反映しました（この画面を閉じるまで有効）'); }} style={btn(true)}>決定</button>
           </div>
         </div>
       </Modal>
@@ -351,7 +351,7 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
           <div style={{ fontSize: 12, color: '#8290a0', marginTop: 10 }}>{HISTORY[Math.max(0, HISTORY.length - (yearsDraft - 1))].y}〜令和8年度を表示します。</div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
             <button type="button" onClick={() => setYearsOpen(false)} style={btn()}>キャンセル</button>
-            <button type="button" className="submit-btn" onClick={() => { setYears(yearsDraft); setYearsOpen(false); setHistOpen(true); }} style={btn(true)}>OK</button>
+            <button type="button" className="submit-btn" onClick={() => { setYears(yearsDraft); setYearsOpen(false); setHistOpen(true); }} style={btn(true)}>決定</button>
           </div>
         </div>
       </Modal>

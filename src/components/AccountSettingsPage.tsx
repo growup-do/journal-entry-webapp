@@ -957,7 +957,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
       <Modal open={!!swap} onClose={() => setSwap(null)} width={560} title={`▲入換▼ 科目の並び順（項目：${swap?.group ?? ''}）`}>
         {swap && (
           <div style={{ padding: '12px 22px 18px', display: 'grid', gap: 10 }}>
-            <Notice>OK で一覧・帳票の印刷順に反映します（表示コードは変わりません）。<HelpTip style={{ marginLeft: 6 }} text="行をドラッグするか、選択して「▲上へ」「▼下へ」で並び順を変えます" /></Notice>
+            <Notice>決定で一覧・帳票の印刷順に反映します（表示コードは変わりません）。<HelpTip style={{ marginLeft: 6 }} text="行をドラッグするか、選択して「▲上へ」「▼下へ」で並び順を変えます" /></Notice>
             <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: 360, overflow: 'auto' }}>
               {swap.keys.map((k, i) => { const r = rows.find((x) => x.key === k)!; const on = i === swap.cur; return (
                 <div key={k} draggable onDragStart={() => setSwap({ ...swap, drag: i, cur: i })} onDragOver={(e) => { e.preventDefault(); }} onDrop={(e) => { e.preventDefault(); if (swap.drag != null) moveSwap(swap.drag, i); }} onDragEnd={() => setSwap((sw) => (sw ? { ...sw, drag: null } : sw))} onClick={() => setSwap({ ...swap, cur: i })}
@@ -970,7 +970,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
               <span data-tip={swap.cur >= swap.keys.length - 1 ? '最後の科目のため、これ以上は下へ動かせません' : undefined} style={{ display: 'inline-flex' }}><button type="button" onClick={() => moveSwap(swap.cur, swap.cur + 1)} disabled={swap.cur >= swap.keys.length - 1} style={{ ...btn(), opacity: swap.cur >= swap.keys.length - 1 ? 0.5 : 1 }}>▼ 下へ</button></span>
               <button type="button" onClick={() => moveSwap(swap.cur, 0)} style={btn()}>先頭へ</button>
               <button type="button" onClick={() => moveSwap(swap.cur, swap.keys.length - 1)} style={btn()}>末尾へ</button>
-              <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}><button type="button" onClick={() => setSwap(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={applySwap} style={btn(accent, true)}>OK</button></span>
+              <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}><button type="button" onClick={() => setSwap(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={applySwap} style={btn(accent, true)}>決定</button></span>
             </div>
           </div>
         )}

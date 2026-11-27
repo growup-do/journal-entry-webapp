@@ -43,7 +43,7 @@ function Foot({ accent, onReset, onCancel, onOk }: { accent: string; onReset: ()
       <span style={note}>設定を標準に戻します。</span>
       <span style={{ flex: 1 }} />
       <button type="button" onClick={onCancel} style={btn()}>キャンセル</button>
-      <button type="button" className="submit-btn" onClick={onOk} style={btn(accent, true)}>OK</button>
+      <button type="button" className="submit-btn" onClick={onOk} style={btn(accent, true)}>決定</button>
     </div>
   );
 }
@@ -185,7 +185,7 @@ export function AreaPickDialog({ value, divisions, perPage, accent, onCancel, on
           <span style={note}>1ページに表示可能な区分数：{per}</span>
           <span style={{ flex: 1 }} />
           <button type="button" onClick={onCancel} style={btn()}>キャンセル</button>
-          <button type="button" className="submit-btn" onClick={ok} style={btn(accent, true)}>OK</button>
+          <button type="button" className="submit-btn" onClick={ok} style={btn(accent, true)}>決定</button>
         </div>
       </div>
     </Modal>
@@ -211,7 +211,7 @@ export function RemarkDialog({ title, column = '備考', value, accent, onCancel
         <div style={note}>次に示す文字は備考に使用できません（入力しても入りません）。&amp; / ? : * &quot; &gt; &lt; |</div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button type="button" onClick={onCancel} style={btn()}>キャンセル</button>
-          <button type="button" className="submit-btn" onClick={() => onOk(Object.fromEntries(Object.entries(v).filter(([, x]) => x.trim())))} style={btn(accent, true)}>OK</button>
+          <button type="button" className="submit-btn" onClick={() => onOk(Object.fromEntries(Object.entries(v).filter(([, x]) => x.trim())))} style={btn(accent, true)}>決定</button>
         </div>
       </div>
     </Modal>
@@ -239,7 +239,7 @@ export function DisplaySettingDialog({ value, accent, onCancel, onOk, title = '�
           <button type="button" onClick={() => setHelp(!help)} style={btn()}>説明</button>
           <span style={{ flex: 1 }} />
           <button type="button" onClick={onCancel} style={btn()}>キャンセル</button>
-          <button type="button" className="submit-btn" onClick={() => onOk(v)} style={btn(accent, true)}>OK</button>
+          <button type="button" className="submit-btn" onClick={() => onOk(v)} style={btn(accent, true)}>決定</button>
         </div>
       </div>
     </Modal>

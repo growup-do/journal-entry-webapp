@@ -710,7 +710,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
         {stampEdit && <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
           <div style={{ fontSize: 12, color: '#8290a0' }}>最大 {STAMP_MAX} 欄、1欄は全角 {STAMP_LEN} 文字（半角 {STAMP_LEN * 2} 文字）まで。左の欄から順に印刷します。</div>
           <div data-stamp-inputs style={{ display: 'grid', gridTemplateColumns: `repeat(${STAMP_MAX}, 1fr)`, gap: 8 }}>{stampEdit.map((v, i) => <Field key={i} label={`捺印欄 ${i + 1}`}><input className="field-input" value={v} maxLength={STAMP_LEN * 2} onChange={(e) => setStampEdit(stampEdit.map((x, k) => (k === i ? clipBytes(e.target.value, STAMP_LEN * 2) : x)))} style={{ ...input, textAlign: 'center' }} /></Field>)}</div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setStampEdit(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { set({ stamps: stampEdit.map((x) => x.trim()) }); setStampEdit(null); }} style={btn(accent, true)}>OK</button></div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setStampEdit(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { set({ stamps: stampEdit.map((x) => x.trim()) }); setStampEdit(null); }} style={btn(accent, true)}>決定</button></div>
         </div>}
       </Modal>
       {/* 脚注編集（「脚注を印刷する」「脚注、注記を印刷する」の右のボタン。決算書 共通印刷設定の脚注と同じ保存先。確認メモ #336・#341） */}

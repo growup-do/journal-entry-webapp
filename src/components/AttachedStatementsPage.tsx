@@ -388,7 +388,7 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
               <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center' }}><span style={{ width: 24, fontSize: 14, color: '#8290a0' }}>{i + 1}</span><input className="field-input" value={t} onChange={(e) => setTitlesDraft(titlesDraft.map((x, k) => (k === i ? e.target.value : x)))} placeholder="例：国庫補助金" style={input} /><button type="button" title="この行を削除" onClick={() => setTitlesDraft(titlesDraft.filter((_, k) => k !== i))} style={btn('#c0392b', false, true)}>×</button></div>
             ))}
             <div><button type="button" onClick={() => setTitlesDraft([...titlesDraft, ''])} style={btn(accent, false, true)}>＋ 行を追加</button></div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setTitlesDraft(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { const t = titlesDraft.map((x) => x.trim()).filter(Boolean); setDraft((d) => ({ ...d, kokkoTitles: t.length ? t : [...KOKKO_TITLES_DEFAULT] })); setTitlesDraft(null); toast.show('合計タイトルを変更しました（未保存：保存で確定）'); }} style={btn(accent, true)}>OK</button></div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setTitlesDraft(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { const t = titlesDraft.map((x) => x.trim()).filter(Boolean); setDraft((d) => ({ ...d, kokkoTitles: t.length ? t : [...KOKKO_TITLES_DEFAULT] })); setTitlesDraft(null); toast.show('合計タイトルを変更しました（未保存：保存で確定）'); }} style={btn(accent, true)}>決定</button></div>
           </div>
         )}
       </Modal>
@@ -424,7 +424,7 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
               })}
               {(draft.checks.hojo ?? []).length === 0 && <div style={{ fontSize: 14, color: '#9aa5b1' }}>補助金事業等収益明細書用の科目にチェックを付けると、その科目ごとに登録できます。</div>}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setGrantsDraft(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { const g = grantsDraft.map((x) => ({ kubun: x.kubun, org: x.org.trim(), purpose: x.purpose.trim() })).filter((x) => x.org || x.purpose); setDraft((d) => ({ ...d, grants: g })); setGrantsDraft(null); toast.show(`交付団体及び交付の目的を ${g.length} 件にしました（未保存：保存で確定）`); }} style={btn(accent, true)}>OK</button></div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setGrantsDraft(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { const g = grantsDraft.map((x) => ({ kubun: x.kubun, org: x.org.trim(), purpose: x.purpose.trim() })).filter((x) => x.org || x.purpose); setDraft((d) => ({ ...d, grants: g })); setGrantsDraft(null); toast.show(`交付団体及び交付の目的を ${g.length} 件にしました（未保存：保存で確定）`); }} style={btn(accent, true)}>決定</button></div>
           </div>
         )}
       </Modal>
