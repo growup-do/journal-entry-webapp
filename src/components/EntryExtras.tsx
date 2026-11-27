@@ -50,7 +50,7 @@ export function InputSettingsModal({ open, onClose, accent }: { open: boolean; o
           <Toggle on={v.gyoshaCode} onChange={(x) => set({ gyoshaCode: x })} accent={accent} label="取引先コードの入力をする（取引先から検索）" />
           <Toggle on={v.spare1} onChange={(x) => set({ spare1: x })} accent={accent} label="入力予備１を入力する（用途は自由）" />
           <Toggle on={v.spare2} onChange={(x) => set({ spare2: x })} accent={accent} label="入力予備２を入力する" />
-          <Toggle on={v.keepLast} onChange={(x) => set({ keepLast: x })} accent={accent} label="登録後も直前の借方・貸方科目を残す（日付は常に残ります。続けて同じ科目で入力するとき）" />
+          <Toggle on={v.keepLast} onChange={(x) => set({ keepLast: x })} accent={accent} label="登録後も直前の借方・貸方科目を残す（日付は常に残ります）" />
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={onClose} style={btn()}>中止</button><button type="button" className="submit-btn" onClick={() => { setSession({ input: v }); onClose(); }} style={btn(accent, true)}>決定</button></div>
       </div>
@@ -259,7 +259,6 @@ export function AllocationRunModal({ open, onClose, accent, onRegister, onNew }:
           <>
             <Field label="自動按分仕訳の選択"><div style={{ display: 'flex', gap: 8 }}><select data-alloc-pick value={tid} onChange={(e) => setTid(e.target.value)} style={input}>{s.allocations.map((a) => <option key={a.id} value={a.id}>{a.name}（{a.form}・伝票 {allocationPages(a).length} 枚）</option>)}</select>{onNew && <button type="button" className="btn-outline" onClick={onNew} style={{ ...btn(accent, false, true), flex: 'none' }}>＋ 新規登録</button>}</div></Field>
             {t && <div data-alloc-summary style={{ fontSize: 13, color: '#5b6773', lineHeight: 1.7 }}>按分：{pageShares(t)}</div>}
-            <div style={{ fontSize: 14, color: '#22303c' }}>自動按分する伝票の日付と、按分元となる金額（総金額）を入力してください。</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <Field label="年月日（令和8年）"><input className="field-input" value={date} onChange={(e) => setDate(e.target.value)} style={input} /></Field>
               <Field label="按分元となる金額（総金額）"><input className="field-input ring" data-alloc-amount value={amount ? yen(toInt(amount)) : ''} onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" placeholder="0" style={{ ...numInput, fontSize: 18, fontWeight: 700 }} /></Field>

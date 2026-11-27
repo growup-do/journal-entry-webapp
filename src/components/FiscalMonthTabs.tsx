@@ -205,7 +205,7 @@ export function FiscalMonthTabs({ current, accent, onSelect, withAll, range, onR
                 <span>〜</span>
                 <input className="field-input" value={to} onChange={(e) => setTo(e.target.value)} onClick={() => setCal('to')} placeholder="6/30" aria-label="終了日（月/日）" title="クリックでカレンダーから選べます" style={inp} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) applyPick(); }} />
               </div>
-              <div style={{ fontSize: 12, color: '#8290a0', display: 'flex', alignItems: 'center', gap: 6 }}>日付の範囲は「4/15〜6/30」のように指定します。<HelpTip text={['日付の欄をクリックするとカレンダーから選べます', '月の範囲は、月タブをドラッグするか、開始月をクリックしてから終了月を Shift＋クリックすると選べます']} /></div>
+              <div style={{ fontSize: 12, color: '#8290a0', display: 'flex', alignItems: 'center', gap: 6 }}><HelpTip text={['日付の欄をクリックするとカレンダーから選べます', '月の範囲は、月タブをドラッグするか、開始月をクリックしてから終了月を Shift＋クリックすると選べます']} /></div>
               {err && <div style={{ fontSize: 14, color: '#c0392b' }}>{err}</div>}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
                 <button type="button" onClick={() => setPickOpen(false)} style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid #cfd8e0', background: '#fff', color: '#5b6773', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>キャンセル</button>

@@ -121,7 +121,6 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
       accent={accent}
       title="収入・支出調書 印刷"
       badge={badge}
-      subtitle="伺書（支出伺・収入伺など）を出力する伝票を選び、「印刷」から出力先（プリンター／Excel／PDF）を選んで出力します。"
       tools={[{ label: '印刷', onClick: openPrint, icon: 'print', title: '収入・支出調書を印刷します' }, { label: '詳細設定', onClick: () => setDetailOpen(true), icon: 'sliders', iconOnly: true, title: '対象科目・決裁印影・タイトル／メッセージ' }, { label: '未出力数', onClick: () => setCountOpen(true), icon: 'count', iconOnly: true, title: 'まだ印刷していない伝票の数（月別）' }]}
       // 伺の種類は一覧表のすぐ上のタブ（試算表の部の切替と同じ。← → キーでも切り替わる）
       parts={{ items: KINDS.map((x) => x.label), current: Math.max(0, KINDS.findIndex((x) => x.key === kind)), onChange: (i) => setKind(KINDS[i].key) }}

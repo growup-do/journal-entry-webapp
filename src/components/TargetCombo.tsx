@@ -38,7 +38,7 @@ export function TargetCombo({ id, kind = 'account', value, onChange, accent, pla
         </div>
       </div>
       {clearable && value && <button type="button" onClick={() => onChange('')} title={`${isVendor ? '取引先' : '科目'}の指定を外します`} style={clearBtn}>{isVendor ? '取引先' : '科目'}の指定 ×解除</button>}
-      {hint !== false && <span style={{ fontSize: 12, color: '#8290a0' }}>{hint ?? 'コードを入力するか、候補から選びます'}</span>}
+      {hint && <span style={{ fontSize: 12, color: '#8290a0' }}>{hint}</span>}
     </>
   );
 }

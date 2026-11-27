@@ -464,7 +464,7 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
               <PaperTitle
                 title={title}
                 division={`${divisionName} 拠点区分`}
-                badge={<span style={{ fontSize: 12, fontWeight: 700, color: accent, whiteSpace: 'nowrap' }}>{single ? '振替単一形式（複数行）' : '振替伝票形式（複数行）'}　<span style={{ color: '#7a8794', fontWeight: 500 }}>{single ? '金額は行ごとに完結します（1行に金額・借方科目・貸方科目を入力）' : '借方合計と貸方合計が一致すると登録できます'}</span></span>}
+                badge={<span style={{ fontSize: 12, fontWeight: 700, color: accent, whiteSpace: 'nowrap' }}>{single ? '振替単一形式（複数行）' : '振替伝票形式（複数行）'}　<span style={{ color: '#7a8794', fontWeight: 500 }}>{single ? '金額は行ごとに完結します' : '借方合計と貸方合計が一致すると登録できます'}</span></span>}
                 right={tools.templateButton}
               />
 

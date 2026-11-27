@@ -292,7 +292,7 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
         onClose={() => setManualOpen(false)}
         accent={accent}
         title="社会福祉充実残額とは"
-        source="社会福祉法 第55条の2／簡易充実残額シミュレーター（既存システム）"
+        source="社会福祉法 第55条の2"
         sections={[
           { h: '概要', body: '社会福祉充実残額は、法人が保有する財産のうち、事業の継続に必要な財産を控除してもなお残る「再投下可能な財産」の額です。残額が生じた法人は、社会福祉充実計画を策定して既存事業の充実や新規事業に活用することが求められます。' },
           { h: '算定の考え方', body: <>充実残額 ＝ ①活用可能な財産 － ②社会福祉法に基づく事業に活用している不動産等 － ③再取得に必要な財産 － ④必要な運転資金<br />①活用可能な財産 ＝ 資産(a) － 負債(b) － 基本金(c) － 国庫補助金等特別積立金(d)</> },
@@ -305,7 +305,7 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
       {/* 科目設定 */}
       <Modal open={mapOpen} onClose={() => setMapOpen(false)} width={760} title="科目設定 ― 各行に集計する勘定科目">
         <div style={{ padding: '12px 22px 18px' }}>
-          <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 10, lineHeight: 1.7 }}>シミュレーターの各行に、どの勘定科目の残高を集計するかを設定します（実績額方式・追加額方式で使用）。<span style={{ color: '#b7791f' }}>設定内容は保存されません。</span></div>
+          <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 10, lineHeight: 1.7 }}>実績額方式・追加額方式で使用します。<span style={{ color: '#b7791f' }}>設定内容は保存されません。</span></div>
           <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: '52vh', overflow: 'auto' }}>
             {LINE_KEYS.map((k, i) => {
               const sel = mapDraft[k];
@@ -341,7 +341,6 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
       {/* 過去年推移の表示年数 選択画面（確認メモ #114） */}
       <Modal open={yearsOpen} onClose={() => setYearsOpen(false)} width={460} title="過去年推移の表示年数 選択画面">
         <div style={{ padding: '18px 24px 20px' }} data-sufficiency-years>
-          <div style={{ fontSize: 14, color: '#22303c', marginBottom: 12 }}>過去年推移に表示する年数を選択してください（今年度を含みます）。</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
             {YEAR_CHOICES.map((n) => (
               <label key={n} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 10px', border: '1px solid ' + (yearsDraft === n ? accent : '#cfd8e0'), borderRadius: 8, background: yearsDraft === n ? '#f3f8fd' : '#fff', fontSize: 14, fontWeight: yearsDraft === n ? 700 : 500, cursor: 'pointer' }}>

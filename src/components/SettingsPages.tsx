@@ -27,7 +27,7 @@ import { AttachedStatementsPage } from './AttachedStatementsPage';
 const yen = (n: number) => n.toLocaleString('ja-JP');
 
 /* ---------------- 共通シェル ---------------- */
-function Shell({ variant, title, desc, actions, children }: { variant: 'form' | 'sheet'; title: string; desc: string; actions?: ReactNode; children: ReactNode }) {
+function Shell({ variant, title, desc, actions, children }: { variant: 'form' | 'sheet'; title: string; desc?: string; actions?: ReactNode; children: ReactNode }) {
   const isSheet = variant === 'sheet';
   return (
     <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
@@ -37,7 +37,7 @@ function Shell({ variant, title, desc, actions, children }: { variant: 'form' | 
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21 }}>
               {title} <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#eef2f6', color: '#3d4a56', verticalAlign: 'middle', marginLeft: 6 }}>設定</span>
             </div>
-            <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>{desc}</div>
+            {desc && <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>{desc}</div>}
           </div>
           {actions && <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>{actions}</div>}
         </div>
@@ -52,7 +52,7 @@ const lbl: CSSProperties = { display: 'block', fontSize: 12, fontWeight: 700, co
 
 /* ---------------- マスタ管理（汎用） ---------------- */
 interface Field { key: string; label: string; type?: 'text' | 'number' | 'select' | 'color'; options?: string[]; width?: number; align?: 'right'; /** 編集画面で入力させない（ほかの画面で決まる項目） */ readOnly?: boolean; /** 編集画面の入力欄の下に出す説明 */ hint?: string; /** 編集画面で横いっぱいに置く */ wide?: boolean }
-interface MasterConfig { title: string; desc: string; fields: Field[]; rows: Record<string, string>[]; addLabel: string }
+interface MasterConfig { title: string; desc?: string; fields: Field[]; rows: Record<string, string>[]; addLabel: string }
 type Row = Record<string, string>; // _id（空なら新規）・_on（'1'=有効）を含む
 
 /** CSV テキストを行×列に分解（BOM・CRLF・ダブルクォート内のカンマ／改行／""に対応） */
@@ -112,16 +112,16 @@ const sumVendorLabel = (v: Record<string, string>) => `${v.code} ${v.name}`;
 /** 取引先（この区分）→ 対応する合算集計用の取引先（サンプル。同じ名前のものだけ対応づけ済み） */
 const sumVendorOf = (name: string) => { const hit = SUM_VENDORS.find((v) => v.name === name); return hit ? sumVendorLabel(hit) : ''; };
 const MASTERS: Record<string, MasterConfig> = {
-  勘定科目: { title: '勘定科目', desc: '仕訳で使う勘定科目の一覧。分類・区分・資金科目の対応を管理します。', addLabel: '科目を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '科目名' }, { key: 'group', label: '分類', type: 'select', options: ACCOUNTS.map((g) => g.group) }, { key: 'kind', label: '区分', type: 'select', options: ['BS 資産', 'BS 負債', 'BS 純資産', 'PL 収益', 'PL 費用'], width: 110 }, { key: 'fund', label: '資金科目', width: 120 }], rows: acctRows() },
+  勘定科目: { title: '勘定科目', addLabel: '科目を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '科目名' }, { key: 'group', label: '分類', type: 'select', options: ACCOUNTS.map((g) => g.group) }, { key: 'kind', label: '区分', type: 'select', options: ['BS 資産', 'BS 負債', 'BS 純資産', 'PL 収益', 'PL 費用'], width: 110 }, { key: 'fund', label: '資金科目', width: 120 }], rows: acctRows() },
   // 名称は「印刷名称」（帳票に印字）と「入力名称」（伝票入力の候補に表示）の2種類。「表示順」は候補・一覧の並び順（確認メモ #177）。課税区分の欄は持たない（確認メモ #456：検討の結果不要。#178 で足した「不明」も合わせてなくした）
-  税区分: { title: '税区分', desc: '消費税の区分と税率。仕訳入力時の既定値として使われます。名称は、帳票に印字する「印刷名称」と、伝票入力の候補に出す「入力名称」の2種類を持ちます。一覧と入力時の候補は「表示順」の小さい順に並びます。', addLabel: '税区分を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '印刷名称' }, { key: 'iname', label: '入力名称' }, { key: 'rate', label: '税率', type: 'number', width: 90, align: 'right' }, { key: 'order', label: '表示順', type: 'number', width: 90, align: 'right' }], rows: [{ code: '10', name: '課税売上 10%', iname: '課売10%', rate: '10', kind: '課税', order: '1' }, { code: '11', name: '課税仕入 10%', iname: '課仕10%', rate: '10', kind: '課税', order: '2' }, { code: '08', name: '軽減税率 8%', iname: '軽減8%', rate: '8', kind: '課税', order: '3' }, { code: '20', name: '非課税', iname: '非課税', rate: '0', kind: '非課税', order: '4' }, { code: '30', name: '不課税', iname: '不課税', rate: '0', kind: '不課税', order: '5' }, { code: '40', name: '免税', iname: '免税', rate: '0', kind: '免税', order: '6' }, { code: '99', name: '課税区分不明', iname: '不明', rate: '0', kind: '不明', order: '99' }] },
+  税区分: { title: '税区分', desc: '仕訳入力時の既定値として使われます。印刷名称は帳票に印字し、入力名称は伝票入力の候補に出します。一覧と入力時の候補は「表示順」の小さい順に並びます。', addLabel: '税区分を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '印刷名称' }, { key: 'iname', label: '入力名称' }, { key: 'rate', label: '税率', type: 'number', width: 90, align: 'right' }, { key: 'order', label: '表示順', type: 'number', width: 90, align: 'right' }], rows: [{ code: '10', name: '課税売上 10%', iname: '課売10%', rate: '10', kind: '課税', order: '1' }, { code: '11', name: '課税仕入 10%', iname: '課仕10%', rate: '10', kind: '課税', order: '2' }, { code: '08', name: '軽減税率 8%', iname: '軽減8%', rate: '8', kind: '課税', order: '3' }, { code: '20', name: '非課税', iname: '非課税', rate: '0', kind: '非課税', order: '4' }, { code: '30', name: '不課税', iname: '不課税', rate: '0', kind: '不課税', order: '5' }, { code: '40', name: '免税', iname: '免税', rate: '0', kind: '免税', order: '6' }, { code: '99', name: '課税区分不明', iname: '不明', rate: '0', kind: '不明', order: '99' }] },
   // 摘要はショートカットではなくコードを持つ（現行の摘要コードと同じ。確認メモ #92）
-  摘要辞書: { title: '摘要辞書', desc: 'よく使う摘要の候補。コードを入力するか、入力時のドロップダウンから選べます。', addLabel: '摘要を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '摘要' }, { key: 'kana', label: 'フリガナ' }, { key: 'acct', label: 'よく使う科目', type: 'select', options: ACCOUNTS.flatMap((g) => g.items) }], rows: SUMMARIES.map((s, i) => ({ code: String(i + 1).padStart(3, '0'), name: s, kana: SUMMARY_KANA[i] ?? '', acct: ['法定福利費', '法定福利費', '法定福利費', '職員俸給', '委託費収益', '通信運搬費', '水道光熱費（事業）', 'その他の利用料収益', '印刷製本費', '保育材料費', '手数料'][i] ?? '' })) },
-  仕訳辞書: { title: '仕訳辞書', desc: '定型仕訳のひな形。単一入力・伝票入力で呼び出して金額だけ入力できます（既存の「連続定型」に相当）。', addLabel: '定型仕訳を追加', fields: [{ key: 'name', label: '名称' }, { key: 'kari', label: '借方科目', type: 'select', options: ACCOUNTS.flatMap((g) => g.items) }, { key: 'kashi', label: '貸方科目', type: 'select', options: ACCOUNTS.flatMap((g) => g.items) }, { key: 'tekiyo', label: '摘要' }, { key: 'amount', label: '金額（任意）', type: 'number', width: 110, align: 'right' }], rows: [{ name: '電話料金', kari: '通信運搬費', kashi: '普通預金（保育園）', tekiyo: '電話料金', amount: '' }, { name: '給与支給（本俸）', kari: '職員俸給', kashi: '普通預金（保育園）', tekiyo: '職員俸給', amount: '' }, { name: '副食費 保護者より', kari: '現金（収入）', kashi: 'その他の利用料収益', tekiyo: '副食費ー保護者より', amount: '4500' }, { name: 'コピー機リース', kari: '賃借料（事業）', kashi: '普通預金（保育園）', tekiyo: 'コピー機リース代', amount: '10995' }] },
+  摘要辞書: { title: '摘要辞書', desc: '入力時は、コードを入力するかドロップダウンから選びます。', addLabel: '摘要を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '摘要' }, { key: 'kana', label: 'フリガナ' }, { key: 'acct', label: 'よく使う科目', type: 'select', options: ACCOUNTS.flatMap((g) => g.items) }], rows: SUMMARIES.map((s, i) => ({ code: String(i + 1).padStart(3, '0'), name: s, kana: SUMMARY_KANA[i] ?? '', acct: ['法定福利費', '法定福利費', '法定福利費', '職員俸給', '委託費収益', '通信運搬費', '水道光熱費（事業）', 'その他の利用料収益', '印刷製本費', '保育材料費', '手数料'][i] ?? '' })) },
+  仕訳辞書: { title: '仕訳辞書', desc: '単一入力・伝票入力で呼び出して金額だけ入力できます。', addLabel: '定型仕訳を追加', fields: [{ key: 'name', label: '名称' }, { key: 'kari', label: '借方科目', type: 'select', options: ACCOUNTS.flatMap((g) => g.items) }, { key: 'kashi', label: '貸方科目', type: 'select', options: ACCOUNTS.flatMap((g) => g.items) }, { key: 'tekiyo', label: '摘要' }, { key: 'amount', label: '金額（任意）', type: 'number', width: 110, align: 'right' }], rows: [{ name: '電話料金', kari: '通信運搬費', kashi: '普通預金（保育園）', tekiyo: '電話料金', amount: '' }, { name: '給与支給（本俸）', kari: '職員俸給', kashi: '普通預金（保育園）', tekiyo: '職員俸給', amount: '' }, { name: '副食費 保護者より', kari: '現金（収入）', kashi: 'その他の利用料収益', tekiyo: '副食費ー保護者より', amount: '4500' }, { name: 'コピー機リース', kari: '賃借料（事業）', kashi: '普通預金（保育園）', tekiyo: 'コピー機リース代', amount: '10995' }] },
   '取引先（合算集計用）': { title: '取引先（合算集計用）', desc: '合算区分（法人全体・事業区分）で取引先元帳・取引先推移表を集計するときに、各区分の取引先をまとめて扱うための名簿です。区分ごとの取引先コードが違っていても、ここで同じ取引先として対応づけます。', addLabel: '合算用の取引先を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '取引先名' }, { key: 'kana', label: 'フリガナ' }, { key: 'map', label: '対応する区分の取引先（区分：コード）', readOnly: true, wide: true, hint: '対応づけは、各区分の「取引先」の画面で「対応する合算集計用の取引先」を選んで行います。ここでは結果の確認だけができます。' }], rows: SUM_VENDORS },
   // 取引先は現行の業者登録と同じ コード・名称・フリガナ（種別・連絡先・備考は持たない。確認メモ #91）。
   // 「対応する合算集計用の取引先」は、現行と同じくこの画面で合算集計用の名簿から選ぶ（確認メモ #220）
-  取引先: { title: '取引先', desc: '仕入先・保護者・行政などの取引先。仕訳の「取引先」欄と取引先元帳に使われます。フリガナは入力時のカナ検索に使います。合算区分で取引先をまとめて集計するときは、「編集」で「対応する合算集計用の取引先」を選びます。', addLabel: '取引先を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '取引先名' }, { key: 'kana', label: 'フリガナ' }, { key: 'sum', label: '対応する合算集計用の取引先', type: 'select', options: SUM_VENDORS.map(sumVendorLabel), wide: true, hint: '合算区分（法人全体・事業区分）の取引先元帳・取引先推移表では、ここで選んだ取引先にまとめて集計します。候補は「取引先（合算集計用）」のタブに登録した取引先です。' }], rows: VENDORS.filter((v) => v !== '（なし）').map((v, i) => ({ code: String(101 + i), name: v, kana: VENDOR_KANA[v] ?? '', sum: sumVendorOf(v) })) },
+  取引先: { title: '取引先', desc: 'フリガナは入力時のカナ検索に使います。合算区分で取引先をまとめて集計するときは、「編集」で「対応する合算集計用の取引先」を選びます。', addLabel: '取引先を追加', fields: [{ key: 'code', label: 'コード', width: 90 }, { key: 'name', label: '取引先名' }, { key: 'kana', label: 'フリガナ' }, { key: 'sum', label: '対応する合算集計用の取引先', type: 'select', options: SUM_VENDORS.map(sumVendorLabel), wide: true, hint: '合算区分（法人全体・事業区分）の取引先元帳・取引先推移表では、ここで選んだ取引先にまとめて集計します。候補は「取引先（合算集計用）」のタブに登録した取引先です。' }], rows: VENDORS.filter((v) => v !== '（なし）').map((v, i) => ({ code: String(101 + i), name: v, kana: VENDOR_KANA[v] ?? '', sum: sumVendorOf(v) })) },
 };
 
 /** 消費税の方式ごとの説明（確認メモ #175） */
@@ -245,7 +245,7 @@ function MasterPage({ variant, accent, label, tabs, title }: { variant: 'form' |
           </div>
           <div data-tax-mode-note style={{ fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>
             <b style={{ color: '#3d4a56' }}>{sess.taxMode}</b>：{TAX_MODE_NOTE[sess.taxMode]}
-            　旧「消費税動作環境」。税率は下の税区分ごとに持ち、税額は 金額 × 税率 ÷（100 ＋ 税率）の切り捨てで計算します（手入力で変更可）。
+            　税率は下の税区分ごとに持ち、税額は 金額 × 税率 ÷（100 ＋ 税率）の切り捨てで計算します（手入力で変更可）。
           </div>
         </div>
       )}
@@ -364,7 +364,7 @@ function MasterPage({ variant, accent, label, tabs, title }: { variant: 'form' |
 /** 「法人情報」タブは廃止（確認メモ #67）。法人名は区分階層の法人のカードを選んで変更する */
 function OrgPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: string }) {
   return (
-    <Shell variant={variant} title={displayName('事業者')} desc="区分階層（法人 › 事業区分 › 拠点区分 › サービス区分 › 小サービス区分）と合算区分を管理します。法人名は、区分階層で法人のカードを選んで変更します。">
+    <Shell variant={variant} title={displayName('事業者')} desc="法人名は、区分階層で法人のカードを選んで変更します。">
       <DivisionTreeEditor accent={accent} />
     </Shell>
   );
@@ -433,11 +433,11 @@ const initOpening = (): Record<string, OpenCell[][]> => ({
 });
 /** タブごとの表の定義。inner＝内部取引の列を出す（繰越残高・前年実績だけ。期中入力は内部取引の入力に対応しない＝現行と同じ） */
 const OPENING_DEFS: Record<string, { items: { code: string; name: string }[]; cols: [string, string]; inner: boolean; note: string }> = {
-  貸借科目繰越残高: { items: OPEN_BS, cols: ['借方', '貸方'], inner: true, note: '期首（前年度末）の貸借対照表科目の残高を登録します。年度更新をすると自動で設定されるため、通常は初年度のみ入力します。' },
-  事業科目前年実績: { items: OPEN_PL, cols: ['借方', '貸方'], inner: true, note: '事業活動計算書の前年度実績（前年度決算額）を登録します。年度更新をすると自動で設定されるため、通常は初年度のみ入力します。' },
-  貸借科目期中入力: { items: OPEN_BS, cols: ['借方', '貸方'], inner: false, note: '期の途中から導入する場合に、期首から導入月の前月までの貸借科目の発生額（借方・貸方）を登録します。' },
-  事業科目期中入力: { items: OPEN_PL, cols: ['借方', '貸方'], inner: false, note: '期の途中から導入する場合に、期首から導入月の前月までの事業活動科目の実績（借方・貸方）を登録します。' },
-  資金科目期中入力: { items: OPEN_FUND, cols: ['収入', '支出'], inner: false, note: '期の途中から導入する場合に、期首から導入月の前月までの資金収支科目の実績（収入・支出）を登録します（旧「資金科目当期実績」）。' },
+  貸借科目繰越残高: { items: OPEN_BS, cols: ['借方', '貸方'], inner: true, note: '年度更新をすると自動で設定されるため、通常は初年度のみ入力します。' },
+  事業科目前年実績: { items: OPEN_PL, cols: ['借方', '貸方'], inner: true, note: '年度更新をすると自動で設定されるため、通常は初年度のみ入力します。' },
+  貸借科目期中入力: { items: OPEN_BS, cols: ['借方', '貸方'], inner: false, note: '期首から導入月の前月までの発生額を登録します。' },
+  事業科目期中入力: { items: OPEN_PL, cols: ['借方', '貸方'], inner: false, note: '期首から導入月の前月までの実績を登録します。' },
+  資金科目期中入力: { items: OPEN_FUND, cols: ['収入', '支出'], inner: false, note: '期首から導入月の前月までの実績を登録します。' },
 };
 
 function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; accent: string }) {
@@ -478,7 +478,7 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
   const cellIn: CSSProperties = { ...input, textAlign: 'right', padding: '5px 8px', fontVariantNumeric: 'tabular-nums', background: '#fffbe6' };
   const total: CSSProperties = { ...cnum, fontWeight: 700, paddingRight: 19 };
   return (
-    <Shell variant={variant} title="開始残高" desc="運用開始時点（期首）の貸借科目の繰越残高と、事業科目の前年実績を拠点ごとに登録します。各科目には内部取引の金額も入力します。期の途中から導入する場合は「期中入力を行う」をチェックすると、期中入力のタブが追加されます。" actions={<>
+    <Shell variant={variant} title="開始残高" actions={<>
       <button type="button" className="btn-outline" onClick={() => setImportOpen(true)} style={btn()}>前年度決算から取込</button>
       {/* 期中入力の切替（確認を挟む。確認メモ #167）。旧「借貸残高（期中）」ボタンの置き換え */}
       <label data-opening-midterm title="期の途中から導入する場合だけチェックします。通常は使用しません" style={{ ...btn(mid ? accent : undefined), display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -561,9 +561,9 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
       </div>
       <div style={{ padding: '10px 22px 16px', fontSize: 12, color: '#9aa5b1', lineHeight: 1.7 }}>
         {def.inner
-          ? <>※ 内部取引：その科目の金額のうち、区分間の内部取引にあたる額を階層（{INNER_LEVELS.join('／')}）ごとに入力します。合算区分で集計するときの内部取引消去に使います。勘定科目そのものが内部取引の科目として設定されている場合は、入力不要です。<br /></>
+          ? <>※ 内部取引の額は、合算区分で集計するときの内部取引消去に使います。勘定科目そのものが内部取引の科目として設定されている場合は、入力不要です。<br /></>
           : <>※ 期中入力は、内部取引の金額の入力には対応していません。<br /></>}
-        ※ 科目は主要なもののみ表示しています。{tab === '貸借科目繰越残高' && '確定後は前年仕訳の「繰越」として各元帳に反映されます。'}
+        {tab === '貸借科目繰越残高' && '※ 確定後は前年仕訳の「繰越」として各元帳に反映されます。'}
       </div>
     </Shell>
   );
@@ -582,7 +582,7 @@ function SummaryDictPage({ variant, accent }: { variant: 'form' | 'sheet'; accen
   const [tab, setTab] = useState('摘要辞書');
   if (tab === '摘要辞書') return <MasterPage key="摘要辞書" variant={variant} accent={accent} label="摘要辞書" tabs={<Tabs items={['摘要辞書', '自動補完候補']} current={tab} onChange={setTab} accent={accent} />} />;
   return (
-    <Shell variant={variant} title={displayName('摘要辞書')} desc="摘要の自動補完候補を管理します（伝票入力時に過去の摘要から候補を表示）。">
+    <Shell variant={variant} title={displayName('摘要辞書')}>
       <Tabs items={['摘要辞書', '自動補完候補']} current={tab} onChange={setTab} accent={accent} />
       <SummaryAutoCompleteTab accent={accent} />
     </Shell>

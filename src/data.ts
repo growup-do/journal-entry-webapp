@@ -638,10 +638,10 @@ export const CLOSING_REPORT_ROWS: { name: string; avail: string[]; required: str
 export interface SettingsGroup { key: string; label: string; note?: string; danger?: boolean; items: string[] }
 export const SETTINGS_GROUPS: SettingsGroup[] = [
   // マスター設定／各種設定 の分け方はチャイルド社の指定（確認メモ #76）
-  { key: 'master', label: 'マスター設定', note: '法人・区分、科目、取引先、摘要、消費税', items: ['事業者', '勘定科目', '取引先', '摘要辞書', '税区分'] },
-  { key: 'config', label: '各種設定', note: '残高・予算・決算・連動・ダッシュボードの設定', items: ['開始残高', '予算', '決算附属明細書', '財務分析設定', '繰越判断', '減価償却連動'] },
-  { key: 'register', label: '登録機能', note: '定型仕訳・自動按分のひな形', items: ['仕訳辞書'] },
-  { key: 'maint', label: '保守・運用', note: 'チェック・動作環境・バックアップ', items: ['整合性チェック', '決算チェック設定', '環境設定', '仕訳更新', 'データのバックアップ'] },
+  { key: 'master', label: 'マスター設定', items: ['事業者', '勘定科目', '取引先', '摘要辞書', '税区分'] },
+  { key: 'config', label: '各種設定', items: ['開始残高', '予算', '決算附属明細書', '財務分析設定', '繰越判断', '減価償却連動'] },
+  { key: 'register', label: '登録機能', items: ['仕訳辞書'] },
+  { key: 'maint', label: '保守・運用', items: ['整合性チェック', '決算チェック設定', '環境設定', '仕訳更新', 'データのバックアップ'] },
   { key: 'update', label: '年度更新', note: '次年度へ繰り越す（取り消しできません）', danger: true, items: ['年度更新'] },
 ];
 export const SETTINGS_MENU = SETTINGS_GROUPS.flatMap((g) => g.items);

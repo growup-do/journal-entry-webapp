@@ -70,7 +70,7 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
   const T = (k: keyof EnvSettings, label: string) => <Toggle on={!!v[k]} onChange={(x) => set({ [k]: x } as Partial<EnvSettings>)} accent={accent} label={label} />;
 
   return (
-    <SettingsShell variant={variant} title={displayName('環境設定')} desc="システムの動作条件を設定します。「全区分共通」（システム全体）と「区分ごと」（起動中の区分のみ）に分けて表示しています。" actions={<>
+    <SettingsShell variant={variant} title={displayName('環境設定')} actions={<>
       <button type="button" className="btn-outline" onClick={() => setInfoOpen(true)} style={btn()}>部門情報の変更</button>
       <button type="button" className="btn-outline" data-import-export-btn={displayName('環境設定')} onClick={() => setFileOpen(true)} style={btn()}>インポート／エクスポート</button>
       <LoadDivisionSettings accent={accent} kind="動作設定" onDone={(from) => toast.show(`「${from}」の動作設定を読み込みました（未保存：OK（保存）で確定）`)} />
@@ -82,18 +82,18 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
       <DivisionInfoDialog open={infoOpen} onClose={() => setInfoOpen(false)} accent={accent} />
       {/* インポート／エクスポート：ほかの画面もこの形にそろえた（確認事項「インポート・エクスポート処理の統一」） */}
       <ImportExportDialog open={fileOpen} onClose={() => setFileOpen(false)} name={displayName('環境設定')} accent={accent} format="JSON"
-        notice={<>区分「{s.division}」の環境条件を設定ファイルとして書き出し、別の区分・別の端末で読み込めます（既存の「動作設定ファイル（.ini）」に相当。Web版では JSON 形式）。</>}
+        notice={<>区分「{s.division}」の環境条件を設定ファイルとして書き出し、別の区分・別の端末で読み込めます。</>}
         exportDesc="現在設定中（未保存分を含む）の条件をファイルに書き出します。"
         onExport={saveFile}
-        importDesc="書き出した設定ファイルを選んで読み込みます。読み込んだ内容は「OK（保存）」で確定します。"
+        importDesc="読み込んだ内容は「OK（保存）」で確定します。"
         accept=".json,application/json"
         onImport={onFile}
         onSample={() => applyLoaded(SAMPLE_ENV, 'サンプル設定')}
         importWarn="一度読み込んだ環境条件は元に戻せません（保存前なら「初期値に戻す」または画面の再表示で破棄できます）。" />
       <div style={{ padding: 22, display: 'grid', gap: 18 }}>
-        <Notice>設定は影響範囲で2つに分けています。<b>全区分共通</b>＝どの区分で起動しても同じ設定、<b>区分ごと</b>＝いま起動している区分だけの設定です。印刷に関わる設定（0データを表示しない・印刷位置・フォント・捺印欄など）は、各帳票の「印刷」画面の詳細設定に集約しました。</Notice>
+        <Notice>印刷に関わる設定（0データを表示しない・印刷位置・フォント・捺印欄など）は、各帳票の「印刷」画面の詳細設定で行います。</Notice>
 
-        <ScopeBlock kind="全区分共通" title="システム全体の設定" desc="すべての区分に同じ内容が適用されます。変更すると他の区分の画面・帳票にも反映されます。">
+        <ScopeBlock kind="全区分共通" title="システム全体の設定" desc="変更すると他の区分の画面・帳票にも反映されます。">
           <div style={grid}>
             <div style={card}><div style={cardHead}>試算表・予算の集計方法</div><div style={{ padding: 14, display: 'grid', gap: 12 }}>
               <Field label="試算表：費目行の計算方式"><select value={v.trialCalc} onChange={(e) => set({ trialCalc: e.target.value })} style={input}>{['費目行に表記されている計算方式で計算する', '収入の借方と支出の借方を加算する（貸方も同様）'].map((o) => <option key={o}>{o}</option>)}</select></Field>
@@ -106,7 +106,7 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
                   <input className="field-input" value={v.fusenNames[f]} onChange={(e) => set({ fusenNames: { ...v.fusenNames, [f]: e.target.value } })} placeholder="（任意）この色の付箋の使い方" aria-label={`${f}の付箋の意味`} style={{ ...input, padding: '5px 8px', fontSize: 14 }} data-fusen-name={f} />
                 </label>
               ))}
-              <div style={{ fontSize: 14, color: '#7a8794' }}>意味を入れると、伝票入力・日記帳・元帳の付箋ボタンのツールチップと、検索条件・印刷の絞り込みに「赤（{v.fusenNames.赤 || '…'}）」のように表示します。空欄のときは色だけを表示します（既存では利用者が自由に使い分けているため、初期値は空です）。付箋の色は4色固定です。</div>
+              <div style={{ fontSize: 14, color: '#7a8794' }}>意味を入れると、伝票入力・日記帳・元帳の付箋ボタンのツールチップと、検索条件・印刷の絞り込みに「赤（{v.fusenNames.赤 || '…'}）」のように表示します。空欄のときは色だけを表示します。付箋の色は4色固定です。</div>
             </div></div>
             <div style={card}><div style={cardHead}>日付の表記</div><div style={{ padding: 14, display: 'grid', gap: 10 }}>
               {T('eraGannen', '和暦の1年を「元年」と表記する')}
@@ -173,7 +173,6 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
                 ) : (
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}><button type="button" className="btn-outline" onClick={() => toast.show('背景画像の選択（プロトタイプでは未対応）')} style={btn()}>画像を選択…</button><span style={{ fontSize: 14, color: '#7a8794' }}>未選択</span></div>
                 )}
-                <div style={{ fontSize: 14, color: '#7a8794' }}>区分ごとに背景を変えると、起動中の区分を取り違えにくくなります。</div>
               </div></div>
             )}
           </div>

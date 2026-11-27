@@ -63,7 +63,7 @@ export function useDivisionTools(all: Voucher[], accent: string) {
   const modal = (
     <Modal open={colorOpen} onClose={() => setColorOpen(false)} width={560} title="区分色の設定">
       <div style={{ padding: '12px 22px 18px' }}>
-        <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 10 }}>伝票入力区分ごとに、日記帳・元帳で行の背景に使う色を設定します（「部門情報の変更」のカラーと共通）。</div>
+        <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 10 }}>「部門情報の変更」のカラーと共通です。</div>
         <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'hidden' }}>
           {entries.map((d) => (
             <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderBottom: '1px solid #f1f4f6', fontSize: 14, opacity: d.use === false ? 0.5 : 1 }}>

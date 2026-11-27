@@ -73,8 +73,7 @@ export function LoginPage({ onLogin }: { onLogin: (kind: 'standard' | 'review', 
           </div>
         </div>
         <div style={{ background: '#fff', border: '1px solid #dde4ea', borderRadius: 16, boxShadow: '0 10px 36px rgba(30,50,70,.10)', padding: '28px 30px 24px' }}>
-          <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 18, marginBottom: 4 }}>ログイン</div>
-          <div style={{ fontSize: 14, color: '#7a8794', marginBottom: 18 }}>登録済みのメールアドレスとパスワードを入力してください。</div>
+          <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 18, marginBottom: 18 }}>ログイン</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
               <span style={lbl}>メールアドレス</span>
@@ -106,7 +105,7 @@ export function LoginPage({ onLogin }: { onLogin: (kind: 'standard' | 'review', 
         <div style={{ padding: '18px 26px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
           {reset.step === 0 && (
             <>
-              <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.7 }}>登録済みのメールアドレスを入力してください。再設定用の確認コードをお送りします。</div>
+              <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.7 }}>再設定用の確認コードをメールでお送りします。</div>
               <div><span style={lbl}>メールアドレス</span><input className="field-input ring" type="email" value={reset.email} onChange={(e) => setReset({ ...reset, email: e.target.value })} onKeyDown={onResetEnter} autoFocus autoComplete="username" style={input} /></div>
             </>
           )}

@@ -93,7 +93,7 @@ function UpdateView({ variant, depOnly, go, onNavigate }: { variant: 'form' | 's
   ];
 
   return (
-    <SettingsShell variant={variant} title={title} badge="取り消しできません" desc={depOnly ? '減価償却のデータだけを次年度へ繰り越します。伝票・残高・予算は変更しません。' : '当年度のデータを締めて、次年度へ繰り越します（繰越残高・予算・摘要候補を次年度へ設定）。'} draft={false}>
+    <SettingsShell variant={variant} title={title} badge="取り消しできません" draft={false}>
       <ToastView msg={toast.msg} />
       <div style={{ margin: '16px 22px 0', display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 14px', border: '1px solid #ecc5bf', borderLeft: '5px solid ' + DANGER, borderRadius: 10, background: '#fdf3f2' }}>
         <WarnIcon size={24} />
@@ -121,7 +121,7 @@ function UpdateView({ variant, depOnly, go, onNavigate }: { variant: 'form' | 's
         {at === 'backup' && (
           <>
             <div style={{ fontSize: 14, fontWeight: 700 }}>① バックアップの確認</div>
-            <div style={{ fontSize: 14, color: '#48565f', lineHeight: 1.8 }}>データを守るため、{title}の前にバックアップが必要です。バックアップが済んでいない場合、先へ進めません。</div>
+            <div style={{ fontSize: 14, color: '#48565f', lineHeight: 1.8 }}>{title}の前にバックアップが必要です。済んでいない場合、先へ進めません。</div>
             <div style={{ ...card, padding: 14, display: 'grid', gap: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', fontSize: 14 }}>
                 <span>最後のバックアップ：<b>{backup.at ?? '2026/09/24 18:02'}</b>{backup.at ? <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#eaf5ef', color: '#1f7a52' }}>いま取得しました</span> : <span style={{ marginLeft: 8, fontSize: 12, color: '#8a5a00' }}>（そのあとに伝票が登録されています）</span>}</span>
@@ -160,7 +160,6 @@ function UpdateView({ variant, depOnly, go, onNavigate }: { variant: 'form' | 's
         {at === 'members' && (
           <>
             <div style={{ fontSize: 14, fontWeight: 700 }}>③ 構成区分の年度更新状況の確認</div>
-            <div style={{ fontSize: 14, color: '#48565f', lineHeight: 1.8 }}>{kind === '入力区分' ? '合算区分・親区分' : kind}で起動しているため、構成する区分ごとに年度更新の状況を確認します。今回更新する区分を選んでください。</div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead><tr><th style={{ ...TH, width: 90, textAlign: 'center' }}>今回更新</th><th style={TH}>区分</th><th style={{ ...TH, width: 130 }}>年度更新の状況</th><th style={TH}>説明</th></tr></thead>
               <tbody>{members.map((m, i) => {

@@ -78,7 +78,6 @@ export function AggPrintDialog({ open, report, units, accent, onRun, onClose }: 
           onRun={() => run(dest)}
           onClose={onClose}
           basic={<div>
-        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 10 }}>{report}を印刷する明細を選んでください</div>
         <div style={{ ...box, marginBottom: 10 }}>
           <label style={row}><input type="radio" name="agg-print-mode" checked={mode === 'unit'} onChange={() => setMode('unit')} />集計単位で選ぶ</label>
           <div style={{ marginTop: 6, maxHeight: 220, overflow: 'auto', border: '1px solid #e2e8ee', borderRadius: 8, opacity: mode === 'unit' ? 1 : 0.5 }}>

@@ -58,7 +58,7 @@ export function NoteTablePickDialog({ accent, onPick, onCancel }: { accent: stri
   return (
     <Modal open onClose={onCancel} width={600} title="挿入する表の選択画面">
       <div data-note-table-pick style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
-        <div style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>挿入する表を選んでください。<HelpTip text={['本文のカーソルの位置に、表の目印（例 @@表1@@）が入ります', '表の中身は［表編集］で作り、目印の位置に印刷します']} /></div>
+        <div style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}><HelpTip text={['本文のカーソルの位置に、表の目印（例 @@表1@@）が入ります', '表の中身は［表編集］で作り、目印の位置に印刷します']} /></div>
         {/* 現行と同じく、左の列に表1〜3、右の列に表4〜7 */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, alignItems: 'start' }}>
           {[NOTE_TABLE_DEFS.slice(0, 3), NOTE_TABLE_DEFS.slice(3)].map((col, c) => (
@@ -117,7 +117,7 @@ export function NoteTablesDialog({ value, accent, initial = 1, onOk, onCancel }:
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead><tr><th style={{ ...TH, width: 36 }}>行</th><th style={{ ...TH, width: 150 }}>行の種別</th>{def.cols.map((c) => <th key={c} style={TH}>{c}</th>)}</tr></thead>
               <tbody>
-                {rows.length === 0 && <tr><td colSpan={def.cols.length + 2} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: '24px 8px' }}>行がありません。［行追加］で行を作ります。</td></tr>}
+                {rows.length === 0 && <tr><td colSpan={def.cols.length + 2} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: '24px 8px' }}>行がありません。</td></tr>}
                 {rows.map((r, i) => (
                   <tr key={i} data-note-row={i + 1} onClick={() => setSel(i)} onDoubleClick={() => setEdit({ at: i, row: JSON.parse(JSON.stringify(r)), isNew: false })} style={{ cursor: 'pointer', background: sel === i ? '#e9f5ef' : r.kind === '合計行' ? '#f7f9fa' : '#fff' }}>
                     <td style={{ ...TD, color: '#8290a0', fontVariantNumeric: 'tabular-nums' }}>{i + 1}</td>
@@ -170,7 +170,6 @@ function RowKindDialog({ def, sel, count, accent, onPick, onCancel }: { def: (ty
             <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="radio" checked={!above} onChange={() => setAbove(false)} style={{ accentColor: accent }} />最後の行の下（{count + 1} 行目）</label>
           </div>
         </fieldset>
-        <div style={{ fontSize: 14 }}>行の種類を選択してください。</div>
         <div style={{ display: 'grid', gap: 8 }}>
           {def.kinds.map((k) => (
             <button key={k} type="button" data-note-row-kind-pick={k} onClick={() => onPick(k, above)} style={{ display: 'grid', gap: 2, padding: '10px 14px', borderRadius: 10, border: '1px solid #cfd8e0', background: '#fff', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer' }}>
@@ -240,7 +239,7 @@ function RowEditDialog({ def, row, accent, onOk, onCancel }: { def: (typeof NOTE
         ) : row.kind === '勘定科目指定' ? (
           <>
             {labelField}
-            <div style={{ fontSize: 14, lineHeight: 1.7 }}>固定資産に設定されている勘定科目を選択してください。勘定科目を選択すると該当する固定資産一覧が表示され、印刷時にそれらの固定資産の金額が加算されます。</div>
+            <div style={{ fontSize: 14, lineHeight: 1.7 }}>印刷時に、選んだ勘定科目の固定資産の金額が加算されます。</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div><div style={{ fontSize: 12, fontWeight: 700, color: '#5b6773', marginBottom: 4 }}>勘定科目選択</div><AcctChecks list={def.accts} value={r.accts ?? []} onChange={(v) => setR({ ...r, accts: v })} accent={accent} height={180} /></div>
               <div><div style={{ fontSize: 12, fontWeight: 700, color: '#5b6773', marginBottom: 4 }}>条件に該当する減価データ</div>

@@ -108,7 +108,7 @@ export function LedgerInquiryPage({ slot, variant, accent, onNavigate }: LedgerP
       variant={variant}
       accent={accent}
       title={title}
-      subtitle="総勘定元帳の参照用の画面です。科目を指定して仕訳と残高を照会します。相手勘定科目・補助科目・税区分・摘要でさらに絞り込めます。元帳１と元帳２は別々の条件を保持します。"
+      subtitle="元帳１と元帳２は別々の条件を保持します。"
       tools={[{ label: '科目検索', onClick: () => openTargetCombo(comboId('acc')), primary: true }]}
       period={
         <>
@@ -248,7 +248,6 @@ export function BalanceCheckPage({ variant, accent }: { variant: 'form' | 'sheet
       variant={variant}
       accent={accent}
       title={displayName('残高照合')}
-      subtitle="現預金科目ごとに、通帳（実残高）とシステム残高を突合して OK／NG を表示します。"
       editing={editing}
       tools={[{ label: editing ? '設定を終了' : '通帳残高の設定', onClick: () => setEditing((e) => !e), primary: true }]}
       extraTools={<ScreenPrintMenu accent={accent} actions={[{ items: [{ name: '現預金残高推移表（残高照合）', onClick: openExport }] }]} />}
@@ -306,7 +305,7 @@ export function BalanceCheckPage({ variant, accent }: { variant: 'form' | 'sheet
           </tr>
         </tfoot>
       </table>
-      <div style={{ padding: '12px 22px', fontSize: 12, color: '#9aa5b1', lineHeight: 1.6, borderTop: '1px solid #eef2f5' }}>月選択ボタンで月を選ぶと、その月の月末時点で突合します。「通帳残高の設定」で通帳の残高を入力すると（月ごとに入力します）、システム残高と突合して OK／NG と差額を表示します。</div>
+      <div style={{ padding: '12px 22px', fontSize: 12, color: '#9aa5b1', lineHeight: 1.6, borderTop: '1px solid #eef2f5' }}>選んだ月の月末時点で突合します。通帳の残高は月ごとに入力します。</div>
     </ReportShell>
   );
 }

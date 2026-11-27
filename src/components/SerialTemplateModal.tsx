@@ -220,7 +220,7 @@ export function SerialTemplateModal({ open, onClose, accent, format, service, ye
   const internal = cur ? pageInternal(cur, perLine) : false;
 
   return (
-    <Modal open={open} onClose={onClose} width={1120} title={<>連続定型 <span style={{ fontSize: 13, fontWeight: 500, color: '#8290a0', marginLeft: 8 }}>{FORMAT_LABEL[format]}の定型をまとめて登録します</span></>}>
+    <Modal open={open} onClose={onClose} width={1120} title={<>連続定型 <span style={{ fontSize: 13, fontWeight: 500, color: '#8290a0', marginLeft: 8 }}>{FORMAT_LABEL[format]}</span></>}>
       <div data-serial-template style={{ ...scopeStyle(accent), padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', padding: '8px 12px', borderRadius: 8, background: '#f3f6f9', fontSize: 14 }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -251,7 +251,7 @@ export function SerialTemplateModal({ open, onClose, accent, format, service, ye
               <button type="button" className="ef-act" data-serial-all="off" onClick={() => setAll(false)} style={btn('#5b6773', false, true)}>すべて無効</button>
             </div>
             <div style={{ maxHeight: 330, overflow: 'auto' }}>
-              {pages.length === 0 && <div style={{ padding: 14, fontSize: 14, color: '#8290a0', lineHeight: 1.8 }}>{mine.length === 0 ? 'この形式の定型がまだありません。「＋ページを追加」でページを作り、「定型に保存」で保存します。仕訳辞書の連続定型仕訳ウィザードでも作れます。' : 'この定型にはページがありません。「＋ページを追加」で作成します。'}</div>}
+              {pages.length === 0 && <div style={{ padding: 14, fontSize: 14, color: '#8290a0', lineHeight: 1.8 }}>{mine.length === 0 ? 'この形式の定型がまだありません。仕訳辞書の連続定型仕訳ウィザードでも作れます。' : 'この定型にはページがありません。'}</div>}
               {pages.map((p, i) => (
                 <div key={p.id} data-serial-page={i + 1} data-enabled={p.enabled ? '1' : '0'} onClick={() => setSel(i)} style={{ display: 'grid', gridTemplateColumns: '26px 22px minmax(0,1fr) auto', gap: 6, alignItems: 'center', padding: '7px 10px', cursor: 'pointer', borderBottom: '1px solid #eef2f5', background: i === sel ? '#eef4fb' : '#fff', borderLeft: '3px solid ' + (i === sel ? accent : 'transparent'), opacity: p.enabled ? 1 : 0.55 }}>
                   <span style={{ fontSize: 12, color: '#8290a0', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{i + 1}</span>
@@ -272,7 +272,6 @@ export function SerialTemplateModal({ open, onClose, accent, format, service, ye
 
           {/* 選んだページの内容 */}
           <div style={{ border: '1px solid #dfe6ec', borderRadius: 10, padding: 12, minHeight: 380, display: 'grid', gap: 10, alignContent: 'start' }}>
-            {!cur && <div style={{ fontSize: 14, color: '#8290a0' }}>左の一覧からページを選ぶか、「＋ページを追加」で定型を作成します。</div>}
             {cur && (
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: perLine ? '90px' : '90px 44px minmax(0,1fr) 44px minmax(0,1fr)', gap: 8, alignItems: 'center' }}>
@@ -325,7 +324,7 @@ export function SerialTemplateModal({ open, onClose, accent, format, service, ye
                   </div>
                 )}
                 {cur.enabled && errors[sel] && <div data-serial-current-error style={{ fontSize: 13, color: '#c0392b' }}>このページはまだ登録できません：{errors[sel]}</div>}
-                {!cur.enabled && <div style={{ fontSize: 13, color: '#8290a0' }}>このページは無効です（登録しません）。左のチェックを入れると登録の対象になります。</div>}
+                {!cur.enabled && <div style={{ fontSize: 13, color: '#8290a0' }}>このページは無効です（登録しません）。</div>}
               </>
             )}
           </div>

@@ -55,7 +55,7 @@ export function CorporatePrintModal({ open, onClose }: Props) {
       fileName={`決算書一括_${s.fiscalYear}`}
       meta={`法人印刷　${period}`}
       detailSummary={`選択 ${checked.size} 帳票`}
-      blocked={checked.size ? undefined : '出力する帳票を選んでください（詳細設定の一覧でチェックします）。'}
+      blocked={checked.size ? undefined : '出力する帳票を選んでください。'}
       previewOpts={{ from: `${s.fiscalYear} 4月1日`, to: '3月31日', output: '画面へプレビューする' }}
       basic={<div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>

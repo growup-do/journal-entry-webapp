@@ -95,7 +95,7 @@ export function TemplateJournalPage({ variant, accent }: { variant: 'form' | 'sh
 
 
   return (
-    <SettingsShell variant={variant} title="仕訳辞書" desc="定型仕訳（連続定型）と自動按分仕訳のテンプレート、特殊金額入力の按分率を管理します。伝票入力の「連続定型」「自動按分」ボタンから呼び出せます。" actions={
+    <SettingsShell variant={variant} title="仕訳辞書" actions={
       tab === '連続定型仕訳' ? <button type="button" className="submit-btn" onClick={() => setWiz({ step: 0, t: blankTemplate() })} style={btn(accent, true)}>＋ 追加</button>
         : tab === '自動按分仕訳' ? <button type="button" className="submit-btn" onClick={() => setAwiz({ step: 0, t: blankAllocation() })} style={btn(accent, true)}>＋ 追加</button>
           : tab === '自動按分出力' ? <><ScreenPrintMenu page="仕訳辞書" accent={accent} /><button type="button" className="submit-btn" onClick={exportAlloc} style={btn(accent, true)}>出力（CSV）</button></>
@@ -106,7 +106,7 @@ export function TemplateJournalPage({ variant, accent }: { variant: 'form' | 'sh
 
       {tab === '連続定型仕訳' && (
         <div style={{ padding: 22 }}>
-          <Notice>事前に登録した仕訳を伝票入力の「連続定型」で呼び出し、日付・金額を入れて登録できます。1 つの定型に複数のページ（1 ページ＝伝票 1 枚）を持てて、伝票画面ではページごとに有効・無効を切り替えます。伝票形式ごとにテンプレートを持てます。</Notice>
+          <Notice>伝票入力の「連続定型」で呼び出し、日付・金額を入れて登録します。1 つの定型に複数のページ（1 ページ＝伝票 1 枚）を持てて、伝票画面ではページごとに有効・無効を切り替えます。</Notice>
           <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
             <thead><tr><th style={TH}>名称</th><th style={{ ...TH, width: 110 }}>伝票の形式</th><th style={TH}>内容</th><th style={{ ...TH, width: 80, textAlign: 'right' }}>ページ</th><th style={{ ...TH, width: 150, textAlign: 'right' }}>操作</th></tr></thead>
             <tbody>
@@ -118,7 +118,7 @@ export function TemplateJournalPage({ variant, accent }: { variant: 'form' | 'sh
                   <td style={{ ...TD, textAlign: 'right' }}><div style={{ display: 'inline-flex', gap: 6 }}><button type="button" onClick={() => setWiz({ step: 2, t: JSON.parse(JSON.stringify(t)) })} style={btn('#5b6773', false, true)}>訂正</button><button type="button" onClick={() => { if (confirm(`「${t.name}」を削除しますか？`)) setSession({ templates: s.templates.filter((x) => x.id !== t.id) }); }} style={btn('#c0392b', false, true)}>削除</button></div></td>
                 </tr>
               ))}
-              {s.templates.length === 0 && <tr><td colSpan={5} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 30 }}>定型仕訳がありません。「＋ 追加」で登録してください。</td></tr>}
+              {s.templates.length === 0 && <tr><td colSpan={5} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 30 }}>定型仕訳がありません。</td></tr>}
             </tbody>
           </table>
         </div>
@@ -158,7 +158,7 @@ export function TemplateJournalPage({ variant, accent }: { variant: 'form' | 'sh
                 const name = row.account || '共通';
                 return (
                   <tr key={name} data-special-rate-row={name} style={{ background: row.account ? undefined : '#f8fafc' }}>
-                    <td style={{ ...TD, fontWeight: 700 }}>{row.account || <>共通<span style={{ fontWeight: 400, color: '#8290a0', fontSize: 12, marginLeft: 8 }}>科目ごとの設定がない科目に使います</span></>}</td>
+                    <td style={{ ...TD, fontWeight: 700 }}>{row.account || '共通'}</td>
                     {row.rates.map((r) => <td key={r.division} style={NUM}><input className="field-input ring" value={String(r.rate)} onChange={(e) => setSpRate(row.account, r.division, Math.max(0, Math.min(100, toInt(e.target.value))))} inputMode="numeric" aria-label={`${name}の${r.division}の按分率`} style={{ ...numInput, width: 80, padding: '4px 8px' }} /></td>)}
                     <td style={{ ...NUM, fontWeight: 700, color: sum === 100 ? '#1f7a52' : '#c0392b' }}>{sum}%</td>
                     <td style={TD}><select value={row.roundTo} onChange={(e) => setSpRoundTo(row.account, e.target.value)} aria-label={`${name}の端数の加算先区分`} style={{ ...input, padding: '4px 8px' }}>{spDivs.map((d) => <option key={d}>{d}</option>)}</select></td>

@@ -559,7 +559,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
                     );
                   })}
                 </div>
-                <div style={{ fontSize: 12, color: noAcct ? '#b03a2e' : '#8290a0', marginTop: 4 }}>{noAcct ? '印刷する科目にチェックを付けてください。' : 'チェックを付けた科目を印刷します。'}科目の選択は、他の伝票入力区分と共有しています。</div>
+                <div style={{ fontSize: 12, color: noAcct ? '#b03a2e' : '#8290a0', marginTop: 4 }}>{noAcct ? '印刷する科目にチェックを付けてください。' : ''}科目の選択は、他の伝票入力区分と共有しています。</div>
               </div>
             )}
             {/* 取引先内訳表：印刷科目のリストボックス（確認メモ #413） */}
@@ -567,7 +567,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
               <div data-basic-list={report.basicList.k} style={{ maxWidth: 420 }}>
                 <span style={lbl}>{report.basicList.label}</span>
                 <PickList options={report.basicList.options} value={p.basicSel ?? report.basicList.def ?? []} onChange={(x) => set({ basicSel: x })} accent={accent} />
-                <div style={{ fontSize: 12, color: (p.basicSel ?? report.basicList.def ?? []).length ? '#8290a0' : '#b03a2e', marginTop: 4 }}>{(p.basicSel ?? report.basicList.def ?? []).length ? 'チェックを付けた科目を印刷します。' : '印刷する科目にチェックを付けてください。'}</div>
+                {!(p.basicSel ?? report.basicList.def ?? []).length && <div style={{ fontSize: 12, color: '#b03a2e', marginTop: 4 }}>印刷する科目にチェックを付けてください。</div>}
               </div>
             )}
             {/* 経年推移グラフ：資産・負債・事業・資金のリストボックスで、グラフにする科目を選ぶ（現行どおり。確認メモ #406） */}
@@ -645,7 +645,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
               <button type="button" data-open-common onClick={(e) => { e.stopPropagation(); goScreen('共通の印刷設定'); }} title="決算書 共通印刷設定の画面を開きます" style={{ ...btn('#5b6773', false, true), whiteSpace: 'nowrap' }}>決算書 共通印刷設定を開く</button>
             </> : undefined}>
               <div style={{ display: 'grid', gap: 12 }}>
-                {report.common && <div data-common-diff={diff} style={{ fontSize: 12, color: diff ? '#6b3fa0' : '#8290a0', lineHeight: 1.6 }}>{diff ? `決算書 共通印刷設定と異なる項目が ${diff} 件あります。「共通の印刷設定を反映」で共通の値にそろえます。` : '決算書 共通印刷設定と同じ内容です。'}</div>}
+                {report.common && <div data-common-diff={diff} style={{ fontSize: 12, color: diff ? '#6b3fa0' : '#8290a0', lineHeight: 1.6 }}>{diff ? `決算書 共通印刷設定と異なる項目が ${diff} 件あります。` : '決算書 共通印刷設定と同じ内容です。'}</div>}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
                   {!report.noZero && !zeroInItems && <div style={{ display: 'grid', gap: 4, alignContent: 'start' }}>
                     <Toggle on={p.zeroHide} onChange={(v) => set({ zeroHide: v })} accent={accent} label="0データを表示しない" />
@@ -683,7 +683,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
                 )}
                 {usesRemark(report) && (
                   <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: 10, display: 'grid', gap: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}><b style={{ fontSize: 14 }}>備考・摘要</b><span style={{ fontSize: 12, fontWeight: 800, padding: '2px 8px', borderRadius: 8, background: '#eef2f6', color: '#3d4a56' }}>単位ごとに保持</span><span style={{ fontSize: 12, color: '#8290a0' }}>法人・拠点・サービス区分で内容が異なる場合があるため、単位ごとに別々に保存します。</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}><b style={{ fontSize: 14 }}>備考・摘要</b><span style={{ fontSize: 12, fontWeight: 800, padding: '2px 8px', borderRadius: 8, background: '#eef2f6', color: '#3d4a56' }}>単位ごとに保持</span></div>
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>{REMARK_UNITS.map((u) => <button key={u} type="button" onClick={() => setUnit(u)} style={btn(unit === u ? accent : '#5b6773', unit === u, true)}>{u}{u === myUnit ? '（今回の印刷で使用）' : ''}</button>)}</div>
                     <textarea value={pr.unitRemarks[unit] ?? ''} onChange={(e) => setCommon({ unitRemarks: { ...pr.unitRemarks, [unit]: e.target.value } })} rows={3} placeholder={`${unit}の備考欄に印刷する文字`} style={{ ...input, resize: 'vertical', lineHeight: 1.7 }} />
                     {unit !== myUnit && <div style={{ fontSize: 12, color: '#8a5a00' }}>起動中の区分（{s.division}）の印刷では「{myUnit}」の備考を使います。ここで編集した内容は「{unit}」を印刷するときに使われます。</div>}
@@ -693,7 +693,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
             </ScopeBlock>
 
             {report.common && (
-              <ScopeBlock kind="決算書共通" title="決算書 共通印刷設定から使う設定" desc="決算書の帳票に共通の設定です（ここでは確認のみ。変更は「決算書 共通印刷設定を開く」から）。">
+              <ScopeBlock kind="決算書共通" title="決算書 共通印刷設定から使う設定">
                 <div data-common-summary style={{ display: 'flex', gap: '4px 16px', flexWrap: 'wrap', fontSize: 14, color: '#48565f' }}>
                   <span>行の間隔：{pr.lineGap}{pr.lineGap === '空きなし' ? '' : `（${pr.gapSize}）`}</span><span>位置調整：横 {pr.offsetX}mm／縦 {pr.offsetY}mm</span><span>印刷幅：科目 {pr.widthName}mm／金額 {pr.widthAmount}mm</span><span>フォント：{pr.fontHeader}／{pr.fontName}／{pr.fontAmount}</span><span>捺印欄の氏名：{pr.stamps.filter(Boolean).join('・') || '（なし）'}</span><span>ページ番号の開始：{pr.pageStart}</span>
                 </div>
@@ -708,7 +708,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
       {/* 捺印欄（現行「捺印欄」：最大4欄、1欄 全角3文字。確認メモ #310） */}
       <Modal open={!!stampEdit} onClose={() => setStampEdit(null)} width={520} title="捺印欄">
         {stampEdit && <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
-          <div style={{ fontSize: 14, color: '#48565f' }}>捺印欄に印刷する名前を入力してください。<span style={{ display: 'block', fontSize: 12, color: '#8290a0' }}>最大 {STAMP_MAX} 欄、1欄は全角 {STAMP_LEN} 文字（半角 {STAMP_LEN * 2} 文字）まで。左の欄から順に印刷します。</span></div>
+          <div style={{ fontSize: 12, color: '#8290a0' }}>最大 {STAMP_MAX} 欄、1欄は全角 {STAMP_LEN} 文字（半角 {STAMP_LEN * 2} 文字）まで。左の欄から順に印刷します。</div>
           <div data-stamp-inputs style={{ display: 'grid', gridTemplateColumns: `repeat(${STAMP_MAX}, 1fr)`, gap: 8 }}>{stampEdit.map((v, i) => <Field key={i} label={`捺印欄 ${i + 1}`}><input className="field-input" value={v} maxLength={STAMP_LEN * 2} onChange={(e) => setStampEdit(stampEdit.map((x, k) => (k === i ? clipBytes(e.target.value, STAMP_LEN * 2) : x)))} style={{ ...input, textAlign: 'center' }} /></Field>)}</div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setStampEdit(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { set({ stamps: stampEdit.map((x) => x.trim()) }); setStampEdit(null); }} style={btn(accent, true)}>OK</button></div>
         </div>}
@@ -833,10 +833,9 @@ export function PreviewModal({ open, onClose, title, opts, pages = 3, accent, ch
           </div>
         </div>
       </div>
-      <div style={{ padding: '8px 16px', fontSize: 12, color: '#9aa5b1', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-        {!children && <span style={{ color: '#5b6773' }}>金額の書式：桁区切り {s.env.thousandsSep}・負数 {formatAmount(-1234, s.env)}（{s.env.negativeColor}）　／　0円の行：{zero ? `表示しない${dropped ? `（${dropped} 行を省略）` : ''}` : '表示する'}</span>}
-        <span>プレビューは確認用で、出力は印刷画面の「出力先」で選んで行います。</span>
-      </div>
+      {!children && <div style={{ padding: '8px 16px', fontSize: 12, color: '#9aa5b1', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <span style={{ color: '#5b6773' }}>金額の書式：桁区切り {s.env.thousandsSep}・負数 {formatAmount(-1234, s.env)}（{s.env.negativeColor}）　／　0円の行：{zero ? `表示しない${dropped ? `（${dropped} 行を省略）` : ''}` : '表示する'}</span>
+      </div>}
     </Modal>
   );
 }
@@ -894,7 +893,6 @@ function ZeroExcludeCard({ accent }: { accent: string }) {
       </div>
       <Modal open={open} onClose={() => setOpen(false)} width={760} title="「0データを印刷しない」の除外科目設定">
         <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
-          <Notice>印刷詳細設定「0データを印刷しない」が有効になっている場合に、0 円でも印刷を行いたい科目にチェックを付けてください。この機能を使用しない場合は「全て OFF」にします。この設定は法人内で共通です。</Notice>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>{col('資金科目', fundItems, fund, setFund)}{col('貸借・事業科目', bsItems, bs, setBs)}</div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setOpen(false)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { setOpen(false); toast.show(`除外科目を保存しました（資金 ${fund.length}・貸借事業 ${bs.length}）`); }} style={btn(accent, true)}>OK</button></div>
         </div>
@@ -909,9 +907,9 @@ function FormSelectCard() {
   const set = (key: string, on: boolean) => setSession({ print: { ...s.print, forms: { ...s.print.forms, [key]: on } } });
   return (
     <div style={card} data-form-select>
-      <div style={cardHead}>帳票選択（決算書・別紙・準決算書で使う様式）<span style={{ fontWeight: 500, color: '#7a8794', marginLeft: 8, fontSize: 12 }}>現行の印刷メニュー「様式設定」・旧 動作環境パネル「帳票選択」</span></div>
+      <div style={cardHead}>帳票選択（決算書・別紙・準決算書で使う様式）</div>
       <div style={{ padding: 14, display: 'grid', gap: 12 }}>
-        <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.7 }}>帳票の印刷の一覧（決算書・別紙・準決算書）に出す帳票を選びます。使用にした様式だけが一覧に出ます。区分階層（事業区分・拠点区分の数）によって省略できる様式は、既定で省略しています。<br />現在の区分階層：事業区分 {can.事業区分 ? '1つ（第二様式を省略できます）' : '複数（第二様式が必要）'}／拠点区分 {can.拠点区分 ? '各1つ（第三様式を省略できます）' : '複数の事業区分あり（第三様式が必要）'}</div>
+        <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.7 }}>使用にした様式だけが、帳票の印刷の一覧に出ます。区分階層（事業区分・拠点区分の数）によって省略できる様式は、既定で省略しています。<br />現在の区分階層：事業区分 {can.事業区分 ? '1つ（第二様式を省略できます）' : '複数（第二様式が必要）'}／拠点区分 {can.拠点区分 ? '各1つ（第三様式を省略できます）' : '複数の事業区分あり（第三様式が必要）'}</div>
         {FORM_GROUPS.map((g) => (
           <div key={g.title}>
             <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{g.title}</div>
@@ -982,7 +980,7 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
   const openFmt = () => setFmt({ widthName: p.widthName, widthAmount: p.widthAmount, fontHeader: p.fontHeader, fontHeaderItem: p.fontHeaderItem ?? STD_FORMAT.fontHeaderItem, fontName: p.fontName, fontAmount: p.fontAmount, fontRemark: p.fontRemark ?? STD_FORMAT.fontRemark });
 
   return (
-    <SettingsShell variant={variant} editing={dirty} title={displayName('共通の印刷設定')} badge="印刷" desc={<>決算書の印刷に使う共通の設定です。各帳票の詳細設定にある「共通の印刷設定を反映」で、ここの値をその帳票に写します。</>} actions={<>
+    <SettingsShell variant={variant} editing={dirty} title={displayName('共通の印刷設定')} badge="印刷" desc={<>各帳票の詳細設定にある「共通の印刷設定を反映」で、ここの値をその帳票に写します。</>} actions={<>
       <ScreenPrintMenu page="共通の印刷設定" accent={accent} />
       <IconButton icon="eye" label="プレビューで確認" data-common-preview onClick={() => setPreview(true)} />
       <LoadDivisionSettings icon accent={accent} kind="印刷設定" onDone={(from) => toast.show(`「${from}」の印刷設定を読み込みました`)} />
@@ -1073,7 +1071,6 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
       <div data-common-extra style={{ padding: '0 22px 22px', display: 'grid', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', borderTop: '1px solid #e2e8ee', paddingTop: 16 }}>
           <span style={{ fontSize: 14, fontWeight: 800, color: '#3d4a56' }}>あわせて使う設定</span>
-          <span style={note}>現行では印刷メニューの「様式設定」や動作環境にある設定です</span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 18, alignItems: 'start' }}>
           <FormSelectCard />
@@ -1090,7 +1087,6 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
       {/* 捺印欄 */}
       <Modal open={!!stamps} onClose={() => setStamps(null)} width={520} title="捺印欄">
         {stamps && <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
-          <div style={note}>捺印欄に印刷する氏名を、最大4名まで入力します。</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>{stamps.map((v, i) => <Field key={i} label={`捺印欄 ${i + 1}`}><input className="field-input" value={v} onChange={(e) => setStamps(stamps.map((x, k) => (k === i ? e.target.value : x)))} style={input} /></Field>)}</div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setStamps(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { set({ stamps }); setStamps(null); }} style={btn(accent, true)}>OK</button></div>
         </div>}

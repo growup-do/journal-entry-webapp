@@ -262,7 +262,7 @@ export function CashbookSettingsDialog({ open, kind, tab, prefs, taxEntry, accen
                     <StampInputs label="仕訳伝票" values={d.print.slipStamps} disabled={!d.print.slipStamp} onChange={(v) => setPrint({ slipStamps: v })} />
                     <StampInputs label="振替・振単" values={d.print.transferStamps} disabled={!d.print.slipStamp} onChange={(v) => setPrint({ transferStamps: v })} />
                   </div>
-                  <div style={{ ...note, marginTop: 6 }}>捺印欄の文字は、左から順に印刷します（空欄の枠は文字なしで印刷します）。</div>
+                  <div style={{ ...note, marginTop: 6 }}>空欄の枠は文字なしで印刷します。</div>
                 </Section>
               </div>
               <div style={{ display: 'grid', gap: 12 }}>
@@ -308,7 +308,7 @@ export function CashbookSettingsDialog({ open, kind, tab, prefs, taxEntry, accen
           {cur === '色の設定' && (
             <div data-agg-colors style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: 16, alignItems: 'start' }}>
               <Section title="集計済明細行の色分け指定">
-                <div style={{ ...note, marginBottom: 10 }}>集計した明細行の背景色です。集計するごとに 1 番目の色から順に使い、最後の色まで使うと 1 番目に戻ります（{AGG_COLOR_MAX} 色まで）。</div>
+                <div style={{ ...note, marginBottom: 10 }}>集計するごとに 1 番目の色から順に使い、最後の色まで使うと 1 番目に戻ります（{AGG_COLOR_MAX} 色まで）。</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', gap: 8 }}>
                   {d.colors.map((c, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 6px', border: '1px solid #e2e8ee', borderRadius: 8 }}>
@@ -337,7 +337,6 @@ export function CashbookSettingsDialog({ open, kind, tab, prefs, taxEntry, accen
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, padding: '10px 22px 16px' }}>
-          <span style={{ ...note, marginRight: 'auto' }}>現行の「システムの保守関連 › ユーザー設定」（色の設定・印刷設定を含む）と同じ項目です。</span>
           <button type="button" className="submit-btn" onClick={() => onSave(d)} style={btn(true)}>登録</button>
           <button type="button" onClick={onClose} style={btn()}>キャンセル</button>
         </div>

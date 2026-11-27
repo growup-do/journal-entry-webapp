@@ -370,7 +370,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
           </div>
           <div id="journal-scroll" className="pp-table" style={{ gridTemplateColumns: '1fr', overflowY: 'auto', minHeight: 150, maxHeight: 'calc(100vh - 720px)', alignContent: 'start' }}>
             {rows.length === 0 && (
-              <div className="pp-cell pp-center" style={{ padding: '40px 22px', color: '#9aa5b1', fontSize: 14 }}>{division} の{range ? 'この期間の' : v.monthFilter == null ? '' : 'この月の'}伝票はありません。下の入力行から登録してください。</div>
+              <div className="pp-cell pp-center" style={{ padding: '40px 22px', color: '#9aa5b1', fontSize: 14 }}>{division} の{range ? 'この期間の' : v.monthFilter == null ? '' : 'この月の'}伝票はありません。</div>
             )}
             {rows.map((e, i) => {
               const isNew = e.id === v.lastAdded;

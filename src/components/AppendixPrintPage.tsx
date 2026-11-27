@@ -399,7 +399,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
                         <thead><tr>{def.cols.map((c, i) => <th key={c} style={{ ...TH, textAlign: def.num.includes(i) ? 'right' : 'left' }}>{c}</th>)}<th style={{ ...TH, width: 50 }} /></tr></thead>
                         <tbody>
                           {myRows.map((r, ri) => <tr key={ri}>{r.map((c, ci) => { const numeric = def.num.includes(ci); const ch = def.choices?.[ci]; if (ch) return <td key={ci} style={TD}><select className="field-input" aria-label={def.cols[ci]} value={c} onChange={(e) => setCell(ri, ci, e.target.value)} style={{ ...input, padding: '4px 8px', fontSize: 14, minWidth: 120 }}>{(ch.includes(c) ? ch : [c, ...ch]).map((o) => <option key={o}>{o}</option>)}</select></td>; return <td key={ci} style={numeric ? NUM : TD}><input className="field-input" aria-label={def.cols[ci]} value={numeric && c ? yen(toInt(c)) : c} onChange={(e) => setCell(ri, ci, numeric ? String(toInt(e.target.value)) : e.target.value)} inputMode={numeric ? 'numeric' : undefined} style={{ ...(numeric ? numInput : input), padding: '4px 8px', fontSize: 14, minWidth: numeric ? 96 : Math.max(110, Math.max(...myRows.map((x) => (x[ci] ?? '').length)) * 14 + 24), color: numeric && toInt(c) < 0 ? '#c0392b' : undefined }} /></td>; })}<td style={TD}><button type="button" title="この行を削除" onClick={() => setRows((d) => ({ ...d, [sheet.id]: (d[sheet.id] ?? []).filter((_, i) => i !== ri) }))} style={btn('#c0392b', false, true)}>×</button></td></tr>)}
-                          {myRows.length === 0 && <tr><td colSpan={def.cols.length + 1} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 24 }}>明細がありません。「＋ 行を追加」で入力します。</td></tr>}
+                          {myRows.length === 0 && <tr><td colSpan={def.cols.length + 1} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 24 }}>明細がありません。</td></tr>}
                         </tbody>
                       </table>
                     </div>
@@ -430,7 +430,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
                     <div style={card}>
                       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead><tr><th style={{ ...TH, width: 40 }}>#</th><th style={TH}>貸借対照表科目</th><th style={TH}>場所・物量等</th><th style={{ ...TH, textAlign: 'right', width: 140 }}>金額</th></tr></thead>
-                        <tbody>{invRows.map((r, i) => <tr key={i} onClick={() => setInvSel(i)} style={{ background: invSel === i ? '#eef2f6' : 'transparent', cursor: 'pointer' }}><td style={TD}>{i + 1}</td>{r.map((c, k) => <td key={k} style={k === 2 ? NUM : TD}><input className="field-input" value={c} onFocus={() => setInvSel(i)} onChange={(e) => setInv({ ...inv, [invTab]: invRows.map((x, xi) => (xi === i ? x.map((y, yi) => (yi === k ? e.target.value : y)) : x)) })} style={{ ...(k === 2 ? numInput : input), padding: '4px 8px', fontSize: 14 }} /></td>)}</tr>)}{invRows.length === 0 && <tr><td colSpan={4} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 24 }}>行がありません。「行挿入」または「既定に戻す」で追加してください。</td></tr>}</tbody>
+                        <tbody>{invRows.map((r, i) => <tr key={i} onClick={() => setInvSel(i)} style={{ background: invSel === i ? '#eef2f6' : 'transparent', cursor: 'pointer' }}><td style={TD}>{i + 1}</td>{r.map((c, k) => <td key={k} style={k === 2 ? NUM : TD}><input className="field-input" value={c} onFocus={() => setInvSel(i)} onChange={(e) => setInv({ ...inv, [invTab]: invRows.map((x, xi) => (xi === i ? x.map((y, yi) => (yi === k ? e.target.value : y)) : x)) })} style={{ ...(k === 2 ? numInput : input), padding: '4px 8px', fontSize: 14 }} /></td>)}</tr>)}{invRows.length === 0 && <tr><td colSpan={4} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 24 }}>行がありません。</td></tr>}</tbody>
                       </table>
                     </div>
                     <div style={{ display: 'grid', gap: 6 }}>
@@ -457,7 +457,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
                   <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 14, fontWeight: 700, color: '#8290a0' }}>1ページ中の項目数</span>
                     <button type="button" aria-label="項目数を減らす" onClick={() => setPerPage((p) => Math.max(3, p - 1))} style={btn('#5b6773', false, true)}>▼</button><b style={{ fontVariantNumeric: 'tabular-nums' }}>{perPage}</b><button type="button" aria-label="項目数を増やす" onClick={() => setPerPage((p) => Math.min(10, p + 1))} style={btn('#5b6773', false, true)}>▲</button>
-                    <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}><ImportExportButton name="合算テーブル" accent={accent} format="CSV" exportDesc="区分・小計・合計の行と計算式を CSV ファイルに書き出します。" onExport={exportTable} importDesc="書き出した CSV ファイルを選んで、合算テーブルを置き換えます。" accept=".csv,text/csv" onImport={(f) => onTableFile(f)} importWarn="読み込むと、いまの合算テーブルの行は置き換わります。" /><button type="button" onClick={() => setFmtOpen(true)} style={btn()}>印刷書式</button></span>
+                    <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}><ImportExportButton name="合算テーブル" accent={accent} format="CSV" exportDesc="区分・小計・合計の行と計算式を CSV ファイルに書き出します。" onExport={exportTable} importDesc={null} accept=".csv,text/csv" onImport={(f) => onTableFile(f)} importWarn="読み込むと、いまの合算テーブルの行は置き換わります。" /><button type="button" onClick={() => setFmtOpen(true)} style={btn()}>印刷書式</button></span>
                   </div>
                   <div style={card}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -483,9 +483,9 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
       {tablesOpen != null && <NoteTablesDialog value={tables[sheet.id] ?? {}} initial={tablesOpen} accent={accent} onCancel={() => setTablesOpen(null)} onOk={(v) => { setTables({ ...tables, [sheet.id]: v }); setTablesOpen(null); toast.show('注記の表を設定しました'); }} />}
       {/* 財産目録の行設定／注記のインポート／エクスポート（確認事項「インポート・エクスポート処理の統一」） */}
       <ImportExportDialog open={!!load} onClose={() => setLoad(null)} name={load === 'inv' ? '財産目録の行設定' : sheet.name} accent={accent} format="JSON"
-        exportDesc="いまの内容を設定ファイルに書き出します。"
+        exportDesc={null}
         onExport={() => { if (load) saveFile(load); }}
-        importDesc="書き出した設定ファイルを選んで、いまの内容を置き換えます。読み込んだ内容は画面上部の「保存」で確定します。"
+        importDesc="読み込んだ内容は画面上部の「保存」で確定します。"
         accept=".json,application/json"
         onImport={(f) => onFile(f)}
         onSample={loadSample}
@@ -516,7 +516,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
   );
   if (embedded) return <div data-appendix-embedded>{body}</div>;
   return (
-    <SettingsShell variant={variant} title="別紙（注記・附属明細書・財産目録）" badge="印刷" desc="決算書に添付する別紙の編集と印刷を行います。左の一覧から別紙を選び、右側で内容の編集と印刷をします。" actions={actions}>
+    <SettingsShell variant={variant} title="別紙（注記・附属明細書・財産目録）" badge="印刷" actions={actions}>
       {body}
     </SettingsShell>
   );

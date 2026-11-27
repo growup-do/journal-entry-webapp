@@ -860,7 +860,6 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       title={title}
       badge={badge}
       org={`チャイルド保育園　${book}`}
-      subtitle={isPetty ? '小口現金の入出金を出納帳形式で記帳し、集計して会計へ連動します。' : '預金口座ごとの入出金を出納帳形式で記帳し、集計して会計へ連動します。銀行CSVの取込ができます。'}
       extraTools={<ScreenPrintMenu accent={accent} actions={[
         { label: '印刷および印刷プレビュー', items: ['集計内訳表', '仕訳伝票', isPetty ? '小口現金出納帳' : '預金出納帳'].map((l) => ({ name: l, onClick: () => openPrint(l) })) },
         ...(isPetty ? [{ label: '残高の確認', items: [{ name: '金銭残高金種別表', note: '日付ごとに紙幣・硬貨の枚数を入力', onClick: openDenom }] }] : []),
@@ -1078,7 +1077,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       {/* ---- 集計：明細選択 ---- */}
       <Modal open={aggOpen && !aggConfirm} onClose={() => setAggOpen(false)} width={860} title="集計">
         <div style={{ padding: '14px 22px 18px' }}>
-          <div style={{ fontSize: 14, marginBottom: 10 }}>上から順に、どこまで集計するかを選びます。集計する最後の行を押してください（その行より上の明細がすべて選ばれます）。<span style={{ fontSize: 14, color: '#7a8794', marginLeft: 8 }}>（選択 {aggSel.size} 件）</span></div>
+          <div style={{ fontSize: 14, marginBottom: 10 }}>集計する最後の行を押してください（その行より上の明細がすべて選ばれます）。<span style={{ fontSize: 14, color: '#7a8794', marginLeft: 8 }}>（選択 {aggSel.size} 件）</span></div>
           <div style={{ maxHeight: 380, overflow: 'auto', border: '1px solid #e2e8ee', borderRadius: 10 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead><tr><th style={{ ...TH, width: 36 }} /><th style={{ ...TH, textAlign: 'right' }}>入金額</th><th style={TH}>年月日</th><th style={TH}>摘要</th><th style={TH}>勘定科目</th><th style={{ ...TH, textAlign: 'right' }}>出金額</th><th style={{ ...TH, textAlign: 'right' }}>残高</th></tr></thead>
@@ -1161,7 +1160,6 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
               <input aria-label="伝票年月日の日" inputMode="numeric" value={slipDay} disabled={!slipActive || aggMonthEnd} maxLength={2} onChange={(e) => setAggDate({ ...aggDate, day: e.target.value })} style={{ ...inp, width: 52, padding: '4px 6px', textAlign: 'right', background: !slipActive || aggMonthEnd ? '#f3f6f9' : '#fff' }} /><span>日</span>
               <label style={{ display: 'flex', gap: 4, alignItems: 'center', marginLeft: 10 }}><input type="checkbox" checked={aggMonthEnd} disabled={!slipActive} onChange={() => setAggMonthEnd(!aggMonthEnd)} />月末日</label>
             </div>
-            <div style={{ fontSize: 12, color: '#7a8794' }}>「月末日」にチェックすると、伝票の日付をその月の末日にします。「明細の日付を伝票日付とする」にチェックすると、明細ごとの日付で伝票を作ります。</div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
             <button type="button" className="submit-btn" onClick={runAggregate} style={btn(true)}>OK</button>
@@ -1221,7 +1219,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       {/* ---- 区分の切替（小口現金・預金出納の共通）。出納帳の追加は、この画面の中の「＋出納帳追加」で行う（確認メモ #211／#215） ---- */}
       <Modal open={switchOpen} onClose={() => setSwitchOpen(false)} width={520} title={isPetty ? '小口区分の切替' : '区分の切替'}>
         <div style={{ padding: '14px 22px 18px' }}>
-          <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 10 }}>{isPetty ? '開く小口現金の区分（担当）を選択してください。区分ごとに出納帳・繰越残高を分けて管理します。' : '開く預金出納帳（預金科目）を選択してください。預金科目ごとに出納帳・繰越残高を分けて管理します。'}</div>
+          <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 10 }}>{isPetty ? '区分ごとに出納帳・繰越残高を分けて管理します。' : '預金科目ごとに出納帳・繰越残高を分けて管理します。'}</div>
           <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'auto', maxHeight: 260 }}>
             {(isPetty ? pettyBooks : bankBooks.map((n) => ({ name: n, staff: '', place: '' }))).map((b) => (
               <label key={b.name} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '9px 12px', borderBottom: '1px solid #f1f4f6', fontSize: 14, cursor: 'pointer', background: switchPick === b.name ? '#fff8c4' : '#fff' }}>
@@ -1292,14 +1290,13 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
           ) : (
             <div data-link-empty style={{ border: '2px dashed #cfd8e0', borderRadius: 12, padding: '20px 20px', textAlign: 'center' }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#48565f' }}>今回連動するデータはありません</div>
-              <div style={{ fontSize: 12, color: '#7a8794', marginTop: 6, lineHeight: 1.7 }}>集計済みで、まだ会計へ連動していない明細がありません。連動するときは、先に「集計」を実行してください。<br />過去に行った会計連動は、下の一覧で確認できます。</div>
+              <div style={{ fontSize: 12, color: '#7a8794', marginTop: 6, lineHeight: 1.7 }}>集計済みで、まだ会計へ連動していない明細がありません。連動するときは、先に「集計」を実行してください。</div>
             </div>
           )}
           {linkNyHold > 0 && <div data-link-ny style={{ marginTop: 8, padding: '8px 14px', background: '#fffaf0', border: '1px dashed #b98a2e', borderRadius: 10, fontSize: 14, color: '#7a5a14', lineHeight: 1.7 }}>翌年度の予備月（令和9年 4〜6月）の明細 {linkNyHold} 件は、翌年度の伝票になるため、ここでは送りません。</div>}
           {/* 過去の会計連動の履歴（確認メモ #233）。行の「伝票を見る」で、そのとき作成した伝票を開く */}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', margin: '16px 0 8px' }}>
             <div style={{ fontSize: 14, fontWeight: 700 }}>過去の会計連動</div>
-            <div style={{ fontSize: 12, color: '#7a8794' }}>「伝票を見る」で、そのとき会計側に作成した仕訳伝票を確認できます。</div>
           </div>
           <div data-link-history style={{ maxHeight: 180, overflow: 'auto', border: '1px solid #e2e8ee', borderRadius: 10 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -1414,7 +1411,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       {/* ---- AI自動仕訳 インポート ---- */}
       <Modal open={aiOpen} onClose={() => setAiOpen(false)} width={900} title="AI自動仕訳システムからのインポート">
         <div style={{ padding: '14px 22px 18px' }}>
-          <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 10 }}>対象：{book}　　AI自動仕訳システムが出力した明細ファイル（CSV：日付,摘要,金額[,入金/出金]　または JSON）を読み込み、推定科目を確認してから取り込みます。</div>
+          <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 10 }}>対象：{book}　　AI自動仕訳システムが出力した明細ファイル（CSV：日付,摘要,金額[,入金/出金]　または JSON）を読み込みます。</div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <input ref={aiFile} type="file" accept=".csv,.json,text/csv,application/json" onChange={(e) => onAiFile(e.target.files?.[0])} style={{ display: 'none' }} />
             <button type="button" className="btn-outline" onClick={() => { if (aiFile.current) { aiFile.current.value = ''; aiFile.current.click(); } }} style={btn()}>ファイルを選択（.csv／.json）</button>
@@ -1460,7 +1457,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       {/* ---- AI自動仕訳 会計確認 ---- */}
       <Modal open={aiConfirmOpen} onClose={() => setAiConfirmOpen(false)} width={900} title="AI自動仕訳 会計確認 ― 承認待ちの明細">
         <div style={{ padding: '14px 22px 18px' }}>
-          <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 10 }}>AI自動仕訳から取り込んだ明細の科目・金額を確認し、承認または差戻しを行います。承認した明細は出納帳の通常明細として集計・会計連動の対象になります。</div>
+          <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 10 }}>承認した明細は出納帳の通常明細として集計・会計連動の対象になります。</div>
           <div style={{ maxHeight: 380, overflow: 'auto', border: '1px solid #e2e8ee', borderRadius: 10 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead><tr><th style={TH}>日付</th><th style={TH}>摘要</th><th style={TH}>勘定科目（AI推定）</th><th style={{ ...TH, textAlign: 'right' }}>入金</th><th style={{ ...TH, textAlign: 'right' }}>出金</th><th style={{ ...TH, textAlign: 'right' }}>信頼度</th><th style={{ ...TH, width: 150 }} /></tr></thead>
@@ -1498,7 +1495,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       <Modal open={rowForm != null} onClose={() => setRowForm(null)} width={560} title={rowForm?.mode === 'insert' ? '明細の挿入（選択した行の上）' : rowForm?.noteOnly ? '摘要行の編集' : '明細の編集'}>
         {rowForm && (() => { const f = rowForm; const set = (p: Partial<typeof f>) => setRowForm({ ...f, ...p }); const fTax = f.tax || (f.account ? defaultTax(f.account, num(f.inAmt) > 0) : ''); return (
           <div data-row-form style={{ padding: '14px 22px 18px' }}>
-            <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 12, lineHeight: 1.7 }}>{f.mode === 'insert' ? '選択した行の上に、明細を 1 行挿入します。' : '明細の内容を訂正します。'}集計済みの期間より前の日付には登録できません。</div>
+            <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 12, lineHeight: 1.7 }}>{f.mode === 'insert' ? '選択した行の上に、明細を 1 行挿入します。' : ''}集計済みの期間より前の日付には登録できません。</div>
             <div style={{ display: 'grid', gridTemplateColumns: '110px minmax(0, 1fr)', gap: '10px 12px', alignItems: 'center', fontSize: 14 }}>
               {!f.noteOnly && <>
                 <label htmlFor="re-day">年月日</label>
@@ -1621,7 +1618,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
                 <b data-denom-diff style={{ textAlign: 'right', fontSize: 16, borderTop: '1px solid #eef2f5', paddingTop: 8, color: !denomValid ? '#7a8794' : denomTotal === denomBook ? '#1f7a52' : '#c0392b' }}>{denomValid ? `${yen(denomTotal - denomBook)} 円` : '―'}</b>
               </div>
               {denomValid && <div style={{ padding: '8px 12px', borderRadius: 10, fontSize: 14, fontWeight: 700, background: denomTotal === denomBook ? '#eaf5ef' : '#fdeee9', color: denomTotal === denomBook ? '#1f7a52' : '#c0392b' }}>{denomTotal === denomBook ? '帳簿残高と一致しています' : `帳簿残高と一致していません（${denomTotal > denomBook ? '実際の残高が多い' : '実際の残高が少ない'}）`}</div>}
-              <div style={{ fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>枚数を入力して「登録」を押すと、この日付の金種別表として保存します。帳簿残高は、この日付までの明細から計算しています。<HelpTip style={{ marginLeft: 6 }} text="Enter で次の金種へ進みます" /></div>
+              <div style={{ fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>帳簿残高は、この日付までの明細から計算しています。<HelpTip style={{ marginLeft: 6 }} text="Enter で次の金種へ進みます" /></div>
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>

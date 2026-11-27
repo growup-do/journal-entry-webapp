@@ -159,7 +159,7 @@ export function DivisionDialog({ open, onClose, accent, startup, onApplied }: { 
             })}
           </div>
         )}
-        <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 10 }}>親区分（法人・事業区分・拠点区分など）と合算区分で開くと、伝票入力など一部のメニューが使えなくなります。ダブルクリックでも確定できます。</div>
+        <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 10 }}>親区分（法人・事業区分・拠点区分など）と合算区分で開くと、伝票入力など一部のメニューが使えなくなります。</div>
 
         <label data-skip-division style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, padding: '9px 12px', borderRadius: 10, background: '#f6f8fa', fontSize: 14, color: '#22303c', cursor: 'pointer' }}>
           <input type="checkbox" checked={!!skipUntil} onChange={(e) => setSkipUntil(writeSkipUntil(e.target.checked))} style={{ width: 16, height: 16, accentColor: accent, cursor: 'pointer' }} />
@@ -179,7 +179,6 @@ export function DivisionDialog({ open, onClose, accent, startup, onApplied }: { 
 
       <Modal open={mergeOpen} onClose={() => setMergeOpen(false)} width={520} title="合算部門の選択" strict>
         <div style={{ padding: '14px 22px 18px' }}>
-          <div style={{ fontSize: 14, color: '#5b6773', marginBottom: 8 }}>合算する部門をチェックし、名称を付けて完了してください（1/2 → 2/2）。</div>
           <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: 8, maxHeight: 220, overflow: 'auto' }}>
             {entries.map(({ node }) => {
               const label = divisionLabel(node);
@@ -270,7 +269,6 @@ export function ContinuityCheckModal({ info, accent, onClose }: { info: { year: 
               <thead><tr><th style={th}>項目</th><th style={{ ...th, textAlign: 'right' }}>{prev} 決算額</th><th style={{ ...th, textAlign: 'right' }}>{info.year} 繰越額</th><th style={{ ...th, textAlign: 'right' }}>差額</th></tr></thead>
               <tbody>{ROWS.map(([n, v]) => <tr key={n}><td style={td}>{n}</td><td style={num}>{v.toLocaleString('ja-JP')}</td><td style={num}>{v.toLocaleString('ja-JP')}</td><td style={{ ...num, color: '#1f7a52', fontWeight: 700 }}>0</td></tr>)}</tbody>
             </table>
-            <div style={{ fontSize: 14, color: '#7a8794' }}>差額があるときは金額を赤で表示し、「開始残高」を開くボタンを出します。</div>
           </>
         )}
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" onClick={onClose} style={btn(accent, true)}>OK</button></div>

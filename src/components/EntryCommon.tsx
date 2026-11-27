@@ -592,7 +592,7 @@ export function ShortcutHelpModal({ open, onClose, shortcuts, formatName, enterO
     <Modal open={open} onClose={onClose} width={1040} title={<>キーボード操作一覧 <span style={{ fontSize: 14, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>{formatName}</span></>}>
       <div style={{ padding: '12px 22px 18px', display: 'grid', gap: 14 }}>
         <div style={{ padding: '10px 12px', background: '#f3f6f9', border: '1px solid #dde4ea', borderRadius: 10, fontSize: 14, lineHeight: 1.8, color: '#48565f' }}>
-          マウスを使わずに伝票登録まで操作できます。ショートカットは<b>どの入力欄にいても同じキーで同じ機能</b>が動きます（カーソル位置で機能は変わりません）。<br />
+          ショートカットは<b>どの入力欄にいても同じキーで同じ機能</b>が動きます。<br />
           <b>Windows</b> は <span style={key}>Alt</span> キー、<b>Mac（MacBook）</b> は <span style={key}>option（⌥）</span> キーを押しながら英数字キーを押します。Mac の <span style={key}>return</span> は Windows の <span style={key}>Enter</span> と同じです。
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '14px 26px' }}>
@@ -644,7 +644,6 @@ export function FormatSwitcher({ current, onSwitch, accent, right }: { current: 
       ) : (
         <span style={{ padding: '6px 14px', borderRadius: 8, background: accent, color: '#fff', fontSize: 14, fontWeight: 800 }}>{displayName(current)}</span>
       )}
-      <span className="ef-hide-narrow" style={{ fontSize: 12, color: '#7a8794' }}>{FORMAT_NOTE[current]}</span>
       {right && <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>{right}</div>}
     </div>
   );

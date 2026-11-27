@@ -193,7 +193,7 @@ export function DivisionTreeEditor({ accent, compact }: { accent: string; compac
       )}
       {sel.kind !== '法人' && sel.kind !== '事業区分' && (
         <Field label="区分の種類" span={2}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 14 }}>{badge(kindOf(sel))}<span style={{ color: '#7a8794', fontSize: 12, lineHeight: 1.7 }}>{sel.entry ? '伝票を入力する区分です。配下に区分は作れません。' : '配下の区分を集計・参照する区分です。伝票は入力できません。'}種類は後から変更できません。</span></div>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 14 }}>{badge(kindOf(sel))}<span style={{ color: '#7a8794', fontSize: 12, lineHeight: 1.7 }}>{sel.entry ? '配下に区分は作れません。' : '伝票は入力できません。'}種類は後から変更できません。</span></div>
         </Field>
       )}
       {sel.entry && (
@@ -208,11 +208,8 @@ export function DivisionTreeEditor({ accent, compact }: { accent: string; compac
           <div style={{ gridColumn: 'span 2', fontSize: 12, color: '#9aa5b1' }}>年度更新待ち：<b style={{ color: '#1f7a52' }}>なし</b>（{s.currentYear} まで更新済み）</div>
         </>
       )}
-      {!sel.entry && sel.kind !== '法人' && (
-        <div style={{ gridColumn: 'span 2', fontSize: 14, color: '#7a8794', lineHeight: 1.7 }}>
-          集計用の区分です。伝票は配下の入力区分（3桁コード付き）で入力します。
-          {(sel.children ?? []).length === 0 && <><br />配下にまだ区分がありません。{canAddUnder(sel) ? '下の「＋ 配下に追加」から追加してください。' : ''}</>}
-        </div>
+      {!sel.entry && sel.kind !== '法人' && (sel.children ?? []).length === 0 && (
+        <div style={{ gridColumn: 'span 2', fontSize: 14, color: '#7a8794', lineHeight: 1.7 }}>配下にまだ区分がありません。</div>
       )}
       <div style={{ gridColumn: 'span 2', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 4, paddingTop: 12, borderTop: '1px solid #eef2f5' }}>
         {canAddUnder(sel) && <button type="button" className="btn-outline" onClick={() => openAdd(sel)} style={btn(accent, false, true)}>＋ 配下に{CHILD_KIND[sel.kind]}を追加</button>}
@@ -260,7 +257,7 @@ export function DivisionTreeEditor({ accent, compact }: { accent: string; compac
               <button type="button" className="btn-outline" onClick={() => { if (confirm(`「${m.name}」を削除しますか？`)) setSession({ merges: s.merges.filter((x) => x.name !== m.name) }); }} style={{ ...btn('#c0392b', false, true), marginLeft: 'auto' }}>削除</button>
             </div>
           ))}
-          <div style={{ marginTop: 10 }}><Notice>合算区分で起動すると、試算表・決算書で配下区分の内訳を表示できます（「区分」メニュー →「区分確認」に相当する一覧は、ヘッダーの区分ボタンから確認できます）。</Notice></div>
+          <div style={{ marginTop: 10 }}><Notice>合算区分で起動すると、試算表・決算書で配下区分の内訳を表示できます。</Notice></div>
         </div>
       </div>}
       {!compact && <div style={{ fontSize: 12, color: '#9aa5b1' }}><span style={lbl}>現在の入力区分</span>{all.filter((x) => x.node.entry).map((x) => divisionLabel(x.node)).join('　')}</div>}

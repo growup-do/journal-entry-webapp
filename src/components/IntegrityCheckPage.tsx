@@ -31,11 +31,11 @@ export function IntegrityCheckPage({ variant, accent }: { variant: 'form' | 'she
   };
   const copy = (k: Kind) => { const t = (results[k] ?? []).join('\n'); navigator.clipboard?.writeText(t).then(() => toast.show('診断結果をコピーしました（メモ帳やExcelに貼り付けできます）')).catch(() => toast.show('コピーできませんでした')); };
   return (
-    <SettingsShell variant={variant} title="整合性チェック" badge="保守" desc="科目・伝票・帳票の整合性を診断します。決算前や科目を変更した後に実行してください。結果はテキストとしてコピー／ファイル出力できます。">
+    <SettingsShell variant={variant} title="整合性チェック" badge="保守" desc="決算前や科目を変更した後に実行してください。">
       <ToastView msg={toast.msg} />
       <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
       <div style={{ padding: 22, display: 'grid', gap: 14 }}>
-        <Notice>決算チェック（28項目）は「調査 › 決算調査」から。ここでは既存の「科目チェック」「伝票チェック」「帳票別 非使用科目チェック」をまとめています。</Notice>
+        <Notice>決算チェック（28項目）は「調査 › 決算調査」から行います。</Notice>
         {DEFS.map((d) => {
           const res = results[d.kind];
           const busy = running === d.kind;

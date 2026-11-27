@@ -460,7 +460,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
   const scrollH = 'calc(100vh - 330px)';
 
   return (
-    <SettingsShell variant={variant} title={displayName('勘定科目')} manual={<ManualButton label="注意事項" onClick={() => setCautionOpen(true)} title="勘定科目設定の注意事項（マニュアル）を開きます" />} desc="科目の一覧（項目＝集計上の見出し／科目＝伝票に入力する科目）を縦に大きく表示し、行を選ぶと右側に詳細を表示します。項目か科目かは追加するときに選び（「＋ 項目を追加」「＋ 科目を追加」）、追加した後は変更できません。科目の追加は標準科目にチェックを入れるだけで、コードは自動設定されます。既存の【科目設定】【費目入力】【使用科目設定】に相当します。" actions={<>
+    <SettingsShell variant={variant} title={displayName('勘定科目')} manual={<ManualButton label="注意事項" onClick={() => setCautionOpen(true)} title="勘定科目設定の注意事項（マニュアル）を開きます" />} actions={<>
       {/* 出力の形式（プリンター／PDF／Excel／CSV）は「印刷」を押してから「出力先」で選ぶ（確認メモ #84、確認事項「印刷の画面遷移の統一」） */}
       <button type="button" className="btn-outline" onClick={() => { if (confirm('仕訳更新を開始します。1年分の全伝票を対象に、勘定科目と資金科目の連動を整理・更新します。途中で中断はできません。よろしいですか？')) runRecalc(); }} style={btn('#b7791f')}>仕訳の再集計</button>
       {listTab && <button type="button" className="btn-outline" onClick={openGroupAdd} style={btn(accent)} data-group-add>＋ 項目を追加</button>}
@@ -505,7 +505,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                 {!panelOpen && <><span style={hcell}>{fundTab ? '勘定科目' : '対応する資金科目'}</span><span style={hcell}>関連する設定</span></>}
                 <span style={hcell}>使用</span>
               </div>
-              {items.length === 0 && <div style={{ padding: 28, color: '#9aa5b1', fontSize: 14, textAlign: 'center' }}>条件に合う科目がありません。検索語やフィルタを変更してください。</div>}
+              {items.length === 0 && <div style={{ padding: 28, color: '#9aa5b1', fontSize: 14, textAlign: 'center' }}>条件に合う科目がありません。</div>}
               {items.map((it) => {
                 if (it.t === 'top') return (
                   <div key={'t' + it.name} style={{ display: 'flex', alignItems: 'center', gap: 8, height: 36, padding: '0 10px', background: '#e6ecf1', borderBottom: '1px solid #d5dde4', fontSize: 14.5, fontWeight: 800 }}>
@@ -560,7 +560,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
               <Section title="科目の説明" right={<button type="button" onClick={() => setDescEdit(!descEdit)} style={btn(descEdit ? accent : '#5b6773', descEdit, true)}>{descEdit ? '編集を終了' : '編集'}</button>}>
                 {descEdit
                   ? <textarea className="field-input" value={sel.desc} onChange={(e) => upd({ desc: e.target.value })} rows={3} aria-label="科目の説明" placeholder="この科目で処理する内容を入力（伝票入力の科目選択時にも表示されます）" style={{ ...small, resize: 'vertical', lineHeight: 1.7 }} />
-                  : <div style={{ fontSize: 14, lineHeight: 1.8, color: sel.desc ? '#22303c' : '#9aa5b1' }}>{sel.desc || '説明は未登録です。「編集」で入力できます。'}</div>}
+                  : <div style={{ fontSize: 14, lineHeight: 1.8, color: sel.desc ? '#22303c' : '#9aa5b1' }}>{sel.desc || '説明は未登録です。'}</div>}
               </Section>
 
               <Section title="項目とコード" note="親の項目から自動設定">
@@ -625,7 +625,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
               </Section>
 
               <section style={{ ...card, marginTop: 12 }}>
-                <div style={cardHead}>関連する設定 <span style={{ fontSize: 12, fontWeight: 500, color: '#8290a0' }}>別画面の設定のうち、この科目に関係するもの</span></div>
+                <div style={cardHead}>関連する設定</div>
                 <RelRow label="科目色設定" note="文字色・背景色。カラー帳票有効時に印刷へ反映" on={!!sel.color} state={sel.color ? <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Swatch c={sel.color} />設定あり</span> : '設定なし'} onOpen={() => setRel('color')} />
                 <RelRow label="減価償却連動" note="固定資産科目を減価償却と連動させます" on={sel.depr} state={groupDef(sel.group).fixed ? (sel.depr ? '連動する' : '連動しない') : '対象外（固定資産のみ）'} onOpen={() => setRel('depr')} disabled={!groupDef(sel.group).fixed} />
                 <RelRow label="1年基準科目" note="1年以内に期限が到来する分を流動へ振り替える科目" on={sel.oneYear} state={sel.oneYear ? '対象' : '対象外'} onOpen={() => setRel('oneYear')} />
@@ -716,7 +716,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setResetOpen(false)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={resetUse} style={btn(accent, true)} data-use-reset-run>初期状態に戻す</button></div>
               </div>
             </Modal>
-            <span style={{ marginLeft: 'auto', fontSize: 14, color: '#7a8794' }}>区分ごとに使用する項目・科目をチェック（帳票の表示／非表示にも使います）。項目のチェックを切り替えると、配下の科目もまとめて切り替わります</span>
+            <span style={{ marginLeft: 'auto', fontSize: 14, color: '#7a8794' }}>帳票の表示／非表示にも使います。項目のチェックを切り替えると、配下の科目もまとめて切り替わります。</span>
           </div>
           <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 380px)' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -825,7 +825,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
       {/* ---- 科目を追加：標準科目からチェックして追加 ---- */}
       <Modal open={addOpen} onClose={() => setAddOpen(false)} width={980} title="科目を追加（標準科目から選ぶ）">
         <div style={{ padding: '12px 22px 18px', display: 'grid', gap: 12 }}>
-          <Notice>社会福祉法人会計基準の標準科目から、追加したい科目にチェックを入れてください。表示コード・費目コード・区分コードは、親の項目から自動で設定されます。</Notice>
+          <Notice>表示コード・費目コード・区分コードは、親の項目から自動で設定されます。</Notice>
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.15fr)', gap: 14 }}>
             <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: '52vh', overflow: 'auto' }}>
               {GROUPS.filter((g) => STD.some((s) => s.group === g.name)).map((g) => {
@@ -853,7 +853,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
               <div style={{ ...card }}>
                 <div style={cardHead}>追加する科目 <span style={{ fontSize: 12, fontWeight: 500, color: '#8290a0' }}>{addChecked.length} 件</span><span style={{ marginLeft: 'auto' }}><AutoTag manual={addManual} /></span></div>
                 <div style={{ maxHeight: '36vh', overflow: 'auto' }}>
-                  {addChecked.length === 0 ? <div style={{ padding: 22, fontSize: 14, color: '#9aa5b1', textAlign: 'center' }}>左の一覧でチェックした科目が、ここに自動設定されたコードとともに表示されます。</div> : (
+                  {addChecked.length === 0 ? <div style={{ padding: 22, fontSize: 14, color: '#9aa5b1', textAlign: 'center' }}>チェックした科目はまだありません。</div> : (
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                       <thead><tr><th style={TH}>科目（親の項目）</th><th style={{ ...TH, width: 78 }}>表示コード</th><th style={{ ...TH, width: 56 }}>費目</th><th style={{ ...TH, width: 138 }}>区分コード</th></tr></thead>
                       <tbody>{addChecked.map((n) => { const s = STD.find((x) => x.name === n)!; const c = addCode(n); const set = (p: Partial<Codes>) => setAddOver((o) => ({ ...o, [n]: { ...o[n], ...p } })); const ci: CSSProperties = { ...small, padding: '3px 6px', fontVariantNumeric: 'tabular-nums' }; return (
@@ -1011,7 +1011,7 @@ export function SummaryAutoCompleteTab({ accent }: { accent: string }) {
   };
   return (
     <div style={{ padding: 22, display: 'grid', gap: 12, maxWidth: 760 }}>
-      <Notice>伝票入力時に過去に入力した摘要から候補を自動表示します（環境設定「摘要自動補完入力機能を有効にする」）。「入力された摘要を候補に追加する」が有効なら、登録した摘要がここに自動で溜まります。候補は CSV で取り込み・書き出しができます。</Notice>
+      <Notice>伝票入力時に過去に入力した摘要から候補を自動表示します（環境設定「摘要自動補完入力機能を有効にする」）。「入力された摘要を候補に追加する」が有効なら、登録した摘要がここに自動で溜まります。</Notice>
       <div style={{ display: 'flex', gap: 8 }}><input className="field-input ring" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) add(); }} placeholder="摘要文字列を入力して Enter で追加" style={input} /><button type="button" onClick={add} style={btn(accent, true)}>追加</button></div>
       <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: 320, overflow: 'auto' }}>
         {cands.map((c) => <label key={c} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', borderBottom: '1px solid #f1f4f6', fontSize: 14 }}><input type="checkbox" checked={checked.has(c)} onChange={(e) => { const n = new Set(checked); if (e.target.checked) n.add(c); else n.delete(c); setChecked(n); }} /><span style={{ flex: 1 }}>{c}</span></label>)}

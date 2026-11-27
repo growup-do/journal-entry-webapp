@@ -234,7 +234,7 @@ function BatchPrintForm({ item, fy, init, accent, onCancel, onRun }: { item: Pri
         </div>
         {ymRow('開始年月', 'from', from, setFrom)}
         {ymRow('終了年月', 'to', to, setTo)}
-        <div data-batch-next={next} style={{ fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>月のボタンは、1回目に押した月が開始年月、2回目に押した月が終了年月になります（次に押す月：<b style={{ color: accent }}>{next}年月</b>）。入力欄でも直せます。</div>
+        <div data-batch-next={next} style={{ fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>月のボタンは、1回目に押した月が開始年月、2回目に押した月が終了年月になります（次に押す月：<b style={{ color: accent }}>{next}年月</b>）。</div>
       </div>
       {err && <div data-batch-error role="alert" style={{ fontSize: 14, fontWeight: 700, color: '#c0392b' }}>{err}</div>}
         </div>}
@@ -378,7 +378,6 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
       asideWidth={drawer.asideWidth}
       extraTools={printActions ? <ScreenPrintMenu page={KEY} actions={printActions} accent={accent} /> : <ScreenPrintMenu page={KEY} accent={accent} />}
       title={displayName(KEY)}
-      subtitle={<>{isClosing ? '当年度末（決算）の残高を一覧します。' : '前月繰越・当月の借方／貸方・残高を一覧します。'}科目の行をクリック（または「元帳」ボタン）で、右側に総勘定元帳を表示します。別の行を押すと差し替わり、全画面で見たいときはパネルの「元帳の画面で開く」を使います。</>}
       tools={isClosing ? [
         // 集計期間と同じ行に収まるよう、ほかの画面と同じアイコンのボタンにする（マウスを載せると名前が出る）
         { label: '残高グラフ', icon: 'bars', iconOnly: true, onClick: () => setGraph(true) },

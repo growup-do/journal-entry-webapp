@@ -74,7 +74,6 @@ export function GraphPage({ mode, variant, accent }: Props) {
       variant={variant}
       accent={accent}
       title={displayName(isYearly ? '経年グラフ' : '分析グラフ')}
-      subtitle={<>{isYearly ? '科目を選ぶと、直近8年度の推移グラフを表示します。横軸を「月」にすると当年度の月別（月次／累計）になります。' : '経営分析の指標を選ぶと、直近8年度の推移グラフを表示します。'}</>}
       extraTools={<ScreenPrintMenu page={isYearly ? '経年グラフ' : '分析グラフ'} accent={accent} />}
       period={
         <>
@@ -95,7 +94,6 @@ export function GraphPage({ mode, variant, accent }: Props) {
           {charts.length > 0 && <span style={{ fontSize: 12, color: '#9aa5b1' }}>{charts.length} 件</span>}
         </>
       }
-      listNote={<span>左：{isYearly ? '部タブと科目の一覧（「すべて選択」で表示中の部をまとめて付け外し）' : '分析項目の一覧（「すべて選択」でまとめて付け外し）'}　右：選んだ{isYearly ? '科目' : '項目'}ごとのグラフ</span>}
       switches={
         <>
           {isYearly && <Segmented label="横軸" items={['年度', '月'] as const} value={byMonth ? '月' : '年度'} onChange={(v) => setByMonth(v === '月')} accent={accent} />}
@@ -118,7 +116,6 @@ export function GraphPage({ mode, variant, accent }: Props) {
           )}
           <div style={{ padding: '8px 14px 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={LABEL}>{isYearly ? '科目' : '指標'}</span>
-            <span style={{ fontSize: 12, color: '#9aa5b1' }}>チェックした項目のグラフを右に表示</span>
             {/* すべて選択（旧「選択解除」。付け外しで全チェックの ON／OFF。確認メモ #103） */}
             <label style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 700, color: allOn ? accent : '#5b6773', cursor: 'pointer', whiteSpace: 'nowrap' }} title={allOn ? '表示中の項目のチェックをすべて外します' : '表示中の項目をすべてチェックします'}>
               <input type="checkbox" checked={allOn} onChange={toggleAll} data-select-all />

@@ -206,7 +206,7 @@ export function CarryoverJudgmentPage({ variant, accent, onNavigate }: Maintenan
   const judge = (over: boolean, yes: string, no: string) => <span style={{ color: over ? '#c0392b' : '#1f7a52' }}>{over ? yes : no}</span>;
 
   return (
-    <SettingsShell variant={variant} title="繰越判断の基準" badge="マスター設定" draft={false} desc="決算書（月次決算）の「繰越判断」ボタンからも開きます（旧 F10 繰越）。委託費の繰越・積立に関する判断（収支分析表の提出、高額繰越、前期末支払資金残高の取り扱い、取崩しの事前協議）の基準となる科目と端数処理を設定します。設定した内容は、決算チェック・収支分析表の印刷で使います。" unsaved={dirty} actions={<>
+    <SettingsShell variant={variant} title="繰越判断の基準" badge="マスター設定" draft={false} desc="設定した内容は、決算チェック・収支分析表の印刷で使います。" unsaved={dirty} actions={<>
       {notice && <button type="button" className="btn-outline" data-action="関連資料（通知文）" onClick={() => setNoticeOpen(true)} title={`「${tab}」に関係する通知文を表示します`} style={btn()}>関連資料（通知文）</button>}
       {dirty && <span role="status" data-unsaved-msg style={{ fontSize: 15, fontWeight: 800, color: UNSAVED_FG, marginRight: 4 }}>保存されていません。</span>}
       <button type="button" data-action="変更を取り消す" onClick={revert} disabled={!dirty} title={dirty ? '保存する前の内容に戻します（すべてのタブ）' : '変更はありません'} style={{ ...btn(), opacity: dirty ? 1 : 0.5, cursor: dirty ? 'pointer' : 'default' }}>変更を取り消す</button>
@@ -286,7 +286,7 @@ export function CarryoverJudgmentPage({ variant, accent, onNavigate }: Maintenan
         <div style={{ padding: 22, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 16, alignItems: 'start' }}>
           <div style={{ display: 'grid', gap: 12 }}>
             <div style={card}><div style={cardHead}>端数処理</div><div style={{ padding: 14 }}><RoundingField label="事業活動収入（予算額）の 3% を算出する際の端数処理" value={r3} onChange={setR3} changed={ch('r3')} /></div></div>
-            <Notice>前期末支払資金残高を取り崩して使う額が、事業活動収入（予算額）の 3% を超える場合は、あらかじめ所轄庁との協議が必要です。この画面では 3% を算出するときの端数処理だけを設定します。</Notice>
+            <Notice>前期末支払資金残高を取り崩して使う額が、事業活動収入（予算額）の 3% を超える場合は、あらかじめ所轄庁との協議が必要です。</Notice>
           </div>
           <Guide rows={[
             { label: '事業活動収入（当年度予算額）', value: yen(SAMPLE.budgetIncome) },
@@ -351,7 +351,7 @@ export function DepreciationLinkPage({ variant, accent, onNavigate }: Maintenanc
   const go = (p: string) => (onNavigate ? onNavigate(p) : toast.show(`「${p}」はメニューから開きます`));
   const cols3 = { padding: 22, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, alignItems: 'start' } as const;
   return (
-    <SettingsShell variant={variant} title="減価償却との連動設定" badge="マスター設定" draft={false} desc="会計の仕訳と減価償却をつなぐ設定です。固定資産の取得・備品購入の仕訳を減価償却へ連動させる科目、借入元金償還補助の仕訳を認識する科目、国庫補助金等特別積立金を自動で積み立てる仕訳の科目を指定します。" unsaved={dirty} actions={<>
+    <SettingsShell variant={variant} title="減価償却との連動設定" badge="マスター設定" draft={false} unsaved={dirty} actions={<>
       <button type="button" className="btn-outline" onClick={reset} style={btn()}>デフォルト設定にする</button>
       {dirty && <span role="status" data-unsaved-msg style={{ fontSize: 15, fontWeight: 800, color: UNSAVED_FG, marginRight: 4 }}>保存されていません。</span>}
       <button type="button" data-action="変更を取り消す" onClick={revert} disabled={!dirty} title={dirty ? '保存する前の内容に戻します（すべてのタブ）' : '変更はありません'} style={{ ...btn(), opacity: dirty ? 1 : 0.5, cursor: dirty ? 'pointer' : 'default' }}>変更を取り消す</button>

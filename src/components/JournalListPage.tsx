@@ -104,7 +104,6 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
       variant={variant}
       accent={accent}
       title={title}
-      subtitle="指定月の仕訳を伝票順に一覧します。行をクリックすると伝票を訂正できます。証憑・チェック・付箋は行の右端で切り替えます。"
       returnTo={boot ? { from: boot.from, onBack: () => onNavigate(boot.from), here: `${boot.month}月${boot.day}日の伝票`, hint: '伝票を訂正したら戻り、「検査継続」で再検査します' } : null}
       tools={[
         { label: '検索条件', onClick: () => setSearchOpen(true), primary: true, icon: 'search', iconOnly: true, title: '科目・金額・摘要などで絞り込みます' },
@@ -222,7 +221,7 @@ function BulkDeleteMenu({ open, onToggle, onPick, small, up, disabled, reason }:
       <button type="button" onClick={disabled ? undefined : onToggle} aria-expanded={open} aria-haspopup="menu" aria-disabled={disabled || undefined} title={disabled ? reason : 'インポート伝票・自動按分伝票をまとめて削除します'} style={small ? { display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 8px', border: '1px solid ' + (disabled ? '#e3e8ec' : '#f2c9c2'), borderRadius: 6, background: '#fff', color: disabled ? '#b3bcc5' : '#c0392b', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: disabled ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' } : { ...btn('#c0392b', false, true), display: 'inline-flex', alignItems: 'center', gap: 4 }}>一括削除<Chevron open={open} color="currentColor" /></button>
       {open && (
         <div role="menu" style={{ position: 'absolute', ...(up ? { left: 0, bottom: 'calc(100% + 4px)' } : { right: 0, top: 'calc(100% + 4px)' }), zIndex: 40, minWidth: 280, background: '#fff', border: '1px solid #e2e8ee', borderRadius: 10, boxShadow: '0 10px 30px rgba(20,30,40,.14)', padding: 6 }}>
-          <div style={{ padding: '4px 10px 6px', fontSize: 12, color: '#8290a0', lineHeight: 1.6 }}>年度内の全件から、取込・按分の実行単位を選んで削除します（削除した仕訳は元に戻せません）</div>
+          <div style={{ padding: '4px 10px 6px', fontSize: 12, color: '#8290a0', lineHeight: 1.6 }}>年度内の全件が対象です。削除した仕訳は元に戻せません。</div>
           {(['インポート', '自動按分'] as const).map((src) => (
             <button key={src} type="button" role="menuitem" data-bulk-src={src} onClick={() => onPick(src)} style={item}>
               {src}伝票を一括削除
@@ -297,7 +296,7 @@ export function BulkDeleteModal({ src, all, onClose, onConfirm, initial }: { src
             <button type="button" className="submit-btn" disabled={ids.length === 0} onClick={() => onConfirm(ids)} style={{ ...btn('#c0392b', true), opacity: ids.length === 0 ? 0.5 : 1 }} data-bulk-confirm>選択した {ids.length} 件の削除確認へ</button>
           </span>
         </div>
-        <div style={{ fontSize: 12, color: '#9aa5b1' }}>次の画面で対象の仕訳を確認してから削除します（通常の「選択した仕訳の削除」と同じ流れ）。</div>
+        <div style={{ fontSize: 12, color: '#9aa5b1' }}>次の画面で対象の仕訳を確認してから削除します。</div>
       </div>
     </Modal>
   );

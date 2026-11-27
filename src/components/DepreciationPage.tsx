@@ -154,7 +154,6 @@ function AssetListPanel({ accent, assets, equips, collapsed, onToggle, top, curr
         <div style={{ padding: '10px 14px 9px', borderBottom: '1px solid #eef2f5', display: 'grid', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16 }}>一覧パネル</span>
-            <span style={{ fontSize: 12, color: '#8290a0' }}>登録しながら、登録済みの資産を確認</span>
           </div>
           <div role="tablist" aria-label="一覧パネルの表示" style={{ display: 'flex', gap: 3, padding: 3, background: '#e9eef2', borderRadius: 9 }}>
             {(['固定資産', '備品'] as const).map((v) => {
@@ -215,7 +214,7 @@ function SubsidyVoucherPicker({ used, onClose, onAdd, accent, toast }: { used: s
   return (
     <Modal open onClose={onClose} width={900} title="国庫補助金の伝票から選ぶ">
       <div style={{ padding: '12px 22px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ fontSize: 14, color: '#5b6773' }}>この固定資産に充てる補助金の伝票を選び、登録する金額を入力します。全額でも一部の金額でも登録できます。</div>
+        <div style={{ fontSize: 14, color: '#5b6773' }}>全額でも一部の金額でも登録できます。</div>
         <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead><tr><th style={{ ...TH, width: 36 }} /><th style={TH}>伝票No</th><th style={TH}>日付</th><th style={TH}>科目</th><th style={TH}>摘要</th><th style={{ ...TH, textAlign: 'right' }}>伝票の金額</th><th style={{ ...TH, textAlign: 'right' }}>登録する金額</th></tr></thead>
@@ -570,7 +569,7 @@ function LifeDictModal({ onClose, onPick, accent }: { onClose: () => void; onPic
             </tbody>
           </table>
         </div>
-        <Notice>減価償却資産の耐用年数等に関する省令（別表）に基づく一覧です。選択すると耐用年数と科目を入力欄にセットします。</Notice>
+        <Notice>減価償却資産の耐用年数等に関する省令（別表）に基づく一覧です。</Notice>
       </div>
     </Modal>
   );
@@ -615,7 +614,7 @@ function SubsidyModal({ rows, cost, onClose, onSave, accent, toast }: { rows: Su
                 <td style={{ ...TD, whiteSpace: 'nowrap' }}>{r.src ? <span style={{ fontSize: 14 }}>{r.date}</span> : <WarekiDate value={r.date} onChange={(v) => upd(i, { date: v })} accent={accent} />}</td>
                 <td style={TD}><button type="button" className="btn-outline" onClick={() => setRs((a) => a.filter((_, k) => k !== i))} style={{ ...BTN('#c0392b'), padding: '4px 8px', fontSize: 12 }}>削除</button></td>
               </tr>)}
-              {rs.length === 0 && <tr><td colSpan={5} data-sub-empty style={{ ...TD, textAlign: 'center', color: '#7a8794', padding: '22px 10px' }}>補助金はまだありません。「国庫補助金の伝票から選ぶ」で会計の伝票を選ぶと、ここに行が追加されます。</td></tr>}
+              {rs.length === 0 && <tr><td colSpan={5} data-sub-empty style={{ ...TD, textAlign: 'center', color: '#7a8794', padding: '22px 10px' }}>補助金はまだありません。</td></tr>}
             </tbody>
           </table>
         </div>
@@ -623,7 +622,7 @@ function SubsidyModal({ rows, cost, onClose, onSave, accent, toast }: { rows: Su
           <button type="button" className="btn-outline" data-subsidy-pick onClick={() => setPick(true)} style={BTN()}>国庫補助金の伝票から選ぶ</button>
           <span style={{ marginLeft: 'auto' }}>補助金総合計 <b style={{ fontSize: 14 }} data-sub-total>{yen(total)}</b>　（うち償還補助金 <b data-sub-redeem-total>{yen(redeem)}</b>）</span>
         </div>
-        <div style={{ fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>補助金は会計の国庫補助金の伝票を選んで追加します。金額は伝票の金額までの範囲で一部に変えられます。補助金総合計は「国庫補助金等の額」の合計です。償還補助金は国庫補助金等の内訳のため、総合計には加算しません。</div>
+        <div style={{ fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>金額は伝票の金額までの範囲で一部に変えられます。補助金総合計は「国庫補助金等の額」の合計です。償還補助金は国庫補助金等の内訳のため、総合計には加算しません。</div>
         {pick && <SubsidyVoucherPicker accent={accent} toast={toast} used={rs.map((r) => r.src ?? '').filter(Boolean)} onClose={() => setPick(false)} onAdd={(add) => setRs((a) => [...a.filter((r) => r.amount > 0 || r.name || r.src), ...add])} />}
         {cost > 0 && total > cost && <Notice tone="warn">補助金の合計が取得価額（{yen(cost)}）を超えています。</Notice>}
         <div style={FOOT}><button type="button" onClick={onClose} style={BTN()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { if (cost > 0 && total > cost) return toast('補助金の合計が取得価額を超えています'); onSave(rs.filter((r) => r.amount > 0 || r.name).map((r) => ({ ...r, redeem: Math.min(r.redeem, r.amount) }))); onClose(); }} style={BTN(accent, true)}>設定</button></div>
@@ -671,7 +670,7 @@ function PartialModal({ qty, cost, vals, value, onClose, onApply, accent, toast 
           <button type="button" onClick={() => setP({ ...p, decrease: undefined })} style={{ ...BTN(), padding: '3px 10px', fontSize: 12, marginLeft: 'auto' }}>按分した額に戻す</button>
         </div>}
         {sale && <div style={{ fontSize: 14 }}>売却損益 <b style={{ color: p.amount - dec >= 0 ? '#1f7a52' : '#c0392b' }}>{yen(p.amount - dec)}</b>（売却額 − 処分額）</div>}
-        <div style={{ fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>処分額を入れると当期減少額に入り、期末帳簿価額・減価償却累計額・期末取得原価を計算し直します。残りの数量は引き続き償却します。</div>
+        <div style={{ fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>残りの数量は引き続き償却します。</div>
         <div style={FOOT}>
           {value && <button type="button" className="btn-outline" onClick={() => { onApply(null); onClose(); }} style={{ ...BTN('#c0392b'), marginRight: 'auto' }}>一部処分を取消</button>}
           <button type="button" onClick={onClose} style={BTN()}>キャンセル</button>
@@ -726,7 +725,7 @@ function CapexChoiceModal({ parent, onPick, onClose }: { parent: Asset; onPick: 
             </span>
           </button>
         ))}
-        <Notice>どちらで登録しても、固定資産台帳には元の固定資産とは別の行として表示します（現行システムと同じ）。修繕費（原状回復）は資本的支出に含めません。</Notice>
+        <Notice>どちらで登録しても、固定資産台帳には元の固定資産とは別の行として表示します。修繕費（原状回復）は資本的支出に含めません。</Notice>
         <div style={FOOT}><button type="button" onClick={onClose} style={BTN()}>キャンセル</button></div>
       </div>
     </Modal>
@@ -808,7 +807,6 @@ function SortMasterModal({ items, onClose, onSave, accent, toast }: { items: Sor
   return (
     <Modal open onClose={onClose} width={820} title="並び順項目マスタ">
       <div data-sort-master style={{ padding: '12px 22px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ fontSize: 14, color: '#48565f' }}>独自に並び順項目を作成しない場合は「標準設定を使う」ボタンをクリックしてください</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 300px', gap: 14 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
             <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'hidden' }}>
@@ -1009,7 +1007,6 @@ export function DepreciationPage({ variant, accent }: Props) {
               <span style={{ fontSize: 14, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>チャイルド保育園　令和8年度</span>
               <ManualButton onClick={() => setManualOpen(true)} title="減価償却のマニュアルを開きます" style={{ marginLeft: 8 }} />
             </div>
-            <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>固定資産・備品の台帳管理と、減価償却の決算処理。</div>
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             <button type="button" className="submit-btn" onClick={() => setAssetModal({ open: true, asset: null, manual: false })} style={btn(accent, true)}>＋ 固定資産を登録</button>
@@ -1134,7 +1131,7 @@ export function DepreciationPage({ variant, accent }: Props) {
               <thead><tr>{([['備品コード', 'code'], ['備品名称', 'name'], ['科目', 'account'], ['取得年月日', 'acquired']] as const).map(([l, k]) => <SortTh key={k} label={l} k={k} sort={equipSort} onSort={setEquipSort} />)}<SortTh label="取得価額" k="cost" sort={equipSort} onSort={setEquipSort} right /><th style={{ ...TH, width: 250 }} /></tr></thead>
               <tbody>
                 {equipList.map((e) => <tr key={e.code}><td style={{ ...TD, color: '#7a8794' }}>{e.code}</td><td style={{ ...TD, fontWeight: 600 }}>{e.name}{images['E:' + e.code] && <span title="画像あり" style={{ marginLeft: 6, fontSize: 12 }}>📷</span>}</td><td style={{ ...TD, color: '#48565f' }}>{e.account ?? ''}</td><td style={TD}>{e.acquired}</td><td style={NUM}>{yen(e.cost)}</td><td style={{ ...TD, textAlign: 'right', whiteSpace: 'nowrap' }}><button type="button" className="btn-outline" data-equip-edit={e.code} onClick={() => setEquipEdit(e)} style={{ ...btn(accent), padding: '4px 10px', fontSize: 12, marginRight: 4 }}>変更</button><button type="button" className="btn-outline" onClick={() => setImgTarget({ key: 'E:' + e.code, title: `備品画像：${e.name}` })} style={{ ...btn(), padding: '4px 10px', fontSize: 12, marginRight: 4 }}>画像</button><button type="button" className="btn-outline" onClick={() => openLog('備品', e.code)} style={{ ...btn(), padding: '4px 10px', fontSize: 12, marginRight: 4 }}>ログ</button><button type="button" className="btn-outline" onClick={async () => { if (await askConfirm({ title: '備品の削除', message: <>「<b>{e.name}</b>」を削除しますか？<br /><span style={{ color: '#c0392b' }}>削除すると取り消せません。</span></>, okLabel: '削除する', danger: true })) { addLog('備品', e.code, `${Number(e.code)}:${e.name}`, '削除'); setEquips((es) => es.filter((x) => x.code !== e.code)); } }} style={{ ...btn('#c0392b'), padding: '4px 10px', fontSize: 12 }}>削除</button></td></tr>)}
-                {equips.length === 0 && <tr><td colSpan={6} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>備品は登録されていません。「＋ 備品を登録」から追加してください。</td></tr>}
+                {equips.length === 0 && <tr><td colSpan={6} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>備品は登録されていません。</td></tr>}
               </tbody>
             </table>
           </div>
@@ -1169,7 +1166,7 @@ export function DepreciationPage({ variant, accent }: Props) {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead><tr><th style={TH}>日時</th><th style={TH}>対象</th><th style={TH}>操作</th><th style={TH}>担当者</th></tr></thead>
                 <tbody>
-                  {logRows.length === 0 && <tr><td colSpan={4} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 30 }}>{logOpen.code ? 'この項目の操作履歴はまだありません（登録後に記録されます）。' : '操作履歴はありません。'}</td></tr>}
+                  {logRows.length === 0 && <tr><td colSpan={4} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 30 }}>{logOpen.code ? 'この項目の操作履歴はまだありません。' : '操作履歴はありません。'}</td></tr>}
                   {[...logRows].reverse().map((l, i) => <tr key={i}><td style={{ ...TD, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 14 }}>{l.time}</td><td style={TD}>{l.target}</td><td style={{ ...TD, fontWeight: 600 }}>{l.action}</td><td style={TD}>{l.user}</td></tr>)}
                 </tbody>
               </table>
@@ -1206,7 +1203,7 @@ export function DepreciationPage({ variant, accent }: Props) {
                   {infoRow('最終更新', targetLogs[targetLogs.length - 1]?.time ?? '—')}
                   {infoRow('画像', images['E:' + logTargetEquip.code] ? '添付あり' : 'なし')}
                 </>
-              ) : <div style={{ color: '#9aa5b1' }}>この項目はまだ登録されていません。「登録」後に詳細情報と操作履歴が記録されます。</div>}
+              ) : <div style={{ color: '#9aa5b1' }}>この項目はまだ登録されていません。</div>}
             </div>
           )}
         </div>
@@ -1402,11 +1399,11 @@ function AssetForm({ accent, asset, manual, dispCalc, capexFor, onAddCapex, onRe
     const curBg = (y: number) => (fy0 + y === THIS_FY ? '#fff7dc' : undefined);
     const yearTd = (y: number) => <td title={fy0 + y === THIS_FY ? '当期' : undefined} style={{ ...TD, padding: '6px 6px', fontSize: 13, whiteSpace: 'nowrap', background: curBg(y), color: fy0 + y === THIS_FY ? '#8a6d00' : undefined, fontWeight: fy0 + y === THIS_FY ? 700 : 400 }}>{fyLabel(fy0 + y)}</td>;
     if (yrTab === '償還補助金') {
-      if (!redeem) return empty('償還補助金は設定されていません（「補助金設定」で、うち償還補助金額を入力します）。');
+      if (!redeem) return empty('償還補助金は設定されていません。');
       return autoRedeem().map((r, y) => <tr key={y}>{yearTd(y)}{yrCell(r.a, false, curBg(y))}{yrCell(r.b, false, curBg(y))}{yrCell(r.a - r.b, true, curBg(y))}</tr>);
     }
     const isSub = yrTab === '国庫補助金';
-    if (isSub && !sub) return empty('国庫補助金等は設定されていません（「補助金設定」で入力します）。');
+    if (isSub && !sub) return empty('国庫補助金等は設定されていません。');
     let acc = 0;
     return autoBook(isSub).map((r, y) => { acc += r.c; const bg = curBg(y); return <tr key={y}>{yearTd(y)}{yrCell(r.a, false, bg)}{yrCell(r.b, false, bg)}{yrCell(r.c, false, bg)}{yrCell(0, false, bg)}{yrCell(r.a + r.b - r.c, true, bg)}{yrCell(acc, false, bg)}{yrCell(isSub ? sub : totalCost, false, bg)}</tr>; });
   };
@@ -1633,7 +1630,7 @@ function AssetForm({ accent, asset, manual, dispCalc, capexFor, onAddCapex, onRe
           <span style={{ fontSize: 14, fontWeight: 700 }}>{manual ? '全項目手入力　年度ごとの入力' : '選択中の固定資産　経年表示'}</span>
           <span style={{ fontSize: 12, color: '#7a8794' }}>{fyLabel(fy0)}（償却開始）から{manual ? `　${mCount} 年ぶんを表示（最大 ${MAX_YEARS} 年）` : ''}</span>
         </div>
-        {manual && <div style={{ padding: '6px 10px', background: '#fff1b8', borderRadius: 8, fontSize: 12, color: '#8a6d00', fontWeight: 700, lineHeight: 1.6 }}>自動計算を行わず、償却を開始する年度からすべての年度（最大 {MAX_YEARS} 年）の金額を、この表に直接入力します。色のついた行が当期（{fyLabel(THIS_FY)}）で、左の償却計算表と同じ値です。</div>}
+        {manual && <div style={{ padding: '6px 10px', background: '#fff1b8', borderRadius: 8, fontSize: 12, color: '#8a6d00', fontWeight: 700, lineHeight: 1.6 }}>色のついた行が当期（{fyLabel(THIS_FY)}）で、左の償却計算表と同じ値です。</div>}
         <div style={{ display: 'flex', gap: 10, fontSize: 14, flexWrap: 'wrap', alignItems: 'center' }}>
           {YR_TABS.map((t) => <label key={t} style={{ display: 'flex', gap: 4, alignItems: 'center' }}><input type="radio" name="yr" checked={yrTab === t} onChange={() => setYrTab(t)} data-yr-tab={t} />{t}</label>)}
           {manual && <button type="button" className="btn-outline" onClick={fillAuto} style={{ ...btn(), marginLeft: 'auto', padding: '4px 10px' }}>自動計算の値を入れる</button>}
@@ -1655,7 +1652,7 @@ function AssetForm({ accent, asset, manual, dispCalc, capexFor, onAddCapex, onRe
         <div style={{ fontSize: 12, color: '#9aa5b1', lineHeight: 1.6 }}>
           {manual
             ? `${yrTab === '償還補助金' ? '期末未入金額' : '期末帳簿価額・減価償却累計額・期末取得原価'}は、入力した金額から表示します。「自動計算の値を入れる」は、選択中の表の耐用年数ぶんを上書きします。`
-            : yrTab === '償還補助金' ? '償還補助金の入金額は、耐用年数で均等に入金する見込みとして表示しています。' : yrTab === '国庫補助金' ? '国庫補助金等の取崩額は、固定資産の当期減価償却額に比例して計算しています。' : '償却を開始する年度から耐用年数の年度までを表示します。色のついた行が当期です。'}
+            : yrTab === '償還補助金' ? '償還補助金の入金額は、耐用年数で均等に入金する見込みとして表示しています。' : yrTab === '国庫補助金' ? '国庫補助金等の取崩額は、固定資産の当期減価償却額に比例して計算しています。' : '色のついた行が当期です。'}
         </div>
       </div>
 
@@ -1837,7 +1834,6 @@ function BatchView({ accent, dispCalc, assets, preselected, disposals, onExport,
             処分年月日 <WarekiDate value={date} onChange={setDate} accent={accent} />
             <button type="button" className="btn-outline" onClick={applyBulk} style={btn(accent, true)}>一括セット</button>
           </div>
-          <div style={{ fontSize: 12, color: '#7a8794', marginTop: 8 }}>処分年月日は、一括セットのあとに一覧の行ごとに入力・変更できます。</div>
         </div>
         <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: 12, fontSize: 14, lineHeight: 1.7 }}>
           <div><b>除却・売却・移管 固定資産当期減価償却額の設定状態</b></div>
@@ -1881,7 +1877,7 @@ function BatchView({ accent, dispCalc, assets, preselected, disposals, onExport,
       {/* 移管先の区分を選んで移管（会計の区分の選択と同じ組織図・一覧。確認メモ #247） */}
       <Modal open={moveOpen} onClose={() => setMoveOpen(false)} width={1000} title="移管先の区分を選んで移管">
         <div data-move-dialog style={{ padding: '12px 22px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.7 }}>移管先の区分（園など）を選んで「移管する」を押すと、この区分（{sess.division}）では移管(元)として処理し、移管先の区分の固定資産台帳に登録します。移管(元)ファイルの出力と取込みは要りません。</div>
+          <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.7 }}>「移管する」を押すと、この区分（{sess.division}）では移管(元)として処理し、移管先の区分の固定資産台帳に登録します。移管(元)ファイルの出力と取込みは要りません。</div>
           <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'auto', maxHeight: 150 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead><tr><th style={{ ...TH, padding: '7px 12px' }}>資産コード</th><th style={{ ...TH, padding: '7px 12px' }}>固定資産名称</th><th style={{ ...TH, padding: '7px 12px' }}>科目</th><th style={{ ...TH, padding: '7px 12px', textAlign: 'right' }}>期首帳簿価額</th><th style={{ ...TH, padding: '7px 12px', textAlign: 'right' }}>うち国庫補助金等</th><th style={{ ...TH, padding: '7px 12px' }}>処分年月日（移管する日）</th></tr></thead>
@@ -1985,7 +1981,7 @@ function ClosingView({ accent, vouchers, setVouchers, onCreated, toast }: { acce
     const tdS: CSSProperties = { ...TD, padding: '8px 12px' };
     return (
       <div data-closing-preview style={{ padding: 18 }}>
-        <div style={{ padding: '8px 14px', background: '#eaf5ef', borderRadius: 10, fontSize: 14, fontWeight: 700, color: '#1f7a52' }}>「{x.name}」を会計の仕訳伝票に登録しました。伝票の「会計の伝票画面で表示」を押すと、会計の伝票の画面で内容を確認・訂正できます。</div>
+        <div style={{ padding: '8px 14px', background: '#eaf5ef', borderRadius: 10, fontSize: 14, fontWeight: 700, color: '#1f7a52' }}>「{x.name}」を会計の仕訳伝票に登録しました。</div>
         <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', fontSize: 14, color: '#5b6773', margin: '12px 0 10px' }}>
           <span>伝票年月日 <b style={{ color: '#22303c' }}>{x.date}</b></span>
           <span>伝票形式 <b style={{ color: '#22303c' }}>{x.format}</b></span>
@@ -2025,7 +2021,7 @@ function ClosingView({ accent, vouchers, setVouchers, onCreated, toast }: { acce
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead><tr><th style={TH}>伝票の名称</th><th style={TH}>伝票年月日</th><th style={TH}>伝票形式</th><th style={TH}>決算処理</th><th style={{ ...TH, width: 140 }}>伝票</th><th style={{ ...TH, width: 80 }}>削除</th></tr></thead>
           <tbody>
-            {vouchers.length === 0 && <tr><td colSpan={6} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>登録済みの決算伝票はありません。「新しい伝票を作成」から作成してください。</td></tr>}
+            {vouchers.length === 0 && <tr><td colSpan={6} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>登録済みの決算伝票はありません。</td></tr>}
             {vouchers.map((x, i) => <tr key={i}><td style={{ ...TD, fontWeight: 600 }}>{x.name}</td><td style={TD}>{x.date}</td><td style={TD}>{x.format}</td><td style={TD}>{x.proc}</td><td style={TD}><button type="button" className="btn-outline" onClick={() => { setDoneIdx(i); setPreviewId(null); setStep(4); }} style={{ ...btn(), padding: '4px 10px', fontSize: 12, background: '#fff' }}>伝票を見る</button></td><td style={TD}><button type="button" className="btn-outline" onClick={() => removeVoucher(i)} style={{ ...btn('#c0392b'), padding: '4px 10px', fontSize: 12, background: '#fff' }}>削除</button></td></tr>)}
           </tbody>
         </table>
@@ -2086,7 +2082,7 @@ function ClosingView({ accent, vouchers, setVouchers, onCreated, toast }: { acce
           </tbody>
         </table>
       </div>
-      <div style={{ fontSize: 12, color: '#7a8794', marginTop: 6 }}><HelpTip text="借方・貸方・摘要はクリックで変更できます" style={{ marginRight: 6 }} />黄色は既定から変更した項目です。「伝票を作成する」を押すと、会計の仕訳伝票に登録し、最後に会計の伝票画面と同じ画面で内容を表示します。</div>
+      <div style={{ fontSize: 12, color: '#7a8794', marginTop: 6 }}><HelpTip text="借方・貸方・摘要はクリックで変更できます" style={{ marginRight: 6 }} />黄色は既定から変更した項目です。</div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
         <button type="button" onClick={() => setStep(2)} style={btn()}>戻る</button>
         <button type="button" className="submit-btn" onClick={finish} style={btn(accent, true)}>伝票を作成する</button>
@@ -2133,7 +2129,7 @@ function TransferView({ accent, assets, onRegister, toast }: { accent: string; a
         <button type="button" className="btn-outline" onClick={load} style={btn()}>移管データ読込</button>
         <button type="button" className="btn-outline" onClick={() => setRows([])} style={btn()}>処理の取消</button>
         <button type="button" className="btn-outline" onClick={() => setHistOpen(true)} style={btn()}>取込み履歴{history.length > 0 && `（${history.length}）`}</button>
-        <span style={{ fontSize: 12, color: '#7a8794' }}>資産コードは読込のときに自動で採番します。一覧で直接変更できます。</span>
+        <span style={{ fontSize: 12, color: '#7a8794' }}>資産コードは読込のときに自動で採番します。</span>
         <div style={{ marginLeft: 'auto' }}><button type="button" className="submit-btn" onClick={register} style={btn(accent, true)}>登録</button></div>
       </div>
       <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, minHeight: 260 }}>

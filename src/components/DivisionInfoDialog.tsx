@@ -92,7 +92,7 @@ export function DivisionInfoDialog({ open, onClose, accent }: { open: boolean; o
       {tab === '伝票入力区分の設定' && (
         <div style={{ padding: '14px 22px 18px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <span style={{ fontSize: 14, color: '#5b6773' }}>集計区分の設定画面で追加した区分の詳細条件を設定します。行の「集計区分」を変えると格納先が移動します。</span>
+            <span style={{ fontSize: 14, color: '#5b6773' }}>行の「集計区分」を変えると格納先が移動します。</span>
             <button type="button" className="submit-btn" onClick={addEntry} style={{ ...btn(accent, true, true), marginLeft: 'auto' }}>伝票入力区分追加</button>
           </div>
           <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'auto', maxHeight: 420 }}>

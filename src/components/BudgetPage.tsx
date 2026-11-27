@@ -128,7 +128,7 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
   const chip = (on: boolean): CSSProperties => ({ minWidth: 30, height: 26, padding: '0 8px', borderRadius: 6, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', border: '1px solid ' + (on ? accent : '#d3dbe3') });
 
   return (
-    <SettingsShell variant={variant} title={displayName('予算')} manual={<ManualButton label="説明" onClick={() => setExplainOpen(true)} title="予算入力の説明（マニュアル 3.2）を開きます" />} desc="資金収支計算書の予算と取引先別の予算を、年度（前年度／当年度／次年度）ごとのタブで入力します。予算月の「初」が当初予算、「4」〜「3」「決」がその月の補正予算です。収支差額と期末支払資金残高を確認しながら設定できます。" badge="予算" actions={<>
+    <SettingsShell variant={variant} title={displayName('予算')} manual={<ManualButton label="説明" onClick={() => setExplainOpen(true)} title="予算入力の説明（マニュアル 3.2）を開きます" />} badge="予算" actions={<>
       {tab === '次年度予算' && <button type="button" className="btn-outline" onClick={() => setWizard(true)} style={btn(accent)}>次年度予算作成</button>}
       <button type="button" className="submit-btn" onClick={() => toast.show('予算を保存しました')} style={btn(accent, true)}>保存</button>
       <ScreenPrintMenu page="予算" accent={accent} />
@@ -139,7 +139,7 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
         { h: '予算月（初・4〜3・決）', body: <>どのタブでも、予算月を「初」「4」〜「3」「決」から選べます。「初」は当初予算、「4」〜「3」「決」はその月の補正予算です。</>},
         { h: '前年度予算', body: <>前年度の予算額を入力します。参考用に前々年度予算額を表示し、当初予算／確定予算（3月末時点の最終予算額）の切替ができます。運用2年目以降は年度更新で自動移行されるため、通常は初年度のみ入力します。</>},
         { h: '当年度予算', body: <>当年度の予算額を科目ごとに入力します。予算月「初」で当初予算額を入力し、参考用に前年度予算額を表示します。予算対比・予算チェック（動作環境）の基準になります。</>},
-        { h: '補正予算（月別）', body: <>補正予算は、予算月で4月〜3月・決算を選んで入力します。入力方法は「補正額」（増減額）と「補正後予算額」（累計予算額）を切り替えられ、どちらで入力するかは、予算月の上に表示される「補正予算の入力方法」で切り替えます（以前は動作環境にあった設定です）。入力すると、その科目が属する資金収支差額（収入合計・支出合計）がどう変化するかを画面右で確認できます。</>},
+        { h: '補正予算（月別）', body: <>補正予算は、予算月で4月〜3月・決算を選んで入力します。入力方法は「補正額」（増減額）と「補正後予算額」（累計予算額）を切り替えられ、どちらで入力するかは、予算月の上に表示される「補正予算の入力方法」で切り替えます。入力すると、その科目が属する資金収支差額（収入合計・支出合計）がどう変化するかを画面右で確認できます。</>},
         { h: '次年度予算', body: <>次年度の予算額を入力します。参考用に当年度予算（当初予算／確定予算）を表示します。「次年度予算作成」で当年度予算からの一括作成（率・端数単位の指定）ができ、年度更新時に当年度当初予算へ自動移行されます。</>},
         { h: '期末支払資金残高', body: <>「前期末決算額」は貸借対照表の繰越残高から「流動資産－流動負債」で計算した前期末支払資金残高です。「当期末予算額」は前期末決算額に資金収支差額合計を加算した当期末支払資金残高で、補正の結果を確認するための目安になります。</>},
         { h: '取引先別予算', body: <>取引先コードごとの支払額に対する予算です。資金収支予算と同じく、年度（前年度／当年度／次年度）ごとのタブで、当初予算（予算月「初」）と補正予算（4月〜3月・決算）を入力します。年度更新で自動的に繰り下がります。取引先推移・取引先元帳で予算との対比に使います。</>},
@@ -154,7 +154,6 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
           </div>
           <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.7, flex: '1 1 320px' }}>
             {mode === '補正額' ? '補正額で入力：その月に増減させる金額（＋／−）を入力します。' : '補正後予算額で入力：補正した後の予算額（累計）を入力します。差額が補正額になります。'}
-            <br /><span style={{ color: '#8290a0' }}>※ 以前は「{displayName('環境設定')}」にあった設定です。この画面で切り替えられるようにしました。</span>
           </div>
         </div>
       )}
@@ -170,7 +169,7 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
       </div>
       {byVendor ? (
         <div style={{ padding: '14px 22px 22px' }}>
-          <Notice>取引先コードごとの支払額に対する予算です。資金収支予算と同じく、年度（前年度／当年度／次年度）ごとに、当初予算（予算月「初」）と補正予算（4月〜3月・決算）を入力します。年度更新で自動的に繰り下がります。</Notice>
+          <Notice>取引先コードごとの支払額に対する予算です。年度更新で自動的に繰り下がります。</Notice>
           <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 470px)', marginTop: 14 }}>
             <table data-budget-vendor={year} style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead><tr><th style={{ ...TH, width: 90 }}>コード</th><th style={{ ...TH, minWidth: 220 }}>取引先</th><th style={{ ...TH, textAlign: 'right', width: 170 }}>{cols.ref}</th><th style={{ ...TH, textAlign: 'right', width: 190 }}>{cols.cur}</th><th style={{ ...TH, textAlign: 'right', width: 170 }}>{cols.diff}</th><th style={{ ...TH, textAlign: 'right', width: 150 }}>実績額</th></tr></thead>

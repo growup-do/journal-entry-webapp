@@ -93,7 +93,7 @@ export function UserSettingsPage({ variant, accent }: Props) {
       <div style={{ width: '100%', maxWidth: 1000, display: 'flex', flexDirection: 'column', gap: 20 }}>
         <div>
           <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 18 : 22 }}>ユーザー設定</div>
-          <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>ご自身のアカウント情報・パスワード・通知・表示の設定です。{session.access.core && '事業者全体の設定は「設定」メニューから行います。'}</div>
+          {session.access.core && <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>事業者全体の設定は「設定」メニューから行います。</div>}
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 20, alignItems: 'start' }}>
@@ -165,7 +165,7 @@ export function UserSettingsPage({ variant, accent }: Props) {
           {isAdmin && session.access.core && <section style={{ ...card, gridColumn: '1 / -1' }} data-account-access>
             <div style={h2}>アカウントごとの利用できる機能</div>
             <div style={{ padding: 18 }}>
-              <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.8, marginBottom: 12 }}>アカウントごとに、使える機能を選びます。<b>会計本体</b>を外したアカウントは、会計本体では区分・年度の切替だけができ、チェックを入れた 小口現金・預金出納・減価償却 だけを開けます。メニューにも、その機能だけを表示します。</div>
+              <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.8, marginBottom: 12 }}><b>会計本体</b>を外したアカウントは、会計本体では区分・年度の切替だけができ、チェックを入れた 小口現金・預金出納・減価償却 だけを開けます。メニューにも、その機能だけを表示します。</div>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                   <thead>

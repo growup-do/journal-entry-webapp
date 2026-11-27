@@ -33,7 +33,6 @@ export function LegalPage() {
       </header>
       <div style={{ maxWidth: 820, margin: '0 auto', padding: '28px 28px 60px', width: '100%', boxSizing: 'border-box' }}>
         <div style={{ background: '#fff', border: '1px solid #dde4ea', borderRadius: 12, padding: '28px 32px' }}>
-          <div style={{ display: 'inline-block', fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#fff1b8', color: '#8a6d00', marginBottom: 12 }}>叩き台（正式な文言は差し替え）</div>
           <h1 style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontSize: 22, margin: '0 0 12px' }}>{doc.title}</h1>
           <p style={{ fontSize: 14, lineHeight: 1.8, color: '#4a5865', margin: '0 0 22px' }}>{doc.lead}</p>
           {doc.sections.map((s) => (

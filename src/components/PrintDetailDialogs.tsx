@@ -77,7 +77,6 @@ export function FormatDialog({ spec, value, accent, onCancel, onOk }: { spec: Fo
           <legend style={legend}>フォント</legend>
           {spec.rows.map((r) => <FontRow key={r} label={ROW_LABEL[r]} value={f.fonts[r] ?? stdFont(spec, r)} onChange={(v) => setF({ ...f, fonts: { ...f.fonts, [r]: v } })} listId={listId} />)}
           <datalist id={listId}>{FORMAT_SIZES.map((o) => <option key={o} value={o} />)}</datalist>
-          <div style={note}>サイズは一覧から選ぶか、数字を直接入力します。</div>
         </fieldset>
         {spec.paper && (
           <fieldset style={box} data-format-paper>
@@ -164,7 +163,7 @@ export function AreaPickDialog({ value, divisions, perPage, accent, onCancel, on
   return (
     <Modal open onClose={onCancel} width={820} title="表示区分選択">
       <div data-area-dialog style={{ padding: '14px 22px 18px', display: 'grid', gap: 10 }}>
-        <div style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>内訳表に表示する区分を設定してください。<HelpTip text={['No の順に左から印刷します。色の切れ目が 1 ページの区切りです', '区分のほか、小計・内部取引消去・合計・計算式の行を置けます', '計算式は行の No で指定します。例 1+3 は 1 行目と 3 行目を足した金額です', '印刷用列名を入れると、その名前で列の見出しを印刷します。空欄のときは区分名で印刷します', '空行は詰めずに空欄で印刷します']} /></div>
+        <div style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}><HelpTip text={['No の順に左から印刷します。色の切れ目が 1 ページの区切りです', '区分のほか、小計・内部取引消去・合計・計算式の行を置けます', '計算式は行の No で指定します。例 1+3 は 1 行目と 3 行目を足した金額です', '印刷用列名を入れると、その名前で列の見出しを印刷します。空欄のときは区分名で印刷します', '空行は詰めずに空欄で印刷します']} /></div>
         <div style={{ maxHeight: 360, overflowY: 'auto', border: '1px solid #e2e8ee', borderRadius: 8 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead><tr><th style={{ ...th, textAlign: 'right', width: 48 }}>No</th><th style={{ ...th, width: '34%' }}>区分名</th><th style={th}>印刷用列名</th><th style={{ ...th, width: '22%' }}>計算式</th></tr></thead>

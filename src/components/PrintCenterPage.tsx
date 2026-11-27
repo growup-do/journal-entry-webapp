@@ -114,7 +114,6 @@ export function PrintCenterPage({ variant, accent, onNavigate, initialCat }: { v
                   <Notice>この帳票は表示条件（{cur.cond?.label}）を満たしていないため、起動中の区分（{s.division}）では印刷できません。</Notice>
                 ) : cur.wamnet ? (
                   <div style={{ ...card, padding: 16, display: 'grid', gap: 10 }}>
-                    <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.7 }}>WAMNET（電子開示システム）へ提出するファイルの{cur.note === '出力' ? '出力' : '設定・確認'}を行います。印刷の詳細設定はありません。</div>
                     <div><button type="button" className="submit-btn" onClick={() => setWamnet(WAMNET_ITEMS.find((w) => w.name === cur.name) ?? null)} style={btn(accent, true)}>{cur.name}を開く</button></div>
                   </div>
                 ) : (
@@ -134,7 +133,7 @@ export function PrintCenterPage({ variant, accent, onNavigate, initialCat }: { v
       {/* まとめて印刷：中区分をまたいで帳票を選ぶ */}
       <Modal open={pickOpen} onClose={() => setPickOpen(false)} width={1000} title="まとめて印刷する帳票を選ぶ">
         <div style={{ padding: '12px 22px 18px', display: 'grid', gap: 12 }}>
-          <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.7 }}>まとめて印刷する帳票にチェックを付けます。期間は当月（令和8年8月）で一括指定し、帳票ごとの詳細設定は各帳票で決めた内容を使います。別紙は別紙の画面から印刷します。</div>
+          <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.7 }}>期間は当月（令和8年8月）で一括指定し、帳票ごとの詳細設定は各帳票で決めた内容を使います。別紙は別紙の画面から印刷します。</div>
           <div data-batch-pick style={{ columns: '3 280px', columnGap: 12, maxHeight: '56vh', overflow: 'auto' }}>
             {CATS.filter((c) => c !== '別紙').map((c) => {
               const rs = batchPool.filter((r) => r.cat === c);

@@ -128,7 +128,7 @@ export function AuditChecklist({ scope, isOn, setOn, onOpen, onSwitch, accent = 
         {col(CHECK_COLS[1])}
         <div style={{ display: 'grid', gap: 6 }}>
           <p style={p}>01〜14、18〜19 は会計システムのデータ同士を比較してチェックするものです。15〜17 は減価償却システムのデータと会計システムのデータを比較してチェックするものです。</p>
-          <p style={p}>減価償却データの指定は「法人・区分」の設定で行います。各項目の具体的な内容は、項目名のボタンをクリックしてください。</p>
+          <p style={p}>減価償却データの指定は「法人・区分」の設定で行います。</p>
           <p style={p}>各項目で使っている科目の区分コードを変更した場合は、再設定を行ってください。</p>
         </div>
       </div>
@@ -252,7 +252,7 @@ export function AuditItemDialog({ no, scope, onClose, onSaved, accent = '#1f7a52
       <div style={{ padding: '12px 22px 18px', display: 'grid', gap: 12 }} data-audit-item-dialog={no}>
         <div style={{ fontSize: 14, color: '#5b6773' }}>
           <span style={{ padding: '2px 8px', borderRadius: 6, background: '#eef2f6', fontWeight: 700, color: '#3d4a56', marginRight: 8 }}>{scope === '法人' ? '法人全体' : `この区分のみ：${sess.division}`}</span>
-          {viewOnly ? '参照のみの権限のため、設定内容の表示だけができます。' : '診断用条件式の各要素を構成する勘定科目を、チェックにより有効または無効に切り替えます。'}
+          {viewOnly && '参照のみの権限のため、設定内容の表示だけができます。'}
         </div>
         {def.formula && (
           <div data-audit-formula style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>

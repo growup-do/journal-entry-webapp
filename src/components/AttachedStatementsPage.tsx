@@ -20,11 +20,6 @@ import { setSession, useSession } from '../store/session';
 import { CHANGED_BG, CHANGED_BORDER, UNSAVED_FG, useUnsaved } from '../store/unsaved';
 
 const TABS = ['設定１　借入金・寄附金・国庫補助金・補助金・基本金・引当金', '設定２　区分間繰入金・積立金', '設定３　区分間貸付金（借入金）'];
-const TAB_DESC = [
-  '借入金明細書・寄附金収益明細書・国庫補助金等特別積立金明細書・補助金事業等収益明細書・基本金明細書・引当金明細書で使う科目を設定します。',
-  '区分間繰入金明細書（事業区分間・拠点区分間・サービス区分間・小サービス区分間）と、積立金・積立資産明細書で使う科目を設定します。',
-  '区分間貸付金（借入金）明細書（事業区分間・拠点区分間・サービス区分間・小サービス区分間）で使う科目を設定します。',
-];
 type Side = '収入' | '支出';
 type OptGroup = { group: string; names: string[] };
 /** チェック付き一覧の候補（cls は科目の区分。一覧の右に小さく出す） */
@@ -265,7 +260,6 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
 
   return (
     <SettingsShell variant={variant} title={displayName('決算附属明細書')} badge="決算" unsaved={dirty}
-      desc="決算附属明細書に集計する科目と、伝票入力時の監視を設定します。これまで 3 つに分かれていた画面（設定／設定２／設定３）を、1 つの画面にまとめました。"
       actions={<>
         {dirty && <span role="status" data-unsaved-msg style={{ fontSize: 15, fontWeight: 800, color: UNSAVED_FG, marginRight: 4 }}>保存されていません。</span>}
         <button type="button" onClick={cancelAll} disabled={!dirty} style={{ ...btn(), opacity: dirty ? 1 : 0.5 }}>変更を取り消す</button>
@@ -275,15 +269,13 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
       <Tabs items={TABS} current={tab} onChange={setTab} accent={accent} marks={dirtyTabs} />
 
       <div style={{ padding: '16px 22px 20px', display: 'grid', gap: 14 }}>
-        <div style={{ fontSize: 14, color: '#48565f', lineHeight: 1.8 }}>{TAB_DESC[ti]}<span style={{ color: '#8290a0' }}>　1 行に 1 科目を対応させる項目は一覧から選び、複数の科目を対象にする項目はチェックを付けます。</span></div>
-
         {/* 設定２・３：収入に合わせる／支出に合わせる（これまで動作環境にあった切替） */}
         {ti >= 1 && (
           <div style={{ border: '1px solid #bfdcd9', borderRadius: 12, overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#e4f1f0', flexWrap: 'wrap' }}>
               <ScopeBadge kind="全区分共通" />
               <b style={{ fontSize: 14 }}>科目の合わせ方（設定２・設定３ 共通）</b>
-              <span style={{ fontSize: 14, color: '#48565f' }}>{ti === 1 ? `いまは${side === '収入' ? '繰入金収入（繰入金収益）' : '繰入金支出（繰入金費用）'}の科目を表示しています` : `いまは${side === '収入' ? '貸付金' : '借入金'}の科目を表示しています`}<span style={{ color: '#8290a0' }}>（合わせ方ごとに別々に保存されます。これまで「{displayName('環境設定')}」にあった切替です）</span></span>
+              <span style={{ fontSize: 14, color: '#48565f' }}>{ti === 1 ? `いまは${side === '収入' ? '繰入金収入（繰入金収益）' : '繰入金支出（繰入金費用）'}の科目を表示しています` : `いまは${side === '収入' ? '貸付金' : '借入金'}の科目を表示しています`}<span style={{ color: '#8290a0' }}>（合わせ方ごとに別々に保存されます）</span></span>
               <div role="radiogroup" aria-label="科目の合わせ方" style={{ display: 'inline-flex', border: '1px solid #1f6f6b', borderRadius: 9, overflow: 'hidden', marginLeft: 'auto' }}>
                 {(['収入', '支出'] as const).map((v) => <button key={v} type="button" role="radio" aria-checked={side === v} onClick={() => side !== v && setSide(v)} style={{ padding: '7px 16px', border: 'none', background: side === v ? '#1f6f6b' : '#fff', color: side === v ? '#fff' : '#1f6f6b', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{v}に合わせる</button>)}
               </div>
@@ -296,7 +288,6 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 14, alignItems: 'start' }}>
               {/* 借入金明細書 */}
               <SecCard title={COMBO.kariire.title} onReset={() => resetSec('kariire', '借入金明細書')}>
-                <div style={{ fontSize: 12, color: '#8290a0' }}>選択肢は流動負債・固定負債の科目です。</div>
                 {comboRows(COMBO.kariire)}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <button type="button" onClick={() => setOneYearOpen(true)} style={btn('#5b6773', false, true)}>１年基準科目設定</button>
@@ -373,16 +364,15 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
         )}
 
         {ti === 2 && (
-          <SecCard title="区分間貸付金（借入金）明細書" sub={<span style={{ fontSize: 12, fontWeight: 500, color: '#8290a0' }}>候補は「１年以内回収予定長期貸付金」〜「長期貸付金」の{side === '収入' ? '貸付金' : '借入金'}科目</span>} onReset={() => resetSec('kashi', '区分間貸付金（借入金）明細書')}>
+          <SecCard title="区分間貸付金（借入金）明細書" onReset={() => resetSec('kashi', '区分間貸付金（借入金）明細書')}>
             {levelGrid('kashi', KASHI_POOL[side], (l) => `${l}${side === '収入' ? '貸付金' : '借入金'}`)}
           </SecCard>
         )}
       </div>
 
       <div style={{ borderTop: '1px solid #eef2f5', padding: '12px 22px 16px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 14, color: '#5b6773' }}>
-        <span style={{ fontWeight: 700, color: '#8290a0' }}>移動した機能</span>
         {MOVED.map((m) => <span key={m} style={{ padding: '2px 8px', borderRadius: 8, background: '#f3f6f9', border: '1px solid #dde4ea' }}>{m}</span>)}
-        <span>は、印刷の準備として「帳票・印刷 ＞ 別紙」にまとめました。</span>
+        <span>は「帳票・印刷 ＞ 別紙」で行います。</span>
         <button type="button" onClick={goAppendix} style={btn('#5b6773', false, true)}>別紙を開く</button>
       </div>
 
@@ -393,7 +383,7 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
       <Modal open={!!titlesDraft} onClose={() => setTitlesDraft(null)} width={480} title="国庫補助金明細書　積立合計行タイトル入力">
         {titlesDraft && (
           <div style={{ padding: '12px 22px 18px', display: 'grid', gap: 10 }}>
-            <Notice>明細書に出力する国庫補助金等のグループ名（積立合計行のタイトル）を設定します。グループごとに積立額・取崩額の合計行が印刷されます。</Notice>
+            <Notice>グループごとに積立額・取崩額の合計行が印刷されます。</Notice>
             {titlesDraft.map((t, i) => (
               <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center' }}><span style={{ width: 24, fontSize: 14, color: '#8290a0' }}>{i + 1}</span><input className="field-input" value={t} onChange={(e) => setTitlesDraft(titlesDraft.map((x, k) => (k === i ? e.target.value : x)))} placeholder="例：国庫補助金" style={input} /><button type="button" title="この行を削除" onClick={() => setTitlesDraft(titlesDraft.filter((_, k) => k !== i))} style={btn('#c0392b', false, true)}>×</button></div>
             ))}
@@ -407,7 +397,7 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
       <Modal open={!!grantsDraft} onClose={() => setGrantsDraft(null)} width={720} title="交付団体及び交付の目的の編集">
         {grantsDraft && (
           <div style={{ padding: '12px 22px 18px', display: 'grid', gap: 10 }}>
-            <Notice>補助金の区分ごとに「交付団体」と「交付の目的」を登録します。伝票入力で補助金を登録するとき、その区分に登録したものから選べます。</Notice>
+            <Notice>伝票入力で補助金を登録するとき、その区分に登録したものから選べます。</Notice>
             <div data-grant-kubuns style={{ display: 'grid', gap: 10, maxHeight: 420, overflow: 'auto' }}>
               {(draft.checks.hojo ?? []).map((kubun) => {
                 const rows = grantsDraft.map((g, i) => ({ g, i })).filter((x) => x.g.kubun === kubun);

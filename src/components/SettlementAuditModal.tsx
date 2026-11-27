@@ -175,7 +175,7 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
           </div>
           <div ref={listRef} style={{ minHeight: onlyNg && listH ? listH : undefined }}>
           {onlyNg && shown.length === 0 && (
-            <div style={{ padding: '28px 12px', textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>{done ? '要調査の項目はありません。' : '要調査の項目はまだありません（「調査開始」で調査します）。'}</div>
+            <div style={{ padding: '28px 12px', textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>{done ? '要調査の項目はありません。' : '要調査の項目はまだありません。'}</div>
           )}
           <div style={{ display: 'grid', gridTemplateColumns: onlyNg ? '1fr' : '1fr 1fr', gap: '0 24px' }}>
             <div>{shown.slice(0, half).map((a) => <Item key={a.no} {...a} />)}</div>
@@ -194,7 +194,7 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
           </div>
           <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <div style={{ fontSize: 14, color: '#7a8794', minHeight: 18 }}>
-              {running ? '調査中…' : done ? (counts.要調査 > 0 ? <>要調査が <b style={{ color: '#c0392b' }}>{counts.要調査} 件</b> あります。行の「結果詳細」「説明」で内容を確認してください。</> : 'すべての項目が OK です。') : '「調査開始」で全項目を調査します（決算チェック設定で無効にした項目はスキップ）'}
+              {running ? '調査中…' : done ? (counts.要調査 > 0 ? <>要調査が <b style={{ color: '#c0392b' }}>{counts.要調査} 件</b> あります。</> : 'すべての項目が OK です。') : null}
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
               <span title={done ? '' : '調査が終わると使えます'}><button type="button" className="btn-outline" disabled={!done} onClick={() => setPrint(true)} style={{ ...btn(), display: 'inline-flex', alignItems: 'center', gap: 6, opacity: done ? 1 : 0.5 }}><PrintIcon />印刷</button></span>
@@ -211,7 +211,7 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
             <div style={{ textAlign: 'center', fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 19, color: '#1f5a3a', letterSpacing: '.06em', marginBottom: 22 }}>
               {String(explain).padStart(2, '0')}. {exItem?.name}
             </div>
-            {ex ? (
+            {ex && (
               <>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 22, marginBottom: 22 }}>
                   <div style={{ textAlign: 'left' }}>
@@ -226,12 +226,6 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
                 </div>
                 <p style={{ fontSize: 14, lineHeight: 1.9, color: '#22303c', margin: 0, textIndent: '1em' }}>{ex.text}</p>
               </>
-            ) : (
-              <p style={{ fontSize: 14, lineHeight: 1.9, color: '#7a8794', margin: 0, textAlign: 'center' }}>
-                この項目の説明文は、既存システムの画面をご提供いただき次第転記します。
-                <br />
-                （現在は「04. 次期繰越活動増減差額」のみ転記済み）
-              </p>
             )}
             {stateOf(explain) === '要調査' && <div style={{ marginTop: 16 }}><Notice tone="warn">この項目は「要調査」です。{detailOf(explain, '要調査')}</Notice></div>}
           </div>
@@ -264,7 +258,7 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
     {/* 結果詳細（トレース情報） */}
     <Modal open={trace != null} onClose={() => setTrace(null)} width={760} title={traceItem ? `結果詳細 - ${String(traceItem.no).padStart(2, '0')}. ${traceItem.name}` : '結果詳細（決算チェックトレース情報）'}>
       <div style={{ padding: '12px 22px 18px' }}>
-        {traceItem && <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, fontSize: 14 }}><StateBadge st={stateOf(traceItem.no)} /><span style={{ color: '#5b6773' }}>対象の金額・伝票を確認してください。</span></div>}
+        {traceItem && <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, fontSize: 14 }}><StateBadge st={stateOf(traceItem.no)} /></div>}
         <pre style={{ margin: 0, padding: 14, background: '#1e2630', color: '#d7dee6', borderRadius: 10, fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap', maxHeight: 420, overflow: 'auto', fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace" }}>{traceText}</pre>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
           <button type="button" onClick={() => navigator.clipboard?.writeText(traceText).then(() => toast.show('テキストとしてコピーしました（メモ帳やExcelに貼り付けできます）')).catch(() => toast.show('コピーできませんでした'))} style={uiBtn()}>コピー</button>

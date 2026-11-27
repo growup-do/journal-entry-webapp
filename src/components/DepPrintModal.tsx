@@ -196,7 +196,6 @@ export function DepPrintPanel({ name, accent, onRun, onClose }: { name: string; 
             })}
           </div>
           <div style={{ display: 'grid', gap: 6, fontSize: 14, color: '#3d4a56', lineHeight: 1.6 }}>
-            <span>1枚 {f.cols * f.rows} 区切りのシール用紙です。印刷を始めるシールの番号を選びます。</span>
             <span><b>{cur} 番</b>から印刷します{cur > 1 ? `（1〜${cur - 1} 番は使用済みとして空けます）` : ''}。</span>
           </div>
         </div>

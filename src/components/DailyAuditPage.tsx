@@ -161,7 +161,7 @@ export function DailyAuditPage({ variant, accent, onNavigate, onClose }: Props) 
       variant={variant}
       accent={accent}
       title={displayName('日次調査')}
-      subtitle="仕訳と残高の同額・不一致を月ごとに検索し、資金収支・貸借・事業活動の整合を確認します。合算区分の内訳確認にも使います。"
+      subtitle="合算区分の内訳確認にも使います。"
       tools={[
         { label: '再計算', onClick: () => run(0), primary: true, title: '最初から検査し直します' },
         { label: '伝票表示', onClick: showVouchers, disabled: !stopped, title: stopped ? `${stopDay}の伝票を日記帳で開きます` : onlyStopped },
@@ -172,7 +172,7 @@ export function DailyAuditPage({ variant, accent, onNavigate, onClose }: Props) 
       notice={stopped ? (
         <>
           <b style={{ color: RED }}>{stopDay}の仕訳で不一致が見つかり、検査を止めています。</b>
-          <span>「伝票表示」でこの日の伝票を日記帳で開いて訂正し、戻ってから「検査継続」で{stopDay}以降を再検査します。日記帳では、該当する伝票に「不一致」の印が付きます。</span>
+          <span>日記帳では、該当する伝票に「不一致」の印が付きます。</span>
           <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
             <button type="button" onClick={showVouchers} style={{ ...miniBtn, background: RED, color: '#fff' }}>伝票表示（{stopDay}の伝票）</button>
             <button type="button" onClick={() => setContinueOpen(true)} style={miniBtn}>検査継続</button>
@@ -184,7 +184,7 @@ export function DailyAuditPage({ variant, accent, onNavigate, onClose }: Props) 
           <span style={{ fontSize: 14, color: '#48565f' }}>令和8年度　繰越残高 〜 決算月仕訳{stopped ? `（${stopDay}で停止中）` : ''}</span>
         </>
       }
-      target={<span>全科目（資金収支・貸借・事業活動の整合を月ごとに検査します。科目の個別指定はありません）</span>}
+      target={<span>全科目（科目の個別指定はありません）</span>}
       periodAside={<span style={{ fontSize: 14, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: stopped ? '#fdecea' : done ? '#fff1b8' : '#f1f4f6', color: stopped ? RED : done ? '#8a6d00' : '#8290a0' }}>{phase === 'running' ? '調査中…' : stopped ? `${stopDay}で不一致` : done ? 'すべて同額（OK）' : '未調査'}</span>}
     >
       <ToastView msg={toast.msg} />

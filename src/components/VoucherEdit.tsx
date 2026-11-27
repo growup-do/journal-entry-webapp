@@ -117,7 +117,7 @@ export function VoucherPickerModal({ open, mode, onClose, onPick, accent }: { op
   const cur = Math.min(hi, Math.max(0, groups.length - 1));
   const danger = mode === '削除';
   return (
-    <Modal open onClose={onClose} width={860} title={<>{danger ? '伝票削除' : '伝票訂正'} <span style={{ fontSize: 14, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>登録済みの伝票から選びます</span></>}>
+    <Modal open onClose={onClose} width={860} title={<>{danger ? '伝票削除' : '伝票訂正'}</>}>
       <div className="ef-scope" style={{ ...scopeStyle(danger ? '#c0392b' : accent), padding: '12px 22px 18px', display: 'grid', gap: 10 }}>
         <EntryStyles />
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -630,7 +630,6 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
           {/* 小切手No は伝票に1つ。予備入力1・予備入力2 は行ごと（各行の下段。確認メモ #198） */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12, alignItems: 'end' }}>
             <Field label="小切手No"><input className="ef-input" disabled={ro} value={st.cheque} onChange={(e) => set({ cheque: e.target.value })} style={cell} /></Field>
-            <div style={{ fontSize: 12, color: '#8290a0', paddingBottom: 9 }}>予備入力1（摘要予備）・予備入力2（取引先予備）は、行ごとに各行の下段で入力します。{taxOn ? '税区分・税額は、借方と貸方のそれぞれに入力します。' : ''}</div>
           </div>
 
           {msg && <div role={msg.tone === 'error' ? 'alert' : 'status'} style={{ padding: '8px 12px', borderRadius: 9, fontSize: 14, fontWeight: 700, background: msg.tone === 'error' ? '#fdeee9' : '#eef4fb', color: msg.tone === 'error' ? '#a5281b' : '#2c5f9e', border: '1px solid ' + (msg.tone === 'error' ? '#f0b9ae' : '#c9dcf2') }}>{msg.text}</div>}

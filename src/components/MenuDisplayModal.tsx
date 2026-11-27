@@ -6,8 +6,8 @@ import { Modal } from './Modal';
 import { setSideNavMode, useSideNavMode, type SideNavMode } from './SideNav';
 
 const MODES: { key: SideNavMode; label: string; note: string }[] = [
-  { key: 'アイコンだけ', label: 'サイドバーを表示する（アイコンだけ）', note: '左に細い列でアイコンだけを表示します。分類にマウスを載せると項目が出ます。' },
-  { key: '表示しない', label: 'サイドバーを表示しない', note: '画面を広く使えます。メニューは、左上の会計基準システムのアイコンの左にある ≡ から開きます。' },
+  { key: 'アイコンだけ', label: 'サイドバーを表示する（アイコンだけ）', note: '分類にマウスを載せると項目が出ます。' },
+  { key: '表示しない', label: 'サイドバーを表示しない', note: 'メニューは、左上の会計基準システムのアイコンの左にある ≡ から開きます。' },
 ];
 
 /** サイドバーの見本（2つの出し方を小さな図で見せる） */
@@ -34,7 +34,7 @@ export function MenuDisplayModal({ open, onClose, accent }: { open: boolean; onC
       <div data-menu-display style={{ padding: '14px 22px 18px', display: 'grid', gap: 14 }}>
         <div>
           <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>左のメニュー（サイドバー）</div>
-          <div style={{ fontSize: 12, color: '#7a8794' }}>選ぶとすぐに画面へ反映します。この設定は、使っているブラウザごとに覚えます。</div>
+          <div style={{ fontSize: 12, color: '#7a8794' }}>この設定は、使っているブラウザごとに覚えます。</div>
         </div>
         <div role="radiogroup" aria-label="サイドバーの表示" style={{ border: '1px solid #e2e8ee', borderRadius: 10 }}>
           {MODES.map((m, i) => {

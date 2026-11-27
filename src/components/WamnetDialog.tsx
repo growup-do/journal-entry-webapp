@@ -106,7 +106,6 @@ export function WamnetDialog({ item, onClose, accent }: { item: WamnetItem | nul
     if (mode === '設定') {
       return (
         <div style={{ display: 'grid', gap: 14 }}>
-          <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.7 }}>WAMNET（財務諸表等電子開示システム）に取り込むファイルを作るための設定です。拠点の入力区分とサービス区分に、サービス区分コード（数字8桁）を設定してください。</div>
           <div style={{ width: 300 }}><span style={lbl}>法人番号（13桁）</span><input className="field-input ring" value={draft.corpNo} inputMode="numeric" onChange={(e) => setDraft({ ...draft, corpNo: e.target.value.replace(/[^0-9]/g, '').slice(0, 13) })} placeholder="例：1234567890123" style={input} /></div>
           <div>
             <span style={lbl}>サービス区分コード</span>
@@ -153,9 +152,9 @@ export function WamnetDialog({ item, onClose, accent }: { item: WamnetItem | nul
       );
     }
     // ファイル出力／注記出力／附属明細書出力
-    const desc = mode === 'ファイル出力' ? '決算書の各様式を、WAMNET に取り込むファイル（CSV）として出力します。出力する様式は、共通の印刷設定の「様式設定」で使用にしているものです。'
-      : mode === '注記出力' ? `計算書類に対する注記を、WAMNET に添付する形式（${cur.format}）で出力します。注記の内容は「帳票の印刷 ＞ 別紙」で編集します。`
-        : `附属明細書を、WAMNET に添付する形式（${cur.format}）で出力します。明細の内容は「帳票の印刷 ＞ 別紙」で入力します。`;
+    const desc = mode === 'ファイル出力' ? '出力する様式は、共通の印刷設定の「様式設定」で使用にしているものです。'
+      : mode === '注記出力' ? '注記の内容は「帳票の印刷 ＞ 別紙」で編集します。'
+        : '明細の内容は「帳票の印刷 ＞ 別紙」で入力します。';
     return (
       <div style={{ display: 'grid', gap: 12 }}>
         <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.7 }}>{desc}</div>

@@ -80,7 +80,7 @@ export function OneYearPairsDialog({ open, onClose, onSaved, accent, viewOnly }:
   return (
     <Modal open onClose={onClose} width={820} title="１年基準科目設定">
       <div data-one-year-dialog style={{ padding: '12px 22px 18px', display: 'grid', gap: 10 }}>
-        <Notice>流動資産と固定資産、流動負債と固定負債の対応するペアを選びます。法人全体の設定で、決算チェック（23. １年基準科目 期中残高チェック）と借入金明細書で同じものを使います。</Notice>
+        <Notice>法人全体の設定で、決算チェック（23. １年基準科目 期中残高チェック）と借入金明細書で同じものを使います。</Notice>
         {table('assets', '流動資産科目', '固定資産科目', CURRENT_ASSETS, FIXED_ASSETS)}
         {table('liabs', '流動負債科目', '固定負債科目', CURRENT_LIABS, FIXED_LIABS)}
         {half && <div style={{ fontSize: 12, color: '#b03a2e' }}>片方だけ選んだ行があります。両方の科目を選ぶか、両方を空欄にしてください。</div>}

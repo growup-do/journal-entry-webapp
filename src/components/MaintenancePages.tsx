@@ -250,7 +250,7 @@ export function FinancialAnalysisSettingsPage({ variant, accent, onNavigate }: M
     : (pickDirtyCount ? { text: `「財務分析科目設定」に、保存されていない変更があります（${pickDirtyCount} 項目）。`, to: '財務分析科目設定' } : null);
 
   return (
-    <SettingsShell variant={variant} title="財務分析設定" badge="マスター設定" desc="経年グラフ・分析グラフ・経営分析の帳票で使う指標について、計算に含める科目と、職員・園児の人数を設定します。" unsaved={anyDirty}>
+    <SettingsShell variant={variant} title="財務分析設定" badge="マスター設定" desc="経年グラフ・分析グラフ・経営分析の帳票で使います。" unsaved={anyDirty}>
       <ToastView msg={toast.msg} />
       <Tabs items={['財務分析科目設定', '人数設定']} current={tab} onChange={setTab} accent={accent} />
       {other && (
@@ -393,7 +393,7 @@ export function FinancialAnalysisSettingsPage({ variant, accent, onNavigate }: M
               <div style={cardHead}>職員数</div>
               <div style={{ padding: 16, display: 'grid', gap: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>専任職員数</span><Stepper value={staff} onChange={setStaff} unit="人" label="専任職員数" changed={staffDirty} /></div>
-                <div style={sub}>数値は直接入力するか、− ＋ ボタンで増減します。変更した欄は、保存するまで黄色で表示します。</div>
+                <div style={sub}>変更した欄は、保存するまで黄色で表示します。</div>
               </div>
             </div>
             <div style={card}>
@@ -440,7 +440,7 @@ export function AuditSettingsPage({ variant, accent, onNavigate }: MaintenancePa
   const onCount = AUDIT_ITEMS.filter((a) => isOn(a.no)).length;
 
   return (
-    <SettingsShell variant={variant} title="決算チェック設定" badge="保守・運用" manual={<ManualButton label="説明" onClick={() => setHelp(true)} title="決算チェック設定の説明を開きます" />} draft={false} desc="決算チェック（決算調査）の 28 項目について、チェックする項目の有効／無効と、項目ごとの条件（対象科目など）を設定します。" actions={<>
+    <SettingsShell variant={variant} title="決算チェック設定" badge="保守・運用" manual={<ManualButton label="説明" onClick={() => setHelp(true)} title="決算チェック設定の説明を開きます" />} draft={false} actions={<>
       <button type="button" className="btn-outline" onClick={() => (onNavigate ? onNavigate('決算調査') : toast.show('メニューの「決算チェック（決算調査）」から開きます'))} style={btn()}>決算チェック（決算調査）を開く →</button>
     </>}>
       <ToastView msg={toast.msg} />
@@ -509,7 +509,7 @@ export function JournalRefreshPage({ variant, accent, onNavigate }: MaintenanceP
   const row: CSSProperties = { display: 'grid', gridTemplateColumns: '150px 1fr', gap: 10, padding: '9px 0', borderBottom: '1px solid #f1f4f6', fontSize: 14 };
 
   return (
-    <SettingsShell variant={variant} title="仕訳更新" badge="保守・運用" draft={false} desc="勘定科目と資金科目の連動を変更したあとに、登録済みの伝票を整理し直して、集計データを作り直します。">
+    <SettingsShell variant={variant} title="仕訳更新" badge="保守・運用" draft={false}>
       <ToastView msg={toast.msg} />
       <ScopeBar scope={target === 'この区分' ? 'この区分のみ' : '全区分共通'} note={target === 'この区分' ? s.division : '法人内の全入力区分'} right={<span style={sub}>前回の実行：{last.at}（{last.by}・{last.count.toLocaleString('ja-JP')} 件）</span>}>
         {target === 'この区分' ? '起動中の区分の伝票だけを対象にします。' : '法人内のすべての入力区分の伝票を対象にします。'}
@@ -529,7 +529,7 @@ export function JournalRefreshPage({ variant, accent, onNavigate }: MaintenanceP
             <div>
               <span style={lbl}>対象の期間（{s.fiscalYear}）</span>
               <div style={{ display: 'grid', gap: 8 }}>
-                <label style={radioRow(range === '年度全体', accent)}><input type="radio" name="jr-range" checked={range === '年度全体'} onChange={() => setRange('年度全体')} /><span><b>年度全体</b>（1 年分の全伝票。通常はこちら）</span></label>
+                <label style={radioRow(range === '年度全体', accent)}><input type="radio" name="jr-range" checked={range === '年度全体'} onChange={() => setRange('年度全体')} /><span><b>年度全体</b>（通常はこちら）</span></label>
                 <label style={radioRow(range === '月を指定', accent)}>
                   <input type="radio" name="jr-range" checked={range === '月を指定'} onChange={() => setRange('月を指定')} />
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}><b>月を指定</b>
@@ -676,7 +676,7 @@ export function BackupPage({ variant, accent }: MaintenancePageProps) {
   const kindChip = (k: BackupGen['kind']): CSSProperties => ({ fontSize: 12, fontWeight: 800, padding: '2px 8px', borderRadius: 8, background: k === '手動' ? '#e8f0fb' : '#f1f4f6', color: k === '手動' ? '#2c5f9e' : '#5b6773', whiteSpace: 'nowrap' });
 
   return (
-    <SettingsShell variant={variant} title="データのバックアップ" badge="保守・運用" draft={false} desc="データのバックアップをすぐに実行できます。年度ごとの自動バックアップ、保存したバックアップの一覧、バックアップからの復元（ピックアップ）もここで確認・実行します。">
+    <SettingsShell variant={variant} title="データのバックアップ" badge="保守・運用" draft={false}>
       <ToastView msg={toast.msg} />
       <div style={{ padding: 22, display: 'grid', gap: 18 }}>
         {/* 今すぐバックアップ：1回押すだけで実行 */}
@@ -699,7 +699,7 @@ export function BackupPage({ variant, accent }: MaintenancePageProps) {
                 <span style={lbl}>バックアップする範囲</span>
                 <div style={{ display: 'grid', gap: 8 }}>
                   <label style={radioRow(method === '区分・年度', accent)}><input type="radio" name="bk-method" checked={method === '区分・年度'} onChange={() => setMethod('区分・年度')} disabled={prog.running} /><span><b>{METHOD_LABEL['区分・年度']}</b>（通常はこちら）<br /><span style={sub}>{here}</span>　<ScopeBadge scope="この区分のみ" /></span></label>
-                  <label style={radioRow(method === '法人全体', accent)}><input type="radio" name="bk-method" checked={method === '法人全体'} onChange={() => setMethod('法人全体')} disabled={prog.running} /><span><b>{METHOD_LABEL['法人全体']}</b><br /><span style={sub}>すべての区分・すべての年度をまとめて保存します</span>　<ScopeBadge scope="全区分共通" /></span></label>
+                  <label style={radioRow(method === '法人全体', accent)}><input type="radio" name="bk-method" checked={method === '法人全体'} onChange={() => setMethod('法人全体')} disabled={prog.running} /><span><b>{METHOD_LABEL['法人全体']}</b><br /><ScopeBadge scope="全区分共通" /></span></label>
                 </div>
               </div>
               <div>
@@ -717,13 +717,13 @@ export function BackupPage({ variant, accent }: MaintenancePageProps) {
           <div style={card} data-backup-auto>
             <div style={cardHead}>自動バックアップ（年度ごと） <ScopeBadge scope="全区分共通" /><span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 800, padding: '2px 9px', borderRadius: 10, background: '#eaf5ef', color: '#1f7a52' }}>有効</span></div>
             <div style={{ padding: 16, display: 'grid', gap: 10 }}>
-              <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.8 }}>会計年度（単年度）ごとに、データを自動でバックアップします。操作は不要で、下の一覧に「自動」として保存されます。</div>
+              <div style={{ fontSize: 14, color: '#5b6773', lineHeight: 1.8 }}>操作は不要で、下の一覧に「自動」として保存されます。</div>
               <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, fontSize: 14 }}>
                 <div style={{ display: 'flex', gap: 12, padding: '9px 12px', borderBottom: '1px solid #f1f4f6' }}><span style={{ width: 150, color: '#7a8794' }}>バックアップの単位</span><b>区分ごと・会計年度ごと</b></div>
                 <div style={{ display: 'flex', gap: 12, padding: '9px 12px', borderBottom: '1px solid #f1f4f6' }}><span style={{ width: 150, color: '#7a8794' }}>前回の自動バックアップ</span><span style={{ fontVariantNumeric: 'tabular-nums' }}>{lastAuto ? `${lastAuto.at}（${lastAuto.target}）` : 'まだありません'}</span></div>
                 <div data-backup-auto-dest style={{ display: 'flex', gap: 12, padding: '9px 12px', alignItems: 'center' }}><span style={{ width: 150, color: '#7a8794', flex: 'none' }}>保存先フォルダ</span><span style={{ wordBreak: 'break-all', flex: 1, minWidth: 0 }}>{prefs.autoPath}</span><button type="button" onClick={() => setPathEdit({ kind: 'auto', value: prefs.autoPath })} style={btn('#5b6773', false, true)}>フォルダを変更</button></div>
               </div>
-              <Notice>システムを終了するときに、バックアップの確認は表示しません。手動で保存したいときは、上の「今すぐバックアップ」を押してください。</Notice>
+              <Notice>システムを終了するときに、バックアップの確認は表示しません。</Notice>
             </div>
           </div>
         </div>
@@ -756,7 +756,7 @@ export function BackupPage({ variant, accent }: MaintenancePageProps) {
               <span style={{ fontSize: 14.5, fontWeight: 700, color: '#8a2a1e' }}>バックアップからの復元（ピックアップ）</span>
             </div>
             <div style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-              <div style={{ flex: 1, minWidth: 280, fontSize: 14, lineHeight: 1.8, color: '#5b3a34' }}>保存したバックアップを読み込み、現在のデータに上書きします。<b>一度実行すると元には戻せません。</b>復元するバックアップと項目を選び、内容を確認してから実行します。</div>
+              <div style={{ flex: 1, minWidth: 280, fontSize: 14, lineHeight: 1.8, color: '#5b3a34' }}>保存したバックアップを読み込み、現在のデータに上書きします。<b>一度実行すると元には戻せません。</b></div>
               <button type="button" onClick={() => openRestore()} disabled={!gens.length} style={{ ...btn(DANGER), borderColor: DANGER, padding: '10px 18px' }}>復元の手順を始める…</button>
             </div>
           </div>
@@ -776,7 +776,7 @@ export function BackupPage({ variant, accent }: MaintenancePageProps) {
           return (
             <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
               <Field label="保存先フォルダ（このパソコン／外部ディスク／社内の共有フォルダ）"><input className="field-input ring" value={pathEdit.value} onChange={(e) => setPathEdit({ ...pathEdit, value: e.target.value })} onKeyDown={onEnter(apply)} autoFocus style={input} /></Field>
-              <Notice>{pathEdit.kind === 'auto' ? '年度ごとの自動バックアップは、このフォルダに「自動」として保存されます。' : '手動のバックアップは、このフォルダに保存されます。'}このパソコン以外の場所（外部ディスクや社内の共有フォルダ）をおすすめします。</Notice>
+              <Notice>このパソコン以外の場所（外部ディスクや社内の共有フォルダ）をおすすめします。</Notice>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                 <button type="button" onClick={() => setPathEdit(null)} style={btn()}>キャンセル</button>
                 <button type="button" className="submit-btn" disabled={!pathEdit.value.trim()} onClick={apply} style={{ ...btn(accent, true), opacity: pathEdit.value.trim() ? 1 : 0.5 }}>変更する</button>
@@ -794,7 +794,6 @@ export function BackupPage({ variant, accent }: MaintenancePageProps) {
             <div style={{ padding: '16px 22px 20px', display: 'grid', gap: 14 }}>
               {restore.step === 0 && (
                 <>
-                  <div style={{ fontSize: 14, color: '#5b6773' }}>復元するバックアップを 1 つ選んでください。</div>
                   <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, maxHeight: 300, overflow: 'auto' }}>
                     {gens.map((g) => (
                       <label key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderBottom: '1px solid #f1f4f6', cursor: 'pointer', background: restore.genId === g.id ? '#fff4f1' : '#fff', fontSize: 14 }}>
@@ -811,7 +810,7 @@ export function BackupPage({ variant, accent }: MaintenancePageProps) {
               )}
               {restore.step === 1 && (
                 <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={{ fontSize: 14, color: '#5b6773' }}>復元する項目にチェックを入れてください。チェックを外した項目は、現在のデータのまま残ります。</span><ManualButton label="説明" onClick={() => setItemHelp(true)} title="復元する項目の説明（マニュアル 4.4.2）を開きます" style={{ marginLeft: 'auto' }} /></div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={{ fontSize: 14, color: '#5b6773' }}>チェックを外した項目は、現在のデータのまま残ります。</span><ManualButton label="説明" onClick={() => setItemHelp(true)} title="復元する項目の説明（マニュアル 4.4.2）を開きます" style={{ marginLeft: 'auto' }} /></div>
                   <div style={{ border: '1px solid #e2e8ee', borderRadius: 10 }}>
                     {RESTORE_ITEMS.map((it) => (
                       <label key={it.key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderBottom: '1px solid #f1f4f6', cursor: 'pointer', fontSize: 14 }}>

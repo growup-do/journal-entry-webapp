@@ -99,7 +99,7 @@ export function ExportDialog({ spec, onClose, accent }: { spec: ExportSpec | nul
             </div>
           )}
           {spec.kind === 'text' && spec.text && <pre style={{ margin: 0, padding: 10, background: '#f6f8fa', borderRadius: 8, fontSize: 12, maxHeight: 160, overflow: 'auto', whiteSpace: 'pre-wrap' }}>{spec.text.slice(0, 600)}{spec.text.length > 600 ? '…' : ''}</pre>}
-          <Notice>{spec.kind === 'excel' ? 'Excel ファイルとして保存します。' : spec.kind === 'pdf' || spec.kind === 'print' ? 'ブラウザの印刷ダイアログが開きます。PDFにする場合は送信先で「PDFに保存」を選んでください。' : 'ダウンロードフォルダに保存されます。'}</Notice>
+          {(spec.kind === 'pdf' || spec.kind === 'print') && <Notice>ブラウザの印刷ダイアログが開きます。PDFにする場合は送信先で「PDFに保存」を選んでください。</Notice>}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
             <button type="button" onClick={onClose} style={btn()}>キャンセル</button>
             <button type="button" className="submit-btn" onClick={() => { const msg = runExport(spec, name.trim()); onClose(); toast.show(msg); }} style={btn(accent, true)}>{isFile ? '保存' : '印刷'}</button>

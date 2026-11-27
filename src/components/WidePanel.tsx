@@ -182,7 +182,6 @@ export function WidePanel({ accent, layout, state, top = 0, highlightIds, return
       <div style={{ padding: '10px 14px 9px', borderBottom: '1px solid #eef2f5', flex: 'none', display: 'grid', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16 }}>参照パネル</span>
-          <span style={{ fontSize: 12, color: '#8290a0' }}>入力しながら帳簿を確認</span>
         </div>
         <div role="tablist" aria-label="参照パネルの表示" style={{ display: 'flex', gap: 3, flexWrap: 'wrap', padding: 3, background: '#e9eef2', borderRadius: 9 }}>
           {WIDE_TABS.map((v) => {

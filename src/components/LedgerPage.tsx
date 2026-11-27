@@ -109,7 +109,6 @@ export function LedgerPage({ kind, variant, accent, onNavigate }: Props) {
       variant={variant}
       accent={accent}
       title={title}
-      subtitle={isVendor ? '指定した取引先の取引を日付順に表示します。行をクリックすると伝票を訂正できます。' : '指定した科目の仕訳を日付順に表示し、残高を計算します。行をクリックすると伝票を訂正できます。'}
       returnTo={from ? { from, onBack: () => onNavigate(from), here: `${target}　${m}月` } : null}
       extraTools={<ScreenPrintMenu page={kind === 'vendor' ? '業者元帳' : kind === 'fund' ? '資金元帳' : '勘定元帳'} accent={accent} data={exportTable()} />}
       tools={[{ label: '検索条件', onClick: () => setSearchOpen(true), primary: true, icon: 'search', iconOnly: true, title: '科目・金額・摘要などで絞り込みます' }, { label: '再計算', icon: 'recalc', iconOnly: true, title: '残高を計算し直します', onClick: () => toast.show(`再計算しました（${lines.length} 件　残高 ${moneyText(bal, s.env)}）`) }]}

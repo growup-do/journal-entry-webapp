@@ -181,11 +181,12 @@ export function TemplateWizardModal({ wiz, setWiz, accent, onSaved }: { wiz: Tem
                   </div>
                 </>
               )}
-              <div style={{ marginTop: 8, fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>
-                伝票画面の「連続定型」でこの定型を選ぶと、ページごとに有効・無効を切り替えて、有効なページをまとめて登録できます。
-                {split && <><br />振替伝票式は、行ごとに借方金額と貸方金額を分けて入力できます。</>}
-                {single && <><br />単一式は 1 ページに 1 行です。</>}
-              </div>
+              {(split || single) && (
+                <div style={{ marginTop: 8, fontSize: 12, color: '#7a8794', lineHeight: 1.7 }}>
+                  {split && '振替伝票式は、行ごとに借方金額と貸方金額を分けて入力できます。'}
+                  {single && '単一式は 1 ページに 1 行です。'}
+                </div>
+              )}
             </>
             );
           })()}
