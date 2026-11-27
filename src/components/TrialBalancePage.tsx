@@ -13,6 +13,7 @@
 //   表示する列は部で変わる（現行と同じ）：資産の部・負債の部＝前月繰越・借方・貸方・残高／事業活動・資金の部＝前月累計・当月・累計。決算書の予算・差異は資金の部だけ。
 //   合計の行：資産の部・負債の部＝合計／事業活動＝当期活動増減差額／資金の部＝当期資金収支差額合計。
 
+import { ListScroll } from './ListScroll';
 import { useMemoAction } from '../memo/memoAction';
 import type { CSSProperties, ReactNode } from 'react';
 import { rowClick, HelpTip } from './ui';
@@ -485,7 +486,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
         </div>
       }
     >
-      <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 400px)' }}>
+      <ListScroll>
         {flat.length === 0 ? (
           <div style={{ padding: '48px 22px', textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>表示する列を1つ以上選んでください。</div>
         ) : (
@@ -526,7 +527,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
             </tfoot>
           </table>
         )}
-      </div>
+      </ListScroll>
       <div data-format-note style={{ padding: '8px 22px', borderTop: '1px solid #eef2f5', fontSize: 12, color: '#9aa5b1', display: 'flex', gap: 14, flexWrap: 'wrap' }}>
         <span>金額の書式は「動作環境」の設定に従います（桁区切り：{s.env.thousandsSep}／負の表記：{s.env.negativeSign}・{s.env.negativeColor}字／0データの判定：{zeroCut ? `相殺結果が0円の項目を0データとみなして表示しない${hiddenZero > 0 ? `（${hiddenZero} 行を省略中）` : ''}` : '0データとみなさず表示する'}）</span>
       </div>

@@ -206,7 +206,7 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
   };
   const saveAll = () => { setSaved(draft); setHojoConf({ method: draft.kihon2, kubuns: [...(draft.checks.hojo ?? [])], grants: draft.grants.filter((g) => (draft.checks.hojo ?? []).includes(g.kubun)) }); setSession({ kariireAccts: COMBO.kariire.rows.map((_, i) => draft.combo[`kariire/${i}`] ?? '') }); toast.show(`${displayName('決算附属明細書')}を保存しました`); };
   const cancelAll = () => { setDraft(saved); toast.show('変更を取り消しました'); };
-  const goAppendix = () => { if (onNavigate) onNavigate('別紙（注記・明細書・財産目録）'); else toast.show('「帳票・印刷 ＞ 帳票の印刷 ＞ 別紙」を開いてください'); };
+  const goAppendix = () => { if (onNavigate) onNavigate('別紙（注記・明細書・財産目録）'); else toast.show('「印刷 ＞ 帳票の印刷 ＞ 別紙」を開いてください'); };
 
   /** コンボボックスの表（項目 ｜ 科目）。同じ明細書の中で同じ科目を 2 か所に選んだときは注意を出す */
   const comboRows = (c: ComboSec, after?: (i: number) => ReactNode) => {
@@ -372,7 +372,7 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
 
       <div style={{ borderTop: '1px solid #eef2f5', padding: '12px 22px 16px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 14, color: '#5b6773' }}>
         {MOVED.map((m) => <span key={m} style={{ padding: '2px 8px', borderRadius: 8, background: '#f3f6f9', border: '1px solid #dde4ea' }}>{m}</span>)}
-        <span>は「帳票・印刷 ＞ 別紙」で行います。</span>
+        <span>は「印刷 ＞ 別紙」で行います。</span>
         <button type="button" onClick={goAppendix} style={btn('#5b6773', false, true)}>別紙を開く</button>
       </div>
 

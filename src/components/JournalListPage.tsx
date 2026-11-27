@@ -6,6 +6,7 @@
 //   旧 伝票メニューの「インポート伝票一括削除」「自動按分伝票一括削除」は右上の「一括削除 ▾」（依頼書 2.3／6.4）。
 //   一括削除は年度内の全件が対象で、取込・按分の実行単位（GUID）ごとに消す（確認メモ #56）。
 
+import { ListScroll, Pager, usePager } from './ListScroll';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { BizSwitch, useDivisionTools } from './DivisionTools';
@@ -69,6 +70,8 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
     cond,
   );
   const ra = useRowActions({ rows, accent, returnTo: title });
+  // ページ送り（確認メモ #477）。絞り込みを変えたら 1 ページ目に戻る
+  const { rows: pageRows, pager, offset } = usePager(rows, [month, day, range, acct, cond]);
   const total = rows.reduce((a, r) => a + r.amount, 0);
   const m = month ?? '8';
   const filtered = condActive(cond) || !!kw || !!acct;
@@ -150,11 +153,12 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
     >
       <ToastView msg={toast.msg} />
       <SelectionBar count={sel.length} unit="行" hint={<HelpTip text={['Shift＋クリックで範囲を選びます', 'Ctrl／⌘＋クリックで追加・解除します']} />} onClear={() => setSel([])} actions={<button type="button" data-action="選択した行を削除" onClick={() => setDelOpen(true)} style={btn('#c0392b', true, true)}>選択した行を削除</button>} />
-      <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 330px)' }}>
+      <Pager pager={pager} accent={accent} position="top" unit="行" />
+      <ListScroll>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead style={{ position: 'sticky', top: 0, zIndex: 2 }}>
             <tr>
-              {selectable && <th style={{ ...TH, width: 34, textAlign: 'center' }}><input type="checkbox" aria-label="表示中の行をすべて選択" title="表示中の行をすべて選択" checked={rows.length > 0 && sel.length === rows.length} onChange={() => setSel(sel.length === rows.length ? [] : rows.map((r) => r.id))} /></th>}
+              {selectable && <th style={{ ...TH, width: 34, textAlign: 'center' }}><input type="checkbox" aria-label="表示中の行をすべて選択" title="表示中の行をすべて選択" checked={pageRows.length > 0 && pageRows.every((r) => sel.includes(r.id))} onChange={() => { const ids = pageRows.map((r) => r.id); setSel((cur) => (ids.every((id) => cur.includes(id)) ? cur.filter((id) => !ids.includes(id)) : Array.from(new Set([...cur, ...ids])))); }} /></th>}
               <th style={{ ...TH, width: 70 }}>Seq-No</th>
               <th style={{ ...TH, width: 70 }}>日</th>
               <th style={{ ...TH, width: 70 }}>伝票</th>
@@ -168,13 +172,13 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
             {rows.length === 0 && (
               <tr><td colSpan={colCount} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>該当する仕訳がありません。</td></tr>
             )}
-            {rows.map((r, idx) => {
+            {pageRows.map((r, idx) => {
               // 日次調査で不一致の原因になっている伝票（確認メモ #127）：行の色・左端の赤い帯・「不一致」ラベルで示す
               const marked = markIds.includes(r.id);
               const bar = marked ? { boxShadow: `inset 4px 0 0 ${MARK}` } : null;
               return (
-              <tr key={r.id} data-voucher={r.id} data-mismatch={marked || undefined} data-selected={sel.includes(r.id) || undefined} data-dark-row={sel.includes(r.id) || marked ? undefined : dt.rowDark(r)} {...ra.rowProps(r)} onClick={(e) => { if (selectable && (e.shiftKey || e.metaKey || e.ctrlKey)) { e.preventDefault(); toggleSel(r.id, idx, e.shiftKey); return; } ra.rowProps(r).onClick(e); }} style={{ background: sel.includes(r.id) ? '#fff7cc' : marked ? '#fdecea' : dt.rowBg(r) }}>
-                {selectable && <td style={{ ...TD, textAlign: 'center', ...bar }} onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={sel.includes(r.id)} onChange={() => undefined} onClick={(e) => toggleSel(r.id, idx, e.shiftKey)} aria-label={`Seq ${r.seq} を選択`} /></td>}
+              <tr key={r.id} data-voucher={r.id} data-mismatch={marked || undefined} data-selected={sel.includes(r.id) || undefined} data-dark-row={sel.includes(r.id) || marked ? undefined : dt.rowDark(r)} {...ra.rowProps(r)} onClick={(e) => { if (selectable && (e.shiftKey || e.metaKey || e.ctrlKey)) { e.preventDefault(); toggleSel(r.id, offset + idx, e.shiftKey); return; } ra.rowProps(r).onClick(e); }} style={{ background: sel.includes(r.id) ? '#fff7cc' : marked ? '#fdecea' : dt.rowBg(r) }}>
+                {selectable && <td style={{ ...TD, textAlign: 'center', ...bar }} onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={sel.includes(r.id)} onChange={() => undefined} onClick={(e) => toggleSel(r.id, offset + idx, e.shiftKey)} aria-label={`Seq ${r.seq} を選択`} /></td>}
                 <td style={selectable ? TD : { ...TD, ...bar }}><div style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{ra.handle(r)}{dt.chip(r)}{r.seq}{marked && <span data-mismatch-tag title={`日次調査で不一致になった伝票${boot?.markNote ? `（${boot.markNote}）` : ''}`} style={{ marginLeft: 6, padding: '0 6px', borderRadius: 6, background: MARK, color: '#fff', fontSize: 12 }}>不一致</span>}</div></td>
                 <td style={TD}><div style={{ fontSize: 12, color: '#9aa5b1' }}>{r.kind}{r.source && <span data-source={r.source} title={r.source === '自動按分' ? `自動按分で登録した伝票（${r.from ?? ''}）` : `別システムから取り込んだ伝票（${r.from ?? ''}）`} data-keep-color style={{ marginLeft: 3, padding: '0 4px', borderRadius: 4, background: '#eef2f5', color: '#5b6773', fontWeight: 700 }}>{r.source === '自動按分' ? '按分' : r.source}</span>}</div><div style={{ whiteSpace: 'nowrap' }}>{r.date}<InternalTag v={r} /></div></td>
                 <td style={TD}>{r.no}</td>
@@ -194,7 +198,8 @@ export function JournalListPage({ variant, accent, onNavigate }: Props) {
             })}
           </tbody>
         </table>
-      </div>
+      </ListScroll>
+      <Pager pager={pager} accent={accent} position="bottom" unit="行" />
       {ra.modals}
       {delOpen && <DeleteVoucherModal rows={all.filter((r) => sel.includes(r.id))} multi onClose={() => setDelOpen(false)} onDeleted={() => { toast.show(`${sel.length} 行の仕訳を削除しました`); setSel([]); }} />}
       <AdvancedSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} cond={cond} onApply={setCond} accent={accent} />

@@ -6,6 +6,7 @@
 //   月の行から元帳へドリルダウン：画面遷移せず右側の元帳パネルにその月の元帳を表示。全画面の元帳はパネルの「元帳の画面で開く」から（「← 戻る」で同じ科目・表示に戻る）。
 //   前年度の表示中は元帳パネルを使えない（確認メモ #99）。前年度のグラフの比較は「前々年度」になる（確認メモ #97）。
 
+import { ListScroll } from './ListScroll';
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { TargetCombo } from './TargetCombo';
@@ -142,7 +143,7 @@ export function TrendPage({ kind, variant, accent, onNavigate }: Props) {
         </>
       }
     >
-      <div style={{ overflow: 'auto' }}>
+      <ListScroll>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
@@ -214,7 +215,7 @@ export function TrendPage({ kind, variant, accent, onNavigate }: Props) {
             })}
           </tbody>
         </table>
-      </div>
+      </ListScroll>
 
       {/* グラフ作成 */}
       <Modal open={graphOpen} onClose={() => setGraphOpen(false)} width={860} title={<>{title} グラフ <span style={{ fontSize: 14, fontWeight: 500, color: '#7a8794', marginLeft: 8 }}>{target || '（未指定）'}　{yearLabel}</span></>}>

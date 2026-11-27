@@ -4,6 +4,7 @@
 //   決算附属明細書・内部取引）を詳細パネルにまとめて表示。勘定科目／資金科目／費目／使用科目設定タブ、Excel／CSV／印刷、注意事項、▲入換▼。
 //   摘要辞書の自動補完候補もここ（SummaryAutoCompleteTab）。
 
+import { ListScroll } from './ListScroll';
 import { Fragment, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { ExplainModal } from './ExplainModal';
@@ -716,7 +717,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
             </Modal>
             <span style={{ marginLeft: 'auto', fontSize: 14, color: '#7a8794' }}>帳票の表示／非表示にも使います。項目のチェックを切り替えると、配下の科目もまとめて切り替わります。</span>
           </div>
-          <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 380px)' }}>
+          <ListScroll>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead><tr><th style={TH}>{useFundTab ? '項目・資金科目' : '項目・科目'}</th>{useCols.map((s) => <th key={s} style={{ ...TH, textAlign: 'center', width: 110 }}>{s}</th>)}</tr></thead>
               {useFundTab ? (
@@ -735,7 +736,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                 ...useRows.filter((m) => m.group === g.name).map((m) => <tr key={m.key}><td style={{ ...TD, fontWeight: 500, paddingLeft: 30 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, verticalAlign: 'middle' }}><Badge kind="科目" />{m.dispName}</span>{!m.internal.startsWith('0') && <span style={{ fontSize: 12, fontWeight: 800, marginLeft: 6, padding: '0 5px', borderRadius: 4, background: '#eef2f6', color: '#3d4a56' }}>内部</span>}</td>{useCols.map((s) => <td key={s} style={{ ...TD, textAlign: 'center' }}><input type="checkbox" aria-label={`${m.dispName}を${s}で使用`} checked={!!use[m.name + '|' + s]} onChange={() => toggleUse(m.name, s)} /></td>)}</tr>),
               ])}</tbody>}
             </table>
-          </div>
+          </ListScroll>
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>{useFundTab
             ? <PrintOutButton name="使用科目設定（資金科目）" accent={accent} data={() => { const fs = Array.from(new Set(GROUPS.flatMap((g) => fundsOf(g.name)))); return { header: ['資金科目', ...SERVICES], rows: fs.map((f) => [f, ...SERVICES.map((sv) => (fundUsed(f, sv) ? 1 : 0))]) }; }} meta={`${SERVICES.length} 区分`} defaultDest="csv" />
             : <PrintOutButton name="使用科目設定（勘定科目）" accent={accent} data={() => useData('bs')} meta={`${useMetas('bs').length} 科目 × ${SERVICES.length} 区分`} defaultDest="csv" />}<button type="button" className="submit-btn" onClick={() => toast.show('使用科目設定を保存しました')} style={{ ...btn(accent, true), marginLeft: 'auto' }}>保存</button></div>

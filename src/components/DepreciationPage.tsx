@@ -6,6 +6,7 @@
 //   値はサンプル。定額法の年間償却額＝（取得価額－残存価額）÷耐用年数 で自動計算。
 //   帳票・ファイル出力は ExportDialog（印刷／CSV）で実際に出力する。各種設定ダイアログは画面内の状態を変更する。
 
+import { ListScroll } from './ListScroll';
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent } from 'react';
 import { Modal } from './Modal';
@@ -1068,7 +1069,7 @@ export function DepreciationPage({ variant, accent }: Props) {
                 <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="名称・コード・科目で検索" autoComplete="off" style={{ marginLeft: 'auto', width: 240, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
               </div>
               <SelectionBar count={sel.size} unit="件" hint={<HelpTip text="行頭のチェックで追加・解除します" />} style={{ padding: '8px 22px', borderTop: '1px solid #f3e3a0' }} onClear={() => setSel(new Set())} actions={<><button type="button" onClick={() => { setTab('disposal'); }} style={uiBtn('#5b6773', false, true)}>除却・売却・移管へ</button><button type="button" onClick={deleteSel} style={uiBtn('#c0392b', true, true)}>削除</button></>} />
-              <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 470px)' }}>
+              <ListScroll>
                 <table className="dense-table" data-asset-table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead><tr><th style={{ ...TH, width: 36 }}><input type="checkbox" checked={list.length > 0 && list.every((a) => sel.has(a.code))} onChange={(e) => setSel(e.target.checked ? new Set(list.map((a) => a.code)) : new Set())} /></th>{([['状態', 'status'], ['コード', 'code'], ['固定資産名称', 'name'], ['科目', 'account'], ['取得年月日', 'acquired']] as const).map(([l, k]) => <SortTh key={k} label={l} k={k} sort={assetSort} onSort={setAssetSort} />)}{([['耐用', 'life'], ['取得価額', 'cost'], ['期首帳簿価額', 'opening'], ['当期償却額', 'dep'], ['期末帳簿価額', 'closing']] as const).map(([l, k]) => <SortTh key={k} label={l} k={k} sort={assetSort} onSort={setAssetSort} right />)}</tr></thead>
                   <tbody>
@@ -1108,7 +1109,7 @@ export function DepreciationPage({ variant, accent }: Props) {
                     })}
                   </tbody>
                 </table>
-              </div>
+              </ListScroll>
             </div>
             {detail && (
               <AssetDetail accent={accent} asset={detail} imageSrc={images['A:' + detail.code]} onClose={() => setDetail(null)} onEdit={() => setAssetModal({ open: true, asset: detail, manual: !!detail.manual })} onPrint={() => openReport('個別固定資産管理台帳', detail)} onDelete={async () => { if (await askConfirm({ title: '固定資産の削除', message: <>「<b>{detail.name}</b>」を削除しますか？<br /><span style={{ color: '#c0392b' }}>削除すると取り消せません。</span></>, okLabel: '削除する', danger: true })) { addLog('資産', detail.code, `${Number(detail.code)}:${detail.name}`, '削除'); setAssets((as) => as.filter((a) => a.code !== detail.code)); setDetail(null); toast.show('削除しました'); } }} />
@@ -1987,7 +1988,7 @@ function ClosingView({ accent, vouchers, setVouchers, onCreated, toast }: { acce
           <span>伝票 <b style={{ color: '#22303c' }}>{groups.length} 件</b>（明細 {rows.length} 行）</span>
           <span>金額の合計 <b style={{ color: '#22303c', fontVariantNumeric: 'tabular-nums' }}>{yen(total)} 円</b></span>
         </div>
-        <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'auto', maxHeight: 'calc(100vh - 430px)' }}>
+        <ListScroll style={{ border: '1px solid #e2e8ee', borderRadius: 10 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead><tr><th style={TH}>伝票No</th><th style={{ ...TH, width: 40 }}>行</th><th style={TH}>借方科目</th><th style={TH}>貸方科目</th><th style={TH}>摘要</th><th style={{ ...TH, textAlign: 'right' }}>金額</th><th style={{ ...TH, width: 200 }} /></tr></thead>
             <tbody>
@@ -2003,7 +2004,7 @@ function ClosingView({ accent, vouchers, setVouchers, onCreated, toast }: { acce
               )))}
             </tbody>
           </table>
-        </div>
+        </ListScroll>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
           <button type="button" className="submit-btn" onClick={() => { setStep(1); setDoneIdx(null); setPreviewId(null); }} style={btn(accent, true)}>作成済みの決算伝票の一覧へ</button>
         </div>

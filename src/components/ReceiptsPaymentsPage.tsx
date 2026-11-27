@@ -4,6 +4,7 @@
 //   「印刷」は出力先（プリンター／Excel／PDF）と、印刷／プレビューを選ぶ（確認メモ #213）。
 //   詳細設定（対象科目・決裁印影・タイトル／メッセージ）、未出力数（月別の集計）。
 
+import { ListScroll, Pager, usePager } from './ListScroll';
 import { useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { runExport } from './ExportDialog';
@@ -85,6 +86,8 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
   const k = KINDS.find((x) => x.key === kind)!;
   const rowKey = (r: JournalRow) => `${r.no}:${r.kari}:${r.amount}`;
   const rows = useMemo(() => JOURNAL_ROWS.filter((r) => (range ? inPeriod(r.date, range) : month == null || r.date.split('/')[0] === month) && k.filter(r)), [month, range, k]);
+  // ページ送り（確認メモ #477）。条件を変えたら 1 ページ目に戻る
+  const { rows: pageRows, pager } = usePager(rows, [kind, month, range]);
   // 初期状態は全て対象
   const isOn = (r: JournalRow) => !checked.has('off:' + rowKey(r));
   const toggle = (r: JournalRow) => setChecked((s) => { const n = new Set(s); const key = 'off:' + rowKey(r); n.has(key) ? n.delete(key) : n.add(key); return n; });
@@ -138,7 +141,8 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
       }
     >
       <ToastView msg={toast.msg} />
-      <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 420px)' }}>
+      <Pager pager={pager} accent={accent} position="top" />
+      <ListScroll>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: '#f79b2e' }}>
@@ -147,7 +151,7 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
           </thead>
           <tbody>
             {rows.length === 0 && <tr><td colSpan={6} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>この条件に該当する伝票はありません。</td></tr>}
-            {rows.map((r) => {
+            {pageRows.map((r) => {
               const on = isOn(r);
               const done = exported.has(rowKey(r));
               return (
@@ -163,7 +167,8 @@ export function ReceiptsPaymentsPage({ variant, accent }: Props) {
             })}
           </tbody>
         </table>
-      </div>
+      </ListScroll>
+      <Pager pager={pager} accent={accent} position="bottom" />
       <div style={{ display: 'flex', gap: 8, padding: '10px 22px 16px', borderTop: '1px solid #eef2f5' }}>
         <button type="button" className="btn-outline" onClick={() => setAll(true)} style={btn()}>全てON</button>
         <button type="button" className="btn-outline" onClick={() => setAll(false)} style={btn()}>全てOFF</button>

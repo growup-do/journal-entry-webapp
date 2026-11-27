@@ -2,6 +2,7 @@
 //   マニュアル 3.2 に相当。予算額の設定（年度×月の一覧）・次年度予算作成ウィザード・前期末支払資金残高の表示。
 //   タブは「前年度予算／当年度予算／次年度予算」と、その取引先別の 6 つ。どのタブでも予算月を選べる（月「初」＝当初予算、4〜3・決＝補正予算。確認メモ #169）。
 
+import { ListScroll } from './ListScroll';
 import { useMemo, useRef, useState } from 'react';
 import { UNSAVED_FG, useUnsaved } from '../store/unsaved';
 import type { CSSProperties } from 'react';
@@ -179,7 +180,7 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
       {byVendor ? (
         <div style={{ padding: '14px 22px 22px' }}>
           <Notice>取引先コードごとの支払額に対する予算です。年度更新で自動的に繰り下がります。</Notice>
-          <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 470px)', marginTop: 14 }}>
+          <ListScroll style={{ marginTop: 14 }}>
             <table data-budget-vendor={year} style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead><tr><th style={{ ...TH, width: 90 }}>コード</th><th style={{ ...TH, minWidth: 220 }}>取引先</th><th style={{ ...TH, textAlign: 'right', width: 170 }}>{cols.ref}</th><th style={{ ...TH, textAlign: 'right', width: 190 }}>{cols.cur}</th><th style={{ ...TH, textAlign: 'right', width: 170 }}>{cols.diff}</th><th style={{ ...TH, textAlign: 'right', width: 150 }}>実績額</th></tr></thead>
               <tbody>
@@ -202,11 +203,11 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
                 </tr>
               </tbody>
             </table>
-          </div>
+          </ListScroll>
         </div>
       ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 300px', alignItems: 'start' }}>
-            <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 400px)' }}>
+            <ListScroll>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead><tr><th style={{ ...TH, width: 90 }}>コード</th><th style={{ ...TH, minWidth: 220 }}>科目名</th><th style={{ ...TH, textAlign: 'right', width: 150 }}>{cols.ref}</th><th style={{ ...TH, textAlign: 'right', width: 170 }}>{cols.cur}</th><th style={{ ...TH, textAlign: 'right', width: 150 }}>{cols.diff}</th><th style={{ ...TH, textAlign: 'right', width: 130 }}>実績額</th><th style={{ ...TH, width: 160 }}>摘要</th></tr></thead>
                 <tbody>
@@ -227,7 +228,7 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
                   })}
                 </tbody>
               </table>
-            </div>
+            </ListScroll>
             <div style={{ padding: 16, borderLeft: '1px solid #eef2f5', display: 'flex', flexDirection: 'column', gap: 10, position: 'sticky', top: 0 }}>
               {[['資金収入合計', inSum], ['資金支出合計', outSum], ['当期資金収支差額合計', diff]].map(([l, v]) => (
                 <div key={l as string} style={{ padding: '10px 12px', border: '1px solid #e2e8ee', borderRadius: 10, background: '#fbfcfd' }}><div style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>{l}</div><div style={{ fontSize: 17, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: (v as number) < 0 ? '#c0392b' : '#22303c' }}>{yen(v as number)}</div></div>

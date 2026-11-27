@@ -18,6 +18,7 @@
 //     印刷する欄・表題・捺印欄・元号の印字、集計伝票形式（仕訳伝票の形）
 //   印刷（#235）：集計内訳表・仕訳伝票は「集計単位で選ぶ／月で選ぶ」、出納帳は「出納帳印刷」（範囲・様式・余白）の条件画面から。CashbookPrint.tsx
 
+import { ListScroll } from './ListScroll';
 import { Fragment, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent } from 'react';
 import { AssistField } from './AssistField';
@@ -418,7 +419,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       setEntry({ inAmt: '', month: entry.month, day: '', tekiyo: '', account: '', outAmt: '', tax: '', tcode: '', partner: '' });
       focusId(firstEntry());
       // 登録欄は一覧の上に固定しているので、一覧の最後に入った明細が見える位置までスクロールする（確認メモ #236）
-      setTimeout(() => { const el = listRef.current; if (el) el.scrollTop = el.scrollHeight; }, 0);
+      setTimeout(() => { const el = listRef.current; if (el) { const b = el.getBoundingClientRect().bottom; if (b > window.innerHeight) window.scrollBy({ top: b - window.innerHeight + 24 }); } }, 0);
     };
     // 勘定科目の警告ダイアログ（小口の設定「勘定科目の警告ダイアログを出さない」で出さない。確認メモ #210）
     if (!prefs.noAccWarn && accMismatch(entry.account, inAmt > 0)) {
@@ -937,7 +938,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
       {/* 出納帳 */}
       {/* 見出しと入力行（登録欄）は一覧の上に固定する（確認メモ #236）。勘定科目の候補を開いている間は、候補が欠けない高さを確保する。
           列の並び・罫線の色・摘要コード欄・取引先欄・消費税欄は「小口の設定」に合わせる（確認メモ #210） */}
-      <div ref={listRef} data-cashbook-list data-design={prefs.design} style={{ overflow: 'auto', maxHeight: 'calc(100vh - 400px)', minHeight: assist.isOpen('acc') ? 400 : undefined }}>
+      <ListScroll innerRef={listRef} data-cashbook-list data-design={prefs.design} style={{ minHeight: assist.isOpen('acc') ? 400 : undefined }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead data-sticky-head style={{ position: 'sticky', top: 0, zIndex: 3 }}>
             {(() => { const thIn = <th style={{ ...TH, textAlign: 'right', width: W.amt }}>入金額</th>; return (
@@ -1055,7 +1056,7 @@ export function CashbookPage({ kind, variant, accent, accentRgb }: Props) {
             })}
           </tbody>
         </table>
-      </div>
+      </ListScroll>
 
       {/* ---- 特殊行の挿入（行の右の「特殊行」から。選択した行の上に挿入する。確認メモ #209） ---- */}
       <Modal open={specialTarget != null} onClose={() => setSpecialTarget(null)} width={440} title="特殊行の挿入">

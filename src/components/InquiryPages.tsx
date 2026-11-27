@@ -3,6 +3,7 @@
 //   参照用のため印刷・Excel は置かない（印刷は総勘定元帳の画面で行う）。
 //   元帳１と元帳２は別々の条件を保持する（key で分離）。科目のほか、相手勘定科目・補助科目・税区分・摘要でも絞り込める。
 
+import { ListScroll, Pager, usePager } from './ListScroll';
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { TargetCombo, openTargetCombo } from './TargetCombo';
@@ -85,6 +86,8 @@ export function LedgerInquiryPage({ slot, variant, accent, onNavigate }: LedgerP
     bal += d - c;
     return { r, d, c, bal, other: account ? (r.kari === account ? r.kashi : r.kari) : `${r.kari} ／ ${r.kashi}`, tax: taxOf(r), sub: subOf(r) };
   });
+  // ページ送り（確認メモ #477）。2 ページ目からは、前のページの最後の残高を繰越として出す
+  const { rows: pageLines, pager, offset } = usePager(lines, [account, month, range, applied]);
   const sumD = lines.reduce((a, l) => a + l.d, 0);
   const sumC = lines.reduce((a, l) => a + l.c, 0);
   const isFiltered = applied.other || applied.sub || applied.tax || applied.tekiyo;
@@ -169,7 +172,8 @@ export function LedgerInquiryPage({ slot, variant, accent, onNavigate }: LedgerP
         </>
       }
     >
-      <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 430px)' }}>
+      <Pager pager={pager} accent={accent} position="top" unit="行" />
+      <ListScroll>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
@@ -186,14 +190,14 @@ export function LedgerInquiryPage({ slot, variant, accent, onNavigate }: LedgerP
           <tbody>
             {account && (
               <tr style={{ background: '#f8fafc' }}>
-                <td style={TD} colSpan={5}><span style={{ color: '#7a8794', fontWeight: 700 }}>繰越金額</span></td>
+                <td style={TD} colSpan={5}><span style={{ color: '#7a8794', fontWeight: 700 }}>{offset > 0 ? '前ページからの繰越' : '繰越金額'}</span></td>
                 <td style={NUM} /><td style={NUM} />
-                <td style={{ ...NUM, fontWeight: 700 }}>{yen(CARRY)}</td>
+                <td style={{ ...NUM, fontWeight: 700 }}>{yen(offset > 0 ? lines[offset - 1].bal : CARRY)}</td>
               </tr>
             )}
             {lines.length === 0 && <tr><td colSpan={8} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>条件に該当する仕訳はありません。</td></tr>}
-            {lines.map((l, i) => (
-              <tr key={i}>
+            {pageLines.map((l, i) => (
+              <tr key={offset + i}>
                 <td style={TD}>{l.r.date}</td>
                 <td style={TD}>{l.r.seq}</td>
                 <td style={TD}>
@@ -219,7 +223,8 @@ export function LedgerInquiryPage({ slot, variant, accent, onNavigate }: LedgerP
             </tfoot>
           )}
         </table>
-      </div>
+      </ListScroll>
+      <Pager pager={pager} accent={accent} position="bottom" unit="行" />
     </ReportShell>
   );
 }

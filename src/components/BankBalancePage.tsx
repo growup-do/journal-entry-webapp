@@ -3,6 +3,7 @@
 //   上段：口座ごとの現在の残高と前日比。下段：月末残高の推移（口座別・合計）。
 //   金額はすべてサンプル値。本番では預金出納（オプション）の銀行連携、または通帳残高の入力を反映する。
 
+import { ListScroll } from './ListScroll';
 import type { CSSProperties } from 'react';
 import { HOME_BANKS } from '../data';
 import { useSession } from '../store/session';
@@ -32,7 +33,7 @@ export function BankBalancePage({ variant, accent, onNavigate }: Props) {
   const monthTotals = MONTHS.map((_, m) => HOME_BANKS.reduce((a, _b, i) => a + monthEnd(i, m), 0));
   const peak = Math.max(total, ...monthTotals);
 
-  const card: CSSProperties = { background: '#fff', border: '1px solid #dde4ea', borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'hidden' };
+  const card: CSSProperties = { background: '#fff', border: '1px solid #dde4ea', borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'clip' };
   const h2: CSSProperties = { display: 'flex', alignItems: 'center', gap: 10, padding: '14px 20px', borderBottom: '1px solid #eef2f5', fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16 };
   const th: CSSProperties = { padding: '9px 14px', background: '#f6f8fa', borderBottom: '1px solid #dde4ea', fontSize: 12, fontWeight: 700, color: '#5b6773', textAlign: 'right', whiteSpace: 'nowrap' };
   const td: CSSProperties = { padding: '9px 14px', borderBottom: '1px solid #f1f4f6', fontSize: 14, textAlign: 'right', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' };
@@ -73,7 +74,7 @@ export function BankBalancePage({ variant, accent, onNavigate }: Props) {
         {/* 月末残高の推移 */}
         <section style={card}>
           <div style={h2}>月末残高の推移<span style={{ fontSize: 12, fontWeight: 500, color: '#7a8794' }}>単位：円</span></div>
-          <div style={{ overflowX: 'auto' }}>
+          <ListScroll>
             <table data-bank-trend style={{ width: '100%', borderCollapse: 'collapse', minWidth: 860 }}>
               <thead>
                 <tr>
@@ -113,7 +114,7 @@ export function BankBalancePage({ variant, accent, onNavigate }: Props) {
                 </tr>
               </tfoot>
             </table>
-          </div>
+          </ListScroll>
         </section>
       </div>
     </main>

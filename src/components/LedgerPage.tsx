@@ -4,6 +4,7 @@
 //   行の操作（証憑／チェック／付箋・▲▼入換・訂正・削除）は RowActions で全一覧共通（依頼書 5.4.4）。
 //   表示切替＝摘要／取引先・区分色・区分名・貸借の色付け・消費税表示（資金元帳のみ：税区分／税額の列を追加）。
 
+import { ListScroll, Pager, usePager } from './ListScroll';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { TargetCombo } from './TargetCombo';
@@ -79,6 +80,9 @@ export function LedgerPage({ kind, variant, accent, onNavigate }: Props) {
     const dayEnd = rows[i + 1]?.date !== r.date;
     return { r, debit, credit, bal, other: r.kari === target ? r.kashi : r.kari, tax, taxAmt: taxAmount(tax, r.amount), dayEnd };
   });
+  // ページ送り（確認メモ #477）。2 ページ目からは、前のページの最後の残高を繰越として出す
+  const { rows: pageLines, pager, offset } = usePager(lines, [kind, target, month, range, cond]);
+  const pageCarry = offset > 0 ? lines[offset - 1].bal : CARRY;
   const sumD = lines.reduce((a, l) => a + l.debit, 0);
   const sumC = lines.reduce((a, l) => a + l.credit, 0);
   const m = month ?? '8';
@@ -152,7 +156,8 @@ export function LedgerPage({ kind, variant, accent, onNavigate }: Props) {
       }
       notice={ra.notice}
     >
-      <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 400px)' }}>
+      <Pager pager={pager} accent={accent} position="top" unit="行" />
+      <ListScroll>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead style={{ position: 'sticky', top: 0, zIndex: 2 }}>
             <tr>
@@ -170,15 +175,15 @@ export function LedgerPage({ kind, variant, accent, onNavigate }: Props) {
           </thead>
           <tbody>
             <tr style={{ background: '#f8fafc' }}>
-              <td style={TD} colSpan={leadCols}><span style={{ color: '#7a8794', fontWeight: 700 }}>繰越金額</span></td>
+              <td style={TD} colSpan={leadCols}><span style={{ color: '#7a8794', fontWeight: 700 }}>{offset > 0 ? '前ページからの繰越' : '繰越金額'}</span></td>
               <td style={NUM} />
               {!isVendor && <td style={NUM} />}
-              <td style={{ ...NUM, fontWeight: 700 }}>{money(CARRY)}</td>
+              <td style={{ ...NUM, fontWeight: 700 }}>{money(pageCarry)}</td>
               <td style={TD} />
             </tr>
             {!target && <tr><td colSpan={colCount} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>{isVendor ? '取引先' : '科目'}を指定してください。</td></tr>}
             {target && lines.length === 0 && <tr><td colSpan={colCount} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>この月に該当する仕訳はありません。</td></tr>}
-            {lines.map((l) => (
+            {pageLines.map((l) => (
               <tr key={l.r.id} data-voucher={l.r.id} data-dark-row={dt.rowDark(l.r)} {...ra.rowProps(l.r)} style={{ background: dt.rowBg(l.r) }}>
                 <td style={{ ...TD, whiteSpace: 'nowrap' }}>{ra.handle(l.r)}{l.r.date}<InternalTag v={l.r} /></td>
                 <td style={TD}>{dt.chip(l.r)}{l.r.seq}</td>
@@ -200,7 +205,8 @@ export function LedgerPage({ kind, variant, accent, onNavigate }: Props) {
             ))}
           </tbody>
         </table>
-      </div>
+      </ListScroll>
+      <Pager pager={pager} accent={accent} position="bottom" unit="行" />
       {dt.modal}
       {ra.modals}
       <AdvancedSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} cond={cond} onApply={setCond} accent={accent} />

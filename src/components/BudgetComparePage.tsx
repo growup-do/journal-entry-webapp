@@ -7,6 +7,7 @@
 //   集計行は現行と同じ名称と並び（確認メモ #137）：区分ごとの 収入計・支出計・資金収支差額、予備費支出、
 //   当期資金収支差額合計、前期末支払資金残高、当期末支払資金残高。集計行は緑、科目の行は白と薄い緑の縞。金額はサンプル。
 
+import { ListScroll } from './ListScroll';
 import { useState } from 'react';
 import { rowClick } from './ui';
 import type { CSSProperties, ReactNode } from 'react';
@@ -155,7 +156,7 @@ export function BudgetComparePage({ variant, accent, onNavigate }: Props) {
           <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 10 }}>{graphNote}</div>
         </div>
       ) : (
-        <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 360px)' }}>
+        <ListScroll>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             {/* 一覧をスクロールしても見出しは固定する（月次試算と同じ。確認メモ #135） */}
             <thead data-sticky-head style={{ position: 'sticky', top: 0, zIndex: 2 }}>
@@ -205,7 +206,7 @@ export function BudgetComparePage({ variant, accent, onNavigate }: Props) {
               })()}
             </tbody>
           </table>
-        </div>
+        </ListScroll>
       )}
     </ReportShell>
     <LedgerDrawer state={drawer} accent={accent} onNavigate={onNavigate} />

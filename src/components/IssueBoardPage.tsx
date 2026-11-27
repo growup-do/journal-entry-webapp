@@ -3,6 +3,7 @@
 //   打ち合わせで出た確認事項を登録 → スレッドに「対応」「解決」「提案」「質問」「回答」「メモ」を積み重ね、状態を変える。
 //   データは確認メモと同じ Firebase（コレクション protoIssues）でリアルタイム共有。作成者は GROW UP／チャイルド社。
 
+import { ListScroll } from './ListScroll';
 import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Modal } from './Modal';
@@ -95,7 +96,7 @@ export function IssueBoardPage() {
               {SCREEN_OPTIONS.filter(Boolean).map((s) => <option key={s} value={s}>{displayName(s)}</option>)}
             </select>
           </div>
-          <div style={{ maxHeight: 'calc(100vh - 230px)', overflow: 'auto' }}>
+          <ListScroll>
             {!loaded && <div style={{ padding: 24, color: '#9aa5b1', fontSize: 14 }}>読み込み中…</div>}
             {loaded && list.length === 0 && <div style={{ padding: 24, color: '#9aa5b1', fontSize: 14 }}>該当する確認事項はありません。右上の「確認事項を登録」から追加してください。</div>}
             {list.map((i) => {
@@ -116,7 +117,7 @@ export function IssueBoardPage() {
                 </button>
               );
             })}
-          </div>
+          </ListScroll>
         </section>
 
         {/* スレッド */}

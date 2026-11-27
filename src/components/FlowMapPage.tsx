@@ -25,7 +25,7 @@ const GROUPS: Group[] = [
   { key: 'trend', title: '推移・分析', note: '推移表とグラフ・充実残額・預金残高', color: '#2c5f9e' },
   { key: 'compare', title: '試算表・決算書', note: '科目 → 元帳 → 伝票のドリルダウン', color: '#2c5f9e' },
   { key: 'audit', title: '調査・チェック（ヘッダーのボタンから開く）', color: '#b7791f' },
-  { key: 'print', title: '帳票・印刷', note: '帳票画面内で 出力先（基本条件つき）と詳細設定のタブ', color: '#6b3fb5' },
+  { key: 'print', title: '印刷', note: '帳票画面内で 出力先（基本条件つき）と詳細設定のタブ', color: '#6b3fb5' },
   { key: 'option', title: '出納・資産・決裁（旧オプション）', note: '標準機能として常時表示', color: '#b45309' },
   { key: 'settings', title: '各種設定', note: 'マスター設定／各種設定／登録機能／保守・運用／年度', color: '#48565f' },
   { key: 'user', title: 'ユーザー・共通', color: '#48565f' },

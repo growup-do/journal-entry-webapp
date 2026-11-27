@@ -28,6 +28,7 @@ import { renderPage } from './pages';
 import { Footer } from './Footer';
 import { HelpTip } from './ui';
 import { BackButton, BackNavContext } from './BackNav';
+import { BackToTop } from './ListScroll';
 
 const GREEN = '#1f7a52';
 const GREEN_RGB = '31,122,82';
@@ -36,7 +37,7 @@ const PINK = '#b0426a';
 
 const dateInput: CSSProperties = {
   width: 44,
-  padding: '8px 4px',
+  padding: '5px 4px',
   textAlign: 'center',
   border: '1px solid #cfd8e0',
   borderRadius: 8,
@@ -64,6 +65,8 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
     const measure = () => {
       const o = headerRef.current?.offsetHeight ?? 0;
       if (o) setTopOffset((prev) => (o !== prev ? o : prev));
+      // 一覧表の見出しを固定する位置（アプリの帯のすぐ下）
+      if (o) document.documentElement.style.setProperty('--app-top-h', o + 'px');
     };
     measure();
     const t1 = setTimeout(measure, 60);
@@ -155,6 +158,8 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
           <FiscalYearBanner />
         </div>
 
+      {/* 下へスクロールしたときの「トップへ戻る」（確認メモ #477） */}
+      <BackToTop accent={GREEN} />
       <div style={{ flex: 1, display: 'flex', alignItems: 'stretch' }}>
         {/* 左：メニュー列（ヘッダーの下に固定。アイコンだけの細い列。表示しない設定のときは出さない。確認メモ #387） */}
         {!nav.hidden && <SideNav accent={GREEN} active={page} onSelect={menuNav} top={topOffset} />}
@@ -459,9 +464,9 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
           {tools.topBar && <div style={{ borderRadius: '15px 15px 0 0', overflow: 'hidden' }}>{tools.topBar}</div>}
           {tools.banner}
 
-          <div style={{ padding: '18px 22px 8px', background: '#eef1ef', borderBottom: '1px solid #e2e8ee' }}>
+          <div style={{ padding: '10px 22px 8px', background: '#eef1ef', borderBottom: '1px solid #e2e8ee' }}>
             {/* 伝票用紙 */}
-            <div className="pp-sheet" style={{ padding: '16px 20px 18px' }}>
+            <div className="pp-sheet" style={{ padding: '12px 20px 14px' }}>
               {/* 伝票に付けた付箋：用紙の右端に貼る（伝票1枚につき1つ） */}
               <FusenTab color={flags.fusen} offset={-10} top={64} />
               {/* 表題行：仕訳伝票／拠点区分／取引区分（自動判定）／定型仕訳 */}
@@ -478,7 +483,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
               </PaperTitle>
 
               {/* 1段目：入力区分／年月日／伝票No */}
-              <div style={{ display: 'flex', alignItems: 'stretch', gap: 14, flexWrap: 'wrap', marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'stretch', gap: 14, flexWrap: 'wrap', marginBottom: 10 }}>
                 <PaperBox label="入力区分" grow>
                   <EntryDivisionField ctl={ed} id="fe-division" disabled={!editable} onCommit={() => focusId('fe-month')} />
                 </PaperBox>
@@ -504,7 +509,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
               </div>
 
               {/* 2段目：借方（BS&PL）／貸方（BS&PL）と、その下の資金（CF） */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 14, marginBottom: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 14, marginBottom: 10 }}>
                 {([
                   { side: '借方', id: 'fe-kari', color: BLUE, value: kari, other: kashi, set: (v: string) => { setKari(v); setKariTax(''); }, commit: () => focusId('fe-kashi'), state: fieldState(issues, 'kari', 'pair'), msg: fieldMessage(issues, 'kari'), taxOn: kariTaxOn, tax: kTax, setTax: setKariTax },
                   { side: '貸方', id: 'fe-kashi', color: PINK, value: kashi, other: kari, set: (v: string) => { setKashi(v); setKashiTax(''); }, commit: () => focusId(tools.internalShown && partner ? 'fe-aite' : 'fe-tek-0'), state: bothParent ? 'error' as const : fieldState(issues, 'kashi', 'pair'), msg: bothParent ? '借方と貸方の両方を特殊摘要科目（親）にすることはできません' : fieldMessage(issues, 'kashi', 'pair'), taxOn: kashiTaxOn, tax: sTax, setTax: setKashiTax },
@@ -514,13 +519,13 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                       <div className="pp-lab" style={{ color: s.color }}>
                         <span><FieldLabel color={s.color} style={{ fontSize: 14, marginBottom: 0, display: 'inline' }}>{s.side}科目</FieldLabel><span className="pp-sub">BS&amp;PL</span></span>
                       </div>
-                      <div className="pp-cell" style={{ padding: '7px 8px' }}>
-                        <ComboField id={s.id} kind="account" value={s.value} onChange={s.set} onCommit={s.commit} disabled={!editable} invalid={s.state} message={s.msg} placeholder={`${s.side}科目：コード・科目名・フリガナ`} fontSize={14.5} padY={10} listWidth={400} />
+                      <div className="pp-cell" style={{ padding: '4px 8px' }}>
+                        <ComboField id={s.id} kind="account" value={s.value} onChange={s.set} onCommit={s.commit} disabled={!editable} invalid={s.state} message={s.msg} placeholder={`${s.side}科目：コード・科目名・フリガナ`} fontSize={14.5} padY={6} listWidth={400} />
                       </div>
                     </div>
                     <div className="pp-row" style={{ gridTemplateColumns: '64px minmax(0,1fr)' }}>
                       <div className="pp-lab pp-band"><span>資金科目<span className="pp-sub">CF</span></span></div>
-                      <div className="pp-cell pp-col pp-auto" style={{ padding: '2px 8px 7px' }}>
+                      <div className="pp-cell pp-col pp-auto" style={{ padding: '2px 8px 4px' }}>
                         <FundAccountLine name={s.value} other={s.other} mode={fundMode} />
                         <BudgetHintLive account={s.value} threshold={budgetTh} onOpen={() => setGraphAcct(s.value)} />
                         {/* 消費税コード（確認メモ #190）：資金科目の欄に置く。強制資金で貸借の両方に資金科目があるときは、それぞれに出る */}
@@ -560,13 +565,13 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                           <span className="ef-rownow" style={{ padding: '1px 5px', borderRadius: 7, background: GREEN, color: '#fff', fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap' }}>入力中</span>
                         </button>
                       </div>
-                      <div className="pp-cell" style={{ padding: '6px 8px', gap: 8, background: on ? '#f7fbf9' : undefined }}>
+                      <div className="pp-cell" style={{ padding: '3px 8px', gap: 8, background: on ? '#f7fbf9' : undefined }}>
                         <div style={{ flex: '1.4 1 0', minWidth: 0 }}>
-                          <ComboField id={`fe-tek-${i}`} kind="summary" freeText={!children} options={children ?? undefined} value={r.tekiyo} onChange={(v) => patchRow(i, { tekiyo: v })} onCommit={(v) => afterTekiyo(i, v)} onFocusField={() => setCur(i)} disabled={!editable} invalid={children && r.tekiyo.trim() && !isChild(r.tekiyo.trim()) ? 'error' : undefined} message={children && r.tekiyo.trim() && !isChild(r.tekiyo.trim()) ? '特殊摘要科目（子）から選んでください' : undefined} placeholder={children ? '特殊摘要科目（子）：コード・科目名・フリガナ' : inp.tekiyoCode ? '摘要（コード・フリガナでも検索）' : '摘要を入力'} padY={8} listWidth={360} />
+                          <ComboField id={`fe-tek-${i}`} kind="summary" freeText={!children} options={children ?? undefined} value={r.tekiyo} onChange={(v) => patchRow(i, { tekiyo: v })} onCommit={(v) => afterTekiyo(i, v)} onFocusField={() => setCur(i)} disabled={!editable} invalid={children && r.tekiyo.trim() && !isChild(r.tekiyo.trim()) ? 'error' : undefined} message={children && r.tekiyo.trim() && !isChild(r.tekiyo.trim()) ? '特殊摘要科目（子）から選んでください' : undefined} placeholder={children ? '特殊摘要科目（子）：コード・科目名・フリガナ' : inp.tekiyoCode ? '摘要（コード・フリガナでも検索）' : '摘要を入力'} padY={5} listWidth={360} />
                         </div>
                         <span aria-hidden style={{ flex: 'none', color: PAPER.lineSoft, fontSize: 16 }}>／</span>
                         <div style={{ flex: '1 1 0', minWidth: 0 }}>
-                          <ComboField id={`fe-gyo-${i}`} kind="vendor" value={r.gyosha} onChange={(v) => patchRow(i, { gyosha: v })} onCommit={() => focusId(sp1 ? `fe-sp1-${i}` : sp2 ? `fe-sp2-${i}` : `fe-amt-${i}`)} onFocusField={() => setCur(i)} disabled={!editable} placeholder="取引先（任意）" padY={8} listWidth={300} />
+                          <ComboField id={`fe-gyo-${i}`} kind="vendor" value={r.gyosha} onChange={(v) => patchRow(i, { gyosha: v })} onCommit={() => focusId(sp1 ? `fe-sp1-${i}` : sp2 ? `fe-sp2-${i}` : `fe-amt-${i}`)} onFocusField={() => setCur(i)} disabled={!editable} placeholder="取引先（任意）" padY={5} listWidth={300} />
                         </div>
                       </div>
                       {sp1 && <div className="pp-cell" style={{ padding: '6px 6px', background: on ? '#f7fbf9' : undefined }}><input id={`fe-sp1-${i}`} className="ef-input pp-input" aria-label={`${i + 1}行目の入力予備１`} disabled={!editable} value={r.spare1} onChange={(e) => patchRow(i, { spare1: e.target.value })} onFocus={() => setCur(i)} onKeyDown={onEnter(() => focusId(sp2 ? `fe-sp2-${i}` : `fe-amt-${i}`))} autoComplete="off" style={{ width: '100%', padding: '8px 6px', fontSize: 14 }} /></div>}
@@ -577,7 +582,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                           {taxAmountOf(rowTaxOf(r), toNum(r.amount)) > 0 && <span data-tax-amount title="内税として、金額から自動で計算した税額です" style={{ fontSize: 12, color: '#7a8794', textAlign: 'right' }}>うち税額 {taxAmountOf(rowTaxOf(r), toNum(r.amount)).toLocaleString('ja-JP')} 円</span>}
                         </div>
                       )}
-                      <div className="pp-cell" style={{ padding: '6px 8px', background: on ? '#f7fbf9' : undefined }}>
+                      <div className="pp-cell" style={{ padding: '3px 8px', background: on ? '#f7fbf9' : undefined }}>
                         <input
                           id={`fe-amt-${i}`}
                           className="ef-input pp-input"
@@ -591,7 +596,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                           inputMode="numeric"
                           autoComplete="off"
                           placeholder="0"
-                          style={{ width: '100%', padding: '8px 10px', textAlign: 'right', fontSize: 16, fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderColor: plus ? '#6b3fb5' : 'transparent' }}
+                          style={{ width: '100%', padding: '4px 10px', textAlign: 'right', fontSize: 16, fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderColor: plus ? '#6b3fb5' : 'transparent' }}
                         />
                       </div>
                       <div className="pp-cell pp-col" style={{ padding: '4px 6px', gap: 4, alignItems: 'center', justifyContent: 'center', background: on ? '#f7fbf9' : undefined }}>
@@ -607,7 +612,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
                 <div className="pp-row" style={{ gridTemplateColumns: 'minmax(0,1fr) 170px' }}>
                   {/* 1行：Seq No・チェック・証憑・付箋（と小切手No）と、その右に内部取引（11/26 鈴木さん指示）。
                       内部取引を出していないときも同じ高さを取り、出しても枠の縦幅が変わらないようにする */}
-                  <div className="pp-cell" data-total-left style={{ padding: '6px 12px', background: PAPER.fill, display: 'flex', alignItems: 'center', gap: '8px 12px', flexWrap: 'wrap', minHeight: 60 }}>
+                  <div className="pp-cell" data-total-left style={{ padding: '6px 12px', background: PAPER.fill, display: 'flex', alignItems: 'center', gap: '8px 12px', flexWrap: 'wrap', minHeight: 46 }}>
                     <VoucherMarks variant="bare" seq={nextSeq} flags={flags} onChange={setFlags} disabled={!editable} viewOnly={tools.viewOnly} showShohyo={inp.shohyo} />
                     {inp.cheque && <><span className="pp-lab" style={{ fontSize: 14 }}>小切手No</span><label className="ef-field" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><input className="ef-input pp-input" disabled={!editable} value={cheque} onChange={(e) => setCheque(e.target.value)} placeholder="任意" style={{ ...smallInput, width: 140 }} /></label></>}
                     {tools.internalShown && (

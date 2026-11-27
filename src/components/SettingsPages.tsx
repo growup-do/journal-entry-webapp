@@ -3,6 +3,7 @@
 //   事業者 … 法人情報・会計期間・拠点区分／サービス区分
 //   開始残高 … 期首の貸借残高を拠点ごとに入力（貸借一致チェック）
 
+import { ListScroll } from './ListScroll';
 import { UNSAVED_FG, useUnsaved } from '../store/unsaved';
 import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
@@ -239,7 +240,7 @@ function MasterPage({ variant, accent, label, tabs, title }: { variant: 'form' |
         <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="検索" autoComplete="off" style={{ ...input, width: 260 }} />
         <span style={{ marginLeft: 'auto', fontSize: 14, color: '#8895a3' }}>{list.length} 件（無効 {rows.filter((r) => r._on !== '1').length}）</span>
       </div>
-      <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 330px)' }}>
+      <ListScroll>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead><tr>{cfg.fields.map((f) => <th key={f.key} style={{ ...TH, width: f.width, textAlign: f.align ?? 'left' }}>{f.label}</th>)}<th style={{ ...TH, width: 70 }}>有効</th><th style={{ ...TH, width: 130, textAlign: 'right' }}>操作</th></tr></thead>
           <tbody>
@@ -253,7 +254,7 @@ function MasterPage({ variant, accent, label, tabs, title }: { variant: 'form' |
             {list.length === 0 && <tr><td colSpan={cfg.fields.length + 2} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>該当するデータがありません。</td></tr>}
           </tbody>
         </table>
-      </div>
+      </ListScroll>
       <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
       <Modal open={imp.open} onClose={() => setImp((i) => ({ ...i, open: false }))} width={720} title={`${cfg.title}のCSV取込`}>
         <div style={{ padding: '14px 22px 20px', display: 'grid', gap: 12 }}>
@@ -511,7 +512,7 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
         <span style={{ fontSize: 12, color: '#7a8794', flex: 1, minWidth: 240 }}>{def.note}</span>
         {tab === '貸借科目繰越残高' && <span style={{ fontSize: 14, padding: '4px 12px', borderRadius: 10, background: ok ? '#eaf5ef' : '#fdeee9', color: ok ? '#1f7a52' : '#c0392b', fontWeight: 700, whiteSpace: 'nowrap' }}>{ok ? '貸借一致' : `差額 ${yen(Math.abs(d - c))}（${d > c ? '借方' : '貸方'}が多い）`}</span>}
       </div>
-      <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 330px)' }}>
+      <ListScroll>
         <table data-opening-table={tab} style={{ width: '100%', borderCollapse: 'collapse', maxWidth: def.inner ? undefined : 760 }}>
           <thead>
             <tr>
@@ -548,7 +549,7 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
             </tr>
           </tbody>
         </table>
-      </div>
+      </ListScroll>
       <div style={{ padding: '10px 22px 16px', fontSize: 12, color: '#9aa5b1', lineHeight: 1.7 }}>
         {def.inner
           ? <>※ 内部取引の額は、合算区分で集計するときの内部取引消去に使います。勘定科目そのものが内部取引の科目として設定されている場合は、入力不要です。<br /></>
