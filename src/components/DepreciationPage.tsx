@@ -78,7 +78,7 @@ const ASSETS: Asset[] = [
   { code: '10004', name: '土地', account: '土地　－基本財産－', acquired: '昭和54年 4月 1日', life: 0, cost: 5803427, status: '対象外', opening: 5803427, subsidy: 0, method: '減価償却対象外', qty: 1 },
   { code: '20002', name: 'ピアノ', account: '器具及び備品', acquired: '昭和55年 2月 1日', life: 5, cost: 383000, status: '償却終了', opening: 1, subsidy: 0, method: '定額法', qty: 1 },
 ];
-interface Equip { code: string; name: string; acquired: string; cost: number; account?: string; qty?: number; subsidy?: number }
+interface Equip { code: string; name: string; acquired: string; cost: number; account?: string; qty?: number; subsidy?: number; /** 並び順項目・備品処分等（備品の変更画面で引き継ぐ。確認メモ #430） */ sort?: string; disposal?: string; disposalAmt?: string; disposalDate?: string }
 const EQUIPS: Equip[] = [
   { code: '00001', name: 'ノートパソコン（事務室）', acquired: '令和6年 4月10日', cost: 98000, account: '消耗器具備品費', qty: 1, subsidy: 0 },
   { code: '00002', name: '掃除機', acquired: '令和7年 6月 2日', cost: 32800, account: '消耗器具備品費', qty: 1, subsidy: 0 },
@@ -802,7 +802,7 @@ function SortMasterModal({ items, onClose, onSave, accent, toast }: { items: Sor
   return (
     <Modal open onClose={onClose} width={820} title="並び順項目マスタ">
       <div data-sort-master style={{ padding: '12px 22px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ fontSize: 14, color: '#48565f' }}>独自に並び順項目を作成しない場合は「並び順項目のインポート（標準設定を使う）」ボタンをクリックしてください</div>
+        <div style={{ fontSize: 14, color: '#48565f' }}>独自に並び順項目を作成しない場合は「標準設定を使う」ボタンをクリックしてください</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 300px', gap: 14 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
             <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'hidden' }}>
@@ -830,9 +830,9 @@ function SortMasterModal({ items, onClose, onSave, accent, toast }: { items: Sor
               </div>
             </div>
             <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: '10px 12px', display: 'grid', gap: 6 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#6b7783' }}>並び順項目のインポート／エクスポート</div>
-              <button type="button" className="btn-outline" data-sort-import-std onClick={importStd} style={big}>{'インポート１\n（標準設定を使う）'}</button>
-              <button type="button" className="btn-outline" onClick={() => fileRef.current?.click()} style={big}>{'インポート２\n（CSVファイルから設定）'}</button>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#6b7783' }}>標準設定・インポート／エクスポート</div>
+              <button type="button" className="btn-outline" data-sort-import-std onClick={importStd} style={big}>標準設定を使う</button>
+              <button type="button" className="btn-outline" onClick={() => fileRef.current?.click()} style={big}>{'インポート\n（CSVファイルから設定）'}</button>
               <button type="button" className="btn-outline" onClick={exportCsv} style={big}>{'エクスポート\n（CSVファイルを出力）'}</button>
               <input ref={fileRef} type="file" accept=".csv,text/csv" style={{ display: 'none' }} onChange={(e) => { const fl = e.target.files?.[0]; if (fl) void importCsv(fl); e.target.value = ''; }} />
             </div>
@@ -856,6 +856,8 @@ export function DepreciationPage({ variant, accent }: Props) {
   const [detail, setDetail] = useState<Asset | null>(null);
   const [assetModal, setAssetModal] = useState<{ open: boolean; asset: Asset | null; manual: boolean }>({ open: false, asset: null, manual: false });
   const [equipModal, setEquipModal] = useState(false);
+  /** 変更する備品（固定資産と同じく、登録した備品を開いて直す。確認メモ #430） */
+  const [equipEdit, setEquipEdit] = useState<Equip | null>(null);
   const [envOpen, setEnvOpen] = useState(false);
   const [logOpen, setLogOpen] = useState<{ open: boolean; code?: string; kind?: LogRow['kind'] }>({ open: false });
   const [logTab, setLogTab] = useState<'資産' | '備品' | 'システム'>('資産');
@@ -1123,9 +1125,9 @@ export function DepreciationPage({ variant, accent }: Props) {
               <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="備品名で検索" autoComplete="off" style={{ marginLeft: 'auto', width: 240, padding: '7px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead><tr>{([['備品コード', 'code'], ['備品名称', 'name'], ['科目', 'account'], ['取得年月日', 'acquired']] as const).map(([l, k]) => <SortTh key={k} label={l} k={k} sort={equipSort} onSort={setEquipSort} />)}<SortTh label="取得価額" k="cost" sort={equipSort} onSort={setEquipSort} right /><th style={{ ...TH, width: 200 }} /></tr></thead>
+              <thead><tr>{([['備品コード', 'code'], ['備品名称', 'name'], ['科目', 'account'], ['取得年月日', 'acquired']] as const).map(([l, k]) => <SortTh key={k} label={l} k={k} sort={equipSort} onSort={setEquipSort} />)}<SortTh label="取得価額" k="cost" sort={equipSort} onSort={setEquipSort} right /><th style={{ ...TH, width: 250 }} /></tr></thead>
               <tbody>
-                {equipList.map((e) => <tr key={e.code}><td style={{ ...TD, color: '#7a8794' }}>{e.code}</td><td style={{ ...TD, fontWeight: 600 }}>{e.name}{images['E:' + e.code] && <span title="画像あり" style={{ marginLeft: 6, fontSize: 12 }}>📷</span>}</td><td style={{ ...TD, color: '#48565f' }}>{e.account ?? ''}</td><td style={TD}>{e.acquired}</td><td style={NUM}>{yen(e.cost)}</td><td style={{ ...TD, textAlign: 'right', whiteSpace: 'nowrap' }}><button type="button" className="btn-outline" onClick={() => setImgTarget({ key: 'E:' + e.code, title: `備品画像：${e.name}` })} style={{ ...btn(), padding: '4px 10px', fontSize: 12, marginRight: 4 }}>画像</button><button type="button" className="btn-outline" onClick={() => openLog('備品', e.code)} style={{ ...btn(), padding: '4px 10px', fontSize: 12, marginRight: 4 }}>ログ</button><button type="button" className="btn-outline" onClick={async () => { if (await askConfirm({ title: '備品の削除', message: <>「<b>{e.name}</b>」を削除しますか？<br /><span style={{ color: '#c0392b' }}>削除すると取り消せません。</span></>, okLabel: '削除する', danger: true })) { addLog('備品', e.code, `${Number(e.code)}:${e.name}`, '削除'); setEquips((es) => es.filter((x) => x.code !== e.code)); } }} style={{ ...btn('#c0392b'), padding: '4px 10px', fontSize: 12 }}>削除</button></td></tr>)}
+                {equipList.map((e) => <tr key={e.code}><td style={{ ...TD, color: '#7a8794' }}>{e.code}</td><td style={{ ...TD, fontWeight: 600 }}>{e.name}{images['E:' + e.code] && <span title="画像あり" style={{ marginLeft: 6, fontSize: 12 }}>📷</span>}</td><td style={{ ...TD, color: '#48565f' }}>{e.account ?? ''}</td><td style={TD}>{e.acquired}</td><td style={NUM}>{yen(e.cost)}</td><td style={{ ...TD, textAlign: 'right', whiteSpace: 'nowrap' }}><button type="button" className="btn-outline" data-equip-edit={e.code} onClick={() => setEquipEdit(e)} style={{ ...btn(accent), padding: '4px 10px', fontSize: 12, marginRight: 4 }}>変更</button><button type="button" className="btn-outline" onClick={() => setImgTarget({ key: 'E:' + e.code, title: `備品画像：${e.name}` })} style={{ ...btn(), padding: '4px 10px', fontSize: 12, marginRight: 4 }}>画像</button><button type="button" className="btn-outline" onClick={() => openLog('備品', e.code)} style={{ ...btn(), padding: '4px 10px', fontSize: 12, marginRight: 4 }}>ログ</button><button type="button" className="btn-outline" onClick={async () => { if (await askConfirm({ title: '備品の削除', message: <>「<b>{e.name}</b>」を削除しますか？<br /><span style={{ color: '#c0392b' }}>削除すると取り消せません。</span></>, okLabel: '削除する', danger: true })) { addLog('備品', e.code, `${Number(e.code)}:${e.name}`, '削除'); setEquips((es) => es.filter((x) => x.code !== e.code)); } }} style={{ ...btn('#c0392b'), padding: '4px 10px', fontSize: 12 }}>削除</button></td></tr>)}
                 {equips.length === 0 && <tr><td colSpan={6} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 40 }}>備品は登録されていません。「＋ 備品を登録」から追加してください。</td></tr>}
               </tbody>
             </table>
@@ -1138,8 +1140,9 @@ export function DepreciationPage({ variant, accent }: Props) {
       </div>
 
       <ExplainModal open={manualOpen} onClose={() => setManualOpen(false)} accent={accent} title="減価償却のマニュアル" sections={DEP_MANUAL} source="減価償却システム 操作マニュアル（要約）" width={680} />
-      <Modal open={equipModal} onClose={() => setEquipModal(false)} width={1000} title="備品の登録">
-        {equipModal && <EquipForm accent={accent} equips={equips} sortItems={sortItems} imageSrc={images} onSave={(e) => { setEquips((es) => [...es, e]); addLog('備品', e.code, `${Number(e.code)}:${e.name}`, '登録'); toast.show(`備品「${e.name}」を登録しました`); }} onCancel={() => setEquipModal(false)} onReport={openReport} onLog={(code) => openLog('備品', code)} onImage={(code, name) => setImgTarget({ key: 'E:' + code, title: `備品画像：${name || code}` })} toast={toast.show} />}
+      <Modal open={equipModal || !!equipEdit} onClose={() => { setEquipModal(false); setEquipEdit(null); }} width={1000} title={equipEdit ? '備品の変更' : '備品の登録'}>
+        {equipEdit && <EquipForm key={'edit' + equipEdit.code} edit={equipEdit} accent={accent} equips={equips} sortItems={sortItems} imageSrc={images} onSave={(e) => { setEquips((es) => es.map((x) => (x.code === equipEdit.code ? e : x))); addLog('備品', e.code, `${Number(e.code)}:${e.name}`, '変更'); toast.show(`備品「${e.name}」を変更しました`); setEquipEdit(null); }} onCancel={() => setEquipEdit(null)} onReport={openReport} onLog={(code) => openLog('備品', code)} onImage={(code, name) => setImgTarget({ key: 'E:' + code, title: `備品画像：${name || code}` })} toast={toast.show} />}
+        {equipModal && !equipEdit && <EquipForm accent={accent} equips={equips} sortItems={sortItems} imageSrc={images} onSave={(e) => { setEquips((es) => [...es, e]); addLog('備品', e.code, `${Number(e.code)}:${e.name}`, '登録'); toast.show(`備品「${e.name}」を登録しました`); }} onCancel={() => setEquipModal(false)} onReport={openReport} onLog={(code) => openLog('備品', code)} onImage={(code, name) => setImgTarget({ key: 'E:' + code, title: `備品画像：${name || code}` })} toast={toast.show} />}
       </Modal>
 
       <Modal open={envOpen} onClose={() => setEnvOpen(false)} width={860} title="環境設定">
@@ -1685,8 +1688,10 @@ function AssetForm({ accent, asset, manual, dispCalc, capexFor, onAddCapex, onRe
 }
 
 /* ================= 備品登録 ================= */
-function EquipForm({ accent, equips, sortItems, imageSrc, onSave, onCancel, onReport, onLog, onImage, toast }: { accent: string; equips: Equip[]; sortItems: SortItem[]; imageSrc: Record<string, string>; onSave: (e: Equip) => void; onCancel: () => void; onReport: (name: string) => void; onLog: (code: string) => void; onImage: (code: string, name: string) => void; toast: (m: string) => void }) {
-  const [f, setF] = useState({ code: String(equips.reduce((m, e) => Math.max(m, Number(e.code)), 0) + 1).padStart(5, '0'), sort: '', account: '', name: '', acquired: '令和8年 4月 1日', qty: '1', unit: '', subsidy: '0', disposal: '設定なし', disposalAmt: '', disposalDate: '' });
+function EquipForm({ edit, accent, equips, sortItems, imageSrc, onSave, onCancel, onReport, onLog, onImage, toast }: { /** 変更する備品（なしは新規登録） */ edit?: Equip; accent: string; equips: Equip[]; sortItems: SortItem[]; imageSrc: Record<string, string>; onSave: (e: Equip) => void; onCancel: () => void; onReport: (name: string) => void; onLog: (code: string) => void; onImage: (code: string, name: string) => void; toast: (m: string) => void }) {
+  const [f, setF] = useState(() => edit
+    ? { code: edit.code, sort: edit.sort ?? '', account: edit.account ?? '', name: edit.name, acquired: edit.acquired, qty: String(edit.qty ?? 1), unit: String(Math.round(edit.cost / Math.max(1, edit.qty ?? 1))), subsidy: String(edit.subsidy ?? 0), disposal: edit.disposal ?? '設定なし', disposalAmt: edit.disposalAmt ?? '', disposalDate: edit.disposalDate ?? '' }
+    : { code: String(equips.reduce((m, e) => Math.max(m, Number(e.code)), 0) + 1).padStart(5, '0'), sort: '', account: '', name: '', acquired: '令和8年 4月 1日', qty: '1', unit: '', subsidy: '0', disposal: '設定なし', disposalAmt: '', disposalDate: '' });
   const [subsidies, setSubsidies] = useState<SubsidyRow[]>([]);
   const [subOpen, setSubOpen] = useState(false);
   const num = numOf;
@@ -1699,7 +1704,7 @@ function EquipForm({ accent, equips, sortItems, imageSrc, onSave, onCancel, onRe
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.3fr) minmax(300px,1fr)' }}>
       <div style={{ padding: 18, borderRight: '1px solid #eef2f5', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ border: '1px solid #f0c8cc', background: '#fff5f6', borderRadius: 10, padding: 12, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-          <div><span style={lbl}>備品コード</span><input className="field-input" value={f.code} onChange={(e) => setF({ ...f, code: e.target.value })} style={{ ...input, fontWeight: 700 }} /></div>
+          <div><span style={lbl}>備品コード</span><input className="field-input" value={f.code} readOnly={!!edit} title={edit ? '備品コードは変更できません' : undefined} onChange={(e) => setF({ ...f, code: e.target.value })} style={{ ...input, fontWeight: 700, background: edit ? '#f5f7f9' : '#fff' }} /></div>
           <div><span style={lbl}>並び順項目</span><select value={f.sort} onChange={(e) => setF({ ...f, sort: e.target.value })} style={input}><option value="">（なし）</option>{sortItems.map((o) => <option key={o.code} value={o.code}>{sortLabel(o)}</option>)}</select></div>
           <div><span style={lbl}>科目</span><select value={f.account} onChange={(e) => setF({ ...f, account: e.target.value })} style={input}><option value="">選択</option><option>消耗器具備品費</option><option>器具及び備品</option></select></div>
           <div style={{ gridColumn: 'span 2' }}><span style={lbl}>備品名称</span><input className="field-input ring" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="例：ノートパソコン" style={input} /></div>
@@ -1725,7 +1730,7 @@ function EquipForm({ accent, equips, sortItems, imageSrc, onSave, onCancel, onRe
           <button type="button" className="btn-outline" onClick={() => onLog(f.code)} style={btn()}>操作ログ・詳細情報</button>
           <button type="button" className="btn-outline" onClick={() => onImage(f.code, f.name)} style={{ ...btn(), display: 'inline-flex', alignItems: 'center', gap: 6 }}>{img && <img src={img} alt="" style={{ width: 18, height: 18, objectFit: 'cover', borderRadius: 3 }} />}備品画像</button>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-            <button type="button" className="submit-btn" onClick={() => { if (!f.name.trim()) return toast('備品名称を入力してください'); if (!total) return toast('取得価額を入力してください'); onSave({ code: f.code, name: f.name.trim(), acquired: f.acquired, cost: total, account: f.account || undefined, qty: num(f.qty), subsidy: num(f.subsidy) }); setF({ ...f, code: String(num(f.code) + 1).padStart(5, '0'), name: '', unit: '', subsidy: '0' }); setSubsidies([]); }} style={{ ...btn(accent, true), padding: '9px 26px', fontSize: 14 }}>登録</button>
+            <button type="button" className="submit-btn" onClick={() => { if (!f.name.trim()) return toast('備品名称を入力してください'); if (!total) return toast('取得価額を入力してください'); onSave({ code: f.code, name: f.name.trim(), acquired: f.acquired, cost: total, account: f.account || undefined, qty: num(f.qty), subsidy: num(f.subsidy), sort: f.sort || undefined, disposal: f.disposal, disposalAmt: f.disposalAmt, disposalDate: f.disposalDate }); if (edit) return; setF({ ...f, code: String(num(f.code) + 1).padStart(5, '0'), name: '', unit: '', subsidy: '0' }); setSubsidies([]); }} style={{ ...btn(accent, true), padding: '9px 26px', fontSize: 14 }}>登録</button>
             <button type="button" onClick={onCancel} style={{ ...btn(), padding: '9px 20px', fontSize: 14 }}>キャンセル</button>
           </div>
         </div>

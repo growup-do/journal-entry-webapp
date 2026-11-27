@@ -218,7 +218,7 @@ export function commonValues(r: ReportDef, common: PrintCommon): Record<string, 
   return Object.fromEntries(itemsOf(r).filter((it) => it.k in COMMON_LINK).map((it): [string, DetailValue | undefined] => [it.k, COMMON_LINK[it.k](common)]).filter((x): x is [string, DetailValue] => x[1] !== undefined));
 }
 const initDetail = (r: ReportDef, common: PrintCommon): Record<string, DetailValue> => ({
-  ...Object.fromEntries(itemsOf(r).map((it): [string, DetailValue] => [it.k, it.t === 'check' ? !!it.on : it.def ?? ''])),
+  ...Object.fromEntries(itemsOf(r).flatMap((it): [string, DetailValue][] => (it.t === 'font' ? [[it.k, it.def], [it.k + 'Size', it.size]] : [[it.k, it.t === 'check' ? !!it.on : it.def ?? '']]))),
   ...(r.common && !r.ownInit ? commonValues(r, common) : {}),
 });
 /** 決算書・準決算書：期間の最初の月は 4月で固定（確認メモ #352） */
@@ -258,19 +258,25 @@ export function PickList({ label, options, value, onChange, rows = 8, disabled, 
 export function SpinField({ value, min, max, step, unit, label, disabled, onChange }: { value: string; min: number; max: number; step: number; unit?: string; label: string; disabled?: boolean; onChange: (v: string) => void }) {
   const digits = (String(step).split('.')[1] ?? '').length;
   const fix = (n: number) => Math.min(max, Math.max(min, Math.round(n / step) * step)).toFixed(digits);
-  const num = parseFloat(value.replace(/[^0-9.\-]/g, ''));
+  /** 全角の数字・小数点（日本語入力のまま打った値）を半角にそろえ、数字と小数点だけ残す */
+  const norm = (x: string) => x.replace(/[０-９．]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).replace(/。/g, '.').replace(/[^0-9.]/g, '');
+  const num = parseFloat(norm(value));
   const bump = (d: number) => onChange(fix((isNaN(num) ? min : num) + d * step));
-  const arrow: CSSProperties = { width: 26, height: 15, padding: 0, border: '1px solid #cfd8e0', background: '#f6f8fa', color: '#5b6773', fontSize: 8, lineHeight: 1, cursor: disabled ? 'default' : 'pointer', fontFamily: 'inherit' };
+  const arrow = (off: boolean): CSSProperties => ({ width: 28, height: 16, padding: 0, border: '1px solid #cfd8e0', background: off ? '#f6f8fa' : '#fff', color: off ? '#c3ccd5' : '#3d4a56', fontSize: 9, lineHeight: 1, cursor: off ? 'default' : 'pointer', fontFamily: 'inherit' });
+  const upOff = !!disabled || num >= max;
+  const downOff = !!disabled || num <= min;
   return (
     <div data-spin style={{ display: 'flex', alignItems: 'center', gap: 6, opacity: disabled ? 0.55 : 1 }}>
       <input className="field-input" role="spinbutton" aria-label={label} aria-valuemin={min} aria-valuemax={max} aria-valuenow={isNaN(num) ? undefined : num} inputMode="decimal" value={value} disabled={disabled}
-        onChange={(e) => onChange(e.target.value.replace(/[^0-9.]/g, ''))}
+        // 日本語入力の変換中は打った文字をそのまま見せ、確定したら半角の数字にそろえる
+        onChange={(e) => onChange((e.nativeEvent as InputEvent).isComposing ? e.target.value : norm(e.target.value))}
+        onCompositionEnd={(e) => onChange(norm(e.currentTarget.value))}
         onBlur={() => onChange(isNaN(num) ? fix(min) : fix(num))}
         onKeyDown={(e) => { if (e.key === 'ArrowUp') { e.preventDefault(); bump(1); } else if (e.key === 'ArrowDown') { e.preventDefault(); bump(-1); } }}
         style={{ ...input, padding: '6px 8px', width: 80, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }} />
       <span style={{ display: 'grid', gap: 2 }}>
-        <button type="button" tabIndex={-1} aria-label={`${label}を ${step} 増やす`} disabled={disabled || num >= max} onClick={() => bump(1)} style={{ ...arrow, borderRadius: '4px 4px 0 0' }}>▲</button>
-        <button type="button" tabIndex={-1} aria-label={`${label}を ${step} 減らす`} disabled={disabled || num <= min} onClick={() => bump(-1)} style={{ ...arrow, borderRadius: '0 0 4px 4px' }}>▼</button>
+        <button type="button" tabIndex={-1} aria-label={`${label}を ${step} 増やす`} disabled={upOff} title={!disabled && num >= max ? `上限の ${max.toFixed(digits)} です` : undefined} onClick={() => bump(1)} style={{ ...arrow(upOff), borderRadius: '4px 4px 0 0' }}>▲</button>
+        <button type="button" tabIndex={-1} aria-label={`${label}を ${step} 減らす`} disabled={downOff} title={!disabled && num <= min ? `下限の ${min.toFixed(digits)} です` : undefined} onClick={() => bump(-1)} style={{ ...arrow(downOff), borderRadius: '0 0 4px 4px' }}>▼</button>
       </span>
       {unit && <span style={{ fontSize: 14, color: '#5b6773' }}>{unit}</span>}
       <span style={{ fontSize: 12, color: '#8290a0' }}>{min.toFixed(digits)}〜{max.toFixed(digits)}</span>
@@ -326,6 +332,14 @@ export function DetailSections({ sections, values, onChange, accent, labelOf, op
               if (it.t === 'list') return (
                 <div key={it.k} data-detail-item={it.k} data-type="list">
                   <PickList label={dup ? undefined : label(it)} options={it.options} value={String(v ?? '').split(LIST_SEP).filter(Boolean)} onChange={(x) => onChange(it.k, x.join(LIST_SEP))} rows={it.rows} disabled={dis} accent={accent} />
+                </div>
+              );
+              if (it.t === 'font') return (
+                <div key={it.k} data-detail-item={it.k} data-type="font" style={{ display: 'grid', gridTemplateColumns: '64px minmax(0,1fr) 72px auto', alignItems: 'center', gap: 6, fontSize: 14, opacity: dis ? 0.55 : 1 }}>
+                  <span style={{ color: '#5b6773', fontWeight: 700 }}>{label(it)}</span>
+                  <select className="field-input" aria-label={`${label(it)}のフォント`} value={String(v ?? it.def)} disabled={dis} onChange={(e) => onChange(it.k, e.target.value)} style={{ ...input, padding: '6px 8px', minWidth: 0 }}>{it.fonts.map((o) => <option key={o}>{o}</option>)}</select>
+                  <select className="field-input" aria-label={`${label(it)}の文字サイズ`} value={String(values[it.k + 'Size'] ?? it.size)} disabled={dis} onChange={(e) => onChange(it.k + 'Size', e.target.value)} style={{ ...input, padding: '6px 8px', textAlign: 'right' }}>{it.sizes.map((o) => <option key={o}>{o}</option>)}</select>
+                  <span style={{ fontSize: 12, color: '#8290a0' }}>pt</span>
                 </div>
               );
               if (it.t === 'spin') return (

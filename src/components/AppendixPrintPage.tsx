@@ -11,7 +11,8 @@
 import { DONATION_KINDS, DONOR_ATTRS, getDonations } from '../store/donationStore';
 import { useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { runExport } from './ExportDialog';
+import { DepPrintPanel } from './DepPrintModal';
+import { ExportDialog, runExport, type ExportSpec } from './ExportDialog';
 import { Modal } from './Modal';
 import { PreviewModal, PrintFlow, type ReportDef, type TableData } from './PrintCenter';
 import { appendixSpec, formCond, formEnabled } from './printCatalog';
@@ -196,6 +197,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
   const noteRef = useRef<HTMLTextAreaElement>(null);
   const [load, setLoad] = useState<'inv' | 'note' | null>(null);
   const [ask, setAsk] = useState<{ msg: string; ok: string; run: () => void } | null>(null);
+  const [exp, setExp] = useState<ExportSpec | null>(null);
   const [preview, setPreview] = useState<{ title: string; opts: { from: string; to: string; output: string; hideZero?: boolean } } | null>(null);
   /** 最後に保存した内容。「保存」で更新し、「キャンセル」でここへ戻す */
   const draft: Draft = { rows, notes, tables, inv, merge, perPage };
@@ -356,7 +358,13 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
           {mode === '印刷' && canPrint ? (
             <div style={{ padding: '14px 22px 22px' }}>
               <div style={{ ...card, overflow: 'visible', ['--print-foot-bottom' as string]: 'var(--proto-dock-space, 0px)', ['--print-foot-radius' as string]: '0 0 12px 12px' }}>
-                <PrintFlow key={sheet.id} report={reportOf(sheet)} accent={accent} data={tableOf(sheet)} onPreview={(title, opts) => setPreview({ title, opts })} />
+                {/* ⑧ 固定資産の明細書は、減価償却の同じ帳票と同じ印刷画面（詳細設定も共有。確認メモ #425） */}
+                {sheet.id === 'd8' ? <DepPrintPanel key={sheet.id} name={sheet.name} accent={accent} onRun={(v, o) => {
+                  const t = String(v.title || sheet.name);
+                  if (o === 'preview') { setPreview({ title: t, opts: { from: String(v.periodFrom ?? ''), to: String(v.periodTo ?? ''), output: '画面へプレビューする' } }); return; }
+                  const spec: ExportSpec = { kind: o, title: t, meta: s.division, ...tableOf(sheet) };
+                  if (o === 'print') toast.show(runExport(spec)); else setExp(spec);
+                }} /> : <PrintFlow key={sheet.id} report={reportOf(sheet)} accent={accent} data={tableOf(sheet)} onPreview={(title, opts) => setPreview({ title, opts })} />}
               </div>
             </div>
           ) : (
@@ -500,6 +508,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
         </div>
       </Modal>
       {/* プレビュー */}
+      <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
       <PreviewModal open={!!preview} onClose={() => setPreview(null)} title={preview?.title ?? ''} opts={preview?.opts} accent={accent} pages={1} data={preview ? tableOf(sheet) : undefined}>
         {preview && sheet.editor === 'note' ? <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'inherit', lineHeight: 1.9 }}>{notes[sheet.id] ?? ''}</pre> : undefined}
       </PreviewModal>

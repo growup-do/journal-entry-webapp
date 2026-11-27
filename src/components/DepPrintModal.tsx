@@ -69,7 +69,7 @@ function sectionsOf(name: string): F[] {
   if (n.startsWith('基本財産及びその他の固定資産')) return [DATA, ORDER, MULTI, title(name), NOTICE, PERIOD, checksA(true, [{ key: 'besshi', label: '「別紙3⑧」の文字を印刷する', def: true }])];
   if (n === '固定資産管理台帳（新会計版）') return [DATA, ORDER, MULTI, title(name), NOTICE, PERIOD, METHOD, checksA(true)];
   if (n === '固定資産管理台帳') return [ORDER, MULTI, { t: 'radio', key: 'kind', label: '資産種類名', options: ['印刷しない', '印刷する'], def: '印刷しない' }, { t: 'radio', key: 'months', label: '償却月数', options: ['当年度のみ', '累計'], def: '累計' }, title(name), { t: 'radio', key: 'foot', label: '脚注の入力', options: ['何も印刷しない', '手入力文字を印刷'], def: '何も印刷しない', text: { when: '手入力文字を印刷', key: 'footText', placeholder: '脚注に印刷する文字' } }, range(['区分', '資産コード']), PERIOD, METHOD, checksA(false)];
-  if (n === '個別固定資産管理台帳') return [range(['資産コード'], '資産コード範囲指定'), title(name), { t: 'checks', label: '印刷する内容', items: [{ key: 'redeem', label: '償還補助金の入金額の経年印刷', def: true }, { key: 'page', label: 'ページ番号を印刷する', def: true }, { key: 'date', label: '印刷時の日付を印刷する', def: false }] }];
+  if (n === '個別固定資産管理台帳') return [range(['資産コード'], '資産コード範囲指定'), title(name), { t: 'checks', label: '印刷する内容', items: [{ key: 'page', label: 'ページ番号を印刷する', def: true }, { key: 'date', label: '印刷時の日付を印刷する', def: false }] }];
   if (n === '当期変更情報一覧表') return [ORDER, title(name)];
   if (n === '固定資産タックシール') return [{ t: 'checks', label: '印刷項目', items: [{ key: 'tCode', label: '資産コード', def: true }, { key: 'tCost', label: '取得価額', def: true }, { key: 'tDate', label: '印刷年月日', def: true }] }, { t: 'checks', label: '印刷する物件', items: [{ key: 'tSkip', label: '除却/売却固定資産は印字しない', def: false }] }, { t: 'number', key: 'start', label: '印刷開始指定（シートの何枚目から）', def: 1, unit: '枚目から' }, range(['資産コード'])];
   if (n === '備品一覧表（1）') return [range(['備品コード']), { t: 'checks', label: '改ページ設定', items: [{ key: 'brk', label: '科目ごとに改ページする', def: false }] }, title(name)];
@@ -83,7 +83,11 @@ function sectionsOf(name: string): F[] {
 
 const SIZES = Array.from({ length: 11 }, (_, i) => String(i + 4));
 const LINES = ['細線', '通常', '太線'];
-const COMMON_DEF: DepValues = { fName: '7', fItem: '6', fAmt: '5', lIn: '細線', lBranch: '細線', lOuter: '細線', offUp: '0', offRight: '0' };
+/** フォントの書体（確認メモ #426） */
+const FACES = ['ＭＳ ゴシック', 'ＭＳ 明朝', 'ＭＳ Ｐゴシック', 'ＭＳ Ｐ明朝'];
+/** 罫線の設定（個別固定資産管理台帳は内部と外周だけ。確認メモ #431） */
+const lineRowsOf = (name: string): [string, string][] => (name.replace(/\(/g, '（').replace(/\)/g, '）') === '個別固定資産管理台帳' ? [['lIn', '内部'], ['lOuter', '外周']] : [['lIn', '内部'], ['lBranch', '分岐'], ['lOuter', '外周']]);
+const COMMON_DEF: DepValues = { fName: '7', fItem: '6', fAmt: '5', fNameFace: 'ＭＳ ゴシック', fItemFace: 'ＭＳ ゴシック', fAmtFace: 'ＭＳ ゴシック', lIn: '細線', lBranch: '細線', lOuter: '細線', offUp: '0', offRight: '0' };
 function defaultsOf(name: string): DepValues {
   const v: DepValues = { ...COMMON_DEF, periodOn: false, periodFrom: '令和8年4月', periodTo: '令和9年3月' };
   sectionsOf(name).forEach((f) => {
@@ -106,6 +110,16 @@ const IN: CSSProperties = { boxSizing: 'border-box', padding: '6px 8px', border:
 const ROW: CSSProperties = { display: 'flex', alignItems: 'flex-start', gap: 7, fontSize: 14, lineHeight: 1.5, cursor: 'pointer' };
 
 export function DepPrintModal({ name, accent, onRun, onClose }: { name: string; accent: string; onRun: (values: DepValues, output: DepOutput) => void; onClose: () => void }) {
+  const title2 = name.replace(/\(/g, '（').replace(/\)/g, '）');
+  return (
+    <Modal open onClose={onClose} width={880} title={<>{title2} の印刷 <span style={{ fontSize: 12, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>減価償却</span></>}>
+      <DepPrintPanel name={name} accent={accent} onRun={onRun} onClose={onClose} />
+    </Modal>
+  );
+}
+
+/** 印刷画面の中身（出力先と詳細設定のタブ）。減価償却のダイアログと、帳票の印刷の別紙（⑧ 固定資産の明細書）で共通。設定も帳票の名前ごとに共有する（確認メモ #425） */
+export function DepPrintPanel({ name, accent, onRun, onClose }: { name: string; accent: string; onRun: (values: DepValues, output: DepOutput) => void; onClose?: () => void }) {
   const saved = SAVED.get(name);
   const [v, setV] = useState<DepValues>(() => ({ ...defaultsOf(name), ...(saved?.values ?? {}) }));
   const [output, setOutput] = useState<OutKind>(saved?.output ?? 'print');
@@ -189,7 +203,6 @@ export function DepPrintModal({ name, accent, onRun, onClose }: { name: string; 
   );
 
   return (
-    <Modal open onClose={onClose} width={880} title={<>{title2} の印刷 <span style={{ fontSize: 12, color: '#7a8794', fontWeight: 500, marginLeft: 8 }}>減価償却</span></>}>
       <div data-dep-print>
         <PrintSteps
           accent={accent}
@@ -204,8 +217,15 @@ export function DepPrintModal({ name, accent, onRun, onClose }: { name: string; 
             <ScopeBlock kind="帳票個別" title="この帳票の詳細設定" desc={`「${title2}」の印刷だけに反映されます。次に開いたときも引き継ぎます。`} right={<button type="button" data-dep-print-reset onClick={(e) => { e.stopPropagation(); setV(defaultsOf(name)); }} title="この帳票の詳細設定を標準値に戻します" style={{ ...btnS('#5b6773'), whiteSpace: 'nowrap' }}>標準に戻す</button>}>
               <div data-detail-sections style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 10, alignItems: 'start' }}>
                 {sections.map(field)}
-                {sec('font', 'フォント（ＭＳ ゴシック）', <>{sel('fName', SIZES, '各名称')}{sel('fItem', SIZES, '項目名')}{sel('fAmt', SIZES, '金額')}</>)}
-                {sec('line', '罫線', <>{sel('lIn', LINES, '内部')}{sel('lBranch', LINES, '分岐')}{sel('lOuter', LINES, '外周')}</>)}
+                {sec('font', 'フォント', <>{([['fName', '各名称'], ['fItem', '項目名'], ['fAmt', '金額']] as const).map(([k, l]) => (
+                  <div key={k} data-dep-font={k} style={{ display: 'grid', gridTemplateColumns: '56px minmax(0,1fr) 64px auto', alignItems: 'center', gap: 6, fontSize: 14 }}>
+                    <span style={{ color: '#5b6773', fontWeight: 700 }}>{l}</span>
+                    <select aria-label={`${l}のフォント`} value={String(v[k + 'Face'])} onChange={(e) => set(k + 'Face', e.target.value)} style={{ ...IN, minWidth: 0 }}>{FACES.map((o) => <option key={o}>{o}</option>)}</select>
+                    <select aria-label={`${l}の文字サイズ`} value={String(v[k])} onChange={(e) => set(k, e.target.value)} style={IN}>{SIZES.map((o) => <option key={o}>{o}</option>)}</select>
+                    <span style={{ fontSize: 12, color: '#8290a0' }}>pt</span>
+                  </div>
+                ))}</>)}
+                {sec('line', '罫線', <>{lineRowsOf(name).map(([k, l]) => sel(k, LINES, l))}</>)}
                 {sec('pos', '印刷位置調整（mm）', <>
                   {([['offUp', '上方向への移動量'], ['offRight', '右方向への移動量']] as const).map(([k, l]) => (
                     <label key={k} style={{ display: 'grid', gridTemplateColumns: '1fr 90px', alignItems: 'center', gap: 8, fontSize: 14 }}>{l}<input className="field-input" value={String(v[k])} onChange={(e) => set(k, e.target.value.replace(/[^0-9.-]/g, '').slice(0, 5))} inputMode="decimal" style={{ ...IN, textAlign: 'right' }} /></label>
@@ -216,6 +236,5 @@ export function DepPrintModal({ name, accent, onRun, onClose }: { name: string; 
           }
         />
       </div>
-    </Modal>
   );
 }

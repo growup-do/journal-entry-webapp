@@ -19,7 +19,9 @@ export type DetailItem =
   /** リストボックス（複数を選ぶ。値は選んだ項目を LIST_SEP でつないだ文字列。確認メモ #405） */
   | { k: string; t: 'list'; label: string; options: string[]; def?: string; rows?: number; note?: string; when?: DetailWhen }
   /** スピンボタン（数値を直接入力でき、▲▼で step ずつ増減する。確認メモ #421） */
-  | { k: string; t: 'spin'; label: string; def?: string; min: number; max: number; step: number; unit?: string; note?: string; when?: DetailWhen };
+  | { k: string; t: 'spin'; label: string; def?: string; min: number; max: number; step: number; unit?: string; note?: string; when?: DetailWhen }
+  /** フォントの行：書体（値は k）と文字サイズ（値は k + 'Size'）を1行で選ぶ。ヘッダー・科目・金額などを行ごとに設定する（確認メモ #424） */
+  | { k: string; t: 'font'; label: string; def: string; size: string; fonts: string[]; sizes: string[]; note?: string; when?: DetailWhen };
 /** 詳細設定のまとまり（現行の画面の枠に相当） */
 export interface DetailSection { title: string; items: DetailItem[] }
 export type DetailValue = boolean | string;
@@ -49,6 +51,10 @@ const txt = (k: string, label: string, def = '', placeholder?: string, width?: n
 export const LIST_SEP = '\n';
 const lst = (k: string, label: string, options: string[], def: string[] = [], rows = 8): DetailItem => ({ k, t: 'list', label, options, def: def.join(LIST_SEP), rows });
 /** 行送り（mm）のスピンボタン。枠の見出し「行送り」と同じ名前なので小見出しは出さない（確認メモ #421） */
+/** フォントの行（書体と文字サイズ）。確認メモ #424 */
+export const FONT_FACES = ['ＭＳ 明朝', 'ＭＳ ゴシック', 'ＭＳ Ｐ明朝', 'ＭＳ Ｐゴシック'];
+const FONT_PT = ['8', '9', '10', '10.5', '11', '12'];
+const fontRow = (k: string, label: string, def = 'ＭＳ 明朝', size = '10'): DetailItem => ({ k, t: 'font', label, def, size, fonts: FONT_FACES, sizes: FONT_PT });
 const PITCH = (def: string): DetailItem => ({ k: 'pitch', t: 'spin', label: '行送り', def, min: 3.2, max: 6.4, step: 0.1, unit: 'mm' });
 
 const DEPTH_SECTION = (def = '細々区分までの印刷'): DetailSection => ({ title: '印刷位置', items: [rad('depth', '印刷する区分の深さ', DEPTH_OPTS, def)] });
@@ -241,12 +247,13 @@ const D: Record<string, DetailSection[]> = {
   ],
   // 消費税区分別集計表・科目別消費税区分別集計表（現行「消費税区分別集計表 - 詳細設定」）
   tax: [{ title: '印刷項目', items: [chk('area', '区分名を印刷する', true), chk('autofont', '科目名のフォントサイズを自動調整する'), chk('page', 'ページ番号を印刷する'), txt('pageStart', 'ページ番号の開始番号', '1', '1', 80), chk('date', '印刷時の日付を印刷する')] }, GAP_WITH('上・下空き', '6.4'), POSITION('0', '0')],
-  // 売上仕入税額集計表：網掛け・捺印欄（確認メモ #398）、行送り（#399）、余白（#400）、フォントと文字サイズ（#401）
+  // 売上仕入税額集計表：網掛け・捺印欄（確認メモ #398）、行送り（#399・#421）、余白は上と左だけ（#400・#423）、
+  //   フォントはヘッダー・科目・金額ごとに書体と文字サイズ（#401・#424）
   salesTax: [
     { title: '印刷項目', items: [chk('shade', '費目行を網掛け、太字にする', true), chk('stamp', '捺印欄を印刷する'), chk('area', '区分名を印刷する', true), chk('autofont', '科目名のフォントサイズを自動調整する'), chk('page', 'ページ番号を印刷する'), txt('pageStart', 'ページ番号の開始番号', '1', '1', 80), chk('date', '印刷時の日付を印刷する')] },
     { title: '行送り', items: [PITCH('6.4')] },
-    { title: '余白', items: [txt('marginTop', '上（mm）', '15', '15', 80), txt('marginBottom', '下（mm）', '15', '15', 80), txt('marginLeft', '左（mm）', '15', '15', 80), txt('marginRight', '右（mm）', '15', '15', 80)] },
-    { title: 'フォント', items: [sel('font', 'フォント', ['ＭＳ 明朝', 'ＭＳ ゴシック', 'ＭＳ Ｐ明朝', 'ＭＳ Ｐゴシック'], 'ＭＳ 明朝'), sel('fontSize', '文字サイズ（pt）', ['8', '9', '10', '10.5', '11', '12'], '10')] },
+    { title: '余白', items: [txt('marginTop', '上（mm）', '15', '15', 80), txt('marginLeft', '左（mm）', '15', '15', 80)] },
+    { title: 'フォント', items: [fontRow('fontHead', 'ヘッダー'), fontRow('fontItem', '科目'), fontRow('fontAmt', '金額')] },
     POSITION('0', '0'),
   ],
   // 財務分析一覧表：一覧表なのでグラフの項目は持たない。捺印欄・ページ番号・日付（確認メモ #402）、印刷位置調整（#403）
@@ -385,7 +392,8 @@ const AP: Record<string, AppendixSpec> = {
   d6: { noZero: true, range: true, detail: [{ title: '印刷項目', items: apItems({ shade: true, autofont: true, extra: [chk('noMove', '基本金明細書 組入・取崩が発生していなくても印刷する', true), chk('sumCol', '基本金明細書 通常行の合計金額の列も印字する')] }) }, AP_INNER(true), AP_GAP('上・下空き'), POSITION('0', '0')] },
   d7: { noZero: true, range: true, detail: [{ title: '印刷項目', items: apItems({ shade: true, autofont: true, extra: [chk('sumCol', '国庫補助金等特別積立金明細書 通常行の合計金額の列も印字する')] }) }, AP_INNER(true), AP_GAP('上・下空き'), POSITION('0', '0')] },
   // ⑧ の詳細設定は減価償却システム側の画面（フォント・罫線・データ印字の選択）
-  d8: { noZero: true, outs: ['print', 'excel', 'pdf'], memo: '詳細設定は減価償却の画面（フォント・罫線・データ印字の選択）で行う', detail: [] },
+  // 印刷画面は減価償却の「基本財産及びその他の固定資産（有形・無形固定資産）の明細書」と同じもの（設定も共有。確認メモ #425）
+  d8: { noZero: true, outs: ['print', 'excel', 'pdf'], memo: '印刷画面は減価償却の同じ帳票と共通（詳細設定も共有）', detail: [] },
   d9: { zero: true, range: true, detail: [{ title: '印刷項目', items: apItems({ shade: false, autofont: false }) }, AP_GAP('空きなし'), POSITION('-13', '0')] },
   d10: { zero: true, range: true, detail: AP_LINKED(false) },
   d11: { zero: true, range: true, detail: AP_LINKED(true) },
