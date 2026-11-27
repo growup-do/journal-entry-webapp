@@ -88,7 +88,7 @@ export function OneYearPairsDialog({ open, onClose, onSaved, accent, viewOnly }:
           {!viewOnly && <button type="button" data-one-year-default onClick={() => setD(ONE_YEAR_DEFAULT())} style={btn('#5b6773')}>デフォルト設定にする</button>}
           <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
             {viewOnly ? <button type="button" onClick={onClose} style={btn(accent, true)}>閉じる</button> : <>
-              <button type="button" className="submit-btn" disabled={half} onClick={() => { setOneYear(d); onSaved?.(`１年基準科目設定を保存しました（ペア ${pairCount(d)} 件）`); onClose(); }} style={{ ...btn(accent, true), opacity: half ? 0.5 : 1 }}>OK</button>
+              <button type="button" className="submit-btn" disabled={half} onClick={() => { setOneYear(d); onSaved?.(`１年基準科目設定を保存しました（ペア ${pairCount(d)} 件）`); onClose(); }} style={{ ...btn(accent, true), opacity: half ? 0.5 : 1 }}>保存</button>
               <button type="button" onClick={onClose} style={btn()}>キャンセル</button>
             </>}
           </span>

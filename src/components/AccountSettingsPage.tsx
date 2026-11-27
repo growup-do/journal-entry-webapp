@@ -738,7 +738,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>{useFundTab
             ? <PrintOutButton name="使用科目設定（資金科目）" accent={accent} data={() => { const fs = Array.from(new Set(GROUPS.flatMap((g) => fundsOf(g.name)))); return { header: ['資金科目', ...SERVICES], rows: fs.map((f) => [f, ...SERVICES.map((sv) => (fundUsed(f, sv) ? 1 : 0))]) }; }} meta={`${SERVICES.length} 区分`} defaultDest="csv" />
-            : <PrintOutButton name="使用科目設定（勘定科目）" accent={accent} data={() => useData('bs')} meta={`${useMetas('bs').length} 科目 × ${SERVICES.length} 区分`} defaultDest="csv" />}<button type="button" className="submit-btn" onClick={() => toast.show('使用科目設定を保存しました')} style={{ ...btn(accent, true), marginLeft: 'auto' }}>OK</button></div>
+            : <PrintOutButton name="使用科目設定（勘定科目）" accent={accent} data={() => useData('bs')} meta={`${useMetas('bs').length} 科目 × ${SERVICES.length} 区分`} defaultDest="csv" />}<button type="button" className="submit-btn" onClick={() => toast.show('使用科目設定を保存しました')} style={{ ...btn(accent, true), marginLeft: 'auto' }}>保存</button></div>
         </div>
       )}
 
@@ -922,7 +922,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
               <Field label="相手区分（内部取引の相手先）"><select value={sel.partner} onChange={(e) => upd({ partner: e.target.value })} disabled={sel.internal.startsWith('0')} style={{ ...small, background: sel.internal.startsWith('0') ? '#f5f7f9' : '#fff' }}><option value="">伝票入力時に指定</option>{SERVICES.map((s) => <option key={s}>{s}</option>)}</select></Field>
               <Notice>内部取引科目にすると、法人全体の集計で相手区分の科目と相殺（内部取引消去）されます。相手区分を固定しない場合は伝票入力時に指定します。</Notice>
             </>}
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" className="submit-btn" onClick={() => { setRel(null); toast.show(`${REL_TITLE[rel]}を更新しました`); }} style={btn(accent, true)}>OK</button></div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" className="submit-btn" onClick={() => { setRel(null); toast.show(`${REL_TITLE[rel]}を更新しました`); }} style={btn(accent, true)}>保存</button></div>
           </div>
         )}
       </Modal>

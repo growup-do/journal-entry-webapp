@@ -431,7 +431,7 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
   /** 期中入力を行うか（期の途中から導入する場合だけ On。確認メモ #167） */
   const mid = useSession().openingMidTerm;
   const [data, setData] = useState(initOpening);
-  /** 最後に OK で確定した内容。入力を始めると未保存になり、枠を光らせて「保存されていません。」を出す */
+  /** 最後に保存した内容。入力を始めると未保存になり、枠を光らせて「保存されていません。」を出す */
   const [saved, setSaved] = useState(data);
   const dirty = data !== saved;
   useUnsaved('開始残高', '開始残高', dirty);
@@ -454,7 +454,7 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
   const importPrior = () => {
     setData((x) => ({ ...x, 貸借科目繰越残高: OPENING_SITES.map((_, s) => OPEN_BS.map((it) => openSided(it.side, it.prior[s], s === 1 ? OPEN_BS_PRIOR_INNER[it.name] : undefined))) }));
     setImportOpen(false); setTab('貸借科目繰越残高');
-    toast.show('前年度（令和7年度）の決算残高を貸借科目繰越残高に取り込みました（「OK」で確定）');
+    toast.show('前年度（令和7年度）の決算残高を貸借科目繰越残高に取り込みました（「保存」で確定）');
   };
   const applyMid = () => {
     const on = midConfirm === 'on';
@@ -474,14 +474,14 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
       {/* 期中入力の切替（確認を挟む。確認メモ #167）。旧「借貸残高（期中）」ボタンの置き換え */}
       <SubCheck data-opening-midterm title="期の途中から導入する場合だけチェックします。通常は使用しません" checked={mid} onChange={() => setMidConfirm(mid ? 'off' : 'on')} label="期中入力を行う（期の途中から導入する場合）" />
       {dirty && <span role="status" data-unsaved-msg style={{ fontSize: 15, fontWeight: 800, color: UNSAVED_FG, marginRight: 4 }}>保存されていません。</span>}
-      <button type="button" className="submit-btn" disabled={!ok} onClick={() => { setSaved(data); toast.show('開始残高を確定しました'); }} style={{ ...btn(accent, true), opacity: ok ? 1 : 0.5 }}>OK</button>
+      <button type="button" className="submit-btn" disabled={!ok} onClick={() => { setSaved(data); toast.show('開始残高を保存しました'); }} style={{ ...btn(accent, true), opacity: ok ? 1 : 0.5 }}>保存</button>
     </>}>
       <ToastView msg={toast.msg} />
       <Modal open={importOpen} onClose={() => setImportOpen(false)} width={480} title="前年度決算から取込" strict>
         <div style={{ padding: '16px 22px 18px', fontSize: 14, lineHeight: 1.8 }}>
           <div>前年度（令和7年度）の決算残高を貸借科目繰越残高に取り込みます（内部取引の金額を含みます）。</div>
           <div style={{ color: '#c0392b', fontWeight: 700 }}>現在の入力値は上書きされます。</div>
-          <div style={{ fontSize: 14, color: '#7a8794', marginTop: 6 }}>対象：本部／チャイルド保育園の全拠点。取り込み後は貸借一致を確認し「OK」で確定してください。</div>
+          <div style={{ fontSize: 14, color: '#7a8794', marginTop: 6 }}>対象：本部／チャイルド保育園の全拠点。取り込み後は貸借一致を確認し「保存」で確定してください。</div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
             <button type="button" onClick={() => setImportOpen(false)} style={btn()}>キャンセル</button>
             <button type="button" className="submit-btn" onClick={importPrior} style={btn(accent, true)}>OK（取り込む）</button>

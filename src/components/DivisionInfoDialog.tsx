@@ -125,7 +125,7 @@ export function DivisionInfoDialog({ open, onClose, accent }: { open: boolean; o
         <span style={{ fontSize: 12, color: '#9aa5b1' }}>通常は基本情報を登録した状態で納品するため、ここでの設定は不要です。</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
           <button type="button" onClick={cancel} style={btn()}>キャンセル</button>
-          <button type="button" className="submit-btn" onClick={ok} style={btn(accent, true)}>OK</button>
+          <button type="button" className="submit-btn" onClick={ok} style={btn(accent, true)}>保存</button>
         </div>
       </div>
 

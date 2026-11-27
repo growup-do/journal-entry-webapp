@@ -247,7 +247,7 @@ export function SettlementAuditModal({ open, onClose, onNavigate }: Props) {
         <AuditChecklist scope={corpTab} isOn={cfgOn} setOn={setCfgOn} onOpen={setItemCfg} onSwitch={() => setCorpTab(corpTab === '区分' ? '法人' : '区分')} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
           {onNavigate && <button type="button" data-action="設定画面で開く" onClick={() => { setSettings(false); onClose(); onNavigate('決算チェック設定'); }} title="決算調査を閉じて、各種設定の「決算チェック設定」画面へ移動します" style={uiBtn('#1f7a52')}>各種設定の「決算チェック設定」画面で開く ›</button>}
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>{viewOnly ? <button type="button" onClick={() => setSettings(false)} style={uiBtn('#1f7a52', true)}>閉じる</button> : <><button type="button" onClick={() => setSettings(false)} style={uiBtn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { setSettings(false); toast.show('決算チェック設定を保存しました'); }} style={uiBtn('#1f7a52', true)}>OK</button></>}</div>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>{viewOnly ? <button type="button" onClick={() => setSettings(false)} style={uiBtn('#1f7a52', true)}>閉じる</button> : <><button type="button" onClick={() => setSettings(false)} style={uiBtn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { setSettings(false); toast.show('決算チェック設定を保存しました'); }} style={uiBtn('#1f7a52', true)}>保存</button></>}</div>
         </div>
       </div>
     </Modal>

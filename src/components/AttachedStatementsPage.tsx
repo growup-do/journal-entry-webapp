@@ -291,7 +291,7 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
                 {comboRows(COMBO.kariire)}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <button type="button" onClick={() => setOneYearOpen(true)} style={btn('#5b6773', false, true)}>１年基準科目設定</button>
-                  <span style={{ fontSize: 12, color: '#8290a0' }}>法人全体の決算チェック「{oneYearName}」と同じ設定です（その画面の OK で保存されます）。ペア {pairCount(oneYear)} 件</span>
+                  <span style={{ fontSize: 12, color: '#8290a0' }}>法人全体の決算チェック「{oneYearName}」と同じ設定です（その画面で保存します）。ペア {pairCount(oneYear)} 件</span>
                 </div>
               </SecCard>
 

@@ -717,7 +717,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
       <Modal open={footEdit !== null} onClose={() => setFootEdit(null)} width={560} title={`脚注編集：${report.name}`}>
         {footEdit !== null && <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 10 }}>
           <textarea data-foot-text value={footEdit} onChange={(e) => setFootEdit(e.target.value)} rows={6} placeholder="（注）予備費の充当額 ○○円 は …" style={{ ...input, resize: 'vertical', lineHeight: 1.7 }} />
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setFootEdit(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { setCommon({ footnotes: { ...pr.footnotes, [report.name]: footEdit } }); setFootEdit(null); toast.show('脚注を保存しました'); }} style={btn(accent, true)}>OK</button></div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setFootEdit(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { setCommon({ footnotes: { ...pr.footnotes, [report.name]: footEdit } }); setFootEdit(null); toast.show('脚注を保存しました'); }} style={btn(accent, true)}>保存</button></div>
         </div>}
       </Modal>
       {dlg === 'fmt' && fmtSpec && fmt && <FormatDialog spec={fmtSpec} value={fmt} accent={accent} onCancel={() => setDlg('')} onOk={(f) => { set({ fmt: f }); setDlg(''); }} />}
@@ -894,7 +894,7 @@ function ZeroExcludeCard({ accent }: { accent: string }) {
       <Modal open={open} onClose={() => setOpen(false)} width={760} title="「0データを印刷しない」の除外科目設定">
         <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>{col('資金科目', fundItems, fund, setFund)}{col('貸借・事業科目', bsItems, bs, setBs)}</div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setOpen(false)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { setOpen(false); toast.show(`除外科目を保存しました（資金 ${fund.length}・貸借事業 ${bs.length}）`); }} style={btn(accent, true)}>OK</button></div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setOpen(false)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { setOpen(false); toast.show(`除外科目を保存しました（資金 ${fund.length}・貸借事業 ${bs.length}）`); }} style={btn(accent, true)}>保存</button></div>
         </div>
       </Modal>
     </div>
@@ -1088,7 +1088,7 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
       <Modal open={!!stamps} onClose={() => setStamps(null)} width={520} title="捺印欄">
         {stamps && <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 12 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>{stamps.map((v, i) => <Field key={i} label={`捺印欄 ${i + 1}`}><input className="field-input" value={v} onChange={(e) => setStamps(stamps.map((x, k) => (k === i ? e.target.value : x)))} style={input} /></Field>)}</div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setStamps(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { set({ stamps }); setStamps(null); }} style={btn(accent, true)}>OK</button></div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setStamps(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { set({ stamps }); setStamps(null); }} style={btn(accent, true)}>保存</button></div>
         </div>}
       </Modal>
 
@@ -1110,7 +1110,7 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
         <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 10 }}>
           <textarea value={footText} onChange={(e) => setFootText(e.target.value)} rows={5} placeholder="（注）予備費の充当額 ○○円 は …" style={{ ...input, resize: 'vertical', lineHeight: 1.7 }} />
           <Notice tone="warn">長すぎると2ページ目に送られることがあります。</Notice>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setFoot(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { if (foot) set({ footnotes: { ...p.footnotes, [foot]: footText } }); setFoot(null); }} style={btn(accent, true)}>OK</button></div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setFoot(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { if (foot) set({ footnotes: { ...p.footnotes, [foot]: footText } }); setFoot(null); }} style={btn(accent, true)}>保存</button></div>
         </div>
       </Modal>
 
@@ -1126,7 +1126,7 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
             <button type="button" onClick={() => setFmt({ ...STD_FORMAT })} style={btn()}>リセット</button>
             <span style={{ flex: 1 }} />
             <button type="button" onClick={() => setFmt(null)} style={btn()}>キャンセル</button>
-            <button type="button" className="submit-btn" onClick={() => { set(fmt); setFmt(null); }} style={btn(accent, true)}>OK</button>
+            <button type="button" className="submit-btn" onClick={() => { set(fmt); setFmt(null); }} style={btn(accent, true)}>保存</button>
           </div>
         </div>}
       </Modal>
@@ -1146,7 +1146,7 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
             <button type="button" onClick={() => setInner({ ...DEFAULT_INNER_FORMAT })} style={btn()}>リセット</button>
             <span style={{ flex: 1 }} />
             <button type="button" onClick={() => setInner(null)} style={btn()}>キャンセル</button>
-            <button type="button" className="submit-btn" onClick={() => { set({ inner }); setInner(null); }} style={btn(accent, true)}>OK</button>
+            <button type="button" className="submit-btn" onClick={() => { set({ inner }); setInner(null); }} style={btn(accent, true)}>保存</button>
           </div>
         </div>}
       </Modal>

@@ -73,7 +73,7 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
     const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
     setFileOpen(false); toast.show(`${name} を保存しました`);
   };
-  /** インポート：JSON を解析して未保存の下書きへ反映（OK（保存）で確定） */
+  /** インポート：JSON を解析して未保存の下書きへ反映（保存で確定） */
   const applyLoaded = (obj: unknown, label: string) => {
     const env = (obj && typeof obj === 'object' && 'env' in (obj as Record<string, unknown>)) ? (obj as { env: unknown }).env : obj;
     if (!env || typeof env !== 'object') { toast.show('環境設定ファイルの形式が正しくありません'); return; }
@@ -82,7 +82,7 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
     known.forEach((k) => { const val = (env as Record<string, unknown>)[k]; if (val !== undefined && typeof val === typeof DEFAULT_ENV[k]) (picked as Record<string, unknown>)[k] = val; });
     if (!Object.keys(picked).length) { toast.show('環境設定の項目が見つかりませんでした'); return; }
     setV({ ...DEFAULT_ENV, ...picked });
-    setFileOpen(false); toast.show(`${label} から ${Object.keys(picked).length} 項目を読み込みました（未保存：OK（保存）で確定）`);
+    setFileOpen(false); toast.show(`${label} から ${Object.keys(picked).length} 項目を読み込みました（未保存：保存で確定）`);
   };
   const onFile = (f: File | undefined) => {
     if (!f) return;
@@ -95,11 +95,11 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
     <SettingsShell variant={variant} unsaved={dirty} title={displayName('環境設定')} actions={<>
       <button type="button" className="btn-outline" onClick={() => setInfoOpen(true)} style={btn()}>部門情報の変更</button>
       <button type="button" className="btn-outline" data-import-export-btn={displayName('環境設定')} onClick={() => setFileOpen(true)} style={btn()}>インポート／エクスポート</button>
-      <LoadDivisionSettings accent={accent} kind="動作設定" onDone={(from) => toast.show(`「${from}」の動作設定を読み込みました（未保存：OK（保存）で確定）`)} />
+      <LoadDivisionSettings accent={accent} kind="動作設定" onDone={(from) => toast.show(`「${from}」の動作設定を読み込みました（未保存：保存で確定）`)} />
       {onNavigate && <button type="button" className="btn-outline" onClick={() => onNavigate('共通の印刷設定')} style={btn()} data-open-print-settings>決算書 共通印刷設定</button>}
       <button type="button" className="btn-outline" onClick={() => { setV(DEFAULT_ENV); toast.show('初期値に戻しました（未保存）'); }} style={btn()}>初期値に戻す</button>
       {dirty && <span role="status" data-unsaved-msg style={{ fontSize: 15, fontWeight: 800, color: UNSAVED_FG, marginRight: 4 }}>保存されていません。</span>}
-      <button type="button" className="submit-btn" onClick={save} style={btn(accent, true)}>OK（保存）</button>
+      <button type="button" className="submit-btn" onClick={save} style={btn(accent, true)}>保存</button>
     </>}>
       <ToastView msg={toast.msg} />
       <DivisionInfoDialog open={infoOpen} onClose={() => setInfoOpen(false)} accent={accent} />
@@ -108,7 +108,7 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
         notice={<>区分「{s.division}」の環境条件を設定ファイルとして書き出し、別の区分・別の端末で読み込めます。</>}
         exportDesc="現在設定中（未保存分を含む）の条件をファイルに書き出します。"
         onExport={saveFile}
-        importDesc="読み込んだ内容は「OK（保存）」で確定します。"
+        importDesc="読み込んだ内容は「保存」で確定します。"
         accept=".json,application/json"
         onImport={onFile}
         onSample={() => applyLoaded(SAMPLE_ENV, 'サンプル設定')}

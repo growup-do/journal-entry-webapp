@@ -303,7 +303,7 @@ export function AuditItemDialog({ no, scope, onClose, onSaved, accent = '#1f7a52
           <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
             {viewOnly ? <button type="button" onClick={onClose} style={btn(accent, true)}>閉じる</button> : <>
               <button type="button" onClick={onClose} style={btn()}>キャンセル</button>
-              <button type="button" className="submit-btn" onClick={ok} style={btn(accent, true)}>OK</button>
+              <button type="button" className="submit-btn" onClick={ok} style={btn(accent, true)}>保存</button>
             </>}
           </span>
         </div>

@@ -355,7 +355,7 @@ export function DepreciationLinkPage({ variant, accent, onNavigate }: Maintenanc
       <button type="button" className="btn-outline" onClick={reset} style={btn()}>デフォルト設定にする</button>
       {dirty && <span role="status" data-unsaved-msg style={{ fontSize: 15, fontWeight: 800, color: UNSAVED_FG, marginRight: 4 }}>保存されていません。</span>}
       <button type="button" data-action="変更を取り消す" onClick={revert} disabled={!dirty} title={dirty ? '保存する前の内容に戻します（すべてのタブ）' : '変更はありません'} style={{ ...btn(), opacity: dirty ? 1 : 0.5, cursor: dirty ? 'pointer' : 'default' }}>変更を取り消す</button>
-      <button type="button" className="submit-btn" data-action="設定を保存" onClick={save} title="すべてのタブの内容をまとめて保存します" style={btn(accent, true)}>OK（保存）</button>
+      <button type="button" className="submit-btn" data-action="設定を保存" onClick={save} title="すべてのタブの内容をまとめて保存します" style={btn(accent, true)}>保存</button>
     </>}>
       <ToastView msg={toast.msg} />
       <Tabs items={TABS_D} current={tab} onChange={setTab} accent={accent} marks={dirtyTabs} />
@@ -363,7 +363,7 @@ export function DepreciationLinkPage({ variant, accent, onNavigate }: Maintenanc
         <div data-other-unsaved style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 22px', background: '#fff1d6', borderBottom: '1px solid #f0d9a8', fontSize: 14, color: '#8a5a00', flexWrap: 'wrap' }}>
           <span>ほかのタブにも保存されていない変更があります：</span>
           {otherDirty.map((t) => <button key={t} type="button" onClick={() => setTab(t)} style={{ border: 'none', background: 'transparent', padding: 0, color: '#8a5a00', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', textDecoration: 'underline', cursor: 'pointer' }}>{t}</button>)}
-          <span style={{ color: '#a27a2c' }}>「OK（保存）」で、すべてのタブをまとめて保存します。</span>
+          <span style={{ color: '#a27a2c' }}>「保存」で、すべてのタブをまとめて保存します。</span>
         </div>
       )}
       <ScopeBar scope="全区分共通" note="法人全体で共有" right={<><button type="button" className="btn-outline" onClick={() => go('勘定科目')} style={btn('#5b6773', false, true)}>科目設定で確認 →</button><button type="button" className="btn-outline" onClick={() => go('減価償却')} style={btn('#5b6773', false, true)}>減価償却を開く →</button></>}>

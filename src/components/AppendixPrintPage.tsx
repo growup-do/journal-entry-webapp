@@ -160,7 +160,7 @@ const downloadJson = (name: string, obj: unknown) => {
   const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
 };
-/** 「保存」で確定する編集内容（キャンセルで戻す対象）。印刷書式はダイアログの OK で確定するので含めない */
+/** 「保存」で確定する編集内容（キャンセルで戻す対象）。印刷書式はダイアログの保存で確定するので含めない */
 interface Draft { rows: Record<string, string[][]>; notes: Record<string, string>; /** 注記の表（注記ごと・表ごと。確認メモ #390） */ tables: Record<string, NoteTables>; inv: Record<string, string[][]>; merge: { code: string; name: string; formula: string }[]; perPage: number }
 const cloneDraft = (d: Draft): Draft => JSON.parse(JSON.stringify(d));
 const stamp = () => { const d = new Date(); return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`; };
@@ -502,7 +502,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
           </div>
           <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
             <button type="button" onClick={() => setFmtOpen(false)} style={btn()}>キャンセル</button>
-            <button type="button" className="submit-btn" onClick={() => { setFmtOpen(false); toast.show('印刷書式を保存しました'); }} style={btn(accent, true)}>OK</button>
+            <button type="button" className="submit-btn" onClick={() => { setFmtOpen(false); toast.show('印刷書式を保存しました'); }} style={btn(accent, true)}>保存</button>
           </div>
         </div>
       </Modal>
