@@ -4,12 +4,13 @@
 //     1 行に 1 科目を対応させる項目はコンボボックス（選択）、複数の科目を対象にする項目はチェック付きの一覧。
 //   科目の候補はプロトタイプの既存データ（科目ツリー・科目候補）から取る。既存データに無い科目は作らず、未設定にしている。
 //   設定２・３ の「収入に合わせる／支出に合わせる」の切替は、動作環境ではなくこの画面内で行う（全区分共通の設定）。
-//   ［１年基準科目設定］は、決算チェック設定の「★１年基準科目 期中残高チェック」の設定画面をそのまま使う。
+//   ［１年基準科目設定］は、法人全体の決算チェック（23. １年基準科目 期中残高チェック）と同じ設定・同じ画面（ペアを選ぶ画面。確認メモ #454）。
 //   明細入力・財産目録の行設定・注記の編集・合算テーブルは、印刷の準備として「別紙」画面（AppendixPrintPage）へ移した（5.5.3）。
 
+import { OneYearPairsDialog, pairCount, useOneYear } from './OneYearPairs';
+import { GRANTS_DEFAULT, HOJO_METHODS, getHojoConf, setHojoConf, type Grant, type HojoMethod } from '../store/hojoConfStore';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { AuditItemDialog } from './AuditItemDialog';
 import { Modal } from './Modal';
 import { ScopeBadge } from './PrintCenter';
 import { ToastView, useToast } from './Toast';
@@ -106,9 +107,8 @@ const levelDef = (sec: 'kurii' | 'kashi', side: Side, lv: number): string[] => {
 const lvKey = (sec: 'kurii' | 'kashi', lv: number, side: Side) => `${sec}/${lv}:${side}`;
 
 /* ---------- 設定値 ---------- */
-type Kihon2 = '明細による集計' | '科目による集計' | '交付目的による集計';
-const KIHON2_OPTS: Kihon2[] = ['明細による集計', '科目による集計', '交付目的による集計'];
-interface Grant { org: string; purpose: string }
+type Kihon2 = HojoMethod;
+const KIHON2_OPTS: Kihon2[] = HOJO_METHODS;
 interface Conf {
   /** コンボボックス：`明細書/行` → 科目（'' は未設定） */ combo: Record<string, string>;
   /** チェック付き一覧：`明細書` または `明細書/段階:収入|支出` → 対象の科目 */ checks: Record<string, string[]>;
@@ -116,7 +116,6 @@ interface Conf {
   kihon2: Kihon2; kihonReplace: string; kokkoTitles: string[]; grants: Grant[];
 }
 const KOKKO_TITLES_DEFAULT = ['国庫補助金', '都道府県補助金', '市町村補助金', 'その他の補助金'];
-const GRANTS_DEFAULT: Grant[] = [{ org: '○○市', purpose: '延長保育事業' }, { org: '○○市', purpose: '障害児保育事業' }];
 const WATCH_DEF: Record<string, boolean> = { kifu: true, kokko: true, hojo: true, kihon: true, 'kurii/0': false, 'kurii/1': false, 'kurii/2': false, 'kurii/3': false };
 const defaultConf = (): Conf => ({
   combo: Object.fromEntries(Object.values(COMBO).flatMap((c) => c.rows.map((r, i) => [`${c.key}/${i}`, r.def]))),
@@ -183,7 +182,12 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
   const side: Side = s.env.transferWatch === '支払いで監視' ? '支出' : '収入';
   const setSide = (v: Side) => { setSession({ env: { ...s.env, transferWatch: v === '支出' ? '支払いで監視' : '収入で監視' } }); toast.show(`設定２・設定３ を「${v}に合わせる」に切り替えました（全区分共通）`); };
   // 借入金明細書の5段は全体の設定（session）から読む。別紙の借入金明細書の行に使う（確認メモ #394）
-  const initConf = (): Conf => { const c = defaultConf(); (s.kariireAccts ?? []).forEach((v, i) => { c.combo[`kariire/${i}`] = v; }); return c; };
+  const initConf = (): Conf => {
+    const c = defaultConf(); (s.kariireAccts ?? []).forEach((v, i) => { c.combo[`kariire/${i}`] = v; });
+    // 補助金事業等収益明細書の集計方法・区分・交付目的は、伝票入力と共有する設定から（確認メモ #450）
+    const h = getHojoConf(); c.kihon2 = h.method; c.checks.hojo = [...h.kubuns]; c.grants = h.grants.map((g) => ({ ...g }));
+    return c;
+  };
   const [saved, setSaved] = useState<Conf>(initConf);
   const [draft, setDraft] = useState<Conf>(initConf);
   const [oneYearOpen, setOneYearOpen] = useState(false);
@@ -205,7 +209,7 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
     setDraft((d) => ({ ...d, combo: { ...d.combo, ...mine(d0.combo) }, checks: { ...d.checks, ...mine(d0.checks) }, watch: { ...d.watch, ...mine(d0.watch) }, kihon2: sec === 'hojo' ? d0.kihon2 : d.kihon2 }));
     toast.show(`「${name}」をデフォルト設定にしました（未保存：保存で確定）`);
   };
-  const saveAll = () => { setSaved(draft); setSession({ kariireAccts: COMBO.kariire.rows.map((_, i) => draft.combo[`kariire/${i}`] ?? '') }); toast.show(`${displayName('決算附属明細書')}を保存しました`); };
+  const saveAll = () => { setSaved(draft); setHojoConf({ method: draft.kihon2, kubuns: [...(draft.checks.hojo ?? [])], grants: draft.grants.filter((g) => (draft.checks.hojo ?? []).includes(g.kubun)) }); setSession({ kariireAccts: COMBO.kariire.rows.map((_, i) => draft.combo[`kariire/${i}`] ?? '') }); toast.show(`${displayName('決算附属明細書')}を保存しました`); };
   const cancelAll = () => { setDraft(saved); toast.show('変更を取り消しました'); };
   const goAppendix = () => { if (onNavigate) onNavigate('別紙（注記・明細書・財産目録）'); else toast.show('「帳票・印刷 ＞ 帳票の印刷 ＞ 別紙」を開いてください'); };
 
@@ -257,6 +261,7 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
     </div>
   );
   const oneYearName = AUDIT_ITEMS.find((a) => a.no === ONE_YEAR_NO)?.name ?? '１年基準科目';
+  const oneYear = useOneYear();
 
   return (
     <SettingsShell variant={variant} title={displayName('決算附属明細書')} badge="決算" unsaved={dirty}
@@ -295,7 +300,7 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
                 {comboRows(COMBO.kariire)}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <button type="button" onClick={() => setOneYearOpen(true)} style={btn('#5b6773', false, true)}>１年基準科目設定</button>
-                  <span style={{ fontSize: 12, color: '#8290a0' }}>決算チェック設定の「{oneYearName}」と同じ設定です（その画面の OK で保存されます）</span>
+                  <span style={{ fontSize: 12, color: '#8290a0' }}>法人全体の決算チェック「{oneYearName}」と同じ設定です（その画面の OK で保存されます）。ペア {pairCount(oneYear)} 件</span>
                 </div>
               </SecCard>
 
@@ -327,7 +332,7 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
                 </label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                   {watchBox('hojo', '伝票入力時に補助金収益を監視する')}
-                  <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ fontSize: 12, color: '#9aa5b1' }}>登録 {draft.grants.length} 件</span><button type="button" onClick={() => setGrantsDraft(draft.grants.map((g) => ({ ...g })))} style={btn('#5b6773', false, true)}>交付団体及び交付の目的の編集</button></span>
+                  <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ fontSize: 12, color: '#9aa5b1' }}>登録 {draft.grants.length} 件</span><button type="button" data-open-grants disabled={draft.kihon2 !== '交付目的による集計'} title={draft.kihon2 !== '交付目的による集計' ? '集計方法が「交付目的による集計」のときに使えます' : '補助金の区分ごとに交付団体と交付の目的を登録します'} onClick={() => setGrantsDraft(draft.grants.map((g) => ({ ...g })))} style={{ ...btn('#5b6773', false, true), opacity: draft.kihon2 !== '交付目的による集計' ? 0.5 : 1, cursor: draft.kihon2 !== '交付目的による集計' ? 'default' : 'pointer' }}>交付団体及び交付の目的の編集</button></span>
                 </div>
               </SecCard>
 
@@ -381,8 +386,8 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
         <button type="button" onClick={goAppendix} style={btn('#5b6773', false, true)}>別紙を開く</button>
       </div>
 
-      {/* ［１年基準科目設定］：決算チェック設定の項目の設定画面を流用 */}
-      <AuditItemDialog no={oneYearOpen ? ONE_YEAR_NO : null} scope="区分" onClose={() => setOneYearOpen(false)} onSaved={(m) => toast.show(m)} accent={accent} />
+      {/* ［１年基準科目設定］：法人全体の決算チェックと共通の設定（確認メモ #454） */}
+      <OneYearPairsDialog open={oneYearOpen} onClose={() => setOneYearOpen(false)} onSaved={(m) => toast.show(m)} accent={accent} />
 
       {/* ［合計タイトル］：国庫補助金明細書 積立合計行タイトル入力 */}
       <Modal open={!!titlesDraft} onClose={() => setTitlesDraft(null)} width={480} title="国庫補助金明細書　積立合計行タイトル入力">
@@ -398,25 +403,38 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
         )}
       </Modal>
 
-      {/* ［交付団体及び交付の目的の編集］：補助金事業等収益明細書の明細で選ぶ交付団体と目的 */}
-      <Modal open={!!grantsDraft} onClose={() => setGrantsDraft(null)} width={640} title="交付団体及び交付の目的の編集">
+      {/* ［交付団体及び交付の目的の編集］：補助金の区分ごとに交付団体と交付の目的を登録する。集計方法が「交付目的による集計」のときだけ使う（確認メモ #450） */}
+      <Modal open={!!grantsDraft} onClose={() => setGrantsDraft(null)} width={720} title="交付団体及び交付の目的の編集">
         {grantsDraft && (
           <div style={{ padding: '12px 22px 18px', display: 'grid', gap: 10 }}>
-            <Notice>補助金事業等収益明細書の明細に記載する「交付団体」と「交付の目的」を登録します。明細入力のときに、ここで登録したものから選べます。</Notice>
-            <div style={{ display: 'grid', gridTemplateColumns: '24px minmax(0, 1fr) minmax(0, 1.4fr) auto', gap: '6px 8px', alignItems: 'center' }}>
-              <span /><span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>交付団体</span><span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>交付の目的</span><span />
-              {grantsDraft.map((g, i) => (
-                <div key={i} style={{ display: 'contents' }}>
-                  <span style={{ fontSize: 14, color: '#8290a0' }}>{i + 1}</span>
-                  <input className="field-input" aria-label={`${i + 1} 行目の交付団体`} value={g.org} onChange={(e) => setGrantsDraft(grantsDraft.map((x, k) => (k === i ? { ...x, org: e.target.value } : x)))} placeholder="例：○○市" style={{ ...input, padding: '6px 10px' }} />
-                  <input className="field-input" aria-label={`${i + 1} 行目の交付の目的`} value={g.purpose} onChange={(e) => setGrantsDraft(grantsDraft.map((x, k) => (k === i ? { ...x, purpose: e.target.value } : x)))} placeholder="例：延長保育事業" style={{ ...input, padding: '6px 10px' }} />
-                  <button type="button" title="この行を削除" onClick={() => setGrantsDraft(grantsDraft.filter((_, k) => k !== i))} style={btn('#c0392b', false, true)}>×</button>
-                </div>
-              ))}
+            <Notice>補助金の区分ごとに「交付団体」と「交付の目的」を登録します。伝票入力で補助金を登録するとき、その区分に登録したものから選べます。</Notice>
+            <div data-grant-kubuns style={{ display: 'grid', gap: 10, maxHeight: 420, overflow: 'auto' }}>
+              {(draft.checks.hojo ?? []).map((kubun) => {
+                const rows = grantsDraft.map((g, i) => ({ g, i })).filter((x) => x.g.kubun === kubun);
+                return (
+                  <div key={kubun} data-grant-kubun={kubun} style={{ border: '1px solid #e2e8ee', borderRadius: 10, padding: '8px 12px', display: 'grid', gap: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <b style={{ fontSize: 14 }}>{kubun}</b><span style={{ fontSize: 12, color: '#9aa5b1' }}>{rows.length} 件</span>
+                      <button type="button" onClick={() => setGrantsDraft([...grantsDraft, { kubun, org: '', purpose: '' }])} style={{ ...btn(accent, false, true), marginLeft: 'auto' }}>＋ 交付目的を追加</button>
+                    </div>
+                    {rows.length > 0 ? (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.4fr) auto', gap: '6px 8px', alignItems: 'center' }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>交付団体</span><span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>交付の目的</span><span />
+                        {rows.map(({ g, i }) => (
+                          <div key={i} style={{ display: 'contents' }}>
+                            <input className="field-input" aria-label={`${kubun}の交付団体`} value={g.org} onChange={(e) => setGrantsDraft(grantsDraft.map((x, k) => (k === i ? { ...x, org: e.target.value } : x)))} placeholder="例：○○市" style={{ ...input, padding: '6px 10px' }} />
+                            <input className="field-input" aria-label={`${kubun}の交付の目的`} value={g.purpose} onChange={(e) => setGrantsDraft(grantsDraft.map((x, k) => (k === i ? { ...x, purpose: e.target.value } : x)))} placeholder="例：延長保育事業" style={{ ...input, padding: '6px 10px' }} />
+                            <button type="button" title="この行を削除" onClick={() => setGrantsDraft(grantsDraft.filter((_, k) => k !== i))} style={btn('#c0392b', false, true)}>×</button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : <div style={{ fontSize: 14, color: '#9aa5b1' }}>登録がありません。</div>}
+                  </div>
+                );
+              })}
+              {(draft.checks.hojo ?? []).length === 0 && <div style={{ fontSize: 14, color: '#9aa5b1' }}>補助金事業等収益明細書用の科目にチェックを付けると、その科目ごとに登録できます。</div>}
             </div>
-            {grantsDraft.length === 0 && <div style={{ fontSize: 14, color: '#9aa5b1' }}>登録がありません。「＋ 行を追加」で登録します。</div>}
-            <div><button type="button" onClick={() => setGrantsDraft([...grantsDraft, { org: '', purpose: '' }])} style={btn(accent, false, true)}>＋ 行を追加</button></div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setGrantsDraft(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { const g = grantsDraft.map((x) => ({ org: x.org.trim(), purpose: x.purpose.trim() })).filter((x) => x.org || x.purpose); setDraft((d) => ({ ...d, grants: g })); setGrantsDraft(null); toast.show(`交付団体及び交付の目的を ${g.length} 件にしました（未保存：保存で確定）`); }} style={btn(accent, true)}>OK</button></div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setGrantsDraft(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { const g = grantsDraft.map((x) => ({ kubun: x.kubun, org: x.org.trim(), purpose: x.purpose.trim() })).filter((x) => x.org || x.purpose); setDraft((d) => ({ ...d, grants: g })); setGrantsDraft(null); toast.show(`交付団体及び交付の目的を ${g.length} 件にしました（未保存：保存で確定）`); }} style={btn(accent, true)}>OK</button></div>
           </div>
         )}
       </Modal>

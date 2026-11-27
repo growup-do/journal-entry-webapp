@@ -7,6 +7,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { CSSProperties } from 'react';
 import { Modal } from './Modal';
+import { OneYearPairsDialog } from './OneYearPairs';
 import { btn } from './ui';
 import { AUDIT_ITEMS } from '../data';
 import { ACCOUNT_META } from '../lib/accounts';
@@ -200,6 +201,8 @@ export function AuditItemDialog({ no, scope, onClose, onSaved, accent = '#1f7a52
   const [stage, setStage] = useState<'range' | 'edit'>('range');
   const [draft, setDraft] = useState<string[][]>([]);
   const [param, setParam] = useState('');
+  /** 23. １年基準科目 期中残高チェック：［１年基準科目設定］でペアを選ぶ（確認メモ #454） */
+  const [pairsOpen, setPairsOpen] = useState(false);
   useEffect(() => {
     if (no == null) return;
     // 参照のみ権限は設定しないので、設定先の確認は出さずに内容を表示する
@@ -296,6 +299,7 @@ export function AuditItemDialog({ no, scope, onClose, onSaved, accent = '#1f7a52
             <button type="button" onClick={() => setAll(true)} style={btn('#5b6773', false, true)}>すべて有効</button>
             <button type="button" onClick={() => setAll(false)} style={btn('#5b6773', false, true)}>すべて無効</button>
           </>}
+          {no === 23 && <button type="button" data-open-one-year onClick={() => setPairsOpen(true)} style={btn(accent, false, true)}>１年基準科目設定</button>}
           <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
             {viewOnly ? <button type="button" onClick={onClose} style={btn(accent, true)}>閉じる</button> : <>
               <button type="button" onClick={onClose} style={btn()}>キャンセル</button>
@@ -304,6 +308,7 @@ export function AuditItemDialog({ no, scope, onClose, onSaved, accent = '#1f7a52
           </span>
         </div>
       </div>
+      <OneYearPairsDialog open={pairsOpen} onClose={() => setPairsOpen(false)} onSaved={onSaved} accent={accent} viewOnly={viewOnly} />
     </Modal>
   );
 }

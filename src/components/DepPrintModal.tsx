@@ -39,10 +39,21 @@ type F =
   | { t: 'text'; key: string; label: string; def: string }
   | { t: 'period' }
   | { t: 'range'; key: string; label: string; def: boolean; fields: string[] }
-  | { t: 'number'; key: string; label: string; def: number; unit: string };
+  | { t: 'number'; key: string; label: string; def: number; unit: string }
+  /** タックシールの印刷開始位置：1枚12区切りのシール用紙の表と番号から選ぶ（確認メモ #446） */
+  | { t: 'seal'; key: string; label: string; def: number; cols: number; rows: number };
 
 const ORDER: F = { t: 'radio', key: 'order', label: '固定資産の印刷順序', options: ['資産コード順', '取得日付順'], def: '取得日付順' };
 const MULTI: F = { t: 'radio', key: 'multi', label: '複数固定資産の印字方法', options: ['まとめて印字', '格別に列記印字'], def: 'まとめて印字', disabled: true };
+/** 一覧表（取得・除却・売却・移管(元)・移管(先)）は「複数固定資産の印字方法」を選べる（確認メモ #441〜#445） */
+const MULTI_ON: F = { ...MULTI, disabled: false } as F;
+/** 当期変更情報一覧表の印刷順序は3つから選ぶ（確認メモ #434） */
+const ORDER3: F = { t: 'radio', key: 'order', label: '固定資産の印刷順序', options: ['入力コード順', '固定資産名称順', '取得年月日順'], def: '取得年月日順' };
+/** 当期変更情報一覧表の印刷タイプ選択（現行：固定資産別／変更内容別。確認メモ #433） */
+const PRINT_TYPE: F = { t: 'radio', key: 'ptype', label: '印刷タイプ選択', options: ['固定資産別', '変更内容別'], def: '固定資産別' };
+const PAGE_ITEM = { key: 'page', label: 'ページ番号を印刷する', def: true, num: { key: 'pageStart', label: '開始番号', def: 1 } };
+const DATE_ITEM = { key: 'date', label: '印刷時の日付を印刷する', def: false };
+const CORP_ITEM = { key: 'corp', label: '法人名を印刷する', def: true };
 const DATA: F = { t: 'radio', key: 'data', label: 'データ印字の選択', options: ['集計単位で印刷', '固定資産単位で印刷'], def: '集計単位で印刷' };
 const METHOD: F = { t: 'radio', key: 'method', label: '償却方法の印字設定', options: METHOD_PRINT, def: METHOD_PRINT[0], notes: METHOD_NOTES, wide: true };
 const title = (name: string): F => ({ t: 'text', key: 'title', label: '印刷様式（タイトル）', def: name.replace(/\(/g, '（').replace(/\)/g, '）') });
@@ -68,17 +79,18 @@ function sectionsOf(name: string): F[] {
   const n = name.replace(/\(/g, '（').replace(/\)/g, '）');
   if (n.startsWith('基本財産及びその他の固定資産')) return [DATA, ORDER, MULTI, title(name), NOTICE, PERIOD, checksA(true, [{ key: 'besshi', label: '「別紙3⑧」の文字を印刷する', def: true }])];
   if (n === '固定資産管理台帳（新会計版）') return [DATA, ORDER, MULTI, title(name), NOTICE, PERIOD, METHOD, checksA(true)];
-  if (n === '固定資産管理台帳') return [ORDER, MULTI, { t: 'radio', key: 'kind', label: '資産種類名', options: ['印刷しない', '印刷する'], def: '印刷しない' }, { t: 'radio', key: 'months', label: '償却月数', options: ['当年度のみ', '累計'], def: '累計' }, title(name), { t: 'radio', key: 'foot', label: '脚注の入力', options: ['何も印刷しない', '手入力文字を印刷'], def: '何も印刷しない', text: { when: '手入力文字を印刷', key: 'footText', placeholder: '脚注に印刷する文字' } }, range(['区分', '資産コード']), PERIOD, METHOD, checksA(false)];
+  if (n === '固定資産管理台帳') return [ORDER, { t: 'radio', key: 'kind', label: '資産種類名', options: ['印刷しない', '印刷する'], def: '印刷しない' }, { t: 'radio', key: 'months', label: '償却月数', options: ['当年度のみ', '累計'], def: '累計' }, title(name), { t: 'radio', key: 'foot', label: '脚注の入力', options: ['何も印刷しない', '手入力文字を印刷'], def: '何も印刷しない', text: { when: '手入力文字を印刷', key: 'footText', placeholder: '脚注に印刷する文字' } }, range(['区分', '資産コード']), PERIOD, METHOD, checksA(false)];
   if (n === '個別固定資産管理台帳') return [range(['資産コード'], '資産コード範囲指定'), title(name), { t: 'checks', label: '印刷する内容', items: [{ key: 'page', label: 'ページ番号を印刷する', def: true }, { key: 'date', label: '印刷時の日付を印刷する', def: false }] }];
-  if (n === '当期変更情報一覧表') return [ORDER, title(name)];
-  if (n === '固定資産タックシール') return [{ t: 'checks', label: '印刷項目', items: [{ key: 'tCode', label: '資産コード', def: true }, { key: 'tCost', label: '取得価額', def: true }, { key: 'tDate', label: '印刷年月日', def: true }] }, { t: 'checks', label: '印刷する物件', items: [{ key: 'tSkip', label: '除却/売却固定資産は印字しない', def: false }] }, { t: 'number', key: 'start', label: '印刷開始指定（シートの何枚目から）', def: 1, unit: '枚目から' }, range(['資産コード'])];
-  if (n === '備品一覧表（1）') return [range(['備品コード']), { t: 'checks', label: '改ページ設定', items: [{ key: 'brk', label: '科目ごとに改ページする', def: false }] }, title(name)];
-  if (n === '備品一覧表（2）') return [{ t: 'radio', key: 'order', label: '備品の印刷順序', options: ['備品コード順', '取得日付順'], def: '備品コード順' }, { t: 'checks', label: '合計欄の印刷', items: [{ key: 'total', label: '合計欄を印刷する', def: true }] }, title(name)];
-  if (n === '固定資産管理台帳（施設設備管理用）') return [range(['資産コード'])];
-  if (n === '除却固定資産一覧表') return [DATA, ORDER, MULTI, title(name), { t: 'checks', label: '除却参考仕訳', items: [{ key: 'ref', label: '除却参考仕訳を印刷する', def: false }] }, checksA(true)];
-  if (n === '売却固定資産一覧表') return [DATA, ORDER, MULTI, title(name), { t: 'checks', label: '売却参考仕訳', items: [{ key: 'ref', label: '売却参考仕訳を印刷する', def: false }] }, checksA(true)];
+  // 現行の詳細設定の並び：印刷タイプ選択・印刷順序・ページ番号（開始番号）と日付・タイトル（確認メモ #433〜#435）
+  if (n === '当期変更情報一覧表') return [PRINT_TYPE, ORDER3, { t: 'checks', label: '印刷する内容', items: [PAGE_ITEM, DATE_ITEM] }, title(name)];
+  if (n === '固定資産タックシール') return [{ t: 'checks', label: '印刷項目', items: [{ key: 'tCode', label: '資産コード', def: true }, { key: 'tCost', label: '取得価額', def: true }, { key: 'tDate', label: '印刷年月日', def: true }] }, { t: 'checks', label: '印刷する物件', items: [{ key: 'tSkip', label: '除却/売却固定資産は印字しない', def: false }] }, { t: 'seal', key: 'start', label: '印刷開始指定', def: 1, cols: 2, rows: 6 }, range(['資産コード'])];
+  if (n === '備品一覧表（1）') return [range(['備品コード']), { t: 'checks', label: '改ページ設定', items: [{ key: 'brk', label: '科目ごとに改ページする', def: false }] }, title(name), { t: 'checks', label: '印刷する内容', items: [CORP_ITEM, PAGE_ITEM] }];
+  if (n === '備品一覧表（2）') return [range(['備品コード']), { t: 'radio', key: 'order', label: '備品の印刷順序', options: ['備品コード順', '取得日付順'], def: '備品コード順' }, { t: 'checks', label: '合計欄の印刷', items: [{ key: 'total', label: '合計欄を印刷する', def: true }] }, title(name), { t: 'checks', label: '印刷する内容', items: [CORP_ITEM, PAGE_ITEM] }];
+  if (n === '固定資産管理台帳（施設設備管理用）') return [range(['資産コード']), { t: 'checks', label: '印刷する内容', items: [PAGE_ITEM, DATE_ITEM] }];
+  if (n === '除却固定資産一覧表') return [DATA, ORDER, MULTI_ON, title(name), { t: 'checks', label: '除却参考仕訳', items: [{ key: 'ref', label: '除却参考仕訳を印刷する', def: false }] }, checksA(true)];
+  if (n === '売却固定資産一覧表') return [DATA, ORDER, MULTI_ON, title(name), { t: 'checks', label: '売却参考仕訳', items: [{ key: 'ref', label: '売却参考仕訳を印刷する', def: false }] }, checksA(true)];
   // 取得／移管（元）／移管（先）：新会計版から「通知文の印刷」と「集計期間」を除いた構成
-  return [DATA, ORDER, MULTI, title(name), checksA(true)];
+  return [DATA, ORDER, MULTI_ON, title(name), checksA(true)];
 }
 
 const SIZES = Array.from({ length: 11 }, (_, i) => String(i + 4));
@@ -86,14 +98,19 @@ const LINES = ['細線', '通常', '太線'];
 /** フォントの書体（確認メモ #426） */
 const FACES = ['ＭＳ ゴシック', 'ＭＳ 明朝', 'ＭＳ Ｐゴシック', 'ＭＳ Ｐ明朝'];
 /** 罫線の設定（個別固定資産管理台帳は内部と外周だけ。確認メモ #431） */
-const lineRowsOf = (name: string): [string, string][] => (name.replace(/\(/g, '（').replace(/\)/g, '）') === '個別固定資産管理台帳' ? [['lIn', '内部'], ['lOuter', '外周']] : [['lIn', '内部'], ['lBranch', '分岐'], ['lOuter', '外周']]);
+const norm = (name: string) => name.replace(/\(/g, '（').replace(/\)/g, '）');
+const lineRowsOf = (name: string): [string, string][] => (['個別固定資産管理台帳', '当期変更情報一覧表'].includes(norm(name)) ? [['lIn', '内部'], ['lOuter', '外周']] : [['lIn', '内部'], ['lBranch', '分岐'], ['lOuter', '外周']]);
+/** フォント：各名称・項目名・金額ごと（#426）。タックシールと当期変更情報一覧表はフォントとサイズの1組（#447・#448） */
+const fontRowsOf = (name: string): [string, string][] => (['固定資産タックシール', '当期変更情報一覧表'].includes(norm(name)) ? [['fName', '']] : [['fName', '各名称'], ['fItem', '項目名'], ['fAmt', '金額']]);
 const COMMON_DEF: DepValues = { fName: '7', fItem: '6', fAmt: '5', fNameFace: 'ＭＳ ゴシック', fItemFace: 'ＭＳ ゴシック', fAmtFace: 'ＭＳ ゴシック', lIn: '細線', lBranch: '細線', lOuter: '細線', offUp: '0', offRight: '0' };
 function defaultsOf(name: string): DepValues {
   const v: DepValues = { ...COMMON_DEF, periodOn: false, periodFrom: '令和8年4月', periodTo: '令和9年3月' };
+  // 当期変更情報一覧表のフォントは ＭＳ ゴシック 6（現行の標準値）
+  if (norm(name) === '当期変更情報一覧表') v.fName = '6';
   sectionsOf(name).forEach((f) => {
     if (f.t === 'radio') { v[f.key] = f.def; if (f.text) v[f.text.key] = ''; }
     if (f.t === 'text') v[f.key] = f.def;
-    if (f.t === 'number') v[f.key] = String(f.def);
+    if (f.t === 'number' || f.t === 'seal') v[f.key] = String(f.def);
     if (f.t === 'range') { v[f.key] = f.def; f.fields.forEach((x) => { v[f.key + x + 'From'] = ''; v[f.key + x + 'To'] = ''; }); }
     if (f.t === 'checks') f.items.forEach((it) => { v[it.key] = it.def; if (it.num) v[it.num.key] = String(it.num.def); });
   });
@@ -168,6 +185,23 @@ export function DepPrintPanel({ name, accent, onRun, onClose }: { name: string; 
       </div>
     ), f.wide);
     if (f.t === 'text') return sec(f.key, f.label, <input className="field-input" value={String(v[f.key])} onChange={(e) => set(f.key, e.target.value)} style={{ ...IN, width: '100%' }} />);
+    if (f.t === 'seal') {
+      const cur = Number(v[f.key]) || 1;
+      return sec(f.key, f.label, (
+        <div data-seal-start style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+          <div role="radiogroup" aria-label="印刷を始めるシールの番号" style={{ display: 'grid', gridTemplateColumns: `repeat(${f.cols}, 52px)`, gap: 3, padding: 6, border: '1px solid #cfd8e0', borderRadius: 6, background: '#f6f8fa' }}>
+            {Array.from({ length: f.cols * f.rows }, (_, i) => i + 1).map((no) => {
+              const on = no === cur; const skip = no < cur;
+              return <button key={no} type="button" role="radio" aria-checked={on} data-seal={no} onClick={() => set(f.key, String(no))} title={`${no} 番のシールから印刷します`} style={{ height: 26, border: '1px solid ' + (on ? accent : '#d3dbe3'), borderRadius: 4, background: on ? accent : skip ? '#e9edf1' : '#fff', color: on ? '#fff' : skip ? '#9aa5b1' : '#22303c', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', fontVariantNumeric: 'tabular-nums' }}>{no}</button>;
+            })}
+          </div>
+          <div style={{ display: 'grid', gap: 6, fontSize: 14, color: '#3d4a56', lineHeight: 1.6 }}>
+            <span>1枚 {f.cols * f.rows} 区切りのシール用紙です。印刷を始めるシールの番号を選びます。</span>
+            <span><b>{cur} 番</b>から印刷します{cur > 1 ? `（1〜${cur - 1} 番は使用済みとして空けます）` : ''}。</span>
+          </div>
+        </div>
+      ), true);
+    }
     if (f.t === 'number') return sec(f.key, f.label, <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14 }}><input className="field-input" value={String(v[f.key])} onChange={(e) => set(f.key, e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} inputMode="numeric" style={{ ...IN, width: 80, textAlign: 'right' }} />{f.unit}</div>);
     return null;
   };
@@ -217,11 +251,11 @@ export function DepPrintPanel({ name, accent, onRun, onClose }: { name: string; 
             <ScopeBlock kind="帳票個別" title="この帳票の詳細設定" desc={`「${title2}」の印刷だけに反映されます。次に開いたときも引き継ぎます。`} right={<button type="button" data-dep-print-reset onClick={(e) => { e.stopPropagation(); setV(defaultsOf(name)); }} title="この帳票の詳細設定を標準値に戻します" style={{ ...btnS('#5b6773'), whiteSpace: 'nowrap' }}>標準に戻す</button>}>
               <div data-detail-sections style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 10, alignItems: 'start' }}>
                 {sections.map(field)}
-                {sec('font', 'フォント', <>{([['fName', '各名称'], ['fItem', '項目名'], ['fAmt', '金額']] as const).map(([k, l]) => (
-                  <div key={k} data-dep-font={k} style={{ display: 'grid', gridTemplateColumns: '56px minmax(0,1fr) 64px auto', alignItems: 'center', gap: 6, fontSize: 14 }}>
-                    <span style={{ color: '#5b6773', fontWeight: 700 }}>{l}</span>
-                    <select aria-label={`${l}のフォント`} value={String(v[k + 'Face'])} onChange={(e) => set(k + 'Face', e.target.value)} style={{ ...IN, minWidth: 0 }}>{FACES.map((o) => <option key={o}>{o}</option>)}</select>
-                    <select aria-label={`${l}の文字サイズ`} value={String(v[k])} onChange={(e) => set(k, e.target.value)} style={IN}>{SIZES.map((o) => <option key={o}>{o}</option>)}</select>
+                {sec('font', 'フォント', <>{fontRowsOf(name).map(([k, l]) => (
+                  <div key={k} data-dep-font={k} style={{ display: 'grid', gridTemplateColumns: l ? '56px minmax(0,1fr) 64px auto' : 'minmax(0,1fr) 64px auto', alignItems: 'center', gap: 6, fontSize: 14 }}>
+                    {l && <span style={{ color: '#5b6773', fontWeight: 700 }}>{l}</span>}
+                    <select aria-label={`${l || '文字'}のフォント`} value={String(v[k + 'Face'])} onChange={(e) => set(k + 'Face', e.target.value)} style={{ ...IN, minWidth: 0 }}>{FACES.map((o) => <option key={o}>{o}</option>)}</select>
+                    <select aria-label={`${l || '文字'}の文字サイズ`} value={String(v[k])} onChange={(e) => set(k, e.target.value)} style={IN}>{SIZES.map((o) => <option key={o}>{o}</option>)}</select>
                     <span style={{ fontSize: 12, color: '#8290a0' }}>pt</span>
                   </div>
                 ))}</>)}

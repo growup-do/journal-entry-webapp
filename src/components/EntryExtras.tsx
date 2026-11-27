@@ -29,6 +29,7 @@ import { isViewOnly, setSession, specialRatesOf, splitSpecialAmount, useSession,
 
 export { WATCHED, watchedStatement } from './EntryCommon';
 import { watchedStatement } from './EntryCommon';
+import { getHojoConf, type Grant } from '../store/hojoConfStore';
 
 /* ---------------- 入力設定（既存「入力の変更」＋詳細設定） ---------------- */
 export function InputSettingsModal({ open, onClose, accent }: { open: boolean; onClose: () => void; accent: string }) {
@@ -361,8 +362,20 @@ export function useStatementFlow(accent: string, toast: (m: string) => void) {
   );
   return { start: (list: StatementItem[]) => setItems(list), node };
 }
-interface StatementEntry { reg: boolean; attr: string; kind: string; kihon: string; purpose: string }
-const newEntry = (): StatementEntry => ({ reg: true, attr: DONOR_ATTRS[0], kind: DONATION_KINDS[0], kihon: '0', purpose: '' });
+interface StatementEntry {
+  reg: boolean; attr: string; kind: string; kihon: string; purpose: string;
+  /** 補助金事業等収益明細書（確認メモ #451〜#453）：交付金額・利用者からの収益（明細による集計）、区分、うち国庫補助金等、
+   *  交付金額として登録／利用者からの収益として登録（科目・交付目的による集計）、交付団体及び交付の目的（交付目的による集計） */
+  grantAmt: string; userAmt: string; kubun: string; kokko: string; as: '交付金額' | '利用者からの収益'; grant: string;
+}
+/** 補助金の区分：伝票の行の科目のうち、補助金事業等収益明細書の設定でチェックした科目 */
+const hojoKubunOf = (it: StatementItem) => { const k = getHojoConf().kubuns; return [it.kashi, it.kari].find((a) => k.includes(a)) ?? k[0] ?? it.kashi; };
+const grantLabel = (g: Grant) => [g.org, g.purpose].filter(Boolean).join('　');
+const newEntry = (it?: StatementItem): StatementEntry => {
+  const kubun = it ? hojoKubunOf(it) : '';
+  const g = getHojoConf().grants.find((x) => x.kubun === kubun);
+  return { reg: true, attr: DONOR_ATTRS[0], kind: DONATION_KINDS[0], kihon: '0', purpose: '', grantAmt: it ? yen(it.amount) : '0', userAmt: '0', kubun, kokko: '0', as: '交付金額', grant: g ? grantLabel(g) : '' };
+};
 /** 受領年月日（会計年度の 1〜3月は翌年） */
 function receivedDate(fy: string, date: string) {
   const y = parseInt(fy.replace(/[^0-9]/g, ''), 10) || 8;
@@ -380,9 +393,22 @@ export function AttachedStatementModal({ items, onClose, onDone, accent }: { ite
   if (!cur || !v) return null;
   const set = (p: Partial<StatementEntry>) => setVals((list) => list.map((x, i) => (i === idx ? { ...x, ...p } : x)));
   const kifu = cur.label === '寄附金収益明細書';
+  const hojo = cur.label === '補助金事業等収益明細書';
+  const hc = getHojoConf();
   const last = idx === items.length - 1;
   /** うち基本金組入額は 0 から寄附金額まで */
-  const errOf = (it: StatementItem, e: StatementEntry) => (it.label === '寄附金収益明細書' && e.reg && toInt(e.kihon) > it.amount ? '寄附金額を超える金額は設定できません。' : '');
+  const errOf = (it: StatementItem, e: StatementEntry) => {
+    if (!e.reg) return '';
+    if (it.label === '寄附金収益明細書') return toInt(e.kihon) > it.amount ? '寄附金額を超える金額は設定できません。' : '';
+    if (it.label === '補助金事業等収益明細書') {
+      const m = getHojoConf().method;
+      // 明細による集計：交付金額と利用者からの収益の合計は、受領した金額と一致させる（確認メモ #451）
+      if (m === '明細による集計' && toInt(e.grantAmt) + toInt(e.userAmt) !== it.amount) return `交付金額と利用者からの収益の合計を、受領した金額（${yen(it.amount)} 円）に合わせてください。`;
+      const cap = m === '明細による集計' ? toInt(e.grantAmt) : it.amount;
+      if (toInt(e.kokko) > cap) return m === '明細による集計' ? 'うち国庫補助金等は、交付金額を超えて設定できません。' : 'うち国庫補助金等は、受領した金額を超えて設定できません。';
+    }
+    return '';
+  };
   const err = errOf(cur, v);
   const firstErr = items.findIndex((it, i) => !!errOf(it, vals[i]));
   const lbl: CSSProperties = { fontSize: 14, color: '#5b6773', whiteSpace: 'nowrap' };
@@ -404,7 +430,7 @@ export function AttachedStatementModal({ items, onClose, onDone, accent }: { ite
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', alignItems: 'center', gap: '10px 14px' }}>
           <span style={lbl}>受領年月日</span><span style={shown}>{receivedDate(s.fiscalYear, cur.date)}</span>
-          <span style={lbl}>{kifu ? '寄附金額' : '金額'}</span><span style={shown}>{yen(cur.amount)} 円</span>
+          <span style={lbl}>{kifu ? '寄附金額' : hojo ? '受領した金額' : '金額'}</span><span style={shown}>{yen(cur.amount)} 円</span>
           {kifu ? (
             <>
               <span style={lbl}>寄附者の属性</span>
@@ -413,6 +439,44 @@ export function AttachedStatementModal({ items, onClose, onDone, accent }: { ite
               <select data-stmt-kind className="field-input" disabled={!v.reg} value={v.kind} onChange={(e) => set({ kind: e.target.value })} style={{ ...input, width: 220, opacity: v.reg ? 1 : 0.5 }}>{DONATION_KINDS.map((o) => <option key={o}>{o}</option>)}</select>
               <span style={lbl}>うち基本金組入額</span>
               <input data-stmt-kihon className="field-input" inputMode="numeric" disabled={!v.reg} value={v.kihon} onChange={(e) => set({ kihon: e.target.value.replace(/[^0-9,]/g, '') })} onBlur={() => set({ kihon: yen(toInt(v.kihon)) })} aria-invalid={!!err} style={{ ...numInput, width: 220, opacity: v.reg ? 1 : 0.5, borderColor: err ? '#c0392b' : undefined }} />
+            </>
+          ) : hojo ? (
+            <>
+              <span style={lbl}>集計方法</span><span data-stmt-hojo-method style={{ fontSize: 14, color: '#5b6773' }}>{hc.method}<span style={{ fontSize: 12, color: '#9aa5b1', marginLeft: 8 }}>決算附属明細書の設定で変更します</span></span>
+              {hc.method === '明細による集計' ? (
+                <>
+                  <span style={lbl}>交付団体及び交付の目的</span>
+                  <input data-stmt-grant-text className="field-input" disabled={!v.reg} value={v.purpose} onChange={(e) => set({ purpose: e.target.value })} placeholder="例：○○市　延長保育事業" style={{ ...input, opacity: v.reg ? 1 : 0.5 }} />
+                  <span style={lbl}>区分</span>
+                  <select data-stmt-kubun className="field-input" disabled={!v.reg} value={v.kubun} onChange={(e) => set({ kubun: e.target.value })} style={{ ...input, width: 260, opacity: v.reg ? 1 : 0.5 }}>{(hc.kubuns.includes(v.kubun) ? hc.kubuns : [v.kubun, ...hc.kubuns]).map((o) => <option key={o}>{o}</option>)}</select>
+                  <span style={lbl}>交付金額</span>
+                  <input data-stmt-grant-amt className="field-input" inputMode="numeric" disabled={!v.reg} value={v.grantAmt} onChange={(e) => set({ grantAmt: e.target.value.replace(/[^0-9,]/g, '') })} onBlur={() => set({ grantAmt: yen(toInt(v.grantAmt)) })} style={{ ...numInput, width: 220, opacity: v.reg ? 1 : 0.5 }} />
+                  <span style={lbl}>利用者からの収益</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <input data-stmt-user-amt className="field-input" inputMode="numeric" disabled={!v.reg} value={v.userAmt} onChange={(e) => set({ userAmt: e.target.value.replace(/[^0-9,]/g, '') })} onBlur={() => set({ userAmt: yen(toInt(v.userAmt)) })} style={{ ...numInput, width: 220, opacity: v.reg ? 1 : 0.5 }} />
+                    <span style={{ fontSize: 12, color: toInt(v.grantAmt) + toInt(v.userAmt) === cur.amount ? '#8290a0' : '#b03a2e' }}>合計 {yen(toInt(v.grantAmt) + toInt(v.userAmt))} 円</span>
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span style={lbl}>登録のしかた</span>
+                  <span role="radiogroup" aria-label="登録のしかた" style={{ display: 'flex', gap: 16, fontSize: 14, opacity: v.reg ? 1 : 0.5 }}>
+                    {(['交付金額', '利用者からの収益'] as const).map((o) => <label key={o} style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="radio" data-stmt-as={o} disabled={!v.reg} checked={v.as === o} onChange={() => set({ as: o })} />{o}として登録</label>)}
+                  </span>
+                  {hc.method === '交付目的による集計' && (() => {
+                    const list = hc.grants.filter((g) => g.kubun === v.kubun).map(grantLabel);
+                    return (
+                      <>
+                        <span style={lbl}>交付団体及び交付の目的</span>
+                        {list.length ? <select data-stmt-grant className="field-input" disabled={!v.reg} value={v.grant} onChange={(e) => set({ grant: e.target.value })} style={{ ...input, opacity: v.reg ? 1 : 0.5 }}>{(list.includes(v.grant) || !v.grant ? list : [v.grant, ...list]).map((o) => <option key={o}>{o}</option>)}</select>
+                          : <span style={{ fontSize: 12, color: '#b03a2e' }}>「{v.kubun}」の交付団体及び交付の目的が登録されていません（決算附属明細書の設定で登録します）。</span>}
+                      </>
+                    );
+                  })()}
+                </>
+              )}
+              <span style={lbl}>うち国庫補助金等</span>
+              <input data-stmt-kokko className="field-input" inputMode="numeric" disabled={!v.reg} value={v.kokko} onChange={(e) => set({ kokko: e.target.value.replace(/[^0-9,]/g, '') })} onBlur={() => set({ kokko: yen(toInt(v.kokko)) })} aria-invalid={!!err} style={{ ...numInput, width: 220, opacity: v.reg ? 1 : 0.5, borderColor: err ? '#c0392b' : undefined }} />
             </>
           ) : (
             <>

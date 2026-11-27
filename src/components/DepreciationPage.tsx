@@ -421,8 +421,13 @@ function buildReport(name: string, ctx: ReportCtx): ExportSpec {
   const h = spec.header ?? [];
   let rows = spec.rows ?? [];
   const iCode = h.indexOf('資産コード'), iDate = h.indexOf('取得年月日'), iMethod = h.indexOf('償却方法');
-  if (o.order === '資産コード順' && iCode >= 0) rows = [...rows].sort((a, b) => String(a[iCode]).localeCompare(String(b[iCode])));
-  if (o.order === '取得日付順' && iDate >= 0) rows = [...rows].sort((a, b) => dateKey(String(a[iDate])) - dateKey(String(b[iDate])));
+  const iName = h.findIndex((x) => /名称/.test(x));
+  if ((o.order === '資産コード順' || o.order === '入力コード順') && iCode >= 0) rows = [...rows].sort((a, b) => String(a[iCode]).localeCompare(String(b[iCode])));
+  if (o.order === '固定資産名称順' && iName >= 0) rows = [...rows].sort((a, b) => String(a[iName]).localeCompare(String(b[iName]), 'ja'));
+  if ((o.order === '取得日付順' || o.order === '取得年月日順') && iDate >= 0) rows = [...rows].sort((a, b) => dateKey(String(a[iDate])) - dateKey(String(b[iDate])));
+  // 当期変更情報一覧表の「変更内容別」：変更内容ごとにまとめて並べる（確認メモ #433）
+  const iChange = h.findIndex((x) => /変更内容|処理/.test(x));
+  if (o.ptype === '変更内容別' && iChange >= 0) rows = [...rows].sort((a, b) => String(a[iChange]).localeCompare(String(b[iChange]), 'ja'));
   if (o.method !== undefined && iMethod >= 0) rows = rows.map((r) => r.map((c, i) => (i === iMethod ? printMethod(String(c), o.method) : c)));
   const title = String(o.title ?? '').trim();
   const period = o.periodOn ? '　集計期間 ' + o.periodFrom + '〜' + o.periodTo : '';

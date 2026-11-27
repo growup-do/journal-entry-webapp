@@ -54,7 +54,7 @@ const NODES: Node[] = [
   N('e-single', '単一形式', 'page', 'entry', { open: '単一入力' }),
   N('e-transfer', '振替伝票形式', 'page', 'entry', { open: '振替入力', note: '取引先は行ごと、税区分・税額は貸借それぞれ' }),
   N('e-tsingle', '振替単一形式', 'page', 'entry', { open: '振替単一', note: '1枚の伝票に複数行。金額は行ごとに1つ、内部取引は行ごと' }),
-  N('stmtreg', '附属明細書への登録', 'dialog', 'entry', { open: '振替単一', note: '寄附金・補助金・基本金・繰入金の科目を使う行を1つの画面で 1／2・2／2 と切り替える。寄附金収益明細書は 受領年月日・寄附金額を表示し、寄附者の属性・区分・うち基本金組入額 を入力' }),
+  N('stmtreg', '附属明細書への登録', 'dialog', 'entry', { open: '振替単一', note: '補助金事業等収益明細書は集計方法（明細／科目／交付目的）で入力欄が変わる（#451〜#453）。寄附金・補助金・基本金・繰入金の科目を使う行を1つの画面で 1／2・2／2 と切り替える。寄附金収益明細書は 受領年月日・寄附金額を表示し、寄附者の属性・区分・うち基本金組入額 を入力' }),
   N('widepanel', '参照パネル', 'panel', 'entry', { open: '伝票入力', note: '日記帳（当年／前年）／元帳１・２／残高照合。いまの区分の伝票だけを出す（親区分では配下の入力区分。確認メモ #331）' }),
   N('template', '連続定型', 'dialog', 'entry', { open: '伝票入力', note: 'ページごとに内容を直し、有効／無効を切り替えてまとめて登録（最大 50 ページ）。4形式共通' }),
   N('alloc', '自動按分', 'dialog', 'entry', { open: '伝票入力', note: '按分元の金額入力 → 伝票確認画面（1 枚ずつ） → 終わりで登録。伝票は自動按分仕訳の形式（4 形式）で作る（確認メモ #295）' }),
@@ -143,7 +143,9 @@ const NODES: Node[] = [
   N('s-summary', '摘要マスター', 'page', 'settings', { open: '摘要辞書', note: 'マスター設定' }),
   N('s-opening', '残高設定（繰越・前年実績）', 'page', 'settings', { open: '開始残高' }),
   N('s-budget', '予算額の設定', 'page', 'settings', { open: '予算' }),
-  N('s-attached', '決算附属明細書設定', 'page', 'settings', { open: '決算附属明細書', note: '明細書の項目ごとに科目を結びつける' }),
+  N('s-attached', '決算附属明細書設定', 'page', 'settings', { open: '決算附属明細書', note: '明細書の項目ごとに科目を結びつける。［１年基準科目設定］と［交付団体及び交付の目的の編集］を開く' }),
+  N('oneyear', '１年基準科目設定', 'modal', 'settings', { open: '決算附属明細書', note: '流動資産／固定資産、流動負債／固定負債の対応するペアを選ぶ。法人全体の決算チェック 23 と共通（確認メモ #454）' }),
+  N('grants', '交付団体及び交付の目的の編集', 'modal', 'settings', { open: '決算附属明細書', note: '集計方法が交付目的による集計のときだけ。補助金の区分ごとに登録（確認メモ #450）' }),
   N('s-fin', '財務分析設定', 'page', 'settings', { open: '財務分析設定', note: '財務分析科目設定（5 分類 28 指標）と人数設定。未保存の変更は黄色で表示' }),
   N('unsavedconfirm', '保存されていない変更の確認', 'modal', 'settings', { open: '財務分析設定', note: '人数設定・繰越判断の基準を変更したまま、ほかの画面へ移ろうとしたとき' }),
   N('s-carry', '繰越判断の基準設定', 'page', 'settings', { open: '繰越判断', note: '収支分析表／高額繰越／委託費30%／事前協議3%。未保存の変更は黄色で表示' }),
@@ -169,6 +171,7 @@ const NODES: Node[] = [
 
 const E = (from: string, to: string, label?: string, weak = false): Edge => ({ from, to, label, weak });
 const EDGES: Edge[] = [
+  E('s-attached', 'oneyear', '１年基準科目設定', true), E('s-attached', 'grants', '交付団体及び交付の目的の編集', true),
   E('journal', 'period', '期間を指定', true), E('ledger', 'period', '期間を指定', true),
   E('favmenu', 'favedit', 'お気に入りメニューを編集', true), E('favmenu', 'home', '登録した画面を開く', true),
   E('home', 'bulkdel', '一括削除（日記帳・元帳カード）', true), E('bulkdel', 'vdelete', '削除確認へ', true), E('vdelete', 'bulkdel', '削除しないで戻る'), E('closing', 's-carry', '繰越判断', true),
