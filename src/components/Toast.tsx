@@ -13,7 +13,6 @@ export function useToast() {
   return { msg, show };
 }
 
-export const NOT_IMPL = 'この操作はプロトタイプでは動作しません（本番で実装）';
 
 export function ToastView({ msg }: { msg: string }) {
   if (!msg) return null;

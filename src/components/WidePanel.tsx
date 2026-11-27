@@ -311,7 +311,7 @@ export function WidePanel({ accent, layout, state, top = 0, highlightIds, return
         </span>
       </button>
       {/* 本文に重ねて表示するので、影を付けて浮いていることを示す */}
-      <aside aria-label="参照パネル" aria-hidden={collapsed} data-memo-panel="参照パネル" data-memo-anchor="参照パネル" style={{ position: 'fixed', top, right: 0, bottom: 0, width: WIDE_WIDTH, maxWidth: '94vw', background: '#fff', borderLeft: '1px solid #dde4ea', boxShadow: '-14px 0 40px rgba(30,50,70,.22)', display: 'flex', flexDirection: 'column', zIndex: 90, transition: 'transform .28s ease', transform: collapsed ? `translateX(${WIDE_WIDTH + 20}px)` : 'translateX(0)', visibility: collapsed ? 'hidden' : 'visible' }}>
+      <aside aria-label="参照パネル" aria-hidden={collapsed} data-memo-panel="参照パネル" data-memo-anchor="参照パネル" style={{ position: 'fixed', top, right: 0, bottom: 0, width: WIDE_WIDTH, maxWidth: '94vw', background: sess.env.bgColorRight, borderLeft: '1px solid #dde4ea', boxShadow: '-14px 0 40px rgba(30,50,70,.22)', display: 'flex', flexDirection: 'column', zIndex: 90, transition: 'transform .28s ease', transform: collapsed ? `translateX(${WIDE_WIDTH + 20}px)` : 'translateX(0)', visibility: collapsed ? 'hidden' : 'visible' }}>
         {body}
       </aside>
       {modal}

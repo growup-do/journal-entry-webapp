@@ -6,7 +6,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { NOT_IMPL, ToastView, useToast } from './Toast';
+import { ToastView, useToast } from './Toast';
 import { displayName } from '../data';
 import { startKindOf, useSession, type EnvSettings } from '../store/session';
 import { HelpTip, Icon, IconButton, TabStrip, tabBtn, type IconName } from './ui';
@@ -14,7 +14,7 @@ import { useBackClaim, useBackNav } from './BackNav';
 
 export interface ToolButton {
   label: string;
-  onClick?: () => void;
+  onClick: () => void;
   primary?: boolean;
   /** 無効表示（理由は title に） */
   disabled?: boolean;
@@ -172,11 +172,11 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
             {/* 印刷はどの画面でも右端に置く：印刷以外のツール → 印刷のツール → 印刷メニュー（extraTools）の順 */}
             {[...tools.filter((t) => t.icon !== 'print'), ...tools.filter((t) => t.icon === 'print')].map((t) => t.icon && t.iconOnly ? (
               <span key={t.label} data-tip={t.disabled ? t.title : undefined} style={{ display: 'inline-flex' }}>
-                <IconButton icon={t.icon} label={t.label} disabled={t.disabled} color={t.primary ? accent : '#5b6773'} size={42} onClick={t.onClick ?? (() => toast.show(NOT_IMPL))} />
+                <IconButton icon={t.icon} label={t.label} disabled={t.disabled} color={t.primary ? accent : '#5b6773'} size={42} onClick={t.onClick} />
               </span>
             ) : (
               <span key={t.label} title={t.disabled ? undefined : t.title} data-tip={t.disabled ? t.title : undefined} style={{ display: 'inline-flex' }}>
-                <button type="button" className="btn-outline" disabled={t.disabled} onClick={t.onClick ?? (() => toast.show(NOT_IMPL))} style={{ ...toolStyle(t.primary ? accent : undefined), ...(t.icon ? { display: 'inline-flex', alignItems: 'center', gap: 6 } : {}), ...(t.icon === 'print' && !t.primary ? { color: accent } : {}), ...(t.disabled ? { opacity: 0.45, cursor: 'not-allowed', pointerEvents: 'none' } : {}) }}>
+                <button type="button" className="btn-outline" disabled={t.disabled} onClick={t.onClick} style={{ ...toolStyle(t.primary ? accent : undefined), ...(t.icon ? { display: 'inline-flex', alignItems: 'center', gap: 6 } : {}), ...(t.icon === 'print' && !t.primary ? { color: accent } : {}), ...(t.disabled ? { opacity: 0.45, cursor: 'not-allowed', pointerEvents: 'none' } : {}) }}>
                   {t.icon && <Icon name={t.icon} size={14} />}{t.label}
                 </button>
               </span>

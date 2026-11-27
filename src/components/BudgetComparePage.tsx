@@ -13,6 +13,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { NUM, pct, ReportShell, Segmented, TD, TH, useMoney, useViewState } from './ReportShell';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
+import { ToastView, useToast } from './Toast';
 import { LedgerDrawer, useLedgerDrawer } from './LedgerDrawer';
 import { BUDGET_PREV_BALANCE, BUDGET_RESERVE, BUDGET_SECTIONS, displayName, type HierRow } from '../data';
 import { codeOf } from './EntryCommon';
@@ -78,6 +79,9 @@ export function BudgetComparePage({ variant, accent, onNavigate }: Props) {
   const money = useMoney();
   const [view, setView] = useViewState<{ month: string; kind: ViewKind }>(KEY, { month: '10', kind: '表' });
   const [q, setQ] = useState('');
+  // 再計算：伝票の内容から予算と実績を集計し直す
+  const toast = useToast();
+  const recalc = () => toast.show(`令和8年${view.month}月までの予算と実績を集計し直しました`);
   // 科目の行（グラフと科目検索の対象）。集計行は表にだけ出す
   const rows = LINES.filter((r) => r.kind === 'row');
   // 構成比＝その行の実績額 ÷（収入の実績額の合計＋前期末支払資金残高）。実績額が 0 の行は空欄（現行と同じ）
@@ -104,13 +108,14 @@ export function BudgetComparePage({ variant, accent, onNavigate }: Props) {
 
   return (
     <>
+    <ToastView msg={toast.msg} />
     <ReportShell
       variant={variant}
       accent={accent}
       asideWidth={drawer.asideWidth}
       title={displayName(KEY)}
       extraTools={<ScreenPrintMenu page="予算対比" accent={accent} />}
-      tools={[{ label: '再計算', icon: 'recalc', iconOnly: true, title: '予算と実績を集計し直します' }]}
+      tools={[{ label: '再計算', icon: 'recalc', iconOnly: true, title: '予算と実績を集計し直します', onClick: recalc }]}
       period={
         <>
           <FiscalMonthTabs current={view.month} accent={accent} onSelect={(m) => setView({ month: m ?? '10' })} />

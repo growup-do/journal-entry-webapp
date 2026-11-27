@@ -17,7 +17,6 @@ import { CommonPrintSettingsPage } from './PrintCenter';
 import { PrintCenterPage } from './PrintCenterPage';
 import { TrendPage } from './TrendPage';
 import { TrialBalancePage } from './TrialBalancePage';
-import { PlaceholderPage } from './PlaceholderPage';
 import { FiscalYearPage } from './FiscalYearPage';
 import { AuditSettingsPage, BackupPage, FinancialAnalysisSettingsPage, JournalRefreshPage } from './MaintenancePages';
 import { renderSettingsPage } from './SettingsPages';
@@ -107,7 +106,8 @@ export function renderPage(page: string, variant: 'form' | 'sheet', accent: stri
       return <DepreciationPage variant={variant} accent={accent} />;
     case '予算対比':
       return <BudgetComparePage variant={variant} accent={accent} onNavigate={onNavigate} />;
+    // 画面のない名前で来たときはホームを出す（未作成の画面は作らない）
     default:
-      return <PlaceholderPage title={page} accent={accent} />;
+      return <HomePage variant={variant} accent={accent} onNavigate={onNavigate} />;
   }
 }

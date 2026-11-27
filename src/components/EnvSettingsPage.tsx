@@ -4,7 +4,7 @@
 //   確認メモ #170・#172・#173・#174・#180：Web 化などで不要になった設定欄（フリガナ検索の無効化／片側だけの内部取引仕訳の許可／特殊摘要のポップアップ／
 //   バックアップ先／繰入金明細の集計方法）はこの画面から削除した。繰入金明細の集計方法は「決算付属明細書設定」の「科目の合わせ方」で切り替える。
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { ToastView, useToast } from './Toast';
 import { DivisionInfoDialog } from './DivisionInfoDialog';
@@ -28,6 +28,23 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
   const [tab, setTab] = useState(DIV_TABS[0]);
   const toast = useToast();
   const set = (p: Partial<EnvSettings>) => setV((x) => ({ ...x, ...p }));
+  // 画面背景の画像：選んだ画像を縮小して設定に持つ（大きな画像でも保存できるよう、長辺 1600px の JPEG にする）
+  const bgFile = useRef<HTMLInputElement>(null);
+  const pickBg = (f: File) => {
+    if (!f.type.startsWith('image/')) { toast.show('画像のファイルを選んでください'); return; }
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, 1600 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d')?.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      set({ bgImage: c.toDataURL('image/jpeg', 0.8), bgImageName: f.name });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); toast.show('画像を読み込めませんでした'); };
+    img.src = url;
+  };
   /** 金額の表示例。点線は3桁ごとの区切り線（位取り線）として描く */
   const sample = (n: number): ReactNode => {
     const digits = String(Math.abs(n));
@@ -171,7 +188,17 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
                     <span style={{ display: 'inline-flex', width: 120, height: 34, borderRadius: 8, overflow: 'hidden', border: '1px solid #cfd8e0' }}><span style={{ flex: 2, background: v.bgColor }} /><span style={{ flex: 1, background: v.bgColorRight }} /></span>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}><button type="button" className="btn-outline" onClick={() => toast.show('背景画像の選択（プロトタイプでは未対応）')} style={btn()}>画像を選択…</button><span style={{ fontSize: 14, color: '#7a8794' }}>未選択</span></div>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <input ref={bgFile} type="file" accept="image/*" data-bg-file hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) pickBg(f); }} />
+                    <button type="button" className="btn-outline" onClick={() => bgFile.current?.click()} style={btn()}>画像を選択…</button>
+                    {v.bgImage ? (
+                      <>
+                        <span data-bg-preview style={{ width: 120, height: 68, borderRadius: 8, border: '1px solid #cfd8e0', background: `center / cover no-repeat url(${v.bgImage})` }} />
+                        <span style={{ fontSize: 14, color: '#3d4a56', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.bgImageName}</span>
+                        <button type="button" className="btn-outline" onClick={() => set({ bgImage: '', bgImageName: '' })} style={btn('#c0392b')}>画像を外す</button>
+                      </>
+                    ) : <span style={{ fontSize: 14, color: '#7a8794' }}>未選択</span>}
+                  </div>
                 )}
               </div></div>
             )}

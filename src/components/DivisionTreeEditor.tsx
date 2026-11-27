@@ -133,8 +133,21 @@ export function DivisionTreeEditor({ accent, compact }: { accent: string; compac
   };
 
   // 集計区分（格納先）に選べるのは親区分だけ
-  const parents = all.filter((x) => !x.node.entry && (x.node.kind === '拠点区分' || x.node.kind === '事業区分' || x.node.kind === 'サービス区分')).map((x) => x.node.name);
-  const parentNameOf = (id: string) => all.find((x) => x.node.id === id)?.path.slice(-2, -1)[0] ?? '';
+  /** 集計区分の候補：その区分を配下に置ける親区分（拠点区分なら事業区分、サービス区分なら拠点区分 など） */
+  const parentsFor = (n: DivisionNode) => all.map((x) => x.node).filter((p) => !p.entry && CHILD_KIND[p.kind] === n.kind);
+  const parentIdOf = (id: string, n: DivisionNode = s.tree): string => {
+    for (const c of n.children ?? []) { if (c.id === id) return n.id; const r = parentIdOf(id, c); if (r) return r; }
+    return '';
+  };
+  /** 集計区分の変更：区分を、選んだ集計区分の配下（末尾）へ移す */
+  const moveTo = (id: string, parentId: string) => {
+    const node = all.find((x) => x.node.id === id)?.node;
+    const dest = all.find((x) => x.node.id === parentId)?.node;
+    if (!node || !dest || parentIdOf(id) === parentId) return;
+    const removed = mapTree(s.tree, (x) => (x.id === id ? null : x))!;
+    setSession({ tree: mapTree(removed, (x) => (x.id === parentId ? { ...x, children: [...(x.children ?? []), node] } : x))! });
+    toast.show(`${divisionLabel(node)} の集計区分を「${dest.name}」に変更しました`);
+  };
 
   /** カードの右に置く「＋」（配下に区分を追加）。入力区分には出さない */
   const addButton = (n: DivisionNode) => {
@@ -200,7 +213,7 @@ export function DivisionTreeEditor({ accent, compact }: { accent: string; compac
         <>
           <Field label="区分コード"><input className="field-input ring" value={sel.code} onChange={(e) => update(sel.id, { code: e.target.value.replace(/[^0-9]/g, '').slice(0, 3) })} style={input} /></Field>
           <Field label="内部コード"><div style={{ ...input, background: '#f5f7f9', color: '#9aa5b1' }}>{sel.id}（自動）</div></Field>
-          <Field label="集計区分"><select value={parentNameOf(sel.id)} onChange={() => toast.show('集計区分の変更：本番では階層の移動として実装')} style={input}>{parents.map((p) => <option key={p}>{p}</option>)}</select></Field>
+          <Field label="集計区分"><select data-parent-select value={parentIdOf(sel.id)} onChange={(e) => moveTo(sel.id, e.target.value)} style={input}>{parentsFor(sel).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></Field>
           <Field label="事業種別"><select value={sel.category ?? ''} onChange={(e) => update(sel.id, { category: e.target.value })} style={input}>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select></Field>
           <Field label="カラー（一覧・元帳の背景色）" span={2}><DivisionColorPicker value={sel.color} onChange={(c) => update(sel.id, { color: c })} /></Field>
           <Field label="開始年度"><div style={ro}>{sel.startYear}</div></Field>

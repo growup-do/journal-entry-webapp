@@ -113,9 +113,14 @@ export function FormScreen({ page, onNavigate, onLogout }: Props) {
     renderPage(page, 'form', GREEN, GREEN_RGB, pageNav, onLogout)
   );
 
+  // 動作環境の「画面背景」（色／画像）を本文の背景にする
+  const env = useSession().env;
+  const pageBg: CSSProperties = env.bgMode === '画像' && env.bgImage
+    ? { backgroundColor: env.bgColor, backgroundImage: `url(${env.bgImage})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }
+    : { background: env.bgColor };
   return (
     <BackNavContext.Provider value={backValue}>
-    <div style={{ minHeight: 'calc(100vh / var(--app-zoom, 1))', display: 'flex', flexDirection: 'column' }}>
+    <div data-page-bg={env.bgMode} style={{ minHeight: 'calc(100vh / var(--app-zoom, 1))', display: 'flex', flexDirection: 'column', ...pageBg }}>
         {/* アプリバー＋年度帯：画面の幅いっぱい・上部に固定（スクロールしない）。ロゴとシステム名も同じ帯に置き、名前を省略せずに出す */}
         <div ref={headerRef} data-app-top style={{ position: 'sticky', top: 0, zIndex: 102 }}>
           <header

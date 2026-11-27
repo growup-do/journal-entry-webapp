@@ -78,6 +78,8 @@ export interface EnvSettings {
   noFurigana: boolean; printSpeed: boolean;
   negativePos: '前' | '後'; backupDest: 'クラウド（標準）' | 'フォルダ指定' | 'Dropbox'; backupFolder: string;
   bgMode: '色' | '画像'; bgColor: string; bgColorRight: string; autoAmountFont: boolean;
+  /** 画面背景の画像（縮小した画像のデータ）とファイル名。背景の種類が「画像」のとき本文の背景に使う */
+  bgImage: string; bgImageName: string;
   /** 補正予算額の入力方式（依頼書 5.5.5：切替は「予算額の設定」画面内で行う。区分ごと） */
   supplementMode: '補正額' | '補正後予算額';
   /** 付箋の色の意味（全区分共通）。付箋ボタンのツールチップ・検索条件・印刷の絞り込みに表示する */
@@ -93,7 +95,7 @@ export const DEFAULT_ENV: EnvSettings = {
   eraGannen: true, trialCalc: '費目行に表記されている計算方式で計算する', reserveOutput: '予備費を標準方式で印字', noteOnExcel: true,
   budgetInternalOffset: true, onePageRow: false, hideCorpName: false, transferWatch: '収入で監視',
   noFurigana: false, printSpeed: false,
-  negativePos: '前', backupDest: 'クラウド（標準）', backupFolder: '', bgMode: '色', bgColor: '#f3f6f9', bgColorRight: '#eef5fb', autoAmountFont: true,
+  negativePos: '前', backupDest: 'クラウド（標準）', backupFolder: '', bgMode: '色', bgColor: '#e8ecf0', bgColorRight: '#ffffff', bgImage: '', bgImageName: '', autoAmountFont: true,
   supplementMode: '補正額',
   fusenNames: { 赤: '', 青: '', 黄: '', 緑: '' },
 };
@@ -418,7 +420,7 @@ let state: Session = (() => {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULT;
     const saved = JSON.parse(raw) as Partial<Session>;
-    return { ...DEFAULT, ...saved, tree: normalizeTree((saved.treeRev ?? 1) < TREE_REV && saved.tree ? addSampleDivisions(saved.tree) : saved.tree ?? DEFAULT.tree), treeRev: TREE_REV, env: { ...DEFAULT_ENV, ...(saved.env ?? {}) }, input: { ...DEFAULT_INPUT, ...(saved.input ?? {}) }, print: { ...DEFAULT_PRINT, ...(saved.print ?? {}) }, homeSections: { ...DEFAULT_HOME_SECTIONS, ...(saved.homeSections ?? {}) }, ...resetSampleAccess(saved), ledgerTarget: null, journalTarget: null,
+    return { ...DEFAULT, ...saved, tree: normalizeTree((saved.treeRev ?? 1) < TREE_REV && saved.tree ? addSampleDivisions(saved.tree) : saved.tree ?? DEFAULT.tree), treeRev: TREE_REV, env: oldBg({ ...DEFAULT_ENV, ...(saved.env ?? {}) }), input: { ...DEFAULT_INPUT, ...(saved.input ?? {}) }, print: { ...DEFAULT_PRINT, ...(saved.print ?? {}) }, homeSections: { ...DEFAULT_HOME_SECTIONS, ...(saved.homeSections ?? {}) }, ...resetSampleAccess(saved), ledgerTarget: null, journalTarget: null,
       // 以前の保存データ（消費税対応の On／Off だけ）には方式がないので、On は「簡易課税方式」として引き継ぐ（確認メモ #175）
       taxMode: saved.taxMode ?? (saved.taxEntry ? '簡易課税方式' : DEFAULT.taxMode),
       // 以前の保存データには仕訳伝票形式の定型がないので、サンプルを足す（確認メモ #202）
@@ -437,6 +439,10 @@ export function setSession(patch: Partial<Session> | ((s: Session) => Partial<Se
   state = { ...state, ...p };
   try { localStorage.setItem(KEY, JSON.stringify({ ...state, ledgerTarget: null, journalTarget: null })); } catch { /* ignore */ }
   emit();
+}
+/** 以前の既定の背景色（画面に反映していなかった値）は、今の画面の色に読み替える */
+function oldBg(e: EnvSettings): EnvSettings {
+  return e.bgColor === '#f3f6f9' && e.bgColorRight === '#eef5fb' ? { ...e, bgColor: DEFAULT_ENV.bgColor, bgColorRight: DEFAULT_ENV.bgColorRight } : e;
 }
 export function resetSession() { state = DEFAULT; try { localStorage.removeItem(KEY); } catch { /* ignore */ } emit(); }
 export function useSession(): Session {

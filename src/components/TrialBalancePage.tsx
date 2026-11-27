@@ -10,7 +10,8 @@
 //   科目行から元帳へドリルダウン：画面遷移せず右側の元帳パネルに表示（押した行を見たまま内訳を確認。別の行を押すと差し替わる）。
 //   パネルの「元帳の画面で開く」で全画面の元帳へ移り、その「← 戻る」で同じ月・部・階層に戻る（表示状態は sessionStorage に保持）。
 //   金額書式（桁区切り・負の表記・0円行のカット）は動作環境の設定に従う。
-//   資産の部のみサンプルデータあり。他の部は「サンプル未作成」。
+//   表示する列は部で変わる（現行と同じ）：資産の部・負債の部＝前月繰越・借方・貸方・残高／事業活動・資金の部＝前月累計・当月・累計。決算書の予算・差異は資金の部だけ。
+//   合計の行：資産の部・負債の部＝合計／事業活動＝当期活動増減差額／資金の部＝当期資金収支差額合計。
 
 import { useMemoAction } from '../memo/memoAction';
 import type { CSSProperties, ReactNode } from 'react';
@@ -19,7 +20,7 @@ import { useState } from 'react';
 import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { FISCAL_MONTHS, lastDayOf, periodLabel as periodText, type Period } from '../lib/period';
 import { CHECK, LABEL, NUM, ReportShell, Segmented, SwitchPill, TD, TH, useMoney, useViewState } from './ReportShell';
-import { BS_ASSET_ROWS, displayName, type HierRow } from '../data';
+import { BS_ASSET_ROWS, BS_LIAB_ROWS, CF_ROWS, PL_ROWS, displayName, type HierRow } from '../data';
 import { grandTotal, rollup } from '../lib/hier';
 import { metaOf } from '../lib/accounts';
 import { WATCHED, codeOf } from './EntryCommon';
@@ -64,6 +65,14 @@ const ROWS: HierRow[] = BS_ASSET_ROWS.flatMap((r) => {
   if (r.name === '貯蔵品') return [{ name: '拠点区分間貸付金', level: 1, v: [500000, 500000, 0, 0] }, { name: '事業区分間貸付金', level: 1, v: [0, 0, 0, 0] }, r];
   return [r];
 });
+/** 部ごとの科目行 */
+const PART_ROWS: HierRow[][] = [ROWS, BS_LIAB_ROWS, PL_ROWS, CF_ROWS];
+/** 合計の行の名前（部ごと） */
+const TOTAL_LABEL = ['合計', '合計', '当期活動増減差額', '当期資金収支差額合計'];
+/** 予算（資金の部の決算書）：当年度の予算額。サンプルは累計から年額を見積もった額（1万円単位） */
+const budgetOf = (x: number) => (x === 0 ? 0 : Math.sign(x) * Math.ceil((Math.abs(x) * 2.4) / 10000) * 10000);
+/** 各行が貸方の科目か（最上位の行の cr を配下に引き継ぐ） */
+const crFlags = (rows: HierRow[]) => { let cur = false; return rows.map((r) => { if (r.level === 0) cur = !!r.cr; return cur; }); };
 
 /** 起動区分の内訳（合算区分＝合算の構成区分／親区分＝配下の伝票入力区分） */
 function membersOf(s: Session): string[] {
@@ -279,6 +288,10 @@ interface View {
   depth: Depth;
   pattern: Pattern;
   carry: boolean; debit: boolean; credit: boolean; balance: boolean;
+  /** 事業活動・資金の部の列：前月累計・当月・累計 */
+  prevCum: boolean; cur: boolean; cum: boolean;
+  /** 決算書・資金の部の列：予算・差異 */
+  budget: boolean; bdiff: boolean;
   prev: boolean; diff: boolean;
   breakdown: boolean;
 }
@@ -288,7 +301,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
   const KEY = isClosing ? '月次決算' : '月次試算';
   const s = useSession();
   const money = useMoney();
-  const [view, setView] = useViewState<View>(KEY, { month: '8', part: 0, depth: '細々区分', pattern: '標準', carry: true, debit: false, credit: false, balance: true, prev: true, diff: true, breakdown: true });
+  const [view, setView] = useViewState<View>(KEY, { month: '8', part: 0, depth: '細々区分', pattern: '標準', carry: true, debit: false, credit: false, balance: true, prevCum: true, cur: true, cum: true, prev: true, diff: true, budget: true, bdiff: true, breakdown: true });
   const [graph, setGraph] = useState(false);
   // 貸借対照表の不一致（確認メモ #130）：warn＝確認メッセージを表示中
   const [warn, setWarn] = useState(false);
@@ -304,18 +317,31 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
   const showBreakdown = members.length > 0 && view.breakdown;
   // 表示列の切り替えは合算区分・親区分で起動したときだけ。入力区分（内訳のない下層の区分）で起動中は全列を固定表示（確認メモ #131）
   const colsLocked = members.length === 0;
-  const show = colsLocked ? { carry: true, debit: true, credit: true, balance: true, prev: true, diff: true } : view;
+  const show = colsLocked ? { carry: true, debit: true, credit: true, balance: true, prevCum: true, cur: true, cum: true, prev: true, diff: true, budget: true, bdiff: true } : view;
+  /** 事業活動・資金の部（累計で見る部） */
+  const isFlow = view.part >= 2;
+  /** 予算・差異の列（決算書の資金の部だけ） */
+  const hasBudget = isClosing && view.part === 3;
   const lockedNote = `入力区分（${s.division}）で起動中は、表示する列を切り替えできません（すべての列を表示します）。合算区分または親区分（法人・事業区分・拠点区分）で起動すると切り替えできます`;
   const width = 2 + members.length * 2;
-  const src: HierRow[] = ROWS.map((r) => (r.v ? { ...r, v: toColumns(r.v, s.division, members) } : r));
-  const all = rollup(src, width).map((r, i) => ({ ...r, leaf: !!src[i].v }));
+  // 末尾の列は予算（資金の部の決算書で使う）
+  const bw = width + 1;
+  const withCols = (rows: HierRow[]) => rows.map((r) => { if (!r.v) return r; const c = toColumns(r.v, s.division, members); return { ...r, v: [...c, budgetOf(c[1])] }; });
+  const partRows = PART_ROWS[view.part] ?? ROWS;
+  const src: HierRow[] = withCols(partRows);
+  const cr = crFlags(partRows);
+  const all = rollup(src, bw).map((r, i) => ({ ...r, leaf: !!src[i].v, cr: cr[i] }));
   // 以前の表示状態に、廃止した階層（就労授産）が残っているときは細々区分として扱う
   const depth: Depth = DEPTHS.includes(view.depth) ? view.depth : '細々区分';
   const depthIndex = DEPTHS.indexOf(depth);
   const zeroCut = s.env.zeroCut;
   const rows = all.filter((r) => r.level <= depthIndex && (!zeroCut || r.values.some((x) => x !== 0)));
   const hiddenZero = all.filter((r) => r.level <= depthIndex).length - rows.length;
-  const total = grandTotal(all, width);
+  // 合計の行：事業活動・資金の部は 貸方（収益・収入）− 借方（費用・支出）の差額
+  const total = isFlow
+    ? all.filter((r) => r.level === 0).reduce((t, r) => t.map((x, k) => x + (r.cr ? 1 : -1) * r.values[k]), new Array(bw).fill(0) as number[])
+    : grandTotal(all, bw);
+  const totalCr = view.part === 1 || isFlow;
   // 以前の表示状態に旧名称（寄附補助）が残っているときは、現行の名称（寄付補助）として扱う
   const pattern: Pattern = PATTERNS.includes(view.pattern) ? view.pattern : (view.pattern as string) === '寄附補助' ? '寄付補助' : '標準';
   const info = PATTERN_INFO[pattern];
@@ -326,13 +352,23 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
   const thDivider = `1px solid ${tc ? tc.headLine : '#e6ecf1'}`;
 
   // 列の定義：合計（起動区分）→ 内訳（区分ごと）→ 内部取引消去（決算書のみ）
-  type Col = { head: string; get: (v: number[]) => number; first?: boolean; muted?: boolean };
-  const subCols = (ci: number, bi: number): Col[] => (isClosing
-    ? [{ head: '当年度末(決算)', get: (v: number[]) => v[bi], first: true }, ...(show.prev ? [{ head: '前年度末', get: (v: number[]) => v[ci] }] : []), ...(show.diff ? [{ head: '増減', get: (v: number[]) => v[bi] - v[ci] }] : [])]
-    : [...(show.carry ? [{ head: '前月繰越', get: (v: number[]) => v[ci] }] : []), ...(show.debit ? [{ head: '借方', get: (v: number[]) => Math.max(0, v[bi] - v[ci]) }] : []), ...(show.credit ? [{ head: '貸方', get: (v: number[]) => Math.max(0, v[ci] - v[bi]) }] : []), ...(show.balance ? [{ head: '残高', get: (v: number[]) => v[bi] }] : [])]
+  // get の cr＝貸方の科目（負債・純資産・収益・収入）。借方・貸方の列は科目の貸借で増減の向きを変える
+  type Col = { head: string; get: (v: number[], cr?: boolean) => number; first?: boolean; muted?: boolean };
+  const inc = (v: number[], ci: number, bi: number) => v[bi] - v[ci];
+  const subCols = (ci: number, bi: number, main = false): Col[] => (isClosing
+    ? [
+        ...(main && hasBudget && show.budget ? [{ head: '予算', get: (v: number[]) => v[width] }] : []),
+        { head: '当年度末(決算)', get: (v: number[]) => v[bi] },
+        ...(show.prev ? [{ head: isFlow ? '前月累計' : '前年度末', get: (v: number[]) => v[ci] }] : []),
+        ...(show.diff ? [{ head: '増減', get: (v: number[]) => v[bi] - v[ci] }] : []),
+        ...(main && hasBudget && show.bdiff ? [{ head: '差異', get: (v: number[]) => v[width] - v[bi] }] : []),
+      ]
+    : isFlow
+      ? [...(show.prevCum ? [{ head: '前月累計', get: (v: number[]) => v[ci] }] : []), ...(show.cur ? [{ head: '当月', get: (v: number[]) => v[bi] - v[ci] }] : []), ...(show.cum ? [{ head: '累計', get: (v: number[]) => v[bi] }] : [])]
+      : [...(show.carry ? [{ head: '前月繰越', get: (v: number[]) => v[ci] }] : []), ...(show.debit ? [{ head: '借方', get: (v: number[], c?: boolean) => Math.max(0, (c ? -1 : 1) * inc(v, ci, bi)) }] : []), ...(show.credit ? [{ head: '貸方', get: (v: number[], c?: boolean) => Math.max(0, (c ? 1 : -1) * inc(v, ci, bi)) }] : []), ...(show.balance ? [{ head: '残高', get: (v: number[]) => v[bi] }] : [])]
   ).map((c, i) => ({ ...c, first: i === 0 }));
   const groups: { label: ReactNode; cols: Col[]; breakdown?: boolean }[] = [
-    { label: showBreakdown ? <>合計<span style={{ fontWeight: 500, marginLeft: 6 }}>{s.division}</span></> : s.division, cols: subCols(0, 1) },
+    { label: showBreakdown ? <>合計<span style={{ fontWeight: 500, marginLeft: 6 }}>{s.division}</span></> : s.division, cols: subCols(0, 1, true) },
     ...(showBreakdown ? members.map((m, i) => ({ label: m, breakdown: true, cols: isClosing ? [{ head: '当年度末(決算)', get: (v: number[]) => v[3 + i * 2], first: true }] : subCols(2 + i * 2, 3 + i * 2) })) : []),
     ...(showBreakdown && isClosing ? [{ label: '内部取引消去', breakdown: true, cols: [{ head: '当年度末(決算)', get: () => 0, first: true, muted: true }] }] : []),
   ];
@@ -350,6 +386,10 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
   const linkBtn: CSSProperties = { marginLeft: 10, padding: '1px 8px', borderRadius: 6, border: '1px solid #dde4ea', background: '#fff', color: accent, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' };
   /** 表示する列のチェック（切り替えできないときは薄く表示） */
   const colCheck: CSSProperties = colsLocked ? { ...CHECK, cursor: 'not-allowed', opacity: 0.6 } : CHECK;
+  /** 表示する列のチェック。usable＝この部で使う列（使わない列は薄く表示し、累計は資産の部・負債の部でチェックのまま薄く表示＝現行と同じ） */
+  const colBox = (label: string, on: boolean, toggle: () => void, usable: boolean) => usable
+    ? <label key={label} style={colCheck} title={colsLocked ? lockedNote : undefined}><input type="checkbox" checked={on} disabled={colsLocked} onChange={toggle} />{label}</label>
+    : <label key={label} style={{ ...CHECK, cursor: 'default', opacity: 0.5 }} title={`${PARTS[view.part]}では使いません`}><input type="checkbox" disabled checked={label === '累計'} readOnly />{label}</label>;
   // 一覧表のヘッダー行：スクロールしても上に固定する（確認メモ #135）。固定中は下の罫線が消えるので、影で線を補う
   const headLine = `inset 0 -1px 0 ${tc ? tc.headLine : '#e2e8ee'}`;
   // 月次決算の印刷メニュー（決算書・準決算書の区切りと、拠点区分の帳票名。確認メモ #139／#140）
@@ -365,9 +405,10 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
   ];
   /** 帳票一括印刷の月の初期値：画面で選んでいる月（範囲を選んでいるときは、その開始月〜終了月） */
   const batchInit: [string, string] = range ? [range.from.split('/')[0], range.to.split('/')[0]] : [view.month, view.month];
-  // 貸借対照表の借方合計・貸方合計（サンプルは貸借が一致している）
-  const debitTotal = total[1];
-  const creditTotal = debitTotal;
+  // 貸借対照表の借方合計（資産の部）・貸方合計（負債の部）
+  const bsTotal = (rows: HierRow[]) => grandTotal(rollup(withCols(rows), bw), bw)[1];
+  const debitTotal = bsTotal(ROWS);
+  const creditTotal = bsTotal(BS_LIAB_ROWS);
   const unbalanced = debitTotal !== creditTotal;
 
   return (
@@ -418,21 +459,21 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
           <span style={LABEL}>表示する列</span>
           {isClosing ? (
             <>
+              {colBox('予算', show.budget, () => setView({ budget: !view.budget }), hasBudget)}
               <label style={{ ...CHECK, cursor: 'default' }}><input type="checkbox" checked readOnly />当年度末(決算)</label>
-              <label style={colCheck} title={colsLocked ? lockedNote : undefined}><input type="checkbox" checked={show.prev} disabled={colsLocked} onChange={() => setView({ prev: !view.prev })} />前年度末</label>
+              <label style={colCheck} title={colsLocked ? lockedNote : undefined}><input type="checkbox" checked={show.prev} disabled={colsLocked} onChange={() => setView({ prev: !view.prev })} />{isFlow ? '前月累計' : '前年度末'}</label>
               <label style={colCheck} title={colsLocked ? lockedNote : undefined}><input type="checkbox" checked={show.diff} disabled={colsLocked} onChange={() => setView({ diff: !view.diff })} />増減</label>
-              <label style={{ ...CHECK, cursor: 'default', opacity: 0.5 }}><input type="checkbox" disabled />予算</label>
-              <label style={{ ...CHECK, cursor: 'default', opacity: 0.5 }}><input type="checkbox" disabled />差異</label>
+              {colBox('差異', show.bdiff, () => setView({ bdiff: !view.bdiff }), hasBudget)}
             </>
           ) : (
             <>
-              <label style={colCheck} title={colsLocked ? lockedNote : undefined}><input type="checkbox" checked={show.carry} disabled={colsLocked} onChange={() => setView({ carry: !view.carry })} />前月繰越</label>
-              <label style={colCheck} title={colsLocked ? lockedNote : undefined}><input type="checkbox" checked={show.debit} disabled={colsLocked} onChange={() => setView({ debit: !view.debit })} />借方</label>
-              <label style={colCheck} title={colsLocked ? lockedNote : undefined}><input type="checkbox" checked={show.credit} disabled={colsLocked} onChange={() => setView({ credit: !view.credit })} />貸方</label>
-              <label style={colCheck} title={colsLocked ? lockedNote : undefined}><input type="checkbox" checked={show.balance} disabled={colsLocked} onChange={() => setView({ balance: !view.balance })} />残高</label>
-              <label style={{ ...CHECK, cursor: 'default', opacity: 0.5 }}><input type="checkbox" disabled />前月累計</label>
-              <label style={{ ...CHECK, cursor: 'default', opacity: 0.5 }}><input type="checkbox" disabled />当月</label>
-              <label style={{ ...CHECK, cursor: 'default', opacity: 0.5 }}><input type="checkbox" disabled />累計</label>
+              {colBox('前月繰越', show.carry, () => setView({ carry: !view.carry }), !isFlow)}
+              {colBox('借方', show.debit, () => setView({ debit: !view.debit }), !isFlow)}
+              {colBox('貸方', show.credit, () => setView({ credit: !view.credit }), !isFlow)}
+              {colBox('残高', show.balance, () => setView({ balance: !view.balance }), !isFlow)}
+              {colBox('前月累計', show.prevCum, () => setView({ prevCum: !view.prevCum }), isFlow)}
+              {colBox('当月', show.cur, () => setView({ cur: !view.cur }), isFlow)}
+              {colBox('累計', show.cum, () => setView({ cum: !view.cum }), isFlow)}
             </>
           )}
           {colsLocked && <span data-cols-locked style={{ fontSize: 12, color: '#9aa5b1' }}>入力区分で起動中は切り替えできません（全列を表示）</span>}
@@ -444,9 +485,7 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
       }
     >
       <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 400px)' }}>
-        {view.part !== 0 ? (
-          <div style={{ padding: '48px 22px', textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>「{PARTS[view.part]}」のサンプルデータは未作成です（資産の部で表の構成をご確認ください）。</div>
-        ) : flat.length === 0 ? (
+        {flat.length === 0 ? (
           <div style={{ padding: '48px 22px', textAlign: 'center', color: '#9aa5b1', fontSize: 14 }}>表示する列を1つ以上選んでください。</div>
         ) : (
           <table data-table-tone={tc ? '現行' : undefined} style={{ width: '100%', borderCollapse: 'collapse', background: tc?.base }}>
@@ -473,15 +512,15 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
                       {r.name}
                       {r.leaf && <button type="button" className="btn-outline" data-action="元帳" onClick={(e) => { e.stopPropagation(); openLedger(r.name); }} style={linkBtn}>元帳 ›</button>}
                     </td>
-                    {flat.map((c, k) => <td key={k} style={{ ...NUM, fontWeight: bold ? 700 : 400, borderLeft: c.first ? '1px solid #f1f4f6' : undefined, color: c.muted ? '#9aa5b1' : undefined }}>{money(c.get(r.values))}</td>)}
+                    {flat.map((c, k) => <td key={k} style={{ ...NUM, fontWeight: bold ? 700 : 400, borderLeft: c.first ? '1px solid #f1f4f6' : undefined, color: c.muted ? '#9aa5b1' : undefined }}>{money(c.get(r.values, r.cr))}</td>)}
                   </tr>
                 );
               })}
             </tbody>
             <tfoot>
               <tr data-total-row style={{ background: tc ? tc.total : '#e9eef3' }}>
-                <td style={{ ...TD, fontWeight: 700 }}>合計</td>
-                {flat.map((c, k) => <td key={k} style={{ ...NUM, fontWeight: 700, borderLeft: c.first ? '1px solid #dde4ea' : undefined }}>{money(c.get(total))}</td>)}
+                <td style={{ ...TD, fontWeight: 700 }}>{TOTAL_LABEL[view.part]}</td>
+                {flat.map((c, k) => <td key={k} style={{ ...NUM, fontWeight: 700, borderLeft: c.first ? '1px solid #dde4ea' : undefined }}>{money(c.get(total, totalCr))}</td>)}
               </tr>
             </tfoot>
           </table>
