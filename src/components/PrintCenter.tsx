@@ -222,7 +222,8 @@ const initDetail = (r: ReportDef, common: PrintCommon): Record<string, DetailVal
   ...(r.common && !r.ownInit ? commonValues(r, common) : {}),
 });
 /** 決算書・準決算書：期間の最初の月は 4月で固定（確認メモ #352） */
-const fixedStart = (r: ReportDef) => r.cat === '決算書' || r.cat === '準決算書';
+/** 最初の月を4月で固定する帳票（決算書・準決算書・別紙。別紙は確認メモ #464） */
+const fixedStart = (r: ReportDef) => r.cat === '決算書' || r.cat === '準決算書' || r.cat === '別紙';
 const defaultPrefs = (r: ReportDef, fy: number, common: PrintCommon): FlowPrefs => ({
   ...(fixedStart(r) ? { mCur: '8', mRange: { from: '4/1', to: '8/31' } } : {}),
   months: r.annual ? [] : fixedStart(r) ? monthsIn({ from: '4/1', to: '8/31' }) : ['8'], from: monthStart(fy, r.annual || fixedStart(r) ? '4' : '8'), to: monthEnd(fy, r.annual ? '3' : '8'), range: '範囲指定の合計を印刷', scope: '全て', target: '起動中の区分',
@@ -420,7 +421,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
   const zeroToggle = (
     <label data-detail-item="zeroHide" data-type="check" style={{ display: 'flex', gap: 7, alignItems: 'flex-start', fontSize: 14, cursor: 'pointer', lineHeight: 1.5 }}>
       <input type="checkbox" checked={p.zeroHide} onChange={() => set({ zeroHide: !p.zeroHide })} style={{ marginTop: 4, accentColor: accent }} />
-      <span style={{ flex: 1 }}>0データを表示しない<span style={{ display: 'block', fontSize: 12, color: '#8290a0' }}>金額がすべて 0 円の行を印刷・プレビューから省きます。</span></span>
+      <span style={{ flex: 1 }}>0データを表示しない</span>
     </label>
   );
   const STAMP_MAX = stampMaxOf(report);
@@ -512,7 +513,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
         onRun={run}
         onClose={onClose}
         // 基本条件は出力先と同じ画面に置く（確認事項「「帳票の印刷」画面の構成について」）
-        basic={<ScopeBlock title="基本条件" desc="印刷する期間と区分です。">
+        basic={<ScopeBlock title="基本条件">
             <div data-print-basic style={{ display: 'grid', gap: 14 }}>
             <div>
               <span style={lbl}>{report.annual ? '期間（年次の帳票のため、会計年度の期首〜期末）' : fixStart ? <>期間（最初の月は 4月で固定） <HelpTip text="月のボタンで最後の月を選びます" /></> : <>期間 <HelpTip text={['月のボタンで1か月を選びます', 'ドラッグか Shift＋クリックで月の範囲を選びます', '「全月」で年度全体を選びます']} /></>}</span>
@@ -631,7 +632,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
             </div>
           </ScopeBlock>}
         detail={<>
-            <ScopeBlock kind="帳票個別" title="この帳票の詳細設定" desc={`「${report.name}」の印刷だけに反映されます。`} right={report.common ? <>
+            <ScopeBlock kind="帳票個別" title="この帳票の詳細設定" right={report.common ? <>
               <button type="button" data-apply-common onClick={(e) => { e.stopPropagation(); applyCommon(); }} title="決算書 共通印刷設定の値を、この帳票の詳細設定に写します" style={{ ...btn(accent, true, true), whiteSpace: 'nowrap' }}>共通の印刷設定を反映</button>
               <button type="button" data-open-common onClick={(e) => { e.stopPropagation(); goScreen('共通の印刷設定'); }} title="決算書 共通印刷設定の画面を開きます" style={{ ...btn('#5b6773', false, true), whiteSpace: 'nowrap' }}>決算書 共通印刷設定を開く</button>
             </> : undefined}>
@@ -640,7 +641,6 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
                   {!report.noZero && !zeroInItems && <div style={{ display: 'grid', gap: 4, alignContent: 'start' }}>
                     <Toggle on={p.zeroHide} onChange={(v) => set({ zeroHide: v })} accent={accent} label="0データを表示しない" />
-                    <span style={{ fontSize: 12, color: '#8290a0', paddingLeft: 46 }}>金額がすべて 0 円の行を印刷・プレビューから省きます。</span>
                   </div>}
                   <Field label="タイトル（印刷様式）"><input className="field-input" data-title-input value={p.title} disabled={altOn} title={altOn ? '「〇〇年度」「第〇次」を印字しないときは、ヘッダーのタイトルを使います' : undefined} onChange={(e) => set({ title: e.target.value })} style={{ ...input, opacity: altOn ? 0.55 : 1 }} /></Field>
                 </div>
@@ -708,7 +708,6 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
       {/* 脚注編集（「脚注を印刷する」「脚注、注記を印刷する」の右のボタン。決算書 共通印刷設定の脚注と同じ保存先。確認メモ #336・#341） */}
       <Modal open={footEdit !== null} onClose={() => setFootEdit(null)} width={560} title={`脚注編集：${report.name}`}>
         {footEdit !== null && <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 10 }}>
-          <div style={{ fontSize: 12, color: '#8290a0' }}>帳票の下に印刷する脚注（注記）を入力します。改行もそのまま印刷します。</div>
           <textarea data-foot-text value={footEdit} onChange={(e) => setFootEdit(e.target.value)} rows={6} placeholder="（注）予備費の充当額 ○○円 は …" style={{ ...input, resize: 'vertical', lineHeight: 1.7 }} />
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setFootEdit(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { setCommon({ footnotes: { ...pr.footnotes, [report.name]: footEdit } }); setFootEdit(null); toast.show('脚注を保存しました'); }} style={btn(accent, true)}>OK</button></div>
         </div>}
@@ -1106,7 +1105,7 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
       <Modal open={!!foot} onClose={() => setFoot(null)} width={560} title={`脚注編集：${foot ?? ''}`}>
         <div style={{ padding: '14px 22px 18px', display: 'grid', gap: 10 }}>
           <textarea value={footText} onChange={(e) => setFootText(e.target.value)} rows={5} placeholder="（注）予備費の充当額 ○○円 は …" style={{ ...input, resize: 'vertical', lineHeight: 1.7 }} />
-          <Notice tone="warn">脚注は帳票の最下部に印刷されます。改行はそのまま反映されます。長すぎると2ページ目に送られることがあります。</Notice>
+          <Notice tone="warn">長すぎると2ページ目に送られることがあります。</Notice>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={() => setFoot(null)} style={btn()}>キャンセル</button><button type="button" className="submit-btn" onClick={() => { if (foot) set({ footnotes: { ...p.footnotes, [foot]: footText } }); setFoot(null); }} style={btn(accent, true)}>OK</button></div>
         </div>
       </Modal>

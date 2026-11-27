@@ -173,7 +173,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
   const remember = (k: string, v: string) => { try { sessionStorage.setItem('proto-appendix:' + k, v); } catch { /* ignore */ } };
   const [cur, setCurRaw] = useState(() => remembered('cur', 'note-corp'));
   const setCur = (v: string) => { setCurRaw(v); remember('cur', v); };
-  const [mode, setModeRaw] = useState(() => remembered('mode', '設定・編集'));
+  const [mode, setModeRaw] = useState(() => remembered('mode', '印刷'));
   const setMode = (v: string) => { setModeRaw(v); remember('mode', v); };
   const [hideNa, setHideNa] = useState(true);
   /** 就労支援・授産（⑮〜⑲）：条件を満たしたときの画面を見本として表示する（確認メモ #360） */
@@ -225,7 +225,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
   const def = DETAILS[sheet.id];
   const myRows = rows[sheet.id] ?? [];
   const invRows = inv[invTab] ?? [];
-  const pick = (id: string) => { setCur(id); setMode('設定・編集'); setInvSel(null); setPeek(false); };
+  const pick = (id: string) => { setCur(id); setMode('印刷'); setInvSel(null); setPeek(false); };
   const goSettings = () => { if (onNavigate) onNavigate('決算附属明細書'); else toast.show(`科目の設定は「各種設定 ＞ ${displayName('決算附属明細書')}」で行います`); };
 
   /** 左の一覧に出す状態 */
@@ -255,7 +255,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
   };
   // 詳細設定は現行の各明細書の画面に合わせる（確認メモ #238）
   const reportOf = (x: Sheet): ReportDef => ({
-    id: 'appendix:' + x.id, name: x.group === '附属明細書' ? `${x.name}（別紙3${x.no}）` : x.name, cat: '別紙', sub: x.group, annual: true, common: x.common, title: x.name,
+    id: 'appendix:' + x.id, name: x.group === '附属明細書' ? `${x.name}（別紙3${x.no}）` : x.name, cat: '別紙', sub: x.group, common: x.common, title: x.name,
     ...appendixSpec(x.id),
   });
 
@@ -315,7 +315,6 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
       <ToastView msg={toast.msg} />
       {embedded && (
         <div data-appendix-bar style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '8px 16px', borderBottom: '1px solid #eef2f5', background: dirty ? '#fff8ea' : '#fff' }}>
-          <span style={{ fontSize: 14, color: '#5b6773' }}>決算書に添付する別紙です。注記・明細・財産目録の行設定は、編集したあと「保存」で確定します。</span>
           {dirty && <span style={{ fontSize: 12, fontWeight: 700, color: '#8a5a00' }}>保存で変更内容を確定してください。</span>}
           <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>{actions}</span>
         </div>
@@ -358,7 +357,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
             <span style={{ flex: 1, minWidth: 0 }}>見本の表示です。対象の事業がある法人で、条件を満たしたときの画面を確認用に表示しています（起動中の法人では印刷されません）。</span>
             <button type="button" onClick={() => { setPeek(false); setMode('設定・編集'); }} style={btn('#5b6773', false, true)}>見本の表示をやめる</button>
           </div>}
-          {canPrint && <Tabs items={['設定・編集', '印刷']} current={mode} onChange={setMode} accent={accent} small />}
+          {canPrint && <Tabs items={['印刷', '設定・編集']} current={mode} onChange={setMode} accent={accent} small />}
 
           {mode === '印刷' && canPrint ? (
             <div style={{ padding: '14px 22px 22px' }}>
@@ -395,7 +394,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
               {sheet.editor === 'detail' && def && (
                 <>
                   {sheet.id === 'd1' ? <KariireDetail rows={myRows} accts={s.kariireAccts ?? []} tree={s.tree} accent={accent} onChange={(r) => setRows((d) => ({ ...d, d1: r }))} onOpenSettings={goSettings} /> : <div style={card}>
-                    <div style={cardHead}>明細入力 <span style={{ fontWeight: 500, color: '#8290a0', fontSize: 12 }}>金額を入力すると明細書に印刷されます</span><button type="button" onClick={() => setRows((d) => ({ ...d, [sheet.id]: [...(d[sheet.id] ?? []), def.cols.map((_, ci) => def.choices?.[ci]?.[0] ?? '')] }))} style={{ ...btn(accent, false, true), marginLeft: 'auto' }}>＋ 行を追加</button></div>
+                    <div style={cardHead}>明細入力<button type="button" onClick={() => setRows((d) => ({ ...d, [sheet.id]: [...(d[sheet.id] ?? []), def.cols.map((_, ci) => def.choices?.[ci]?.[0] ?? '')] }))} style={{ ...btn(accent, false, true), marginLeft: 'auto' }}>＋ 行を追加</button></div>
                     <div style={{ overflow: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead><tr>{def.cols.map((c, i) => <th key={c} style={{ ...TH, textAlign: def.num.includes(i) ? 'right' : 'left' }}>{c}</th>)}<th style={{ ...TH, width: 50 }} /></tr></thead>
@@ -474,9 +473,6 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
             </div>
           )}
         </div>
-      </div>
-      <div style={{ borderTop: '1px solid #eef2f5', padding: '10px 22px 14px', fontSize: 12, color: '#8290a0', lineHeight: 1.7 }}>
-        これまで「保守」メニューにあった「財産目録設定」「計算書類に対する注記（法人全体用／拠点区分用）」は、同じ機能が重複していたため、この画面にまとめました。
       </div>
 
       {/* 確認（既定に戻す・全行削除・変更の破棄） */}

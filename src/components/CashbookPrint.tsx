@@ -103,7 +103,6 @@ export function AggPrintDialog({ open, report, units, accent, onRun, onClose }: 
           <label style={row}><input type="radio" name="agg-print-mode" checked={mode === 'month'} onChange={() => setMode('month')} />月で選ぶ</label>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6, opacity: mode === 'month' ? 1 : 0.5, flexWrap: 'wrap' }}>
             <select aria-label="集計した年月" value={ym} disabled={mode !== 'month'} onChange={(e) => setYm(e.target.value)} style={{ ...txt, width: 150 }}>{yms.map((v) => <option key={v} value={v}>{ymText(v)}</option>)}</select>
-            <span style={{ fontSize: 12, color: '#7a8794' }}>指定された月の一ヶ月間に集計した明細を印刷します。</span>
           </div>
           {mode === 'month' && monthUnits.length === 0 && <div style={{ marginTop: 6, fontSize: 12, color: '#c0392b' }}>{ymText(ym)}に集計した明細はありません。</div>}
           {mode === 'month' && monthUnits.length > 0 && <div style={{ marginTop: 6, fontSize: 12, color: '#5b6773' }}>対象：{monthUnits.length} 回の集計（明細 {monthUnits.reduce((a, u) => a + u.count, 0)} 件）</div>}

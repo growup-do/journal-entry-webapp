@@ -10,11 +10,12 @@ import type { ReactNode } from 'react';
 import { Notice, btn, card, lbl } from './ui';
 
 export type OutKind = 'print' | 'pdf' | 'excel' | 'csv';
-export const OUT_DESTS: { kind: OutKind; label: string; desc: string; action: string }[] = [
-  { kind: 'print', label: 'プリンター', desc: '用紙に印刷します', action: '印刷' },
-  { kind: 'pdf', label: 'PDF', desc: 'PDF ファイルとして保存します', action: 'PDFで保存' },
-  { kind: 'excel', label: 'Excel', desc: 'Excel ファイルとして保存します', action: 'Excelで保存' },
-  { kind: 'csv', label: 'CSV', desc: 'エクセル互換（カンマ区切り）で保存します', action: 'CSVで保存' },
+/** 出力先は名前だけで分かるので説明文は出さない（確認メモ #462：スクロールせずに見える高さにする） */
+export const OUT_DESTS: { kind: OutKind; label: string; action: string }[] = [
+  { kind: 'print', label: 'プリンター', action: '印刷' },
+  { kind: 'pdf', label: 'PDF', action: 'PDFで保存' },
+  { kind: 'excel', label: 'Excel', action: 'Excelで保存' },
+  { kind: 'csv', label: 'CSV', action: 'CSVで保存' },
 ];
 /** タブの名前（出力先が先） */
 export const PRINT_TAB_LABELS = ['出力先', '詳細設定'] as const;
@@ -67,15 +68,15 @@ export function PrintSteps({ accent, basic, detail, detailSummary, dest, onDest,
       <div style={{ padding: '16px 18px 4px', display: 'grid', gap: 14 }}>
         {showTab === '出力先' && (
           <div data-print-dest-tab style={{ display: 'grid', gap: 14 }}>
-            <div style={{ display: 'grid', gap: 10 }}>
+            <div style={{ display: 'grid', gap: 6 }}>
               <span style={lbl}>出力先</span>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
                 {list.map((d) => {
                   const on = cur.kind === d.kind;
                   return (
-                    <label key={d.kind} data-print-dest={d.kind} style={{ ...card, padding: '12px 14px', cursor: 'pointer', borderColor: on ? accent : '#e2e8ee', background: on ? '#f6f9fc' : '#fff', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                      <input type="radio" checked={on} onChange={() => onDest(d.kind)} style={{ marginTop: 3 }} />
-                      <span><span style={{ display: 'block', fontSize: 14, fontWeight: 700 }}>{d.label}</span><span style={{ display: 'block', fontSize: 12, color: '#7a8794', marginTop: 2 }}>{d.desc}</span></span>
+                    <label key={d.kind} data-print-dest={d.kind} style={{ ...card, padding: '7px 12px', cursor: 'pointer', borderColor: on ? accent : '#e2e8ee', background: on ? '#f6f9fc' : '#fff', display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <input type="radio" checked={on} onChange={() => onDest(d.kind)} style={{ margin: 0 }} />
+                      <span style={{ fontSize: 14, fontWeight: 700 }}>{d.label}</span>
                     </label>
                   );
                 })}

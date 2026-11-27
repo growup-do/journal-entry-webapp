@@ -124,7 +124,7 @@ export function Notice({ children, tone = 'info' }: { children: ReactNode; tone?
 
 /** 設定系画面の共通シェル（SettingsPages の Shell と同じ見た目）。
  *  unsaved … 変更したのに保存していないあいだ true にすると、画面の色を薄い暖色に変える（確認メモ #224・#225） */
-export function SettingsShell({ variant, title, desc, badge = '設定', draft = false, actions, manual, unsaved = false, editing = false, children }: { variant: 'form' | 'sheet'; title: string; desc: ReactNode; badge?: string; draft?: boolean; actions?: ReactNode; /** 見出しの右に置くマニュアルのボタン（ManualButton） */ manual?: ReactNode; unsaved?: boolean; /** 入力中：画面の枠を光らせる */ editing?: boolean; children: ReactNode }) {
+export function SettingsShell({ variant, title, desc, badge = '設定', draft = false, actions, manual, unsaved = false, editing = false, children }: { variant: 'form' | 'sheet'; title: string; /** 省略したときは説明の行を出さない */ desc?: ReactNode; badge?: string; draft?: boolean; actions?: ReactNode; /** 見出しの右に置くマニュアルのボタン（ManualButton） */ manual?: ReactNode; unsaved?: boolean; /** 入力中：画面の枠を光らせる */ editing?: boolean; children: ReactNode }) {
   const isSheet = variant === 'sheet';
   // 画面内のリンクで移ってきたときは、画面の枠の上端に戻るの帯を出す（BackNav.tsx）
   const backNav = useBackNav();
@@ -144,7 +144,7 @@ export function SettingsShell({ variant, title, desc, badge = '設定', draft = 
               {title} <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#eef2f6', color: '#3d4a56', verticalAlign: 'middle', marginLeft: 6 }}>{badge}</span>
               {manual && <span style={{ marginLeft: 6 }}>{manual}</span>}
             </div>
-            <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>{desc}{draft && <span style={{ color: '#b7791f' }}>（叩き台）</span>}</div>
+            {(desc || draft) && <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>{desc}{draft && <span style={{ color: '#b7791f' }}>（叩き台）</span>}</div>}
           </div>
           {actions && <div className="toolbar-actions" style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>{actions}</div>}
         </div>

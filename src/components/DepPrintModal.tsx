@@ -147,7 +147,6 @@ export function DepPrintPanel({ name, accent, onRun, onClose }: { name: string; 
   const basicOf = all.filter((f) => f.t === 'range' || f.t === 'period');
   const sections = all.filter((f) => f.t !== 'range' && f.t !== 'period');
   const run = (o: DepOutput) => { SAVED.set(name, { values: v, output }); onRun(v, o); };
-  const title2 = name.replace(/\(/g, '（').replace(/\)/g, '）');
   const onCount = all.reduce((n, f) => n + (f.t === 'checks' ? f.items.filter((it) => !!v[it.key]).length : 0), 0);
 
   const sec = (key: string, label: string, body: ReactNode, wide?: boolean) => (
@@ -247,9 +246,9 @@ export function DepPrintPanel({ name, accent, onRun, onClose }: { name: string; 
           onPreview={() => run('preview')}
           onRun={() => run(output)}
           onClose={onClose}
-          basic={basicOf.length ? <ScopeBlock title="基本条件" desc="印刷する範囲と集計期間です。"><div data-print-basic style={{ display: 'grid', gap: 14 }}>{basicOf.map(basicField)}</div></ScopeBlock> : undefined}
+          basic={basicOf.length ? <ScopeBlock title="基本条件"><div data-print-basic style={{ display: 'grid', gap: 14 }}>{basicOf.map(basicField)}</div></ScopeBlock> : undefined}
           detail={
-            <ScopeBlock kind="帳票個別" title="この帳票の詳細設定" desc={`「${title2}」の印刷だけに反映されます。次に開いたときも引き継ぎます。`} right={<button type="button" data-dep-print-reset onClick={(e) => { e.stopPropagation(); setV(defaultsOf(name)); }} title="この帳票の詳細設定を標準値に戻します" style={{ ...btnS('#5b6773'), whiteSpace: 'nowrap' }}>標準に戻す</button>}>
+            <ScopeBlock kind="帳票個別" title="この帳票の詳細設定" right={<button type="button" data-dep-print-reset onClick={(e) => { e.stopPropagation(); setV(defaultsOf(name)); }} title="この帳票の詳細設定を標準値に戻します" style={{ ...btnS('#5b6773'), whiteSpace: 'nowrap' }}>標準に戻す</button>}>
               <div data-detail-sections style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 10, alignItems: 'start' }}>
                 {sections.map(field)}
                 {sec('font', 'フォント', <>{fontRowsOf(name).map(([k, l]) => (
