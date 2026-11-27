@@ -469,7 +469,9 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
               />
 
               {/* 1段目：入力区分／年月日／伝票No／小切手No／内部取引相手区分 */}
-              <div style={{ display: 'flex', alignItems: 'stretch', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+              {/* 右端の資金モードの切替と ? は、入力区分の行にそろえる（左の項目が折り返しても1行目に置く） */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'stretch', gap: 12, flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
                 <div className="ef-field" style={{ display: 'flex', width: 300 }}>
                   <PaperBox label="入力区分" grow>
                     <EntryDivisionField ctl={ed} id={`${pre}-service`} disabled={ro} onCommit={() => focusId(`${pre}-month`)} />
@@ -508,10 +510,12 @@ export function TransferEntryPage({ variant, accent, single, onNavigate }: Props
                   </div>
                 )}
                 <VoucherMarks seq="自動" flags={flags} onChange={setFlags} disabled={ro} viewOnly={tools.viewOnly} />
-                {/* 操作説明の ? は Seq No の枠の右 */}
-                <span style={{ alignSelf: 'center', display: 'inline-flex' }}><HelpTip text={['取引先で Enter：次の行へ（最後の行なら行を追加）', '摘要で Shift+Enter：下に行を追加', `何も入力していない行の${single ? '金額' : '借方金額'}で Enter：伝票登録ボタンへ`]} /></span>
-                {/* 資金モードの切替（自動資金⇄強制資金） */}
-                <div style={{ marginLeft: 'auto', alignSelf: 'center' }}>{tools.fundSwitch}</div>
+              </div>
+                {/* 資金モードの切替（自動資金⇄強制資金）と、操作説明の ?（伝票入力の枠の右上） */}
+                <div data-entry-head-right style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 8, minHeight: 'var(--entry-head-h, 44px)' }}>
+                  {tools.fundSwitch}
+                  <span style={{ display: 'inline-flex' }}><HelpTip text={['取引先で Enter：次の行へ（最後の行なら行を追加）', '摘要で Shift+Enter：下に行を追加', `何も入力していない行の${single ? '金額' : '借方金額'}で Enter：伝票登録ボタンへ`]} /></span>
+                </div>
               </div>
 
               {/* 2段目：明細（金額／率／予算残 ｜ 借方科目 ｜ 貸方科目 ｜ 金額／率／予算残） */}
