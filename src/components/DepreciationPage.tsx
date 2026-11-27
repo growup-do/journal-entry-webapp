@@ -651,7 +651,8 @@ function PartialModal({ qty, cost, vals, value, onClose, onApply, accent, toast 
   return (
     <Modal open onClose={onClose} width={880} title="一部 除却／売却／移管(元)">
       <div style={{ padding: '12px 22px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${sale ? 5 : 4}, minmax(0,1fr))`, gap: 10 }}>
+        {/* 処分年月日の列は1行に収まる幅を先に取り、残りを他の欄で分ける（確認メモ #429） */}
+        <div style={{ display: 'grid', gridTemplateColumns: `minmax(0,0.8fr) auto${' minmax(0,1fr)'.repeat(sale ? 3 : 2)}`, gap: 10 }}>
           <div><span style={LBL}>処理</span><select value={p.proc} onChange={(e) => setP({ ...p, proc: e.target.value })} style={IN}>{['除却', '売却', '移管(元)'].map((o) => <option key={o}>{o}</option>)}</select></div>
           <div><span style={LBL}>処分年月日</span><WarekiDate value={p.date} onChange={(v) => setP({ ...p, date: v })} accent={accent} /></div>
           <div><span style={LBL}>処分数量（登録数量 {qty}）</span><input className="field-input" value={p.qty || ''} onChange={(e) => setP({ ...p, qty: Math.min(qty, numOf(e.target.value)) })} inputMode="numeric" style={IN_NUM} /></div>
@@ -1511,8 +1512,9 @@ function AssetForm({ accent, asset, manual, dispCalc, capexFor, onAddCapex, onRe
     //   左：入力欄と償却計算表、右：経年表示、下：帳票・計算変更などのボタンと「登録」
     <div data-asset-form data-capex-form={capexFor ? capexFor.kind : undefined} ref={formRef} onKeyDown={onEnterNext} style={{ background: capexFor ? '#fffdf3' : undefined, flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: 'minmax(0,1fr) min(700px, 46%)', gridTemplateRows: 'minmax(0,1fr) auto' }}>
       <div ref={inputsRef} style={{ padding: '12px 14px', borderRight: '1px solid #eef2f5', display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0, minHeight: 0, overflow: 'auto' }}>
-        <div style={box}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0,1fr))', gap: 8 }}>
+        {/* 幅に余裕があるときは、取得年月日・償却開始年月日の列を1行に収まる幅にする（確認メモ #429。styles.css の asset-top-grid） */}
+        <div className="asset-top-box" style={box}>
+          <div className="asset-top-grid">
             <div><span style={lbl}>資産コード</span><input className="field-input" value={f.code} onChange={(e) => set('code', e.target.value)} title="新規の登録では自動で採番します。手入力で変更できます" style={{ ...input, background: '#fff9c4', fontWeight: 700 }} /></div>
             <div><span style={lbl}>並び順項目</span><select value={f.sort} onChange={(e) => set('sort', e.target.value)} style={input}>{sortItems.map((o) => <option key={o.code} value={o.code}>{sortLabel(o)}</option>)}</select></div>
             <div style={{ gridColumn: 'span 2' }}><span style={lbl}>科目</span><select value={f.account} onChange={(e) => set('account', e.target.value)} style={input}>{FA_ACCOUNTS.map((o) => <option key={o}>{o}</option>)}</select></div>
@@ -1547,7 +1549,8 @@ function AssetForm({ accent, asset, manual, dispCalc, capexFor, onAddCapex, onRe
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.45fr) minmax(0,1fr)', gap: 8 }}>
+        {/* 資産処分等の枠は処分年月日が1行に収まる幅（272px）を上限に、狭いときは従来の割合（41%）。残りを取得価額の枠にする（確認メモ #429） */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0, min(272px, 41%))', gap: 8 }}>
           <div style={box}>
             <span style={sec}>取得価額</span>
             <div style={{ display: 'grid', gridTemplateColumns: '64px 12px minmax(0,1fr) 12px minmax(0,1fr)', gap: 6, alignItems: 'end' }}>

@@ -343,3 +343,11 @@ tr.row-hover:hover > td:first-child { box-shadow: inset 3px 0 0 rgba(44, 95, 158
 
 /* 固定資産台帳の一覧（確認メモ #305）。列が多いので左右の余白を詰め、詳細を出しても横スクロールしないようにする */
 .dense-table th, .dense-table td { padding-left: 8px !important; padding-right: 8px !important; }
+
+/* 固定資産の登録・変更の上の枠（確認メモ #429）
+   幅に余裕があるときは、取得年月日（5〜6列目）と償却開始年月日（3〜4列目）の列を、和暦の年月日が1行に収まる幅にする。
+   狭いときは等分のまま（年月日は折り返す） */
+.asset-top-box { container-type: inline-size; }
+.asset-top-grid { display: grid; gap: 8px; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+@container (min-width: 600px) { .asset-top-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) repeat(2, minmax(120px, 1fr)); } }
+@container (min-width: 700px) { .asset-top-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) repeat(4, minmax(120px, 1fr)); } }
