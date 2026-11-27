@@ -1,6 +1,7 @@
 // 仕訳辞書（提案E）：連続定型仕訳／自動按分仕訳／特殊金額の按分率／自動按分出力
 //   マニュアル 5.3・5.4・7.6 に相当。テンプレートはセッションに保存し、伝票入力から呼び出す。
 
+import { ListScroll } from './ListScroll';
 import { useEffect, useState } from 'react';
 import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { NUM, TD, TH } from './ReportShell';
@@ -107,39 +108,43 @@ export function TemplateJournalPage({ variant, accent }: { variant: 'form' | 'sh
       {tab === '連続定型仕訳' && (
         <div style={{ padding: 22 }}>
           <Notice>伝票入力の「連続定型」で呼び出し、日付・金額を入れて登録します。1 つの定型に複数のページ（1 ページ＝伝票 1 枚）を持てて、伝票画面ではページごとに有効・無効を切り替えます。</Notice>
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
-            <thead><tr><th style={TH}>名称</th><th style={{ ...TH, width: 110 }}>伝票の形式</th><th style={TH}>内容</th><th style={{ ...TH, width: 80, textAlign: 'right' }}>ページ</th><th style={{ ...TH, width: 150, textAlign: 'right' }}>操作</th></tr></thead>
-            <tbody>
-              {s.templates.map((t) => (
-                <tr key={t.id}>
-                  <td style={{ ...TD, fontWeight: 700 }}>{t.name}</td><td style={TD}>{t.form}</td>
-                  <td style={{ ...TD, fontSize: 14, color: '#5b6773' }}>{templatePages(t).map((p, k) => <div key={k} style={{ opacity: p.enabled === false ? 0.55 : 1 }}><span style={{ display: 'inline-block', minWidth: 30, fontSize: 12, color: '#8290a0' }}>{k + 1}.</span>{p.lines.map((l) => `${l.tekiyo || l.kari}${l.amount ? ` ${yen(Number(l.amount))}` : ''}`).join('、') || '（行なし）'}{p.enabled === false && <span style={{ marginLeft: 6, fontSize: 12, color: '#8290a0' }}>無効</span>}</div>)}</td>
-                  <td style={NUM}>{templatePages(t).length}</td>
-                  <td style={{ ...TD, textAlign: 'right' }}><div style={{ display: 'inline-flex', gap: 6 }}><button type="button" onClick={() => setWiz({ step: 2, t: JSON.parse(JSON.stringify(t)) })} style={btn('#5b6773', false, true)}>訂正</button><button type="button" onClick={() => { if (confirm(`「${t.name}」を削除しますか？`)) setSession({ templates: s.templates.filter((x) => x.id !== t.id) }); }} style={btn('#c0392b', false, true)}>削除</button></div></td>
-                </tr>
-              ))}
-              {s.templates.length === 0 && <tr><td colSpan={5} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 30 }}>定型仕訳がありません。</td></tr>}
-            </tbody>
-          </table>
+          <ListScroll>
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
+              <thead><tr><th style={TH}>名称</th><th style={{ ...TH, width: 110 }}>伝票の形式</th><th style={TH}>内容</th><th style={{ ...TH, width: 80, textAlign: 'right' }}>ページ</th><th style={{ ...TH, width: 150, textAlign: 'right' }}>操作</th></tr></thead>
+              <tbody>
+                {s.templates.map((t) => (
+                  <tr key={t.id}>
+                    <td style={{ ...TD, fontWeight: 700 }}>{t.name}</td><td style={TD}>{t.form}</td>
+                    <td style={{ ...TD, fontSize: 14, color: '#5b6773' }}>{templatePages(t).map((p, k) => <div key={k} style={{ opacity: p.enabled === false ? 0.55 : 1 }}><span style={{ display: 'inline-block', minWidth: 30, fontSize: 12, color: '#8290a0' }}>{k + 1}.</span>{p.lines.map((l) => `${l.tekiyo || l.kari}${l.amount ? ` ${yen(Number(l.amount))}` : ''}`).join('、') || '（行なし）'}{p.enabled === false && <span style={{ marginLeft: 6, fontSize: 12, color: '#8290a0' }}>無効</span>}</div>)}</td>
+                    <td style={NUM}>{templatePages(t).length}</td>
+                    <td style={{ ...TD, textAlign: 'right' }}><div style={{ display: 'inline-flex', gap: 6 }}><button type="button" onClick={() => setWiz({ step: 2, t: JSON.parse(JSON.stringify(t)) })} style={btn('#5b6773', false, true)}>訂正</button><button type="button" onClick={() => { if (confirm(`「${t.name}」を削除しますか？`)) setSession({ templates: s.templates.filter((x) => x.id !== t.id) }); }} style={btn('#c0392b', false, true)}>削除</button></div></td>
+                  </tr>
+                ))}
+                {s.templates.length === 0 && <tr><td colSpan={5} style={{ ...TD, textAlign: 'center', color: '#9aa5b1', padding: 30 }}>定型仕訳がありません。</td></tr>}
+              </tbody>
+            </table>
+          </ListScroll>
         </div>
       )}
 
       {tab === '自動按分仕訳' && (
         <div style={{ padding: 22 }}>
           <Notice>水道代・ガス代などを、あらかじめ設定した比率で複数の区分（事務費／事業費など）の伝票に分けて登録します。伝票入力の「自動按分」で総金額と日付を入れると、1回の操作で複数枚の伝票を登録できます。</Notice>
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
-            <thead><tr><th style={TH}>名称</th><th style={{ ...TH, width: 90 }}>形式</th><th style={TH}>伝票（区分：按分率）</th><th style={{ ...TH, width: 90 }}>端数処理</th><th style={{ ...TH, width: 200, textAlign: 'right' }}>操作</th></tr></thead>
-            <tbody>
-              {s.allocations.map((a) => (
-                <tr key={a.id}>
-                  <td style={{ ...TD, fontWeight: 700 }}>{a.name}</td><td style={TD}>{a.form}</td>
-                  <td style={{ ...TD, fontSize: 14, color: '#5b6773' }}>{allocationPages(a).map((p, k) => <span key={k} style={{ display: 'inline-block', marginRight: 12 }}><b style={{ color: '#22303c' }}>{k + 1}枚目</b> {p.division}：{p.entries.map((e) => `${shareText(e.share)}${e.kashiShare ? `／貸方 ${shareText(e.kashiShare)}` : ''}（${e.kari || e.kashi}）`).join('、')}</span>)}</td>
-                  <td style={TD}>{a.rounding}</td>
-                  <td style={{ ...TD, textAlign: 'right' }}><div style={{ display: 'inline-flex', gap: 6 }}><button type="button" onClick={() => setAwiz({ step: 3, t: JSON.parse(JSON.stringify(a)) })} style={btn('#5b6773', false, true)}>訂正</button><button type="button" onClick={() => { if (confirm(`「${a.name}」を削除しますか？`)) setSession({ allocations: s.allocations.filter((x) => x.id !== a.id) }); }} style={btn('#c0392b', false, true)}>削除</button></div></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <ListScroll>
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
+              <thead><tr><th style={TH}>名称</th><th style={{ ...TH, width: 90 }}>形式</th><th style={TH}>伝票（区分：按分率）</th><th style={{ ...TH, width: 90 }}>端数処理</th><th style={{ ...TH, width: 200, textAlign: 'right' }}>操作</th></tr></thead>
+              <tbody>
+                {s.allocations.map((a) => (
+                  <tr key={a.id}>
+                    <td style={{ ...TD, fontWeight: 700 }}>{a.name}</td><td style={TD}>{a.form}</td>
+                    <td style={{ ...TD, fontSize: 14, color: '#5b6773' }}>{allocationPages(a).map((p, k) => <span key={k} style={{ display: 'inline-block', marginRight: 12 }}><b style={{ color: '#22303c' }}>{k + 1}枚目</b> {p.division}：{p.entries.map((e) => `${shareText(e.share)}${e.kashiShare ? `／貸方 ${shareText(e.kashiShare)}` : ''}（${e.kari || e.kashi}）`).join('、')}</span>)}</td>
+                    <td style={TD}>{a.rounding}</td>
+                    <td style={{ ...TD, textAlign: 'right' }}><div style={{ display: 'inline-flex', gap: 6 }}><button type="button" onClick={() => setAwiz({ step: 3, t: JSON.parse(JSON.stringify(a)) })} style={btn('#5b6773', false, true)}>訂正</button><button type="button" onClick={() => { if (confirm(`「${a.name}」を削除しますか？`)) setSession({ allocations: s.allocations.filter((x) => x.id !== a.id) }); }} style={btn('#c0392b', false, true)}>削除</button></div></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </ListScroll>
           <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: '#5b6773' }}>
             <span>計算例：</span><input className="field-input" value={yen(toInt(testAmount))} onChange={(e) => setTestAmount(e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" style={{ ...numInput, width: 120, padding: '5px 8px' }} /><span>円を「{s.allocations[0]?.name}」で按分 →</span>
             {s.allocations[0] && allocate(s.allocations[0], toInt(testAmount)).map((v, i) => <span key={i} style={{ padding: '3px 8px', background: '#eef2f6', borderRadius: 6 }}>{i + 1}枚目 {v.division.split(' ')[1]} {yen(v.rows.reduce((a, r) => a + (r.kari ? r.amount : 0), 0))}</span>)}
@@ -150,24 +155,26 @@ export function TemplateJournalPage({ variant, accent }: { variant: 'form' | 'sh
       {tab === '特殊金額の按分率' && (
         <div style={{ padding: 22, maxWidth: 1100, display: 'grid', gap: 12 }}>
           <Notice>配下に伝票入力区分を含む集合区分で起動したとき、金額の先頭に「＋」を付けて入力すると【特殊金額入力】が開き、ここで設定した按分率を初期値として区分別の金額を入力できます（合計100%）。按分率は<b>科目ごと</b>に設定でき、設定のない科目には「共通」の按分率を使います。按分で出た端数（区分ごとに円未満を切り捨てた残り）は「端数の加算先区分」に加算します。</Notice>
-          <table data-special-rates style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr><th style={TH}>科目</th>{spDivs.map((d) => <th key={d} style={{ ...TH, width: 130, textAlign: 'right' }}>{d}（%）</th>)}<th style={{ ...TH, width: 80, textAlign: 'right' }}>合計</th><th style={{ ...TH, width: 190 }}>端数の加算先区分</th><th style={{ ...TH, width: 80, textAlign: 'right' }}>操作</th></tr></thead>
-            <tbody>
-              {spRows.map((row) => {
-                const sum = row.rates.reduce((a, r) => a + r.rate, 0);
-                const name = row.account || '共通';
-                return (
-                  <tr key={name} data-special-rate-row={name} style={{ background: row.account ? undefined : '#f8fafc' }}>
-                    <td style={{ ...TD, fontWeight: 700 }}>{row.account || '共通'}</td>
-                    {row.rates.map((r) => <td key={r.division} style={NUM}><input className="field-input ring" value={String(r.rate)} onChange={(e) => setSpRate(row.account, r.division, Math.max(0, Math.min(100, toInt(e.target.value))))} inputMode="numeric" aria-label={`${name}の${r.division}の按分率`} style={{ ...numInput, width: 80, padding: '4px 8px' }} /></td>)}
-                    <td style={{ ...NUM, fontWeight: 700, color: sum === 100 ? '#1f7a52' : '#c0392b' }}>{sum}%</td>
-                    <td style={TD}><select value={row.roundTo} onChange={(e) => setSpRoundTo(row.account, e.target.value)} aria-label={`${name}の端数の加算先区分`} style={{ ...input, padding: '4px 8px' }}>{spDivs.map((d) => <option key={d}>{d}</option>)}</select></td>
-                    <td style={{ ...TD, textAlign: 'right' }}>{row.account && <button type="button" onClick={() => removeSpAccount(row.account)} style={btn('#c0392b', false, true)}>削除</button>}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <ListScroll>
+            <table data-special-rates style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead><tr><th style={TH}>科目</th>{spDivs.map((d) => <th key={d} style={{ ...TH, width: 130, textAlign: 'right' }}>{d}（%）</th>)}<th style={{ ...TH, width: 80, textAlign: 'right' }}>合計</th><th style={{ ...TH, width: 190 }}>端数の加算先区分</th><th style={{ ...TH, width: 80, textAlign: 'right' }}>操作</th></tr></thead>
+              <tbody>
+                {spRows.map((row) => {
+                  const sum = row.rates.reduce((a, r) => a + r.rate, 0);
+                  const name = row.account || '共通';
+                  return (
+                    <tr key={name} data-special-rate-row={name} style={{ background: row.account ? undefined : '#f8fafc' }}>
+                      <td style={{ ...TD, fontWeight: 700 }}>{row.account || '共通'}</td>
+                      {row.rates.map((r) => <td key={r.division} style={NUM}><input className="field-input ring" value={String(r.rate)} onChange={(e) => setSpRate(row.account, r.division, Math.max(0, Math.min(100, toInt(e.target.value))))} inputMode="numeric" aria-label={`${name}の${r.division}の按分率`} style={{ ...numInput, width: 80, padding: '4px 8px' }} /></td>)}
+                      <td style={{ ...NUM, fontWeight: 700, color: sum === 100 ? '#1f7a52' : '#c0392b' }}>{sum}%</td>
+                      <td style={TD}><select value={row.roundTo} onChange={(e) => setSpRoundTo(row.account, e.target.value)} aria-label={`${name}の端数の加算先区分`} style={{ ...input, padding: '4px 8px' }}>{spDivs.map((d) => <option key={d}>{d}</option>)}</select></td>
+                      <td style={{ ...TD, textAlign: 'right' }}>{row.account && <button type="button" onClick={() => removeSpAccount(row.account)} style={btn('#c0392b', false, true)}>削除</button>}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </ListScroll>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <select value={spAdd} onChange={(e) => setSpAdd(e.target.value)} aria-label="按分率を設定する科目" style={{ ...input, width: 260, padding: '6px 8px' }}><option value="">科目を選択</option>{spFree.map((a) => <option key={a}>{a}</option>)}</select>
             <button type="button" className="btn-outline" data-special-rate-add onClick={addSpAccount} style={btn(accent, false, true)}>＋ 科目を追加</button>
@@ -192,10 +199,12 @@ export function TemplateJournalPage({ variant, accent }: { variant: 'form' | 'sh
             <Field label="出力する列"><div style={{ display: 'flex', gap: 10, fontSize: 14, paddingTop: 8 }}>{ALLOC_OUT_COLS.map((o) => <label key={o} style={{ display: 'flex', gap: 4 }}><input type="checkbox" checked={aoCols.has(o)} onChange={() => setAoCols((c) => { const n = new Set(c); if (n.has(o)) n.delete(o); else n.add(o); return n; })} />{o}</label>)}</div></Field>
             <Field label="端数の加算区分"><select style={input} value={aoRound} onChange={(e) => setAoRound(e.target.value)}>{aoServices.map((o) => <option key={o}>{o}</option>)}</select></Field>
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr><th style={{ ...TH, width: 70 }}>費目</th><th style={{ ...TH, width: 110 }}>区分コード</th><th style={TH}>科目名</th>{aoServices.map((sv) => <th key={sv} style={{ ...TH, textAlign: 'right', width: 90 }}>{sv.split(' ')[1]}</th>)}<th style={{ ...TH, width: 160 }}>備考</th></tr></thead>
-            <tbody>{aoRows.map((r, ri) => <tr key={r.kubun}><td style={TD}>{r.himoku}</td><td style={{ ...TD, fontVariantNumeric: 'tabular-nums' }}>{r.kubun}</td><td style={TD}>{r.name}</td>{r.rates.map((rate, i) => <td key={i} style={{ ...NUM, color: r.rates.reduce((a, b) => a + b, 0) === 100 ? undefined : '#c0392b' }}><input className="field-input" value={String(rate)} onChange={(e) => setAoRows((rs) => rs.map((x, k) => (k === ri ? { ...x, rates: x.rates.map((v, j) => (j === i ? toInt(e.target.value) : v)) } : x)))} inputMode="numeric" style={{ ...numInput, width: 60, padding: '3px 6px', fontSize: 14 }} />%</td>)}<td style={TD}><input className="field-input" value={r.note} onChange={(e) => setAoRows((rs) => rs.map((x, k) => (k === ri ? { ...x, note: e.target.value } : x)))} placeholder="編集" style={{ ...input, padding: '3px 6px', fontSize: 14 }} /></td></tr>)}</tbody>
-          </table>
+          <ListScroll>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead><tr><th style={{ ...TH, width: 70 }}>費目</th><th style={{ ...TH, width: 110 }}>区分コード</th><th style={TH}>科目名</th>{aoServices.map((sv) => <th key={sv} style={{ ...TH, textAlign: 'right', width: 90 }}>{sv.split(' ')[1]}</th>)}<th style={{ ...TH, width: 160 }}>備考</th></tr></thead>
+              <tbody>{aoRows.map((r, ri) => <tr key={r.kubun}><td style={TD}>{r.himoku}</td><td style={{ ...TD, fontVariantNumeric: 'tabular-nums' }}>{r.kubun}</td><td style={TD}>{r.name}</td>{r.rates.map((rate, i) => <td key={i} style={{ ...NUM, color: r.rates.reduce((a, b) => a + b, 0) === 100 ? undefined : '#c0392b' }}><input className="field-input" value={String(rate)} onChange={(e) => setAoRows((rs) => rs.map((x, k) => (k === ri ? { ...x, rates: x.rates.map((v, j) => (j === i ? toInt(e.target.value) : v)) } : x)))} inputMode="numeric" style={{ ...numInput, width: 60, padding: '3px 6px', fontSize: 14 }} />%</td>)}<td style={TD}><input className="field-input" value={r.note} onChange={(e) => setAoRows((rs) => rs.map((x, k) => (k === ri ? { ...x, note: e.target.value } : x)))} placeholder="編集" style={{ ...input, padding: '3px 6px', fontSize: 14 }} /></td></tr>)}</tbody>
+            </table>
+          </ListScroll>
           <label style={{ fontSize: 14, display: 'flex', gap: 6 }}><input type="checkbox" checked={aoTotal} onChange={() => setAoTotal((v) => !v)} />合計値を印刷</label>
           {aoRows.some((r) => r.rates.reduce((a, b) => a + b, 0) !== 100) && <Notice tone="warn">按分率の合計が100%になっていない科目があります（赤字）。出力時は入力した率のまま按分し、端数は「端数の加算区分」に加算します。</Notice>}
         </div>

@@ -355,3 +355,5 @@ tr.row-hover:hover > td:first-child { box-shadow: inset 3px 0 0 rgba(44, 95, 158
 /* 一覧表（確認メモ #476）：ウィンドウのスクロールで一覧を送り、見出しはアプリの帯のすぐ下に固定する */
 [data-list-scroll] thead { position: sticky !important; top: var(--app-top-h, 52px) !important; z-index: 5 !important; }
 [data-list-scroll][data-list-wide] thead { top: 0 !important; }
+/* 一覧表の縦の薄い罫線（確認メモ #482）。罫線を重ねて描く表なので、もともと区切りの線がある列はその線のまま */
+[data-list-scroll] table > * > tr > :is(th, td) + :is(th, td) { border-left: 1px solid #e6ebf0; }

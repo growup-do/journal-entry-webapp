@@ -269,47 +269,49 @@ export function BalanceCheckPage({ variant, accent }: { variant: 'form' | 'sheet
       periodAside={<span style={{ fontSize: 14, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: ngCount ? '#fdeee9' : '#eaf5ef', color: ngCount ? '#c0392b' : '#1f7a52' }}>{ngCount ? `不一致 ${ngCount} 件` : 'すべて一致'}</span>}
     >
       <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr>
-            <th style={TH}>現預金科目</th>
-            <th style={{ ...TH, width: 70 }}>判定</th>
-            <th style={{ ...TH, width: 180, textAlign: 'right' }}>通帳残高</th>
-            <th style={{ ...TH, width: 180, textAlign: 'right' }}>システム残高</th>
-            <th style={{ ...TH, width: 160, textAlign: 'right' }}>差額</th>
-          </tr>
-        </thead>
-        <tbody>
-          {BALANCE_ACCOUNTS.map((a, i) => {
-            const ok = book[i] === system[i];
-            const diff = book[i] - system[i];
-            if (ngOnly && ok) return null;
-            return (
-              <tr key={a.name} style={{ background: ok ? 'transparent' : '#fff7f5' }}>
-                <td style={{ ...TD, fontWeight: 500 }}>{a.name}</td>
-                <td style={TD}><span style={{ fontSize: 12, fontWeight: 800, padding: '2px 7px', borderRadius: 6, background: ok ? '#e8f0fb' : '#c0392b', color: ok ? '#2c5f9e' : '#fff' }}>{ok ? 'OK' : 'NG'}</span></td>
-                <td style={NUM}>
-                  {editing ? (
-                    <input className="field-input" value={yen(book[i])} onChange={(e) => set(i, e.target.value)} inputMode="numeric" style={{ width: 150, boxSizing: 'border-box', textAlign: 'right', padding: '5px 8px', border: '1px solid #cfd8e0', borderRadius: 6, fontSize: 14, fontFamily: 'inherit', outline: 'none', fontVariantNumeric: 'tabular-nums' }} />
-                  ) : (
-                    yen(book[i])
-                  )}
-                </td>
-                <td style={NUM}>{yen(system[i])}</td>
-                <td style={{ ...NUM, fontWeight: 700, color: ok ? '#22303c' : '#c0392b' }}>{diff < 0 ? '-' : ''}{yen(Math.abs(diff))}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-        <tfoot>
-          <tr style={{ background: '#f6f8fa' }}>
-            <td style={{ ...TD, fontWeight: 700 }} colSpan={2}>合計</td>
-            <td style={{ ...NUM, fontWeight: 700 }}>{yen(sumBook)}</td>
-            <td style={{ ...NUM, fontWeight: 700 }}>{yen(sumSys)}</td>
-            <td style={{ ...NUM, fontWeight: 700, color: sumBook === sumSys ? '#22303c' : '#c0392b' }}>{sumBook - sumSys < 0 ? '-' : ''}{yen(Math.abs(sumBook - sumSys))}</td>
-          </tr>
-        </tfoot>
-      </table>
+      <ListScroll>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th style={TH}>現預金科目</th>
+              <th style={{ ...TH, width: 70 }}>判定</th>
+              <th style={{ ...TH, width: 180, textAlign: 'right' }}>通帳残高</th>
+              <th style={{ ...TH, width: 180, textAlign: 'right' }}>システム残高</th>
+              <th style={{ ...TH, width: 160, textAlign: 'right' }}>差額</th>
+            </tr>
+          </thead>
+          <tbody>
+            {BALANCE_ACCOUNTS.map((a, i) => {
+              const ok = book[i] === system[i];
+              const diff = book[i] - system[i];
+              if (ngOnly && ok) return null;
+              return (
+                <tr key={a.name} style={{ background: ok ? 'transparent' : '#fff7f5' }}>
+                  <td style={{ ...TD, fontWeight: 500 }}>{a.name}</td>
+                  <td style={TD}><span style={{ fontSize: 12, fontWeight: 800, padding: '2px 7px', borderRadius: 6, background: ok ? '#e8f0fb' : '#c0392b', color: ok ? '#2c5f9e' : '#fff' }}>{ok ? 'OK' : 'NG'}</span></td>
+                  <td style={NUM}>
+                    {editing ? (
+                      <input className="field-input" value={yen(book[i])} onChange={(e) => set(i, e.target.value)} inputMode="numeric" style={{ width: 150, boxSizing: 'border-box', textAlign: 'right', padding: '5px 8px', border: '1px solid #cfd8e0', borderRadius: 6, fontSize: 14, fontFamily: 'inherit', outline: 'none', fontVariantNumeric: 'tabular-nums' }} />
+                    ) : (
+                      yen(book[i])
+                    )}
+                  </td>
+                  <td style={NUM}>{yen(system[i])}</td>
+                  <td style={{ ...NUM, fontWeight: 700, color: ok ? '#22303c' : '#c0392b' }}>{diff < 0 ? '-' : ''}{yen(Math.abs(diff))}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr style={{ background: '#f6f8fa' }}>
+              <td style={{ ...TD, fontWeight: 700 }} colSpan={2}>合計</td>
+              <td style={{ ...NUM, fontWeight: 700 }}>{yen(sumBook)}</td>
+              <td style={{ ...NUM, fontWeight: 700 }}>{yen(sumSys)}</td>
+              <td style={{ ...NUM, fontWeight: 700, color: sumBook === sumSys ? '#22303c' : '#c0392b' }}>{sumBook - sumSys < 0 ? '-' : ''}{yen(Math.abs(sumBook - sumSys))}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </ListScroll>
       <div style={{ padding: '12px 22px', fontSize: 12, color: '#9aa5b1', lineHeight: 1.6, borderTop: '1px solid #eef2f5' }}>選んだ月の月末時点で突合します。通帳の残高は月ごとに入力します。</div>
     </ReportShell>
   );
