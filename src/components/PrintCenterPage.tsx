@@ -106,10 +106,9 @@ export function PrintCenterPage({ variant, accent, onNavigate, initialCat }: { v
                 <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16, minWidth: 0 }}>{cur.name}</div>
                 {tag(cur.sub && cur.sub !== cat ? `${cat}／${cur.sub}` : cat, '#eef2f6', '#3d4a56')}
                 {cur.note && !cur.wamnet && tag(cur.note, '#eef2f6', '#3d4a56')}
-                {cur.cond && tag(ok(cur) ? '表示条件あり' : '表示条件を満たしていません', ok(cur) ? '#eef2f6' : '#fdecea', ok(cur) ? '#3d4a56' : '#b03a2e')}
+                {cur.cond && !ok(cur) && tag('表示条件を満たしていません', '#fdecea', '#b03a2e')}
                 <span style={{ marginLeft: 'auto', fontSize: 12, color: '#8290a0' }}>{s.fiscalYear}　{s.division}</span>
               </div>
-              {cur.cond && <div data-report-cond style={{ padding: '0 22px 8px', fontSize: 12, color: '#8290a0' }}>表示条件：{cur.cond.label}</div>}
               <div style={{ padding: '6px 22px 22px' }}>
                 {!ok(cur) ? (
                   <Notice>この帳票は表示条件（{cur.cond?.label}）を満たしていないため、起動中の区分（{s.division}）では印刷できません。</Notice>

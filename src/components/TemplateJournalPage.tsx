@@ -1,7 +1,7 @@
 // 仕訳辞書（提案E）：連続定型仕訳／自動按分仕訳／特殊金額の按分率／自動按分出力
 //   マニュアル 5.3・5.4・7.6 に相当。テンプレートはセッションに保存し、伝票入力から呼び出す。
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { NUM, TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
@@ -26,7 +26,9 @@ const allocBase = (i: number) => [[9_630_000, 8_420_000], [1_800_000, 2_100_000]
 
 export function TemplateJournalPage({ variant, accent }: { variant: 'form' | 'sheet'; accent: string }) {
   const s = useSession();
-  const [tab, setTab] = useState('連続定型仕訳');
+  // 帳票の印刷（自動按分出力）から開いたときは、指定のタブを開く（確認メモ #467）
+  const [tab, setTab] = useState(() => { try { return sessionStorage.getItem('proto-open-tab:仕訳辞書') ?? '連続定型仕訳'; } catch { return '連続定型仕訳'; } });
+  useEffect(() => { try { sessionStorage.removeItem('proto-open-tab:仕訳辞書'); } catch { /* なし */ } }, []);
   const toast = useToast();
   // 連続定型ウィザード
   const [wiz, setWiz] = useState<{ step: number; t: JournalTemplate } | null>(null);

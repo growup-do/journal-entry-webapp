@@ -480,6 +480,8 @@ export interface ReportDef {
   /** 一覧の帳票名の下に出す補足（様式番号など短いものだけ） */ note?: string; detail: DetailSection[]; scope?: boolean;
   /** 開発用のメモ（現行との違いなど）。画面には出さない */ memo?: string;
   /** 年次の帳票（期間は会計年度の期首〜期末。月の指定なし） */ annual?: boolean;
+  /** 詳細設定の横に［設定・編集］タブを置く（収支分析表の行の設定。確認メモ #465） */ setupTab?: 'shushiBunseki';
+  /** 詳細設定の見出しに、設定の画面のタブへ移るボタンを置く（確認メモ #467） */ openTab?: { screen: string; tab: string };
   /** WAMNET連携出力：印刷ではなく WAMNET連携のダイアログを開く */ wamnet?: boolean;
   /** 共通印刷設定＝有（詳細設定に「共通の印刷設定を反映」を置く） */ common?: boolean;
   /** 表示条件 */ cond?: Cond;
@@ -581,8 +583,16 @@ export const REPORTS: ReportDef[] = [
   ...group('WAMNET連携出力', 'WAMNET連携出力', ['WAMNET連携設定', 'WAMNET連携科目チェック', 'WAMNET連携ファイル出力', 'WAMNET連携注記出力（PDF）', 'WAMNET連携注記出力（Excel）', 'WAMNET連携附属明細書出力（PDF）', 'WAMNET連携附属明細書出力（Excel）'].map((name, i): R => ({ id: 'w' + (i + 1), name, wamnet: true, note: i < 2 ? '設定・確認' : '出力', detail: [] }))),
   ...group('その他', 'その他', [
     { id: 'o1', name: '決算書 表紙', noZero: true, detail: [] },
-    { id: 'o2', name: '収支分析表', memo: '［設定］で科目名称・金額の決定方法・背景色・文字色を指定', noZero: true, outs: ['print', 'excel'], detail: [{ title: '印刷項目', items: [chk('thousand', '金額を千円単位で表示する', true)] }] },
-    { id: 'o3', name: '自動按分出力', cond: C.belowSite, detail: [{ title: '出力条件', items: [rad('kind', '出力種類', ['貸借対照表', '事業活動計算書', '資金収支計算書']), rad('cols', '出力する列', ['当年度末', '前年度末', '増減']), rad('round', '端数の加算区分', ['按分率の最も大きい区分', '最後の区分'])] }, { title: '印刷項目', items: [chk('sum', '合計値を印刷する', true)] }] },
+    // 収支分析表：現行の印刷画面のチェック（千円単位）と「資金収支分析表　詳細設定」。行の構成は［設定・編集］タブ（確認メモ #465）
+    { id: 'o2', name: '収支分析表', annual: true, setupTab: 'shushiBunseki', noZero: true, outs: ['print', 'excel'], detail: [
+      { title: '印刷項目', items: [
+        chk('thousand', '金額を千円単位で表示する', true), chk('mergeName', '合算の名称を印刷する'), chk('useDiffTotal', '資金収支決算書の当期資金収支差額合計を使用する'),
+        chk('foot', '脚注を印刷する'), chk('page', 'ページ番号を印刷する'), { ...txt('pageStart', 'ページ番号の開始番号', '1', '1', 80), when: { k: 'page', v: true } }, chk('date', '印刷時の日付を印刷する'),
+      ] },
+      { title: '行送り', items: [PITCH('6.4')] },
+      POSITION('0', '0'),
+    ] },
+    { id: 'o3', name: '自動按分出力', cond: C.belowSite, openTab: { screen: '仕訳辞書', tab: '自動按分出力' }, detail: [{ title: '出力条件', items: [rad('kind', '出力種類', ['貸借対照表', '事業活動計算書', '資金収支計算書']), rad('cols', '出力する列', ['当年度末', '前年度末', '増減']), rad('round', '端数の加算区分', ['按分率の最も大きい区分', '最後の区分'])] }, { title: '印刷項目', items: [chk('sum', '合計値を印刷する', true)] }] },
     { id: 'o4', name: '取引先内訳表', memo: '旧 業者内訳表', cond: C.belowSite,
       // 基本条件に印刷科目のリストボックス（確認メモ #413）
       range: true, basicList: { k: 'printAccts', label: '印刷科目', options: bsAccounts() }, detail: [{ title: '印刷項目', items: [chk('vsub', '取引先コード小計'), chk('zeroV', '0円の取引先を印刷しない', true), chk('area', '区分名を印刷する', true)] }] },

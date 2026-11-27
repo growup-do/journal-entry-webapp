@@ -352,7 +352,6 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
             {condText(sheet) && tag(sheetOk(sheet, s) ? '表示条件あり' : '表示条件を満たしていません', sheetOk(sheet, s) ? '#eef2f6' : '#fdecea', sheetOk(sheet, s) ? '#3d4a56' : '#b03a2e')}
             <span style={{ marginLeft: 'auto', fontSize: 12, color: '#8290a0' }}>{s.fiscalYear}　{s.division}</span>
           </div>
-          {condText(sheet) && <div data-sheet-cond style={{ padding: '0 22px 8px', fontSize: 12, color: '#8290a0' }}>表示条件：{condText(sheet)}</div>}
           {peeking && <div data-sheet-peek style={{ margin: '0 22px 10px', padding: '8px 12px', borderRadius: 8, background: '#fff8ea', border: '1px solid #f0dcae', fontSize: 14, color: '#6b4e00', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <span style={{ flex: 1, minWidth: 0 }}>見本の表示です。対象の事業がある法人で、条件を満たしたときの画面を確認用に表示しています（起動中の法人では印刷されません）。</span>
             <button type="button" onClick={() => { setPeek(false); setMode('設定・編集'); }} style={btn('#5b6773', false, true)}>見本の表示をやめる</button>

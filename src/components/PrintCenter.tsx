@@ -9,6 +9,7 @@
 //   各帳票画面には PrintButton を置き、画面内から同じ流れを開く（5.1.1）。
 //   金額は動作環境の金額書式（桁区切り・負数の表記と色）で表示し、0円行は「0データを表示しない」に従って省く（6.5）。
 
+import { ShushiBunsekiSetup, analysisTable, useAnalysisRows } from './ShushiBunsekiSetup';
 import { useEffect, useId, useMemo, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { FISCAL_MONTHS, FiscalMonthTabs } from './FiscalMonthTabs';
@@ -38,6 +39,8 @@ export interface TableData { header: string[]; rows: (string | number)[][]; }
 /** 帳票名からサンプルの表（科目／当月／累計）を作る。本番では各帳票の集計結果が入る。
  *  0円行・負数の表示を確認できるよう、5行目を 0 円、10行目の当月を負数にしている */
 export function sampleReportData(name: string, n = 14): TableData {
+  // 収支分析表は［設定・編集］で決めた行の構成で作る（確認メモ #465）
+  if (name === '収支分析表') return analysisTable();
   const names = ACCOUNTS.flatMap((g) => g.items);
   let h = 7;
   for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
@@ -409,6 +412,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
   const s = useSession();
   const uidFmt = useId();
   const toast = useToast();
+  const analysisRows = useAnalysisRows();
   const fy = eraYear(s.fiscalYear);
   const [p, setP] = useState<FlowPrefs>(() => PREFS.get(report.id) ?? defaultPrefs(report, fy, s.print));
   const [exp, setExp] = useState<ExportSpec | null>(null);
@@ -512,6 +516,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
         onPreview={preview}
         onRun={run}
         onClose={onClose}
+        extraTab={report.setupTab === 'shushiBunseki' ? { label: '設定・編集', summary: analysisRows.length + ' 行', node: <ShushiBunsekiSetup accent={accent} toast={toast.show} /> } : undefined}
         // 基本条件は出力先と同じ画面に置く（確認事項「「帳票の印刷」画面の構成について」）
         basic={<ScopeBlock title="基本条件">
             <div data-print-basic style={{ display: 'grid', gap: 14 }}>
@@ -632,7 +637,10 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
             </div>
           </ScopeBlock>}
         detail={<>
-            <ScopeBlock kind="帳票個別" title="この帳票の詳細設定" right={report.common ? <>
+            <ScopeBlock kind="帳票個別" title="この帳票の詳細設定" right={report.openTab ? (
+              // 設定の画面の該当タブへ移る（自動按分出力 → 連続定型仕訳・自動按分仕訳の登録の「自動按分出力」タブ。確認メモ #467）
+              <button type="button" data-open-tab={report.openTab.tab} onClick={(e) => { e.stopPropagation(); try { sessionStorage.setItem('proto-open-tab:' + report.openTab!.screen, report.openTab!.tab); } catch { /* 開くタブは既定のまま */ } goScreen(report.openTab!.screen); }} style={{ ...btn('#5b6773', false, true), whiteSpace: 'nowrap' }}>{displayName(report.openTab.screen)}を開く</button>
+            ) : report.common ? <>
               <button type="button" data-apply-common onClick={(e) => { e.stopPropagation(); applyCommon(); }} title="決算書 共通印刷設定の値を、この帳票の詳細設定に写します" style={{ ...btn(accent, true, true), whiteSpace: 'nowrap' }}>共通の印刷設定を反映</button>
               <button type="button" data-open-common onClick={(e) => { e.stopPropagation(); goScreen('共通の印刷設定'); }} title="決算書 共通印刷設定の画面を開きます" style={{ ...btn('#5b6773', false, true), whiteSpace: 'nowrap' }}>決算書 共通印刷設定を開く</button>
             </> : undefined}>
@@ -692,7 +700,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
               </ScopeBlock>
             )}
 
-            <ScopeBlock title="動作環境から引き継ぐ設定" descBelow right={<button type="button" data-open-env onClick={(e) => { e.stopPropagation(); goScreen('環境設定'); }} style={btn('#5b6773', false, true)}>{displayName('環境設定')}を開く</button>} desc="画面表示と印刷の両方に関わるため動作環境に残した設定です（ここでは確認のみ。区分ごと／全区分共通の別を表示）。">
+            <ScopeBlock title="動作環境から引き継ぐ設定" descBelow right={<button type="button" data-open-env onClick={(e) => { e.stopPropagation(); goScreen('環境設定'); }} style={btn('#5b6773', false, true)}>{displayName('環境設定')}を開く</button>}>
               <EnvPrintSummary env={s.env} division={s.division} budget={report.cat === '予算'} />
             </ScopeBlock>
         </>}

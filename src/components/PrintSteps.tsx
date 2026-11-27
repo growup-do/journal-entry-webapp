@@ -19,6 +19,8 @@ export const OUT_DESTS: { kind: OutKind; label: string; action: string }[] = [
 ];
 /** タブの名前（出力先が先） */
 export const PRINT_TAB_LABELS = ['出力先', '詳細設定'] as const;
+/** 詳細設定の横に置くタブ（収支分析表の［設定・編集］など。確認メモ #465） */
+export interface ExtraTab { label: string; summary?: string; node: ReactNode }
 export const destOf = (k: OutKind) => OUT_DESTS.find((d) => d.kind === k) ?? OUT_DESTS[0];
 
 export interface PrintStepsProps {
@@ -40,25 +42,27 @@ export interface PrintStepsProps {
   onClose?: () => void;
   /** 出力できない理由（帳票が選ばれていない など）。あるとプレビュー・実行を押せない */
   blocked?: string;
+  /** 詳細設定の横に置くタブ */
+  extraTab?: ExtraTab;
 }
 
-export function PrintSteps({ accent, basic, detail, detailSummary, dest, onDest, dests, destNote, onPreview, onRun, onClose, blocked }: PrintStepsProps) {
-  const [tab, setTab] = useState<(typeof PRINT_TAB_LABELS)[number]>('出力先');
+export function PrintSteps({ accent, basic, detail, dest, onDest, dests, destNote, onPreview, onRun, onClose, blocked, extraTab }: PrintStepsProps) {
+  const [tab, setTab] = useState<string>('出力先');
   const list = dests ? OUT_DESTS.filter((d) => dests.includes(d.kind)) : OUT_DESTS;
   const cur = list.find((d) => d.kind === dest) ?? list[0];
-  const sub: Record<(typeof PRINT_TAB_LABELS)[number], string> = { 出力先: cur.label, 詳細設定: detailSummary ?? '' };
-  const showTab = detail ? tab : '出力先';
+  const labels: string[] = [...PRINT_TAB_LABELS, ...(extraTab ? [extraTab.label] : [])];
+  const showTab = detail || extraTab ? tab : '出力先';
   return (
     <div data-print-steps style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       {/* 出力先と詳細設定のタブ（詳細設定があるときだけ） */}
       {detail && (
         <div role="tablist" aria-label="印刷の設定" style={{ display: 'flex', gap: 0, padding: '12px 18px 0', borderBottom: '1px solid #e8edf2' }}>
-          {PRINT_TAB_LABELS.map((label) => {
+          {labels.map((label) => {
             const on = label === showTab;
             return (
               <button key={label} type="button" role="tab" aria-selected={on} data-print-tab={label} onClick={() => setTab(label)} style={{ flex: '0 1 260px', minWidth: 0, textAlign: 'left', padding: '8px 14px 9px', border: 'none', borderBottom: '3px solid ' + (on ? accent : 'transparent'), marginBottom: -1, background: 'transparent', cursor: 'pointer', fontFamily: 'inherit' }}>
+                {/* タブの下に選んだ出力先・印刷項目数は出さない（確認メモ #466） */}
                 <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: on ? '#22303c' : '#5b6773', whiteSpace: 'nowrap' }}>{label}</span>
-                <span style={{ display: 'block', fontSize: 12, color: '#8290a0', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minHeight: 15 }}>{sub[label]}</span>
               </button>
             );
           })}
@@ -88,6 +92,7 @@ export function PrintSteps({ accent, basic, detail, detailSummary, dest, onDest,
           </div>
         )}
         {showTab === '詳細設定' && detail}
+        {extraTab && showTab === extraTab.label && extraTab.node}
       </div>
 
       {/* ボタンは画面の下に固定し、スクロールしなくても［印刷］を押せるようにする。
