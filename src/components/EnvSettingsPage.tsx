@@ -5,6 +5,7 @@
 //   バックアップ先／繰入金明細の集計方法）はこの画面から削除した。繰入金明細の集計方法は「決算付属明細書設定」の「科目の合わせ方」で切り替える。
 
 import { useState, useRef } from 'react';
+import { UNSAVED_FG, useUnsaved } from '../store/unsaved';
 import type { CSSProperties, ReactNode } from 'react';
 import { ToastView, useToast } from './Toast';
 import { DivisionInfoDialog } from './DivisionInfoDialog';
@@ -28,6 +29,10 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
   const [tab, setTab] = useState(DIV_TABS[0]);
   const toast = useToast();
   const set = (p: Partial<EnvSettings>) => setV((x) => ({ ...x, ...p }));
+  // 未保存の変更：保存済みの設定と比べる（ほかの画面へ移した項目は比べない）。入力を始めると枠を光らせて「保存されていません。」を出す
+  const MOVED = ['supplementMode', 'wideInitial', 'wideMonth', 'ledger1Init', 'ledger2Init', 'order', 'transferWatch', 'oneSideInternal'];
+  const dirty = (Object.keys(v) as (keyof EnvSettings)[]).some((k) => !MOVED.includes(k) && JSON.stringify(v[k]) !== JSON.stringify(s.env[k]));
+  useUnsaved('環境設定', displayName('環境設定'), dirty);
   // 画面背景の画像：選んだ画像を縮小して設定に持つ（大きな画像でも保存できるよう、長辺 1600px の JPEG にする）
   const bgFile = useRef<HTMLInputElement>(null);
   const pickBg = (f: File) => {
@@ -87,12 +92,13 @@ export function EnvSettingsPage({ variant, accent, onNavigate }: { variant: 'for
   const T = (k: keyof EnvSettings, label: string) => <Toggle on={!!v[k]} onChange={(x) => set({ [k]: x } as Partial<EnvSettings>)} accent={accent} label={label} />;
 
   return (
-    <SettingsShell variant={variant} title={displayName('環境設定')} actions={<>
+    <SettingsShell variant={variant} unsaved={dirty} title={displayName('環境設定')} actions={<>
       <button type="button" className="btn-outline" onClick={() => setInfoOpen(true)} style={btn()}>部門情報の変更</button>
       <button type="button" className="btn-outline" data-import-export-btn={displayName('環境設定')} onClick={() => setFileOpen(true)} style={btn()}>インポート／エクスポート</button>
       <LoadDivisionSettings accent={accent} kind="動作設定" onDone={(from) => toast.show(`「${from}」の動作設定を読み込みました（未保存：OK（保存）で確定）`)} />
       {onNavigate && <button type="button" className="btn-outline" onClick={() => onNavigate('共通の印刷設定')} style={btn()} data-open-print-settings>決算書 共通印刷設定</button>}
       <button type="button" className="btn-outline" onClick={() => { setV(DEFAULT_ENV); toast.show('初期値に戻しました（未保存）'); }} style={btn()}>初期値に戻す</button>
+      {dirty && <span role="status" data-unsaved-msg style={{ fontSize: 15, fontWeight: 800, color: UNSAVED_FG, marginRight: 4 }}>保存されていません。</span>}
       <button type="button" className="submit-btn" onClick={save} style={btn(accent, true)}>OK（保存）</button>
     </>}>
       <ToastView msg={toast.msg} />

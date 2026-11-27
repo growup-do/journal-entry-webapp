@@ -2,14 +2,15 @@
 //   マニュアル 3.2 に相当。予算額の設定（年度×月の一覧）・次年度予算作成ウィザード・前期末支払資金残高の表示。
 //   タブは「前年度予算／当年度予算／次年度予算」と、その取引先別の 6 つ。どのタブでも予算月を選べる（月「初」＝当初予算、4〜3・決＝補正予算。確認メモ #169）。
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import { UNSAVED_FG, useUnsaved } from '../store/unsaved';
 import type { CSSProperties } from 'react';
 import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
 import { ExplainModal } from './ExplainModal';
 import { FISCAL_MONTHS } from './FiscalMonthTabs';
-import { Field, ManualButton, Notice, SettingsShell, Tabs, btn, input, numInput, toInt, yen, HelpTip } from './ui';
+import { Field, ManualButton, Notice, SettingsShell, Tabs, btn, input, numInput, toInt, yen, HelpTip, SubAction } from './ui';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { VENDORS, displayName } from '../data';
 import { ScopeBadge } from './PrintCenter';
@@ -80,6 +81,13 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
   const [vPrev, setVPrev] = useState<Grid>(() => initVendorGrid(300000));
   const [vCur, setVCur] = useState<Grid>(() => initVendorGrid(320000));
   const [vNext, setVNext] = useState<Grid>(() => initVendorGrid(330000));
+  // 未保存の変更：最後に保存した表と比べる。入力を始めると枠を光らせて「保存されていません。」を出す
+  const allGrids = [prev, cur, next, vPrev, vCur, vNext];
+  const savedGrids = useRef(allGrids);
+  const [, setSavedTick] = useState(0);
+  const dirty = allGrids.some((g, i) => g !== savedGrids.current[i]);
+  useUnsaved('予算', displayName('予算'), dirty);
+  const saveAll = () => { savedGrids.current = allGrids; setSavedTick((n) => n + 1); toast.show('予算を保存しました'); };
 
   /** 取引先別のタブか */
   const byVendor = tab.endsWith(BY_VENDOR);
@@ -128,9 +136,10 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
   const chip = (on: boolean): CSSProperties => ({ minWidth: 30, height: 26, padding: '0 8px', borderRadius: 6, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', border: '1px solid ' + (on ? accent : '#d3dbe3') });
 
   return (
-    <SettingsShell variant={variant} title={displayName('予算')} manual={<ManualButton label="説明" onClick={() => setExplainOpen(true)} title="予算入力の説明（マニュアル 3.2）を開きます" />} actions={<>
-      {tab === '次年度予算' && <button type="button" className="btn-outline" onClick={() => setWizard(true)} style={btn(accent)}>次年度予算作成</button>}
-      <button type="button" className="submit-btn" onClick={() => toast.show('予算を保存しました')} style={btn(accent, true)}>保存</button>
+    <SettingsShell variant={variant} unsaved={dirty} title={displayName('予算')} manual={<ManualButton label="説明" onClick={() => setExplainOpen(true)} title="予算入力の説明（マニュアル 3.2）を開きます" />} actions={<>
+      {tab === '次年度予算' && <SubAction icon="copy" label="次年度予算作成" onClick={() => setWizard(true)} />}
+      {dirty && <span role="status" data-unsaved-msg style={{ fontSize: 15, fontWeight: 800, color: UNSAVED_FG, marginRight: 4 }}>保存されていません。</span>}
+      <button type="button" className="submit-btn" onClick={saveAll} style={btn(accent, true)}>保存</button>
       <ScreenPrintMenu page="予算" accent={accent} />
     </>}>
       <ToastView msg={toast.msg} />

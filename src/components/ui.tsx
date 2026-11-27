@@ -132,7 +132,7 @@ export function SettingsShell({ variant, title, desc, badge, draft = false, acti
   return (
     <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : '16px 28px 20px', display: 'flex', justifyContent: 'center' }}>
       {/* 角丸の外にはみ出す部分は切るが、スクロールの枠にはしない（clip）。中の position: sticky（印刷画面の下のボタンなど）が画面に対して効くようにする */}
-      <div data-unsaved={unsaved || undefined} data-editing={editing || undefined} className={editing ? 'edit-glow' : undefined} style={{ width: '100%', maxWidth: isSheet ? 'none' : 1240, background: unsaved ? UNSAVED_BG : '#fff', border: '1px solid ' + (unsaved ? '#ecd9b4' : '#dde4ea'), borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'clip', transition: 'background .15s, border-color .15s' }}>
+      <div data-unsaved={unsaved || undefined} data-editing={editing || unsaved || undefined} className={editing || unsaved ? 'edit-glow' : undefined} style={{ width: '100%', maxWidth: isSheet ? 'none' : 1240, background: unsaved ? UNSAVED_BG : '#fff', border: '1px solid ' + (unsaved ? '#ecd9b4' : '#dde4ea'), borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'clip', transition: 'background .15s, border-color .15s' }}>
         {backNav.from && (
           <div data-return-bar style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 22px', background: '#f3f6f9', borderBottom: '1px solid #e2e8ee', borderRadius: '12px 12px 0 0' }}>
             <BackButton from={backNav.from} onBack={backNav.back} accent="#1f7a52" />
@@ -257,6 +257,25 @@ export const PrintIcon = () => <Icon name="print" size={14} />;
 
 /** アイコンだけのボタン。マウスを載せたときの表示（title）と読み上げ（aria-label）は、メニュー名だけにする。
  *  大きさは右上の機能ボタン（btn の通常の大きさ）と同じ高さの正方形 */
+/** 入力の補助的な機能（前年度からの取込・期中入力の切替・インポートなど）の小さめのメニュー：アイコン＋文字。
+ *  保存・追加などの主な操作のボタンと見分けられるよう、枠のない小さな文字にする（小口現金の「AI自動仕訳 インポート」と同じ形） */
+export function SubAction({ icon, label, onClick, title, danger, style, ...rest }: { icon: IconName; label: ReactNode; onClick: () => void; title?: string; danger?: boolean; style?: CSSProperties; [k: `data-${string}`]: unknown }) {
+  return (
+    <button type="button" className="month-row-act" data-danger={danger || undefined} onClick={onClick} title={title} {...rest} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 6px', border: 'none', borderRadius: 6, background: 'transparent', color: danger ? '#c0392b' : '#1f7a52', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', ...style }}>
+      <Icon name={icon} size={15} />
+      {label}
+    </button>
+  );
+}
+/** SubAction のチェックボックス版（アイコンの代わりにチェックボックス） */
+export function SubCheck({ label, checked, onChange, title, style, ...rest }: { label: ReactNode; checked: boolean; onChange: () => void; title?: string; style?: CSSProperties; [k: `data-${string}`]: unknown }) {
+  return (
+    <label className="month-row-act" title={title} {...rest} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 6px', borderRadius: 6, color: '#1f7a52', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', ...style }}>
+      <input type="checkbox" checked={checked} onChange={onChange} style={{ margin: 0, width: 14, height: 14, accentColor: '#1f7a52' }} />
+      {label}
+    </label>
+  );
+}
 export function IconButton({ icon, label, color = '#5b6773', solid = false, size = 42, badge, tipOnly = false, style, onMouseEnter, onFocus, ...rest }: { icon: IconName; label: string; color?: string; solid?: boolean; size?: number; /** 右上の赤い数字（承認待ちの件数など）。0 は出さない */ badge?: number; /** 枠を広げず、マウスを載せたときにツールチップ（印刷ボタンと同じ小さな表記）で名前だけを出す */ tipOnly?: boolean } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'color' | 'title'>) {
   // ふだんはアイコンだけの正方形。マウスを載せると枠の幅が広がってアイコンの横にメニュー名が出て、並んでいるほかのボタンは動いて場所を空ける（styles.css の .icon-btn-label）。
   // 右寄せのボタン列では名前をアイコンの左に出す。こうするとマウスを載せたボタン（アイコン）は動かず、左側のボタンが左へ動く

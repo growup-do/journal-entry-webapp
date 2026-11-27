@@ -7,7 +7,7 @@
 import { useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { Modal } from './Modal';
-import { Notice, btn, card, cardHead } from './ui';
+import { Notice, btn, card, cardHead, SubAction } from './ui';
 
 export interface ImportExportProps {
   open: boolean;
@@ -69,11 +69,12 @@ export function ImportExportDialog({ open, onClose, name, accent, notice, export
 }
 
 /** 画面に置く「インポート／エクスポート」ボタンと画面の組 */
-export function ImportExportButton({ style, small, ...props }: Omit<ImportExportProps, 'open' | 'onClose'> & { style?: CSSProperties; small?: boolean }) {
+export function ImportExportButton({ style, ...props }: Omit<ImportExportProps, 'open' | 'onClose'> & { style?: CSSProperties; /** 互換用（いつも小さめのメニュー） */ small?: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className="btn-outline" data-import-export-btn={props.name} onClick={() => setOpen(true)} title={`${props.name}をファイルに書き出す／ファイルから読み込む`} style={{ ...btn('#5b6773', false, small), ...style }}>インポート／エクスポート</button>
+      {/* 入力の補助的な機能なので、小さめのメニュー（アイコン＋文字） */}
+      <SubAction icon="import" label="インポート／エクスポート" data-import-export-btn={props.name} onClick={() => setOpen(true)} title={`${props.name}をファイルに書き出す／ファイルから読み込む`} style={style} />
       <ImportExportDialog {...props} open={open} onClose={() => setOpen(false)} />
     </>
   );

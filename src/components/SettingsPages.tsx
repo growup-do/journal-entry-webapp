@@ -3,6 +3,7 @@
 //   事業者 … 法人情報・会計期間・拠点区分／サービス区分
 //   開始残高 … 期首の貸借残高を拠点ごとに入力（貸借一致チェック）
 
+import { UNSAVED_FG, useUnsaved } from '../store/unsaved';
 import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { ExportDialog, type ExportSpec } from './ExportDialog';
@@ -10,7 +11,7 @@ import { Modal } from './Modal';
 import { NUM, TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
 import { ACCOUNTS, JOURNAL_ROWS, SUMMARIES, VENDORS, displayName } from '../data';
-import { Tabs } from './ui';
+import { Tabs, SubAction, SubCheck, SettingsShell } from './ui';
 import { TAX_MODES, setSession, setTaxMode, taxModeUsesTax, useSession, type TaxMode } from '../store/session';
 import { DivisionTreeEditor } from './DivisionTreeEditor';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
@@ -27,24 +28,9 @@ import { AttachedStatementsPage } from './AttachedStatementsPage';
 const yen = (n: number) => n.toLocaleString('ja-JP');
 
 /* ---------------- 共通シェル ---------------- */
-function Shell({ variant, title, desc, actions, children }: { variant: 'form' | 'sheet'; title: string; desc?: string; actions?: ReactNode; children: ReactNode }) {
-  const isSheet = variant === 'sheet';
-  return (
-    <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : '16px 28px 20px', display: 'flex', justifyContent: 'center' }}>
-      <div style={{ width: '100%', maxWidth: isSheet ? 'none' : 1200, background: '#fff', border: '1px solid #dde4ea', borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '18px 22px 14px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
-          <div>
-            <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21 }}>
-              {title} <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#eef2f6', color: '#3d4a56', verticalAlign: 'middle', marginLeft: 6 }}>設定</span>
-            </div>
-            {desc && <div style={{ color: '#7a8794', fontSize: 14, marginTop: 4 }}>{desc}</div>}
-          </div>
-          {actions && <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>{actions}</div>}
-        </div>
-        {children}
-      </div>
-    </main>
-  );
+/** 設定画面の共通の枠（SettingsShell）。unsaved のあいだは枠を光らせ、未保存の色にする */
+function Shell({ variant, title, desc, actions, unsaved, children }: { variant: 'form' | 'sheet'; title: string; desc?: string; actions?: ReactNode; unsaved?: boolean; children: ReactNode }) {
+  return <SettingsShell variant={variant} title={title} desc={desc} actions={actions} unsaved={unsaved}>{children}</SettingsShell>;
 }
 const btn = (color = '#5b6773', solid = false): CSSProperties => ({ padding: '8px 14px', borderRadius: 8, border: '1px solid ' + (solid ? color : '#cfd8e0'), background: solid ? color : '#fff', color: solid ? '#fff' : color, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' });
 const input: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '8px 10px', border: '1px solid #cfd8e0', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none', background: '#fff' };
@@ -445,6 +431,10 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
   /** 期中入力を行うか（期の途中から導入する場合だけ On。確認メモ #167） */
   const mid = useSession().openingMidTerm;
   const [data, setData] = useState(initOpening);
+  /** 最後に OK で確定した内容。入力を始めると未保存になり、枠を光らせて「保存されていません。」を出す */
+  const [saved, setSaved] = useState(data);
+  const dirty = data !== saved;
+  useUnsaved('開始残高', '開始残高', dirty);
   const [site, setSite] = useState(0);
   const [tabRaw, setTab] = useState(OPENING_BASE_TABS[0]);
   const [importOpen, setImportOpen] = useState(false);
@@ -478,13 +468,13 @@ function OpeningBalancePage({ variant, accent }: { variant: 'form' | 'sheet'; ac
   const cellIn: CSSProperties = { ...input, textAlign: 'right', padding: '5px 8px', fontVariantNumeric: 'tabular-nums', background: '#fffbe6' };
   const total: CSSProperties = { ...cnum, fontWeight: 700, paddingRight: 19 };
   return (
-    <Shell variant={variant} title="開始残高" actions={<>
-      <button type="button" className="btn-outline" onClick={() => setImportOpen(true)} style={btn()}>前年度決算から取込</button>
+    <Shell variant={variant} title="開始残高" unsaved={dirty} actions={<>
+      {/* 入力の補助的な機能は小さめのメニュー（アイコン＋文字） */}
+      <SubAction icon="import" label="前年度決算から取込" onClick={() => setImportOpen(true)} data-opening-import />
       {/* 期中入力の切替（確認を挟む。確認メモ #167）。旧「借貸残高（期中）」ボタンの置き換え */}
-      <label data-opening-midterm title="期の途中から導入する場合だけチェックします。通常は使用しません" style={{ ...btn(mid ? accent : undefined), display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-        <input type="checkbox" checked={mid} onChange={() => setMidConfirm(mid ? 'off' : 'on')} style={{ margin: 0 }} />期中入力を行う（期の途中から導入する場合）
-      </label>
-      <button type="button" className="submit-btn" disabled={!ok} onClick={() => toast.show('開始残高を確定しました')} style={{ ...btn(accent, true), opacity: ok ? 1 : 0.5 }}>OK</button>
+      <SubCheck data-opening-midterm title="期の途中から導入する場合だけチェックします。通常は使用しません" checked={mid} onChange={() => setMidConfirm(mid ? 'off' : 'on')} label="期中入力を行う（期の途中から導入する場合）" />
+      {dirty && <span role="status" data-unsaved-msg style={{ fontSize: 15, fontWeight: 800, color: UNSAVED_FG, marginRight: 4 }}>保存されていません。</span>}
+      <button type="button" className="submit-btn" disabled={!ok} onClick={() => { setSaved(data); toast.show('開始残高を確定しました'); }} style={{ ...btn(accent, true), opacity: ok ? 1 : 0.5 }}>OK</button>
     </>}>
       <ToastView msg={toast.msg} />
       <Modal open={importOpen} onClose={() => setImportOpen(false)} width={480} title="前年度決算から取込" strict>
