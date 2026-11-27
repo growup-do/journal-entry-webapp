@@ -980,7 +980,7 @@ export function DepreciationPage({ variant, accent }: Props) {
   const infoRow = (l: string, v: string) => <div key={l} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '4px 0', borderBottom: '1px solid #f1f4f6' }}><span style={{ color: '#7a8794' }}>{l}</span><span style={{ fontWeight: 600, textAlign: 'right' }}>{v}</span></div>;
 
   return (
-    <main ref={mainRef} style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, paddingRight: assetModal.open ? (pushOut ? WIDE_WIDTH : 0) + WIDE_TAB_SPACE : undefined, display: 'flex', justifyContent: 'center', transition: 'padding-right .28s ease' }}>
+    <main ref={mainRef} style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : '16px 28px 20px', paddingRight: assetModal.open ? (pushOut ? WIDE_WIDTH : 0) + WIDE_TAB_SPACE : undefined, display: 'flex', justifyContent: 'center', transition: 'padding-right .28s ease' }}>
       <ToastView msg={toast.msg} />
       {/* 固定資産の登録／変更（確認メモ #299）。モーダルではなく画面として開き、右に一覧パネル（固定資産・備品）を付ける */}
       {assetModal.open && (

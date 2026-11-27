@@ -286,7 +286,7 @@ export function SingleEntryPage({ variant, accent, onNavigate }: Props) {
   const valCell: CSSProperties = { padding: '5px 8px', minHeight: 44 };
 
   return (
-    <main className="ef-scope" style={{ ...scopeStyle(accent), flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
+    <main className="ef-scope" style={{ ...scopeStyle(accent), flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : '16px 28px 20px', display: 'flex', justifyContent: 'center' }}>
       <EntryStyles />
       <PaperStyles />
       <ToastView msg={toast.msg} />

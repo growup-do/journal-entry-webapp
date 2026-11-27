@@ -40,7 +40,7 @@ export function BankBalancePage({ variant, accent, onNavigate }: Props) {
   const diffText = (d: number) => `${d > 0 ? '▲' : d < 0 ? '▼' : '±'} ${yen(Math.abs(d))}`;
 
   return (
-    <main data-bank-page style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
+    <main data-bank-page style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : '16px 28px 20px', display: 'flex', justifyContent: 'center' }}>
       <div style={{ width: '100%', maxWidth: isSheet ? 'none' : 1280, display: 'flex', flexDirection: 'column', gap: 18 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 21 }}>預金残高</div>

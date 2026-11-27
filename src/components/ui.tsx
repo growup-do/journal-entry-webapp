@@ -130,7 +130,7 @@ export function SettingsShell({ variant, title, desc, badge = '設定', draft = 
   const backNav = useBackNav();
   useBackClaim(!!backNav.from);
   return (
-    <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
+    <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : '16px 28px 20px', display: 'flex', justifyContent: 'center' }}>
       {/* 角丸の外にはみ出す部分は切るが、スクロールの枠にはしない（clip）。中の position: sticky（印刷画面の下のボタンなど）が画面に対して効くようにする */}
       <div data-unsaved={unsaved || undefined} data-editing={editing || undefined} className={editing ? 'edit-glow' : undefined} style={{ width: '100%', maxWidth: isSheet ? 'none' : 1240, background: unsaved ? UNSAVED_BG : '#fff', border: '1px solid ' + (unsaved ? '#ecd9b4' : '#dde4ea'), borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'clip', transition: 'background .15s, border-color .15s' }}>
         {backNav.from && (
@@ -138,7 +138,7 @@ export function SettingsShell({ variant, title, desc, badge = '設定', draft = 
             <BackButton from={backNav.from} onBack={backNav.back} accent="#1f7a52" />
           </div>
         )}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '22px 24px 16px', borderBottom: '1px solid ' + (unsaved ? '#f0e2c6' : '#eef2f5'), flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 24px 12px', borderBottom: '1px solid ' + (unsaved ? '#f0e2c6' : '#eef2f5'), flexWrap: 'wrap' }}>
           <div>
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21 }}>
               {title} <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#eef2f6', color: '#3d4a56', verticalAlign: 'middle', marginLeft: 6 }}>{badge}</span>

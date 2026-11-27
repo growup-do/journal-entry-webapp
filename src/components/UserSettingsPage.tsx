@@ -88,7 +88,7 @@ export function UserSettingsPage({ variant, accent }: Props) {
   };
 
   return (
-    <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
+    <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : '16px 28px 20px', display: 'flex', justifyContent: 'center' }}>
       <ToastView msg={toast.msg} />
       <div style={{ width: '100%', maxWidth: 1000, display: 'flex', flexDirection: 'column', gap: 20 }}>
         <div>

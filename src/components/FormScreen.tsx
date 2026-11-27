@@ -428,7 +428,7 @@ function VoucherEntry({ onNavigate, topOffset }: { onNavigate: (label: string) =
       <main
         style={{
           flex: 1,
-          padding: 28,
+          padding: '16px 28px 20px',
           // 右側は参照パネルの開閉タブと重ならないよう、タブの幅の分だけ空ける（パネル自体は本文に重ねて出すので、開いても本文は動かない）
           paddingRight: (pushOut ? WIDE_WIDTH : 0) + WIDE_TAB_SPACE,
           display: 'flex',

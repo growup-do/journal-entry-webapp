@@ -30,7 +30,7 @@ const yen = (n: number) => n.toLocaleString('ja-JP');
 function Shell({ variant, title, desc, actions, children }: { variant: 'form' | 'sheet'; title: string; desc?: string; actions?: ReactNode; children: ReactNode }) {
   const isSheet = variant === 'sheet';
   return (
-    <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
+    <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : '16px 28px 20px', display: 'flex', justifyContent: 'center' }}>
       <div style={{ width: '100%', maxWidth: isSheet ? 'none' : 1200, background: '#fff', border: '1px solid #dde4ea', borderRadius: 14, boxShadow: '0 6px 26px rgba(30,50,70,.06)', overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '18px 22px 14px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
           <div>

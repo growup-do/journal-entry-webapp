@@ -476,10 +476,11 @@ export function TrialBalancePage({ mode, variant, accent, onNavigate }: Props) {
               {colBox('累計', show.cum, () => setView({ cum: !view.cum }), isFlow)}
             </>
           )}
-          {colsLocked && <span data-cols-locked style={{ fontSize: 12, color: '#9aa5b1' }}>入力区分で起動中は切り替えできません（全列を表示）</span>}
+          {colsLocked && <span data-cols-locked style={{ display: 'inline-flex' }}><HelpTip text="入力区分で起動中は切り替えできません（全列を表示）" /></span>}
           <span data-pattern-legend style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#7a8794' }}>
             <span style={{ width: 14, height: 14, borderRadius: 3, background: pattern === '標準' ? tc?.base ?? '#fff' : info.color, border: '1px solid #c3ccd4' }} />
-            配色「{pattern}」：{info.note}
+            配色「{pattern}」
+            <HelpTip text={info.note} />
           </span>
         </div>
       }

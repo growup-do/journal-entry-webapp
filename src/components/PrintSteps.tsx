@@ -69,11 +69,12 @@ export function PrintSteps({ accent, basic, detail, dest, onDest, dests, destNot
         </div>
       )}
 
-      <div style={{ padding: '16px 18px 4px', display: 'grid', gap: 14 }}>
+      <div style={{ padding: '12px 18px 4px', display: 'grid', gap: 12 }}>
         {showTab === '出力先' && (
           <div data-print-dest-tab style={{ display: 'grid', gap: 14 }}>
             <div style={{ display: 'grid', gap: 6 }}>
-              <span style={lbl}>出力先</span>
+              {/* タブの名前が「出力先」のときは見出しを重ねて出さない */}
+              {!detail && <span style={lbl}>出力先</span>}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
                 {list.map((d) => {
                   const on = cur.kind === d.kind;

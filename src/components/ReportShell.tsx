@@ -128,7 +128,7 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
   const rt: ReturnSpec | null = returnTo ?? (!embedded && backNav.from ? { from: backNav.from, onBack: backNav.back } : null);
   useBackClaim(!embedded && !!rt);
   return (
-    <main style={embedded ? { minWidth: 0 } : { flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, paddingRight: (isSheet ? 24 : 28) + asideWidth, transition: 'padding-right .28s ease', display: 'flex', justifyContent: 'center' }}>
+    <main style={embedded ? { minWidth: 0 } : { flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : '16px 28px 20px', paddingRight: (isSheet ? 24 : 28) + asideWidth, transition: 'padding-right .28s ease', display: 'flex', justifyContent: 'center' }}>
       <ToastView msg={toast.msg} />
       <div data-editing={editing || undefined} className={editing && !embedded ? 'edit-glow' : undefined} style={embedded ? { width: '100%', background: '#fff', display: 'flex', flexDirection: 'column' } : { width: '100%', maxWidth: isSheet ? 'none' : 1280, background: '#fff', border: '1px solid #dde4ea', borderRadius: isSheet ? 14 : 16, boxShadow: '0 6px 26px rgba(30,50,70,.07)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {rt && (
@@ -142,7 +142,7 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
             {(rt.hint || returnTo) && <HelpTip style={{ marginLeft: 'auto' }} text={rt.hint ?? '戻ると、開く前と同じ表示条件（月・部・表示階層など）で表示します'} />}
           </div>
         )}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '22px 24px 16px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '14px 24px 12px', borderBottom: '1px solid #eef2f5', flexWrap: 'wrap' }}>
           <div style={{ minWidth: 0, ...(periodInHeader ? { flexBasis: '100%' } : {}) }}>
             <div style={{ fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: isSheet ? 17 : 21 }}>
               {title} {badge}
@@ -168,7 +168,8 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
               {periodAside}
             </div>
           )}
-          <div className="toolbar-actions" style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+          {listNote && <div data-list-note style={{ marginLeft: 'auto', alignSelf: 'center', display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#48565f', whiteSpace: 'nowrap' }}>{listNote}</div>}
+          <div className="toolbar-actions" style={{ marginLeft: listNote ? 0 : 'auto', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
             {/* 印刷はどの画面でも右端に置く：印刷以外のツール → 印刷のツール → 印刷メニュー（extraTools）の順 */}
             {[...tools.filter((t) => t.icon !== 'print'), ...tools.filter((t) => t.icon === 'print')].map((t) => t.icon && t.iconOnly ? (
               <span key={t.label} data-tip={t.disabled ? t.title : undefined} style={{ display: 'inline-flex' }}>
@@ -186,7 +187,7 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
         </div>
         {/* 問合せ画面の共通構成（依頼書 5.4.5／2.5）：① 集計期間の選択 → ② 指定科目 → ③ 表示切替 → ④ 一覧表。見出しは共通シェルが付ける */}
         {hasConditions && (
-          <div data-conditions style={{ padding: '14px 22px', borderBottom: '1px solid #eef2f5', display: 'grid', gridTemplateColumns: '92px minmax(0,1fr)', columnGap: 14, rowGap: 10, alignItems: 'center' }}>
+          <div data-conditions style={{ padding: '10px 22px', borderBottom: '1px solid #eef2f5', display: 'grid', gridTemplateColumns: '92px minmax(0,1fr)', columnGap: 14, rowGap: 8, alignItems: 'center' }}>
             {periodInConditions && (
               <>
                 <span style={SECTION_TAG} data-section="集計期間">集計期間</span>
@@ -236,10 +237,7 @@ export function ReportShell({ variant, accent, title, subtitle, tools = [], extr
             })}
           </TabStrip>
         )}
-        <div data-list-head style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 22px', background: '#f8fafc', borderBottom: '1px solid #eef2f5', fontSize: 14, color: '#48565f' }}>
-          <span style={SECTION_TAG} data-section="一覧表">一覧表</span>
-          {listNote}
-        </div>
+        {/* 「一覧表」の帯は出さない（確認メモ #473）。件数などは見出しの行に出す */}
         {children}
       </div>
     </main>
@@ -342,8 +340,8 @@ export function useMoney(): (n: number) => ReactNode {
 }
 
 /* ---- 表の共通スタイル ---- */
-export const TH: CSSProperties = { padding: '11px 14px', background: '#f6f8fa', fontSize: 14, fontWeight: 700, color: '#8290a0', borderBottom: '1px solid #eef2f5', textAlign: 'left', whiteSpace: 'nowrap' };
-export const TD: CSSProperties = { padding: '10px 14px', fontSize: 14, borderBottom: '1px solid #f1f4f6', verticalAlign: 'middle' };
+export const TH: CSSProperties = { padding: '8px 14px', background: '#f6f8fa', fontSize: 14, fontWeight: 700, color: '#8290a0', borderBottom: '1px solid #eef2f5', textAlign: 'left', whiteSpace: 'nowrap' };
+export const TD: CSSProperties = { padding: '7px 14px', fontSize: 14, borderBottom: '1px solid #f1f4f6', verticalAlign: 'middle' };
 export const NUM: CSSProperties = { ...TD, textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
 export const yen = (n: number) => (n < 0 ? '△' + Math.abs(n).toLocaleString('ja-JP') : n.toLocaleString('ja-JP'));
 export const pct = (n: number) => (isFinite(n) ? (n * 100).toFixed(1) + '%' : '');

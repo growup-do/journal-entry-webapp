@@ -36,7 +36,7 @@ export function HomePage({ variant, accent, onNavigate }: Props) {
   const nextYear = s.currentYear.replace(/(\d+)/, (d) => String(Number(d) + 1));
 
   return (
-    <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
+    <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : '16px 28px 20px', display: 'flex', justifyContent: 'center' }}>
       <ToastView msg={toast.msg} />
       <div style={{ width: '100%', maxWidth: isSheet ? 'none' : 1280, display: 'flex', flexDirection: 'column', gap: 18 }}>
         {/* 年度更新を促す案内 */}

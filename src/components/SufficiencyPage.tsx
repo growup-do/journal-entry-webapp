@@ -142,7 +142,7 @@ export function SufficiencyPage({ variant, accent, onNavigate }: Props) {
   const section = (t: string): CSSProperties => ({ background: '#d8cfe6', padding: '10px 18px', fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, fontSize: 16, color: '#3b2f52', ...(t ? {} : {}) });
 
   return (
-    <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : 28, display: 'flex', justifyContent: 'center' }}>
+    <main style={{ flex: 1, minWidth: 0, padding: isSheet ? '20px 24px 24px' : '16px 28px 20px', display: 'flex', justifyContent: 'center' }}>
       <ToastView msg={toast.msg} />
 
       {/* ① 確認画面 */}
