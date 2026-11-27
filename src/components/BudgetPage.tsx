@@ -9,7 +9,7 @@ import { NUM, TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
 import { ExplainModal } from './ExplainModal';
 import { FISCAL_MONTHS } from './FiscalMonthTabs';
-import { Field, ManualButton, Notice, SettingsShell, Tabs, btn, input, numInput, toInt, yen } from './ui';
+import { Field, ManualButton, Notice, SettingsShell, Tabs, btn, input, numInput, toInt, yen, HelpTip } from './ui';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { VENDORS, displayName } from '../data';
 import { ScopeBadge } from './PrintCenter';
@@ -128,7 +128,7 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
   const chip = (on: boolean): CSSProperties => ({ minWidth: 30, height: 26, padding: '0 8px', borderRadius: 6, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? accent : '#fff', color: on ? '#fff' : '#5b6773', border: '1px solid ' + (on ? accent : '#d3dbe3') });
 
   return (
-    <SettingsShell variant={variant} title={displayName('予算')} manual={<ManualButton label="説明" onClick={() => setExplainOpen(true)} title="予算入力の説明（マニュアル 3.2）を開きます" />} badge="予算" actions={<>
+    <SettingsShell variant={variant} title={displayName('予算')} manual={<ManualButton label="説明" onClick={() => setExplainOpen(true)} title="予算入力の説明（マニュアル 3.2）を開きます" />} actions={<>
       {tab === '次年度予算' && <button type="button" className="btn-outline" onClick={() => setWizard(true)} style={btn(accent)}>次年度予算作成</button>}
       <button type="button" className="submit-btn" onClick={() => toast.show('予算を保存しました')} style={btn(accent, true)}>保存</button>
       <ScreenPrintMenu page="予算" accent={accent} />
@@ -165,7 +165,7 @@ export function BudgetPage({ variant, accent }: { variant: 'form' | 'sheet'; acc
         {!byVendor && month === '初' && (
           <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}><span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0', marginRight: 4 }}>対比する予算</span>{(['当初予算', '確定予算'] as const).map((r) => <button key={r} type="button" onClick={() => setRef(r)} style={btn(ref === r ? accent : '#5b6773', ref === r, true)}>{r}</button>)}</div>
         )}
-        <span style={{ marginLeft: 'auto', fontSize: 14, color: '#7a8794' }}>{byVendor ? '黄色のセルが入力できます。' : '黄色のセルが入力できます。ピンク＝設定不可（集計項目）'}</span>
+        <HelpTip style={{ marginLeft: 'auto' }} text={byVendor ? '黄色のセルが入力できます' : ['黄色のセルが入力できます', 'ピンク＝設定不可（集計項目）']} />
       </div>
       {byVendor ? (
         <div style={{ padding: '14px 22px 22px' }}>

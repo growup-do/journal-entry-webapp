@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
-import { Field, Notice, Tabs, btn, input, lbl } from './ui';
+import { Field, Notice, Tabs, btn, input, lbl, HelpTip } from './ui';
 import { CATEGORIES, COLORS, DivisionColorPicker, DivisionTreeEditor, mapTree } from './DivisionTreeEditor';
 import { divisionLabel, flattenDivisions, getSession, setSession, useSession, type DivisionNode } from '../store/session';
 
@@ -115,8 +115,9 @@ export function DivisionInfoDialog({ open, onClose, accent }: { open: boolean; o
               </tbody>
             </table>
           </div>
-          <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 8, lineHeight: 1.7 }}>内部コード＝システムが自動設定する区分のキー（変更不可。伝票はこのコードで区分を保持）。区分コード＝画面表示用の3桁。名称＝全角32文字まで。使用＝廃園などで使わなくなったらチェックを外す。カラー＝仕訳一覧・元帳の背景色（10区分まで自動配色）。事業種別＝資金収支計算書のサービス活動収入の大区分科目（科目表示設定に反映）。</div>
-          <div style={{ marginTop: 8 }}><span style={lbl}>現在の伝票入力区分</span><span style={{ fontSize: 14, color: '#5b6773' }}>{entries.map((x) => divisionLabel(x.node)).join('　')}</span></div>
+          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}><span style={lbl}>現在の伝票入力区分</span><span style={{ fontSize: 14, color: '#5b6773' }}>{entries.map((x) => divisionLabel(x.node)).join('　')}</span>
+            <HelpTip style={{ marginLeft: 'auto' }} text={['内部コード＝システムが自動設定する区分のキー（変更不可。伝票はこのコードで区分を保持）', '区分コード＝画面表示用の3桁', '名称＝全角32文字まで', '使用＝廃園などで使わなくなったらチェックを外す', 'カラー＝仕訳一覧・元帳の背景色（10区分まで自動配色）', '事業種別＝資金収支計算書のサービス活動収入の大区分科目（科目表示設定に反映）']} />
+          </div>
         </div>
       )}
 

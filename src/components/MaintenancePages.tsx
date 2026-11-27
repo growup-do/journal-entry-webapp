@@ -250,7 +250,7 @@ export function FinancialAnalysisSettingsPage({ variant, accent, onNavigate }: M
     : (pickDirtyCount ? { text: `「財務分析科目設定」に、保存されていない変更があります（${pickDirtyCount} 項目）。`, to: '財務分析科目設定' } : null);
 
   return (
-    <SettingsShell variant={variant} title="財務分析設定" badge="マスター設定" desc="経年グラフ・分析グラフ・経営分析の帳票で使います。" unsaved={anyDirty}>
+    <SettingsShell variant={variant} title="財務分析設定" desc="経年グラフ・分析グラフ・経営分析の帳票で使います。" unsaved={anyDirty}>
       <ToastView msg={toast.msg} />
       <Tabs items={['財務分析科目設定', '人数設定']} current={tab} onChange={setTab} accent={accent} />
       {other && (
@@ -440,7 +440,7 @@ export function AuditSettingsPage({ variant, accent, onNavigate }: MaintenancePa
   const onCount = AUDIT_ITEMS.filter((a) => isOn(a.no)).length;
 
   return (
-    <SettingsShell variant={variant} title="決算チェック設定" badge="保守・運用" manual={<ManualButton label="説明" onClick={() => setHelp(true)} title="決算チェック設定の説明を開きます" />} draft={false} actions={<>
+    <SettingsShell variant={variant} title="決算チェック設定" manual={<ManualButton label="説明" onClick={() => setHelp(true)} title="決算チェック設定の説明を開きます" />} draft={false} actions={<>
       <button type="button" className="btn-outline" onClick={() => (onNavigate ? onNavigate('決算調査') : toast.show('メニューの「決算チェック（決算調査）」から開きます'))} style={btn()}>決算チェック（決算調査）を開く →</button>
     </>}>
       <ToastView msg={toast.msg} />
@@ -509,7 +509,7 @@ export function JournalRefreshPage({ variant, accent, onNavigate }: MaintenanceP
   const row: CSSProperties = { display: 'grid', gridTemplateColumns: '150px 1fr', gap: 10, padding: '9px 0', borderBottom: '1px solid #f1f4f6', fontSize: 14 };
 
   return (
-    <SettingsShell variant={variant} title="仕訳更新" badge="保守・運用" draft={false}>
+    <SettingsShell variant={variant} title="仕訳更新" draft={false}>
       <ToastView msg={toast.msg} />
       <ScopeBar scope={target === 'この区分' ? 'この区分のみ' : '全区分共通'} note={target === 'この区分' ? s.division : '法人内の全入力区分'} right={<span style={sub}>前回の実行：{last.at}（{last.by}・{last.count.toLocaleString('ja-JP')} 件）</span>}>
         {target === 'この区分' ? '起動中の区分の伝票だけを対象にします。' : '法人内のすべての入力区分の伝票を対象にします。'}
@@ -676,7 +676,7 @@ export function BackupPage({ variant, accent }: MaintenancePageProps) {
   const kindChip = (k: BackupGen['kind']): CSSProperties => ({ fontSize: 12, fontWeight: 800, padding: '2px 8px', borderRadius: 8, background: k === '手動' ? '#e8f0fb' : '#f1f4f6', color: k === '手動' ? '#2c5f9e' : '#5b6773', whiteSpace: 'nowrap' });
 
   return (
-    <SettingsShell variant={variant} title="データのバックアップ" badge="保守・運用" draft={false}>
+    <SettingsShell variant={variant} title="データのバックアップ" draft={false}>
       <ToastView msg={toast.msg} />
       <div style={{ padding: 22, display: 'grid', gap: 18 }}>
         {/* 今すぐバックアップ：1回押すだけで実行 */}

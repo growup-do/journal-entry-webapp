@@ -3,6 +3,7 @@
 //   最初に表示する画面（伝票入力／ホーム）と、ホームに表示するメニューを選ぶ。
 //   変更はその場で保存するので、閉じるのは「閉じる」か × だけ（Esc・外側のクリックでは閉じない）。
 
+import { HelpTip } from './ui';
 import { Modal } from './Modal';
 import { HOME_SECTIONS, setSession, useSession } from '../store/session';
 
@@ -33,8 +34,7 @@ export function HomeOptionsModal({ open, onClose, accent }: Props) {
             {s.startScreen === '伝票入力' && <div style={{ fontSize: 12, color: '#5b6773', marginTop: 8 }}>仕訳伝票形式の入力画面を開きます。</div>}
           </div>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>ダッシュボードに表示するメニュー</div>
-            <div style={{ fontSize: 12, color: '#7a8794', marginBottom: 8 }}>「機能から探す」（検索ボックスと機能の一覧）は常に表示します。</div>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>ダッシュボードに表示するメニュー<HelpTip text={['「機能から探す」（検索ボックスと機能の一覧）は常に表示します', 'お知らせは、画面右上のベルから開きます', '預金残高は「推移・分析」の「預金残高」で確認できます']} /></div>
             <div style={{ border: '1px solid #e2e8ee', borderRadius: 10 }}>
               {HOME_SECTIONS.map((sec, i) => (
                 <label key={sec.key} data-home-section={sec.key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderTop: i ? '1px solid #f1f4f6' : 'none', cursor: 'pointer', fontSize: 14 }}>
@@ -44,7 +44,6 @@ export function HomeOptionsModal({ open, onClose, accent }: Props) {
                 </label>
               ))}
             </div>
-            <div style={{ fontSize: 12, color: '#7a8794', marginTop: 8, lineHeight: 1.7 }}>お知らせは、画面右上のベルから開きます。預金残高は「推移・分析」の「預金残高」で確認できます。</div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" data-home-options-close onClick={onClose} style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: accent, color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>閉じる</button></div>
         </div>

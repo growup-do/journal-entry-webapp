@@ -259,7 +259,7 @@ export function AttachedStatementsPage({ variant, accent, onNavigate }: { varian
   const oneYear = useOneYear();
 
   return (
-    <SettingsShell variant={variant} title={displayName('決算附属明細書')} badge="決算" unsaved={dirty}
+    <SettingsShell variant={variant} title={displayName('決算附属明細書')} unsaved={dirty}
       actions={<>
         {dirty && <span role="status" data-unsaved-msg style={{ fontSize: 15, fontWeight: 800, color: UNSAVED_FG, marginRight: 4 }}>保存されていません。</span>}
         <button type="button" onClick={cancelAll} disabled={!dirty} style={{ ...btn(), opacity: dirty ? 1 : 0.5 }}>変更を取り消す</button>

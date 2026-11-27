@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { ExportDialog, type ExportSpec } from './ExportDialog';
 import { NUM, TD, TH } from './ReportShell';
 import { ToastView, useToast } from './Toast';
-import { Field, Notice, SettingsShell, Tabs, btn, input, numInput, toInt, yen } from './ui';
+import { Field, Notice, SettingsShell, Tabs, btn, input, numInput, toInt, yen, HelpTip } from './ui';
 import { ScreenPrintMenu } from './ScreenPrintMenu';
 import { ACCOUNTS, SERVICES } from '../data';
 import { allocate, allocationPages, setSession, shareText, specialRatesOf, splitSpecialAmount, templatePages, useSession, type AllocationTemplate, type JournalTemplate } from '../store/session';
@@ -171,7 +171,7 @@ export function TemplateJournalPage({ variant, accent }: { variant: 'form' | 'sh
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <select value={spAdd} onChange={(e) => setSpAdd(e.target.value)} aria-label="按分率を設定する科目" style={{ ...input, width: 260, padding: '6px 8px' }}><option value="">科目を選択</option>{spFree.map((a) => <option key={a}>{a}</option>)}</select>
             <button type="button" className="btn-outline" data-special-rate-add onClick={addSpAccount} style={btn(accent, false, true)}>＋ 科目を追加</button>
-            <span style={{ fontSize: 12, color: '#8290a0' }}>追加した科目は、共通の按分率を初期値にして設定できます。</span>
+            <HelpTip text="追加した科目は、共通の按分率を初期値にして設定できます" />
           </div>
           {spRows.some((row) => row.rates.reduce((a, r) => a + r.rate, 0) !== 100) && <Notice tone="warn">按分率の合計が100%になっていない行があります（赤字）。合計が100%になるよう設定してください。</Notice>}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: '#5b6773', flexWrap: 'wrap' }}>

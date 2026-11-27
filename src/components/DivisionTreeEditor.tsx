@@ -261,7 +261,7 @@ export function DivisionTreeEditor({ accent, compact }: { accent: string; compac
         </div>
       )}
       {!compact && <div style={card}>
-        <div style={cardHead}>合算区分（任意の組合せ） <span style={{ fontSize: 12, fontWeight: 500, color: '#8290a0' }}>区分選択の「合算追加」からも作成できます</span></div>
+        <div style={cardHead}>合算区分（任意の組合せ） <HelpTip text="区分選択の「合算追加」からも作成できます" /></div>
         <div style={{ padding: 14 }}>
           {s.merges.length === 0 && <div style={{ fontSize: 14, color: '#9aa5b1' }}>合算区分はありません。</div>}
           {s.merges.map((m) => (

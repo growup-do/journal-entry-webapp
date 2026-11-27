@@ -464,9 +464,8 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
                       <thead><tr><th style={{ ...TH, width: 50 }}>No.</th><th style={{ ...TH, width: 140 }}>コード（区分／小計／合計）</th><th style={TH}>部門名称</th><th style={{ ...TH, width: 200 }}>計算式（No.で指定）</th><th style={{ ...TH, width: 50 }} /></tr></thead>
                       <tbody>{merge.map((m, i) => <tr key={i} style={{ background: m.code === '小計' ? '#fff8d6' : m.code === '合計' ? '#efe6fb' : 'transparent' }}><td style={TD}>{i + 1}</td><td style={TD}><select value={m.code} onChange={(e) => setMerge(merge.map((x, k) => (k === i ? { ...x, code: e.target.value } : x)))} style={{ ...input, padding: '4px 8px', fontSize: 14 }}>{[...SERVICES.map((v) => v.split(' ')[0]), '小計', '合計'].map((o) => <option key={o}>{o}</option>)}</select></td><td style={TD}><input className="field-input" value={m.name} onChange={(e) => setMerge(merge.map((x, k) => (k === i ? { ...x, name: e.target.value } : x)))} style={{ ...input, padding: '4px 8px', fontSize: 14 }} /></td><td style={TD}>{(m.code === '小計' || m.code === '合計') ? <input className="field-input" value={m.formula} onChange={(e) => setMerge(merge.map((x, k) => (k === i ? { ...x, formula: e.target.value } : x)))} placeholder="例：2+3" style={{ ...input, padding: '4px 8px', fontSize: 14 }} /> : <span style={{ color: '#9aa5b1', fontSize: 14 }}>—</span>}</td><td style={TD}><button type="button" title="この行を削除" onClick={() => setMerge(merge.filter((_, k) => k !== i))} style={btn('#c0392b', false, true)}>×</button></td></tr>)}</tbody>
                     </table>
-                    <div style={{ padding: 10 }}><button type="button" onClick={() => setMerge([...merge, { code: SERVICES[0].split(' ')[0], name: '', formula: '' }])} style={btn(accent, false, true)}>＋ 行を追加</button></div>
+                    <div style={{ padding: 10, display: 'flex', alignItems: 'center', gap: 8 }}><button type="button" onClick={() => setMerge([...merge, { code: SERVICES[0].split(' ')[0], name: '', formula: '' }])} style={btn(accent, false, true)}>＋ 行を追加</button><HelpTip text={['黄色＝小計、紫＝合計', '計算式には、合計する行の No. を 2+3 のように入力します']} /></div>
                   </div>
-                  <div style={{ fontSize: 14, color: '#7a8794' }}>黄色＝小計、紫＝合計。計算式には、合計する行の No. を 2+3 のように入力します。</div>
                 </>
               )}
             </div>
@@ -516,7 +515,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
   );
   if (embedded) return <div data-appendix-embedded>{body}</div>;
   return (
-    <SettingsShell variant={variant} title="別紙（注記・附属明細書・財産目録）" badge="印刷" actions={actions}>
+    <SettingsShell variant={variant} title="別紙（注記・附属明細書・財産目録）" actions={actions}>
       {body}
     </SettingsShell>
   );

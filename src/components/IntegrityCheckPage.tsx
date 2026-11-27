@@ -31,7 +31,7 @@ export function IntegrityCheckPage({ variant, accent }: { variant: 'form' | 'she
   };
   const copy = (k: Kind) => { const t = (results[k] ?? []).join('\n'); navigator.clipboard?.writeText(t).then(() => toast.show('診断結果をコピーしました（メモ帳やExcelに貼り付けできます）')).catch(() => toast.show('コピーできませんでした')); };
   return (
-    <SettingsShell variant={variant} title="整合性チェック" badge="保守" desc="決算前や科目を変更した後に実行してください。">
+    <SettingsShell variant={variant} title="整合性チェック" desc="決算前や科目を変更した後に実行してください。">
       <ToastView msg={toast.msg} />
       <ExportDialog spec={exp} onClose={() => setExp(null)} accent={accent} />
       <div style={{ padding: 22, display: 'grid', gap: 14 }}>

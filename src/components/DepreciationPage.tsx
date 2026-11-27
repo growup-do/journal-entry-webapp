@@ -214,10 +214,9 @@ function SubsidyVoucherPicker({ used, onClose, onAdd, accent, toast }: { used: s
   return (
     <Modal open onClose={onClose} width={900} title="国庫補助金の伝票から選ぶ">
       <div style={{ padding: '12px 22px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ fontSize: 14, color: '#5b6773' }}>全額でも一部の金額でも登録できます。</div>
         <div style={{ border: '1px solid #e2e8ee', borderRadius: 10, overflow: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr><th style={{ ...TH, width: 36 }} /><th style={TH}>伝票No</th><th style={TH}>日付</th><th style={TH}>科目</th><th style={TH}>摘要</th><th style={{ ...TH, textAlign: 'right' }}>伝票の金額</th><th style={{ ...TH, textAlign: 'right' }}>登録する金額</th></tr></thead>
+            <thead><tr><th style={{ ...TH, width: 36 }} /><th style={TH}>伝票No</th><th style={TH}>日付</th><th style={TH}>科目</th><th style={TH}>摘要</th><th style={{ ...TH, textAlign: 'right' }}>伝票の金額</th><th style={{ ...TH, textAlign: 'right' }}>登録する金額 <HelpTip size={14} text={['全額でも一部の金額でも登録できます', '伝票の金額を超えては入力できません', '償還補助金の伝票は、うち償還補助金額にも同じ金額が入ります']} /></th></tr></thead>
             <tbody>{SUBSIDY_VOUCHERS.map((v) => {
               const done = used.includes(v.no);
               return (
@@ -234,7 +233,6 @@ function SubsidyVoucherPicker({ used, onClose, onAdd, accent, toast }: { used: s
             })}</tbody>
           </table>
         </div>
-        <div style={{ fontSize: 12, color: '#7a8794' }}>伝票の金額を超えては入力できません。償還補助金の伝票は、うち償還補助金額にも同じ金額が入ります。</div>
         <div style={FOOT}>
           <button type="button" onClick={onClose} style={BTN()}>キャンセル</button>
           <button type="button" className="submit-btn" onClick={() => {
@@ -2029,7 +2027,7 @@ function ClosingView({ accent, vouchers, setVouchers, onCreated, toast }: { acce
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 14 }}>
         <button type="button" className="submit-btn" onClick={() => setStep(2)} style={btn(accent, true)}>＋ 新しい伝票を作成</button>
         <label style={{ fontSize: 14, display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" />集計期間設定</label>
-        <div style={{ marginLeft: 'auto', fontSize: 14, color: '#7a8794' }}>作成した伝票は会計の仕訳伝票に登録され、作成のあとに会計の伝票画面と同じ画面で内容を確認できます</div>
+        <HelpTip style={{ marginLeft: 'auto' }} text="作成した伝票は会計の仕訳伝票に登録され、作成のあとに会計の伝票画面と同じ画面で内容を確認できます" />
       </div>
     </div>
   );

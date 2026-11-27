@@ -487,11 +487,9 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
                   {(['使用', '非使用'] as const).map((u) => <Chip key={u} on={useF === u} onClick={() => setUseF(useF === u ? null : u)} accent={accent}>{u}</Chip>)}
                 </span>
                 <span style={{ marginLeft: 'auto', fontSize: 14, color: '#8895a3' }}>{visible.length} 科目</span>
-              </div>
-              <div style={{ display: 'flex', gap: 14, alignItems: 'center', fontSize: 12, color: '#6b7783', flexWrap: 'wrap' }}>
-                <span style={{ display: 'inline-flex', gap: 5, alignItems: 'center' }}><Badge kind="項目" />集計上の見出し（伝票には入力しません）</span>
-                <span style={{ display: 'inline-flex', gap: 5, alignItems: 'center' }}><Badge kind="科目" />伝票に入力する科目</span>
-                <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 6 }}>
+                {/* 項目／科目の凡例は ? に入れる */}
+                <HelpTip text={['項目：集計上の見出し（伝票には入力しません）', '科目：伝票に入力する科目']} />
+                <span style={{ display: 'inline-flex', gap: 6 }}>
                   <button type="button" onClick={() => setCollapsed([])} style={btn('#5b6773', false, true)}>すべて開く</button>
                   <button type="button" onClick={() => setCollapsed(GROUPS.map((g) => g.name))} style={btn('#5b6773', false, true)}>項目だけ表示</button>
                 </span>
@@ -748,8 +746,7 @@ export function AccountSettingsPage({ variant, accent }: { variant: 'form' | 'sh
         <div style={{ padding: 22, display: 'grid', gap: 12 }} data-subledger>
           <Notice>
             補助簿（明細表）を作る科目を指定します（既存の【補助簿（明細表）設定】に相当）。補助簿は2種類あり、印刷のしかたが異なります。
-            <span style={{ display: 'block', marginTop: 4 }}><b style={{ color: '#1b6fa8' }}>水色</b>＝「項目以下の勘定科目を明細とする」…項目にだけ付けられます（現金預金・預り金など）。</span>
-            <span style={{ display: 'block' }}><b style={{ color: '#9a6a00' }}>黄色</b>＝「指定した勘定科目の伝票を、印刷時に明細として指定する」…項目にも科目にも付けられます（未払金・未収金など）。</span>
+            <HelpTip style={{ marginLeft: 6 }} text={['水色＝「項目以下の勘定科目を明細とする」…項目にだけ付けられます（現金預金・預り金など）', '黄色＝「指定した勘定科目の伝票を、印刷時に明細として指定する」…項目にも科目にも付けられます（未払金・未収金など）']} />
           </Notice>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, alignItems: 'start' }}>
             {([['資産（流動資産・固定資産）', (c: string) => c === '現預金' || c === '資産'], ['負債', (c: string) => c === '負債']] as const).map(([title, f]) => {

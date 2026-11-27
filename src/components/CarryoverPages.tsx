@@ -10,7 +10,7 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { Modal } from './Modal';
 import { ToastView, useToast } from './Toast';
-import { Field, Notice, SettingsShell, Tabs, Toggle, btn, card, cardHead, input, lbl, yen } from './ui';
+import { Field, Notice, SettingsShell, Tabs, Toggle, btn, card, cardHead, input, yen, HelpTip } from './ui';
 import { ACCOUNT_META } from '../lib/accounts';
 import { ScopeBar, type MaintenancePageProps } from './MaintenancePages';
 import { CHANGED_BG, CHANGED_BORDER, UNSAVED_FG, useUnsaved } from '../store/unsaved';
@@ -206,7 +206,7 @@ export function CarryoverJudgmentPage({ variant, accent, onNavigate }: Maintenan
   const judge = (over: boolean, yes: string, no: string) => <span style={{ color: over ? '#c0392b' : '#1f7a52' }}>{over ? yes : no}</span>;
 
   return (
-    <SettingsShell variant={variant} title="繰越判断の基準" badge="マスター設定" draft={false} desc="設定した内容は、決算チェック・収支分析表の印刷で使います。" unsaved={dirty} actions={<>
+    <SettingsShell variant={variant} title="繰越判断の基準" draft={false} desc="設定した内容は、決算チェック・収支分析表の印刷で使います。" unsaved={dirty} actions={<>
       {notice && <button type="button" className="btn-outline" data-action="関連資料（通知文）" onClick={() => setNoticeOpen(true)} title={`「${tab}」に関係する通知文を表示します`} style={btn()}>関連資料（通知文）</button>}
       {dirty && <span role="status" data-unsaved-msg style={{ fontSize: 15, fontWeight: 800, color: UNSAVED_FG, marginRight: 4 }}>保存されていません。</span>}
       <button type="button" data-action="変更を取り消す" onClick={revert} disabled={!dirty} title={dirty ? '保存する前の内容に戻します（すべてのタブ）' : '変更はありません'} style={{ ...btn(), opacity: dirty ? 1 : 0.5, cursor: dirty ? 'pointer' : 'default' }}>変更を取り消す</button>
@@ -351,7 +351,7 @@ export function DepreciationLinkPage({ variant, accent, onNavigate }: Maintenanc
   const go = (p: string) => (onNavigate ? onNavigate(p) : toast.show(`「${p}」はメニューから開きます`));
   const cols3 = { padding: 22, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, alignItems: 'start' } as const;
   return (
-    <SettingsShell variant={variant} title="減価償却との連動設定" badge="マスター設定" draft={false} unsaved={dirty} actions={<>
+    <SettingsShell variant={variant} title="減価償却との連動設定" draft={false} unsaved={dirty} actions={<>
       <button type="button" className="btn-outline" onClick={reset} style={btn()}>デフォルト設定にする</button>
       {dirty && <span role="status" data-unsaved-msg style={{ fontSize: 15, fontWeight: 800, color: UNSAVED_FG, marginRight: 4 }}>保存されていません。</span>}
       <button type="button" data-action="変更を取り消す" onClick={revert} disabled={!dirty} title={dirty ? '保存する前の内容に戻します（すべてのタブ）' : '変更はありません'} style={{ ...btn(), opacity: dirty ? 1 : 0.5, cursor: dirty ? 'pointer' : 'default' }}>変更を取り消す</button>
@@ -404,9 +404,8 @@ export function DepreciationLinkPage({ variant, accent, onNavigate }: Maintenanc
               <div data-changed={ch('autoOn') || undefined} style={changedBox(ch('autoOn'))}><Toggle on={autoOn} onChange={setAutoOn} accent={accent} label="自動積立機能を有効とする" /></div>
               {/* 摘要は「自動積立機能を有効とする」とは独立して入力できる（現行と同じ。確認メモ #228） */}
               <Field label="自動で起こす仕訳の摘要"><input className="field-input" value={tekiyo} onChange={(e) => setTekiyo(e.target.value)} data-changed={ch('tekiyo') || undefined} style={{ ...input, ...(ch('tekiyo') ? { background: CHANGED_BG, border: '1px solid ' + CHANGED_BORDER } : {}) }} /></Field>
-              <div style={{ fontSize: 14, color: '#7a8794' }}>有効にすると、補助金で取得した資産の登録時に「{RESERVE_IN_ITEMS.find((i) => autoIn.includes(i.code))?.name ?? '積立額の科目'} ／ {RESERVE_ACCT_ITEMS[0].name}」の仕訳を自動で作成します。</div>
+              <div style={{ fontSize: 14, color: '#7a8794' }}>有効にすると、補助金で取得した資産の登録時に「{RESERVE_IN_ITEMS.find((i) => autoIn.includes(i.code))?.name ?? '積立額の科目'} ／ {RESERVE_ACCT_ITEMS[0].name}」の仕訳を自動で作成します。<HelpTip style={{ marginLeft: 6 }} text="自動で作成した仕訳は日記帳に「自動」の印が付き、通常の仕訳と同じように訂正・削除できます" /></div>
             </div></div>
-            <div style={{ fontSize: 12, color: '#7a8794', padding: '0 4px' }}><span style={lbl}>補足</span>自動で作成した仕訳は日記帳に「自動」の印が付き、通常の仕訳と同じように訂正・削除できます。</div>
           </div>
         </div>
       )}

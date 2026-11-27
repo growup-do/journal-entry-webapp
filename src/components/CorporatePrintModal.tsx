@@ -2,6 +2,7 @@
 //   流れはほかの帳票と同じ「出力先（基本条件つき）と詳細設定のタブ」（PrintOutDialog。確認事項「印刷の画面遷移の統一」）。
 //   詳細設定で区分 × 帳票のマトリクスから出力する帳票を選ぶ。Excel／PDF は個別のボタンを置かず、出力先で選ぶ。
 
+import { HelpTip } from './ui';
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { TableData } from './PrintCenter';
@@ -91,8 +92,7 @@ export function CorporatePrintModal({ open, onClose }: Props) {
             </tbody>
           </table>
         </div>
-        <div style={{ fontSize: 12, color: '#9aa5b1', marginTop: 8 }}>青い背景＝必須帳票、白＝省略可能、灰＝その区分では出力対象外</div>
-        <div style={{ fontSize: 12, color: '#5b6773', marginTop: 6 }}>金額の書式などは、各帳票の印刷の詳細設定と共通の印刷設定に従います。</div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}><HelpTip text={['青い背景＝必須帳票、白＝省略可能、灰＝その区分では出力対象外', '金額の書式などは、各帳票の印刷の詳細設定と共通の印刷設定に従います']} /></div>
       </div>}
     />
   );
