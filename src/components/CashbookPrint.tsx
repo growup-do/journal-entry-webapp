@@ -10,6 +10,8 @@ import type { CSSProperties, ReactNode } from 'react';
 import { Modal } from './Modal';
 import { TD, TH } from './ReportShell';
 import { PrintSteps, type OutKind } from './PrintSteps';
+import { SpinField } from './PrintCenter';
+import { MM_SPIN } from './printCatalog';
 
 export type PrintRun = OutKind | 'preview';
 
@@ -187,9 +189,11 @@ export function LedgerPrintDialog({ open, report, pageCount, accent, onRun, onSe
               </>
             ) })}
             {Sec({ title: '用紙位置調整', children: (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 14 }}>
-                <span>左余白</span>{num(left, setLeft, '左余白（ミリ）')}<span>ミリ</span>
-                <span style={{ marginLeft: 12 }}>上余白</span>{num(top, setTop, '上余白（ミリ）')}<span>ミリ</span>
+              // 帳票の印刷位置調整と同じく、自由入力と▲▼で 1mm ずつ増減するスピンボタンを横に並べる（確認メモ #457・#460）
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', fontSize: 14 }}>
+                {([['左余白', left, setLeft], ['上余白', top, setTop]] as const).map(([l, v, set]) => (
+                  <span key={l} data-ledger-margin={l} style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span>{l}</span><SpinField value={v} {...MM_SPIN} min={0} width={64} label={l} onChange={set} /></span>
+                ))}
               </div>
             ) })}
           </div>

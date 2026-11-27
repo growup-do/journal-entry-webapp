@@ -10,16 +10,16 @@ import { divisionLabel, flattenDivisions, startKindOf, type DivisionNode, type P
 
 /* ---------------- 詳細設定の項目 ---------------- */
 /** 別の項目がこの値のときだけ選べる（それ以外は灰色で押せない。現行どおり） */
-export interface DetailWhen { k: string; v: DetailValue; /** true＝その値のときは押せない */ not?: boolean }
+export interface DetailWhen { k: string; v: DetailValue; /** true＝その値のときは押せない */ not?: boolean; /** ほかの条件のどれか1つでも満たせば押せる（「〇〇年度」「第〇次」のどちらかを印字しない、など。確認メモ #455） */ or?: { k: string; v: DetailValue }[] }
 export type DetailItem =
   | { k: string; t: 'check'; label: string; on?: boolean; note?: string; when?: DetailWhen }
   | { k: string; t: 'radio'; label: string; options: string[]; def?: string; note?: string; when?: DetailWhen }
   | { k: string; t: 'select'; label: string; options: string[]; def?: string; note?: string; when?: DetailWhen }
-  | { k: string; t: 'text'; label: string; def?: string; placeholder?: string; width?: number; note?: string; when?: DetailWhen }
+  | { k: string; t: 'text'; label: string; def?: string; placeholder?: string; width?: number; note?: string; when?: DetailWhen; /** 入力できる文字数 */ max?: number }
   /** リストボックス（複数を選ぶ。値は選んだ項目を LIST_SEP でつないだ文字列。確認メモ #405） */
   | { k: string; t: 'list'; label: string; options: string[]; def?: string; rows?: number; note?: string; when?: DetailWhen }
   /** スピンボタン（数値を直接入力でき、▲▼で step ずつ増減する。確認メモ #421） */
-  | { k: string; t: 'spin'; label: string; def?: string; min: number; max: number; step: number; unit?: string; note?: string; when?: DetailWhen }
+  | { k: string; t: 'spin'; label: string; def?: string; min: number; max: number; step: number; unit?: string; note?: string; when?: DetailWhen; /** 横に並べる短い欄（範囲の表示を省く。確認メモ #460） */ compact?: boolean }
   /** フォントの行：書体（値は k）と文字サイズ（値は k + 'Size'）を1行で選ぶ。ヘッダー・科目・金額などを行ごとに設定する（確認メモ #424） */
   | { k: string; t: 'font'; label: string; def: string; size: string; fonts: string[]; sizes: string[]; note?: string; when?: DetailWhen };
 /** 詳細設定のまとまり（現行の画面の枠に相当） */
@@ -70,8 +70,11 @@ const SLIP_NO: DetailSection = { title: '伝票番号', items: [
   // Seq指定の番号を、入力番号と SeqNo. のどちらとして扱うか（Seq指定のときだけ選べる。確認メモ #311）
   { ...rad('seqNoKind', '伝票番号は', ['入力番号', 'SeqNo.'], '入力番号'), when: { k: 'slipNo', v: 'Seq指定' } },
 ] };
-/** 印刷位置調整（上方向・右方向への移動量） */
-const POSITION = (up: string, right: string): DetailSection => ({ title: '印刷位置調整', items: [txt('offsetUp', '上方向への移動量（mm）', up, '0', 100), txt('offsetRight', '右方向への移動量（mm）', right, '0', 100)] });
+/** mm の値のスピンボタン（自由入力と▲▼で 1mm ずつ増減。横に並べる。確認メモ #457・#460） */
+export const MM_SPIN = { min: -50, max: 50, step: 1, unit: 'mm', compact: true } as const;
+const mmSpin = (k: string, label: string, def: string, min: number = MM_SPIN.min): DetailItem => ({ k, t: 'spin', label, def, ...MM_SPIN, min });
+/** 印刷位置調整（上方向・右方向への移動量）。2つの欄を横に並べる */
+const POSITION = (up: string, right: string): DetailSection => ({ title: '印刷位置調整', items: [mmSpin('offsetUp', '上方向への移動量', up), mmSpin('offsetRight', '右方向への移動量', right)] });
 /** 試算表の詳細設定（現行「残高試算表 - 詳細設定」が基準。資金収支予算管理表・予算内訳表も同じ系統） */
 function TRIAL(o: { head2?: boolean; serial?: boolean; extra?: DetailItem[]; depth?: string; right?: string; stamp?: boolean } = {}): DetailSection[] {
   return [
@@ -87,6 +90,10 @@ function TRIAL(o: { head2?: boolean; serial?: boolean; extra?: DetailItem[]; dep
   ];
 }
 type BudgetKind = '前年度' | '当初' | '補正' | '次年度';
+/** 補正予算書で「〇〇年度」「第〇次」を印字しないときに使うタイトルの項目キー */
+export const ALT_TITLE = 'altTitle';
+/** 補正予算書で、年度または第〇次を印字しない設定か（そのときはタイトル（印刷様式）の代わりに ALT_TITLE を使う） */
+export const usesAltTitle = (detail: Record<string, DetailValue>) => !!detail.noYear || !!detail.noNth;
 /** 予算書の詳細設定（現行「当初予算書 - 詳細設定」が基準。前年度・補正・次年度は項目の名称・順序・ヘッダーが違う） */
 function BUDGET(kind: BudgetKind): DetailSection[] {
   const names: Record<BudgetKind, [string, string][]> = {
@@ -101,7 +108,9 @@ function BUDGET(kind: BudgetKind): DetailSection[] {
     補正: ['補正前、補正、補正後', '補正前、補正後、補正', '補正後、補正、補正前', '補正後、補正前、補正'],
     次年度: ['次年、当年、差引', '次年、差引、当年', '当年、次年、差引', '当年、差引、次年'],
   };
-  const header: DetailItem[] = kind === '補正' ? [chk('noYear', '「〇〇年度」を印字しない'), chk('noNth', '「第〇次」を印字しない')]
+  // 補正予算書：どちらかのチェックを付けると、下のタイトル欄に入力でき、上のタイトル（印刷様式）は使わない（現行どおり。確認メモ #455）
+  const header: DetailItem[] = kind === '補正' ? [chk('noYear', '「〇〇年度」を印字しない'), chk('noNth', '「第〇次」を印字しない'),
+    { k: ALT_TITLE, t: 'text', label: '印字しないときのタイトル', def: '資金収支補正予算書', max: 32, when: { k: 'noYear', v: true, or: [{ k: 'noNth', v: true }] } }]
     : [rad('titleYear', 'タイトルの年', kind === '前年度' ? ['当年を用いる', '前年を用いる', '印字しない'] : kind === '次年度' ? ['当年を用いる', '次年を用いる', '印字しない'] : ['当年を用いる', '印字しない'], kind === '次年度' ? '次年を用いる' : '当年を用いる')];
   const prev = kind === '前年度' ? '前々年度予算' : kind === '当初' ? '前年度予算' : kind === '次年度' ? '当年度予算' : '';
   return [
@@ -252,7 +261,7 @@ const D: Record<string, DetailSection[]> = {
   salesTax: [
     { title: '印刷項目', items: [chk('shade', '費目行を網掛け、太字にする', true), chk('stamp', '捺印欄を印刷する'), chk('area', '区分名を印刷する', true), chk('autofont', '科目名のフォントサイズを自動調整する'), chk('page', 'ページ番号を印刷する'), txt('pageStart', 'ページ番号の開始番号', '1', '1', 80), chk('date', '印刷時の日付を印刷する')] },
     { title: '行送り', items: [PITCH('6.4')] },
-    { title: '余白', items: [txt('marginTop', '上（mm）', '15', '15', 80), txt('marginLeft', '左（mm）', '15', '15', 80)] },
+    { title: '余白', items: [mmSpin('marginTop', '上', '15', 0), mmSpin('marginLeft', '左', '15', 0)] },
     { title: 'フォント', items: [fontRow('fontHead', 'ヘッダー'), fontRow('fontItem', '科目'), fontRow('fontAmt', '金額')] },
     POSITION('0', '0'),
   ],

@@ -10,7 +10,8 @@ import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { Modal } from './Modal';
 import { PrintSteps, type OutKind } from './PrintSteps';
-import { ScopeBlock } from './PrintCenter';
+import { ScopeBlock, SpinField } from './PrintCenter';
+import { MM_SPIN } from './printCatalog';
 import { btn as uiBtn } from './ui';
 
 const btnS = (c: string) => uiBtn(c, false, true);
@@ -260,11 +261,17 @@ export function DepPrintPanel({ name, accent, onRun, onClose }: { name: string; 
                   </div>
                 ))}</>)}
                 {sec('line', '罫線', <>{lineRowsOf(name).map(([k, l]) => sel(k, LINES, l))}</>)}
-                {sec('pos', '印刷位置調整（mm）', <>
-                  {([['offUp', '上方向への移動量'], ['offRight', '右方向への移動量']] as const).map(([k, l]) => (
-                    <label key={k} style={{ display: 'grid', gridTemplateColumns: '1fr 90px', alignItems: 'center', gap: 8, fontSize: 14 }}>{l}<input className="field-input" value={String(v[k])} onChange={(e) => set(k, e.target.value.replace(/[^0-9.-]/g, '').slice(0, 5))} inputMode="decimal" style={{ ...IN, textAlign: 'right' }} /></label>
-                  ))}
-                </>)}
+                {/* 印刷位置調整：会計の帳票と同じく、自由入力と▲▼で 1mm ずつ増減するスピンボタンを横に並べる（確認メモ #457・#460） */}
+                {sec('pos', '印刷位置調整', (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 9 }}>
+                    {([['offUp', '上方向への移動量'], ['offRight', '右方向への移動量']] as const).map(([k, l]) => (
+                      <div key={k} data-dep-pos={k} style={{ display: 'grid', gap: 3 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>{l}</span>
+                        <SpinField value={String(v[k])} {...MM_SPIN} width={64} label={l} onChange={(x) => set(k, x)} />
+                      </div>
+                    ))}
+                  </div>
+                ))}
               </div>
             </ScopeBlock>
           }

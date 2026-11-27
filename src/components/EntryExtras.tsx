@@ -343,38 +343,43 @@ export function statementItems(date: string, division: string, rows: { kari: str
   });
   return out;
 }
-/** 明細書への登録の流れ：start(items) で開き、終了するとトーストで結果を出す */
-export function useStatementFlow(accent: string, toast: (m: string) => void) {
+/** 明細書への登録の流れ：start(items) で開き、終了するとトーストで結果を出す。onFinish は登録・中止のどちらでも最後に呼ぶ（伝票の訂正を閉じる。確認メモ #458） */
+export function useStatementFlow(accent: string, toast: (m: string) => void, onFinish?: () => void) {
   const [items, setItems] = useState<StatementItem[]>([]);
   const node = (
     <AttachedStatementModal
       items={items}
       accent={accent}
-      onClose={() => { if (items.length) toast('明細書には登録しませんでした'); setItems([]); }}
+      onClose={() => { if (items.length) toast('明細書には登録しませんでした'); setItems([]); onFinish?.(); }}
       onDone={(reg, rows) => {
         // 寄附金収益明細書は、別紙の明細入力に1件ずつ追加する（確認メモ #419）
         if (rows.length) addDonations(rows);
         const labels = [...new Set(items.map((x) => x.label))].join('・');
         toast(reg > 0 ? `${labels}に ${reg} 件登録しました` : '明細書には登録しませんでした');
         setItems([]);
+        onFinish?.();
       }}
     />
   );
-  return { start: (list: StatementItem[]) => setItems(list), node };
+  return { start: (list: StatementItem[]) => setItems(list), node, active: items.length > 0 };
 }
 interface StatementEntry {
   reg: boolean; attr: string; kind: string; kihon: string; purpose: string;
   /** 補助金事業等収益明細書（確認メモ #451〜#453）：交付金額・利用者からの収益（明細による集計）、区分、うち国庫補助金等、
    *  交付金額として登録／利用者からの収益として登録（科目・交付目的による集計）、交付団体及び交付の目的（交付目的による集計） */
   grantAmt: string; userAmt: string; kubun: string; kokko: string; as: '交付金額' | '利用者からの収益'; grant: string;
+  /** 事業区分間及び拠点区分間繰入金明細書：繰入金の財源（「その他」のときだけ fundOther に入力。確認メモ #459） */
+  fund: string; fundOther: string;
 }
+/** 繰入金の財源の選択肢（確認メモ #459） */
+const KURII_FUNDS = ['介護保険収入', '運用収入', '前期末支払資金残高', 'その他'];
 /** 補助金の区分：伝票の行の科目のうち、補助金事業等収益明細書の設定でチェックした科目 */
 const hojoKubunOf = (it: StatementItem) => { const k = getHojoConf().kubuns; return [it.kashi, it.kari].find((a) => k.includes(a)) ?? k[0] ?? it.kashi; };
 const grantLabel = (g: Grant) => [g.org, g.purpose].filter(Boolean).join('　');
 const newEntry = (it?: StatementItem): StatementEntry => {
   const kubun = it ? hojoKubunOf(it) : '';
   const g = getHojoConf().grants.find((x) => x.kubun === kubun);
-  return { reg: true, attr: DONOR_ATTRS[0], kind: DONATION_KINDS[0], kihon: '0', purpose: '', grantAmt: it ? yen(it.amount) : '0', userAmt: '0', kubun, kokko: '0', as: '交付金額', grant: g ? grantLabel(g) : '' };
+  return { reg: true, attr: DONOR_ATTRS[0], kind: DONATION_KINDS[0], kihon: '0', purpose: '', grantAmt: it ? yen(it.amount) : '0', userAmt: '0', kubun, kokko: '0', as: '交付金額', grant: g ? grantLabel(g) : '', fund: KURII_FUNDS[0], fundOther: '' };
 };
 /** 受領年月日（会計年度の 1〜3月は翌年） */
 function receivedDate(fy: string, date: string) {
@@ -385,7 +390,8 @@ function receivedDate(fy: string, date: string) {
 export function AttachedStatementModal({ items, onClose, onDone, accent }: { items: StatementItem[]; onClose: () => void; onDone: (registered: number, donations: DonationRow[]) => void; accent: string }) {
   const s = useSession();
   const [idx, setIdx] = useState(0);
-  const [vals, setVals] = useState<StatementEntry[]>([]);
+  // 対象が決まった状態で開くとき（伝票の訂正から。確認メモ #458）も入力欄の初期値を作る
+  const [vals, setVals] = useState<StatementEntry[]>(() => items.map((it) => newEntry(it)));
   const [prev, setPrev] = useState(items);
   if (prev !== items) { setPrev(items); setIdx(0); setVals(items.map(newEntry)); }
   const cur = items[idx];
@@ -393,6 +399,7 @@ export function AttachedStatementModal({ items, onClose, onDone, accent }: { ite
   if (!cur || !v) return null;
   const set = (p: Partial<StatementEntry>) => setVals((list) => list.map((x, i) => (i === idx ? { ...x, ...p } : x)));
   const kifu = cur.label === '寄附金収益明細書';
+  const kurii = cur.label === '事業区分間及び拠点区分間繰入金明細書';
   const hojo = cur.label === '補助金事業等収益明細書';
   const hc = getHojoConf();
   const last = idx === items.length - 1;
@@ -400,6 +407,7 @@ export function AttachedStatementModal({ items, onClose, onDone, accent }: { ite
   const errOf = (it: StatementItem, e: StatementEntry) => {
     if (!e.reg) return '';
     if (it.label === '寄附金収益明細書') return toInt(e.kihon) > it.amount ? '寄附金額を超える金額は設定できません。' : '';
+    if (it.label === '事業区分間及び拠点区分間繰入金明細書') return e.fund === 'その他' && !e.fundOther.trim() ? '繰入金の財源に「その他」を選んだときは、財源を入力してください。' : '';
     if (it.label === '補助金事業等収益明細書') {
       const m = getHojoConf().method;
       // 明細による集計：交付金額と利用者からの収益の合計は、受領した金額と一致させる（確認メモ #451）
@@ -477,6 +485,17 @@ export function AttachedStatementModal({ items, onClose, onDone, accent }: { ite
               )}
               <span style={lbl}>うち国庫補助金等</span>
               <input data-stmt-kokko className="field-input" inputMode="numeric" disabled={!v.reg} value={v.kokko} onChange={(e) => set({ kokko: e.target.value.replace(/[^0-9,]/g, '') })} onBlur={() => set({ kokko: yen(toInt(v.kokko)) })} aria-invalid={!!err} style={{ ...numInput, width: 220, opacity: v.reg ? 1 : 0.5, borderColor: err ? '#c0392b' : undefined }} />
+            </>
+          ) : kurii ? (
+            <>
+              {/* 繰入金明細書：「使用目的等」と「繰入金の財源」（その他を選んだときだけ文字を入力できる。確認メモ #459） */}
+              <span style={lbl}>使用目的等</span>
+              <input data-stmt-kurii-purpose className="field-input" disabled={!v.reg} value={v.purpose} onChange={(e) => set({ purpose: e.target.value })} placeholder="例：本部運営費" style={{ ...input, opacity: v.reg ? 1 : 0.5 }} />
+              <span style={lbl}>繰入金の財源</span>
+              <span role="radiogroup" aria-label="繰入金の財源" style={{ display: 'flex', alignItems: 'center', gap: '4px 16px', flexWrap: 'wrap', fontSize: 14, opacity: v.reg ? 1 : 0.5 }}>
+                {KURII_FUNDS.map((o) => <label key={o} style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="radio" data-stmt-fund={o} disabled={!v.reg} checked={v.fund === o} onChange={() => set({ fund: o })} />{o}</label>)}
+                <input data-stmt-fund-other className="field-input" aria-label="繰入金の財源（その他）" disabled={!v.reg || v.fund !== 'その他'} value={v.fundOther} onChange={(e) => set({ fundOther: e.target.value })} placeholder="その他の財源" style={{ ...input, width: 220, opacity: v.reg && v.fund === 'その他' ? 1 : 0.5 }} />
+              </span>
             </>
           ) : (
             <>

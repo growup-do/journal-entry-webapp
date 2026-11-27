@@ -24,7 +24,7 @@ import { TargetCombo } from './TargetCombo';
 import { AreaPickDialog, toAreaRows, type AreaRow, DisplaySettingDialog, FUND_GROUPS, FormatDialog, InnerFormatDialog, RemarkDialog, STD_INNER_PRINT, formatSummary, stdFormat, type FormatSpec, type InnerPrintFormat, type PrintFormat } from './PrintDetailDialogs';
 import { PrintSteps, type OutKind } from './PrintSteps';
 import { LoadDivisionSettings } from './DivisionSettingsLoad';
-import { COMMON_LINK, FORM_GROUPS, LIST_SEP, REPORTS, formEnabled, omittable, type DetailItem, type DetailSection, type DetailValue, type ReportDef } from './printCatalog';
+import { ALT_TITLE, COMMON_LINK, FORM_GROUPS, LIST_SEP, MM_SPIN, usesAltTitle, REPORTS, formEnabled, omittable, type DetailItem, type DetailSection, type DetailValue, type ReportDef } from './printCatalog';
 import { goScreen } from '../lib/nav';
 import { ACCOUNT_META } from '../lib/accounts';
 import { ACCOUNTS, GRAPH_PARTS, GRAPH_TREES, displayName } from '../data';
@@ -255,11 +255,17 @@ export function PickList({ label, options, value, onChange, rows = 8, disabled, 
 
 /** 詳細設定の項目（現行の画面の枠ごとに、チェック・ラジオ・選択・入力を描き分ける。確認メモ #238） */
 /** スピンボタン：数値を直接入力でき、▲▼で step ずつ増減する。入力欄を離れると範囲に収め、step の桁にそろえる（確認メモ #421） */
-export function SpinField({ value, min, max, step, unit, label, disabled, onChange }: { value: string; min: number; max: number; step: number; unit?: string; label: string; disabled?: boolean; onChange: (v: string) => void }) {
+/** 印刷位置調整・余白などもこの部品を使う（確認メモ #457：自由入力と▲▼での増減。マイナスの値も入力できる） */
+export function SpinField({ value, min, max, step, unit, label, disabled, onChange, width = 80, compact }: { value: string; min: number; max: number; step: number; unit?: string; label: string; disabled?: boolean; onChange: (v: string) => void; /** 入力欄の幅 */ width?: number; /** 範囲の表示を省き、入力欄のヒントにする（横に並べる欄。確認メモ #460） */ compact?: boolean }) {
   const digits = (String(step).split('.')[1] ?? '').length;
   const fix = (n: number) => Math.min(max, Math.max(min, Math.round(n / step) * step)).toFixed(digits);
   /** 全角の数字・小数点（日本語入力のまま打った値）を半角にそろえ、数字と小数点だけ残す */
-  const norm = (x: string) => x.replace(/[０-９．]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).replace(/。/g, '.').replace(/[^0-9.]/g, '');
+  //   マイナスを使える欄（min が 0 未満）は、先頭の「-」（全角の「－」「ー」も）を残す
+  const norm = (x: string) => {
+    const s = x.replace(/[０-９．]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).replace(/。/g, '.').replace(/[－ー−]/g, '-').trim();
+    const neg = min < 0 && s.startsWith('-');
+    return (neg ? '-' : '') + s.replace(/[^0-9.]/g, '');
+  };
   const num = parseFloat(norm(value));
   const bump = (d: number) => onChange(fix((isNaN(num) ? min : num) + d * step));
   const arrow = (off: boolean): CSSProperties => ({ width: 28, height: 16, padding: 0, border: '1px solid #cfd8e0', background: off ? '#f6f8fa' : '#fff', color: off ? '#c3ccd5' : '#3d4a56', fontSize: 9, lineHeight: 1, cursor: off ? 'default' : 'pointer', fontFamily: 'inherit' });
@@ -273,15 +279,23 @@ export function SpinField({ value, min, max, step, unit, label, disabled, onChan
         onCompositionEnd={(e) => onChange(norm(e.currentTarget.value))}
         onBlur={() => onChange(isNaN(num) ? fix(min) : fix(num))}
         onKeyDown={(e) => { if (e.key === 'ArrowUp') { e.preventDefault(); bump(1); } else if (e.key === 'ArrowDown') { e.preventDefault(); bump(-1); } }}
-        style={{ ...input, padding: '6px 8px', width: 80, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }} />
+        title={compact ? `${min.toFixed(digits)}〜${max.toFixed(digits)}${unit ?? ''}` : undefined}
+        style={{ ...input, padding: '6px 8px', width, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }} />
       <span style={{ display: 'grid', gap: 2 }}>
         <button type="button" tabIndex={-1} aria-label={`${label}を ${step} 増やす`} disabled={upOff} title={!disabled && num >= max ? `上限の ${max.toFixed(digits)} です` : undefined} onClick={() => bump(1)} style={{ ...arrow(upOff), borderRadius: '4px 4px 0 0' }}>▲</button>
         <button type="button" tabIndex={-1} aria-label={`${label}を ${step} 減らす`} disabled={downOff} title={!disabled && num <= min ? `下限の ${min.toFixed(digits)} です` : undefined} onClick={() => bump(-1)} style={{ ...arrow(downOff), borderRadius: '0 0 4px 4px' }}>▼</button>
       </span>
       {unit && <span style={{ fontSize: 14, color: '#5b6773' }}>{unit}</span>}
-      <span style={{ fontSize: 12, color: '#8290a0' }}>{min.toFixed(digits)}〜{max.toFixed(digits)}</span>
+      {!compact && <span style={{ fontSize: 12, color: '#8290a0' }}>{min.toFixed(digits)}〜{max.toFixed(digits)}</span>}
     </div>
   );
+}
+
+/** 数値で持つ値（offsetX など）をスピンボタンで編集する。入力中の文字（「-」だけ等）はこの中で持ち、数値になったら渡す */
+function PosSpin({ value, label, onCommit }: { value: string; label: string; onCommit: (v: string) => void }) {
+  const [t, setT] = useState(value);
+  useEffect(() => { if (parseFloat(t) !== parseFloat(value)) setT(value); }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+  return <SpinField value={t} {...MM_SPIN} width={64} label={label} onChange={(x) => { setT(x); if (!isNaN(parseFloat(x))) onCommit(x); }} />;
 }
 
 export function DetailSections({ sections, values, onChange, accent, labelOf, optionsOf, buttons, lead }: { /** 選択肢を画面で決める項目（区分の一覧など） */ optionsOf?: (it: DetailItem) => string[] | undefined; sections: DetailSection[]; values: Record<string, DetailValue>; onChange: (k: string, v: DetailValue) => void; accent: string; /** 起動中の区分などで文言を変える項目 */ labelOf?: (it: DetailItem) => string; /** 項目の右のボタン（「捺印欄を印刷する」の［捺印欄］など。確認メモ #310・#336・#341） */ buttons?: Record<string, DetailButton>; /** 「印刷項目」の枠の先頭に置くもの（0データを表示しない。確認メモ #335） */ lead?: ReactNode }) {
@@ -292,14 +306,17 @@ export function DetailSections({ sections, values, onChange, accent, labelOf, op
   // 押せない項目の値は、ほかの項目の条件では「OFF」として扱う（例：科目欄を変えたあとの 特摘行の資金科目名）
   //   A4白紙と A5白紙のような「お互いに押せなくなる」組（not）は、たどると循環するので値をそのまま使う
   const eff = (k: string): DetailValue | undefined => { const c = byKey.get(k); return c?.when && !c.when.not && off(c) ? undefined : values[k]; };
-  function off(it: DetailItem): boolean { return !!it.when && (it.when.not ? (typeof it.when.v === 'boolean' ? !!eff(it.when.k) === it.when.v : eff(it.when.k) === it.when.v) :eff(it.when.k) !== it.when.v); }
+  function off(it: DetailItem): boolean {
+    if (it.when?.or) return ![it.when, ...it.when.or].some((c) => eff(c.k) === c.v);
+    return !!it.when && (it.when.not ? (typeof it.when.v === 'boolean' ? !!eff(it.when.k) === it.when.v : eff(it.when.k) === it.when.v) :eff(it.when.k) !== it.when.v);
+  }
   return (
     <div data-detail-sections style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 10, alignItems: 'start' }}>
       {sections.map((sec) => {
         // 項目の多い枠（元帳の印刷項目など）は横幅いっぱいに広げ、項目を複数列に並べる
         const wide = sec.items.length > 8;
         /** 短い入力欄だけの枠（余白の上・下・左・右など）は横に並べる */
-        const row = sec.items.length > 1 && sec.items.every((it) => it.t === 'text' && (it.width ?? 999) <= 80);
+        const row = sec.items.length > 1 && sec.items.every((it) => (it.t === 'text' && (it.width ?? 999) <= 80) || (it.t === 'spin' && !!it.compact));
         /** depth：同じ欄の親の項目からの段数（付随する項目だけ字下げする。確認メモ #381／#382） */
         const renderIt = (it: DetailItem, depth = 0) => {
               const v = values[it.k];
@@ -345,7 +362,7 @@ export function DetailSections({ sections, values, onChange, accent, labelOf, op
               if (it.t === 'spin') return (
                 <div key={it.k} data-detail-item={it.k} data-type="spin" style={{ display: 'grid', gap: 3 }}>
                   {!dup && head(it, dis)}
-                  <SpinField value={String(v ?? '')} min={it.min} max={it.max} step={it.step} unit={it.unit} label={label(it)} disabled={dis} onChange={(x) => onChange(it.k, x)} />
+                  <SpinField value={String(v ?? '')} min={it.min} max={it.max} step={it.step} unit={it.unit} label={label(it)} disabled={dis} onChange={(x) => onChange(it.k, x)} compact={it.compact} width={it.compact ? 64 : 80} />
                 </div>
               );
               if (it.t === 'select') return (
@@ -357,7 +374,7 @@ export function DetailSections({ sections, values, onChange, accent, labelOf, op
               return (
                 <label key={it.k} data-detail-item={it.k} data-type="text" style={{ display: 'grid', gap: 3 }}>
                   {!dup && head(it, dis)}
-                  <input className="field-input" value={String(v ?? '')} disabled={dis} placeholder={it.placeholder} onChange={(e) => onChange(it.k, e.target.value)} style={{ ...input, padding: '6px 8px', width: it.width ?? '100%', maxWidth: '100%', opacity: dis ? 0.55 : 1 }} />
+                  <input className="field-input" value={String(v ?? '')} disabled={dis} placeholder={it.placeholder} maxLength={it.max} onChange={(e) => onChange(it.k, e.target.value)} style={{ ...input, padding: '6px 8px', width: it.width ?? '100%', maxWidth: '100%', opacity: dis ? 0.55 : 1 }} />
                 </label>
               );
         };
@@ -466,12 +483,14 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
   });
   const selectRange = (r: Period | null) => setP((x) => (r ? { ...x, mRange: r, months: monthsIn(r), from: md(r.from), to: md(r.to) } : { ...x, mRange: null }));
   const curMonth: MonthFilter = p.mCur !== undefined ? p.mCur : p.months.length === 1 ? p.months[0] : null;
+  /** 補正予算書で年度・第〇次を印字しないときは、ヘッダーのタイトル欄を使い、タイトル（印刷様式）は押せない（確認メモ #455） */
+  const altOn = report.budget === '補正' && usesAltTitle(p.detail);
   const table = (): TableData => { const base = data ?? sampleReportData(report.name); return p.zeroHide ? dropZeroRows(base).data : base; };
   const preview = () => noAcct ? toast.show('印刷する科目にチェックを付けてください') : onPreview(report.name, { from: p.from, to: p.to, output: OUTPUTS[1], hideZero: p.zeroHide });
   const run = () => {
     if (noAcct) { toast.show('印刷する科目にチェックを付けてください'); return; }
     const kindOut = outputKind(p.output) ?? 'print';
-    const spec: ExportSpec = { kind: kindOut, title: p.title.trim() || report.name, meta: `${p.from}〜${p.to}　${s.division}${report.scope && p.scope === '科目指定' ? '　科目指定' : ''}`, ...table() };
+    const spec: ExportSpec = { kind: kindOut, title: (altOn ? String(p.detail[ALT_TITLE] ?? '') : p.title).trim() || report.name, meta: `${p.from}〜${p.to}　${s.division}${report.scope && p.scope === '科目指定' ? '　科目指定' : ''}`, ...table() };
     if (kindOut === 'print') { toast.show(runExport(spec)); onClose?.(); return; }
     // ファイル出力は【名前を付けて保存】を経由する
     setExp(spec);
@@ -623,7 +642,7 @@ export function PrintFlow({ report, accent, data, onPreview, onClose }: PrintFlo
                     <Toggle on={p.zeroHide} onChange={(v) => set({ zeroHide: v })} accent={accent} label="0データを表示しない" />
                     <span style={{ fontSize: 12, color: '#8290a0', paddingLeft: 46 }}>金額がすべて 0 円の行を印刷・プレビューから省きます。</span>
                   </div>}
-                  <Field label="タイトル（印刷様式）"><input className="field-input" value={p.title} onChange={(e) => set({ title: e.target.value })} style={input} /></Field>
+                  <Field label="タイトル（印刷様式）"><input className="field-input" data-title-input value={p.title} disabled={altOn} title={altOn ? '「〇〇年度」「第〇次」を印字しないときは、ヘッダーのタイトルを使います' : undefined} onChange={(e) => set({ title: e.target.value })} style={{ ...input, opacity: altOn ? 0.55 : 1 }} /></Field>
                 </div>
                 {report.detail.length > 0 && <DetailSections sections={report.detail} values={p.detail} onChange={(k, v) => set({ detail: { ...p.detail, [k]: v } })} accent={accent} labelOf={labelOf} optionsOf={optionsOf} lead={zeroInItems ? zeroToggle : undefined} buttons={{
                   depth: { label: report.cat === '予算' && report.budget && !report.rangeSumOnly ? '表示科目' : '表示設定', always: true, onClick: () => setDlg('disp'), title: '科目毎の表示設定（「科目毎に指定」で印刷する科目）を開きます', note: Object.values(p.disp ?? {}).some((x) => x === false) ? `表示しない科目 ${Object.values(p.disp ?? {}).filter((x) => x === false).length} 件` : undefined },
@@ -1001,14 +1020,15 @@ export function CommonPrintSettingsPage({ variant, accent }: { variant: 'form' |
           <div style={card} data-common-sec="印刷位置調整">
             <div style={cardHead}>印刷位置調整・印刷書式</div>
             <div style={{ padding: 14, display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'center' }}>
-              <div style={{ display: 'grid', gap: 6, justifyItems: 'center' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 34px)', gap: 4, alignItems: 'center' }}>
-                  <span /><button type="button" aria-label="上へ1mm" onClick={() => set({ offsetY: p.offsetY - 1 })} style={btn('#5b6773', false, true)}>↑</button><span />
-                  <button type="button" aria-label="左へ1mm" onClick={() => set({ offsetX: p.offsetX - 1 })} style={btn('#5b6773', false, true)}>←</button><span />
-                  <button type="button" aria-label="右へ1mm" onClick={() => set({ offsetX: p.offsetX + 1 })} style={btn('#5b6773', false, true)}>→</button>
-                  <span /><button type="button" aria-label="下へ1mm" onClick={() => set({ offsetY: p.offsetY + 1 })} style={btn('#5b6773', false, true)}>↓</button><span />
-                </div>
-                <span style={{ fontSize: 12, color: '#5b6773', fontVariantNumeric: 'tabular-nums' }}>横 {p.offsetX}mm／縦 {p.offsetY}mm</span>
+              {/* 帳票の詳細設定の印刷位置調整と同じ、上方向・右方向への移動量のスピンボタン（自由入力と▲▼で 1mm ずつ。確認メモ #457・#460）。
+                  値は offsetY（下がプラス）・offsetX（右がプラス）に持つので、上方向は符号を反転する */}
+              <div data-common-pos style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+                {([['上方向への移動量', String(-p.offsetY || 0), (x: string) => set({ offsetY: -(parseFloat(x) || 0) })], ['右方向への移動量', String(p.offsetX), (x: string) => set({ offsetX: parseFloat(x) || 0 })]] as const).map(([l, v, on]) => (
+                  <div key={l} style={{ display: 'grid', gap: 3 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#8290a0' }}>{l}</span>
+                    <PosSpin value={v} label={l} onCommit={on} />
+                  </div>
+                ))}
               </div>
               <div style={{ display: 'grid', gap: 10, flex: 1, minWidth: 220 }}>
                 <div style={{ display: 'grid', gap: 2 }}><button type="button" data-open-format onClick={openFmt} style={{ ...btn(), justifySelf: 'start' }}>印刷書式</button><span style={note}>科目 {p.widthName}mm／金額 {p.widthAmount}mm・科目名 {p.fontName}</span></div>

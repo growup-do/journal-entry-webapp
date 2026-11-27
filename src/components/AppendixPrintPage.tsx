@@ -29,6 +29,8 @@ type Editor = 'note' | 'detail' | 'auto' | 'inventory' | 'merge';
 type Group = '計算書類に対する注記' | '附属明細書' | '財産目録' | '内訳表の準備';
 interface Sheet { id: string; group: Group; no: string; name: string; unit: '法人全体' | '拠点区分' | ''; editor: Editor; /** 対象事業がない（就労支援・授産）。表示条件を満たさない */ na?: boolean; /** 自動作成の元になるデータ */ source?: string; /** 表示条件の説明 */ cond?: string; /** 帳票選択の様式キー（使用にしたときだけ表示） */ form?: string; /** 共通印刷設定＝有 */ common?: boolean }
 
+/** 伝票登録時の明細書への登録画面で入力したデータから作る明細書の、作成元 */
+const STMT_SOURCE = '伝票登録時に入力した明細データ';
 const MARU = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩', '⑪', '⑫', '⑬', '⑭', '⑮', '⑯', '⑰', '⑱', '⑲'];
 const SHUROU = '就労支援事業を行う区分（就労支援区分）があるとき';
 const SHUROU_S = '就労支援区分（年間売上高5,000万円以下）があるとき';
@@ -37,7 +39,8 @@ const DETAIL_SHEETS: [string, string, Sheet['unit'], Editor, string?, string?][]
   [MARU[0], '借入金明細書', '法人全体', 'detail'],
   [MARU[1], '寄附金収益明細書', '法人全体', 'detail'],
   [MARU[2], '補助金事業等収益明細書', '法人全体', 'detail'],
-  [MARU[3], '事業区分間及び拠点区分間繰入金明細書', '法人全体', 'detail'],
+  // 現行に明細入力がないので、伝票登録時に入力した明細データから自動で作成する（確認メモ #461）
+  [MARU[3], '事業区分間及び拠点区分間繰入金明細書', '法人全体', 'auto', STMT_SOURCE],
   [MARU[4], '事業区分間及び拠点区分間貸付金（借入金）残高明細書', '法人全体', 'detail'],
   [MARU[5], '基本金明細書', '法人全体', 'detail'],
   [MARU[6], '国庫補助金等特別積立金明細書', '法人全体', 'detail'],
@@ -240,6 +243,8 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
   const tableOf = (x: Sheet): TableData | undefined => {
     if (x.id === 'd1') return kariireTable(rows.d1 ?? [], s.kariireAccts ?? []);
     if (x.id === 'd2') return donationTable(rows.d2 ?? []);
+    // ④ 繰入金明細書：伝票登録時に入力した明細データ（この画面では編集しない。確認メモ #461）
+    if (x.id === 'd4') { const d = DETAILS.d4; return { header: d.cols, rows: (rows.d4 ?? d.rows).map((r) => r.map((c, i) => (d.num.includes(i) ? toInt(c) : c))) }; }
     if (x.editor === 'detail') { const d = DETAILS[x.id]; return { header: d.cols, rows: (rows[x.id] ?? []).map((r) => r.map((c, i) => (d.num.includes(i) ? toInt(c) : c))) }; }
     if (x.editor === 'inventory') {
       const assets = invAmount(INVENTORY_TABS.slice(0, 3)), debts = invAmount(INVENTORY_TABS.slice(3));
@@ -414,7 +419,7 @@ export function AppendixPrintPage({ variant, accent, onNavigate, embedded }: { v
               {sheet.editor === 'auto' && (
                 !sheetOk(sheet, s) && !peeking ? <Notice>{sheet.na ? <>この明細書は、就労支援事業・授産事業を行う法人が作成するものです。起動中の法人には対象の事業がないため、編集・印刷する内容はありません。<span style={{ display: 'block', marginTop: 8 }}><button type="button" data-peek onClick={() => setPeek(true)} style={btn(accent, false, true)}>条件を満たしたときの画面を見る（見本）</button></span></> : `この明細書は表示条件（${condText(sheet)}）を満たしていないため、印刷できません。`}</Notice>
                   : <>
-                    <Notice tone="ok">この明細書は「{sheet.source ?? (sheet.na ? '伝票（就労支援事業・授産事業の区分ごとの集計）' : '伝票')}」から自動で作成します。この画面で編集する項目はありません。</Notice>
+                    <Notice tone="ok">{sheet.source === STMT_SOURCE ? `この明細書は${STMT_SOURCE}から自動で作成します。この画面で編集する項目はありません。` : <>この明細書は「{sheet.source ?? (sheet.na ? '伝票（就労支援事業・授産事業の区分ごとの集計）' : '伝票')}」から自動で作成します。この画面で編集する項目はありません。</>}</Notice>
                     <div><button type="button" onClick={() => setMode('印刷')} style={btn(accent, true)}>印刷へ進む</button></div>
                   </>
               )}

@@ -11,7 +11,7 @@ import { FiscalMonthTabs } from './FiscalMonthTabs';
 import { Field, Notice, btn, input, numInput, toInt, yen, HelpTip } from './ui';
 import { ActButton, ActDivider, ComboField, ConfirmModal, EntryMonthNote, EntryStyles, FieldLabel, FlagButtons, FundAccountLine, IssueList, ReadOnlyBanner, fieldState, fmtNum, focusId, hasError, hasWarn, judgeEntry, needsPartner, onEnter, parseEntryMonth, entryYearOf, partnerOf, scopeStyle, setPartner, toNum, useShortcuts, type Issue, FusenTab } from './EntryCommon';
 import { SERVICES } from '../data';
-import { InternalSwitch } from './EntryExtras';
+import { InternalSwitch, statementItems, useStatementFlow } from './EntryExtras';
 import { CalendarModal } from './SingleEntryTools';
 import { FUSEN_COLORS, FUSEN_CYCLE, addVoucher, cycleFusen, deleteVoucher, getVouchers, moveVoucher, setVoucherFlags, updateVoucher, useVouchers, type Fusen, type Voucher } from '../store/journalStore';
 import { judgeTorihiki, TORIHIKI_COLOR } from '../lib/accounts';
@@ -240,6 +240,8 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
   const [loadedId, setLoadedId] = useState<number | null>(null);
   const [active, setActive] = useState(0);
   const [msg, setMsg] = useState<{ tone: 'error' | 'info'; text: string } | null>(null);
+  // 明細書に連動する科目の伝票は、訂正を登録したあと入力画面と同じく明細書への登録画面を開き、終わったら閉じる（確認メモ #458）
+  const stmt = useStatementFlow(accent, () => {}, onClose);
   const [rowErr, setRowErr] = useState<Record<string, string>>({});
   const [delOpen, setDelOpen] = useState(false);
   /** 内部取引の欄を出しているか（入力画面と同じく［内部取引］ボタンで出す。確認メモ #393） */
@@ -405,6 +407,8 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
     });
     applyOrder(ids);
     ids.forEach((id, k) => setPartner(id, partners[k]));
+    const items = statementItems(date, st.service, st.rows.map((r) => ({ kari: st.shared ? st.kari : r.kari, kashi: st.shared ? st.kashi : r.kashi, tekiyo: r.tekiyo, amount: toNum(r.amount) || (isTr ? toNum(r.kashiAmount) : 0) })));
+    if (items.length) { setDirty(false); stmt.start(items); return; }
     onClose();
   };
 
@@ -425,6 +429,7 @@ export function EditVoucherModal({ voucher, onClose, accent, returnTo, entry }: 
     !!voucher && !!st && !delOpen && !calOpen && askNav == null,
   );
 
+  if (stmt.active) return <>{stmt.node}</>;
   if (!voucher || !st) return null;
   const j = judgeTorihiki(st.shared ? st.kari : st.rows[act]?.kari ?? '', st.shared ? st.kashi : st.rows[act]?.kashi ?? '');
   const c = TORIHIKI_COLOR[j.kind];
